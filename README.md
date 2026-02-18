@@ -2,6 +2,8 @@
 
 Relatórios técnicos agrícolas — **JSON como fonte de verdade**, renderização HTML na Vercel, download em PDF pelo navegador.
 
+**Repositório:** [github.com/Smeagle951/fortsmart-reports](https://github.com/Smeagle951/fortsmart-reports)
+
 ## Arquitetura
 
 - **Frontend:** Next.js (Vercel)
