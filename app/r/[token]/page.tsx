@@ -1,9 +1,9 @@
+import { notFound } from 'next/navigation';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
 import RelatorioContent from '@/components/RelatorioContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import PrintBar from '@/components/PrintBar';
-import RelatorioNotFoundDiagnostic from '@/components/RelatorioNotFoundDiagnostic';
 
 type Props = { params: { token: string }; searchParams?: { [key: string]: string | string[] | undefined } };
 
@@ -70,14 +70,28 @@ export default async function RelatorioCompartilhadoPage({ params, searchParams 
 
     if (!row) {
       console.warn('[fortsmart-reports] /r/[token] notFound: nenhum registro para token', token);
-      return <RelatorioNotFoundDiagnostic token={token} />;
+      return (
+        <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+          <div style={{ textAlign: 'center', maxWidth: 560 }}>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório não encontrado</h1>
+            <p style={{ color: '#6b7280' }}>O relatório solicitado não está disponível. Verifique o link ou tente novamente mais tarde.</p>
+          </div>
+        </main>
+      );
     }
 
     const rawPayload = row.dados ?? (row as RelatorioRow & { json_data?: unknown; dados_json?: unknown }).json_data ?? (row as RelatorioRow & { dados_json?: unknown }).dados_json;
     const relatorio = parsePayload(rawPayload);
     if (!relatorio) {
       console.warn('[fortsmart-reports] /r/[token] notFound: payload inválido', typeof rawPayload);
-      return <RelatorioNotFoundDiagnostic token={token} />;
+      return (
+        <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+          <div style={{ textAlign: 'center', maxWidth: 560 }}>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório inválido</h1>
+            <p style={{ color: '#6b7280' }}>O conteúdo do relatório está corrompido ou não pode ser exibido.</p>
+          </div>
+        </main>
+      );
     }
 
     const tipo = relatorio.tipo as string | undefined;
@@ -85,7 +99,7 @@ export default async function RelatorioCompartilhadoPage({ params, searchParams 
 
     return (
       <>
-        <PrintBar showHome />
+        <PrintBar />
         <article className="relatorio">
           {isSideBySide ? (
             <SideBySideReportContent
@@ -104,6 +118,13 @@ export default async function RelatorioCompartilhadoPage({ params, searchParams 
     );
   } catch (e) {
     console.error('[fortsmart-reports] /r/[token] erro:', e);
-    return <RelatorioNotFoundDiagnostic token={token} />;
+    return (
+      <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+        <div style={{ textAlign: 'center', maxWidth: 560 }}>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Erro ao carregar o relatório</h1>
+          <p style={{ color: '#6b7280' }}>Ocorreu um erro inesperado ao carregar o relatório. Tente novamente mais tarde.</p>
+        </div>
+      </main>
+    );
   }
 }

@@ -348,17 +348,22 @@ export default function SideBySideReportContent({ data, reportId }: SideBySideRe
                 <tr>
                   <th>Data</th>
                   <th>Tipo</th>
+                  <th>Classe</th>
                   <th>Produtos</th>
                 </tr>
               </thead>
               <tbody>
-                {aplicacoes.map((a, i) => (
-                  <tr key={i}>
-                    <td>{formatDate(a.data)}</td>
-                    <td>{a.tipo || '—'}</td>
-                    <td>{a.produtos || '—'}</td>
-                  </tr>
-                ))}
+                {aplicacoes.map((a, i) => {
+                  const idx = (a as any).index ?? (a as any).pontoIndex ?? (a as any).pointIndex ?? i + 1;
+                  return (
+                    <tr key={i} data-ponto-index={idx}>
+                      <td>{formatDate(a.data)}</td>
+                      <td>{a.tipo || '—'}</td>
+                      <td>{(a as any).classe || '—'}</td>
+                      <td>{a.produtos || '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -49,8 +49,10 @@ export function InfoGrid({
 }) {
   if (!items?.length) return null;
 
+  const sectionClass = `section ${className} ${title === 'Identificação' ? 'info-grid-identificacao' : ''}`;
+
   return (
-    <section className={`section ${className}`}>
+    <section className={sectionClass}>
       {title && <h2 className="section-title">{title}</h2>}
       <div className="info-grid">
         {items.map(([label, value]) => (

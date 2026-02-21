@@ -40,6 +40,83 @@ body {
   color: #6b7280;
 }
 
+.brand-subtitle {
+  display: block;
+  font-size: 0.85rem;
+  color: #4b5563;
+  font-weight: 500;
+  margin-top: 0.15rem;
+}
+
+/* Header improved layout */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.header .brand {
+  display: flex;
+  flex-direction: column;
+}
+.meta-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.meta-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-align: left;
+}
+.meta-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-align: right;
+  min-width: 150px;
+}
+.meta-fazenda {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.meta-talhao {
+  font-size: 0.95rem;
+  color: #065f46;
+  font-weight: 600;
+}
+.meta-date {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+.meta-tecnico {
+  color: #374151;
+  font-size: 0.9rem;
+}
+.meta-id {
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+/* Map pin hover effects (SVG) */
+.mapa-svg g {
+  transition: transform 160ms ease, filter 160ms ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.mapa-svg g:hover {
+  transform: translateY(-4px) scale(1.05);
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.12));
+}
+
+/* Photo card accessibility focus */
+.photo-card:focus {
+  outline: 3px solid rgba(27,94,32,0.18);
+  outline-offset: 4px;
+}
+
 .report-title {
   font-size: 1.35rem;
   font-weight: 700;
@@ -175,6 +252,63 @@ body {
   max-height: 280px;
   display: block;
 }
+.mapa-svg path, .mapa-svg rect {
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* Popup (SVG) styling fallback for non-HTML tooltip */
+.mapa-popup text {
+  pointer-events: none;
+}
+.mapa-popup rect {
+  /* slight shadow handled by filter; ensure crisp edges on export */
+}
+
+/* HTML overlay popup for map points */
+.mapa-overlay {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 2500;
+  min-width: 220px;
+  max-width: 320px;
+}
+.mapa-overlay-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.6rem;
+  box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+  font-size: 0.9rem;
+}
+.mapa-overlay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.mapa-overlay-desc {
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
+.mapa-overlay-meta {
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+.mapa-overlay-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* Highlight target when scrolled to from map */
+.highlighted-map-target {
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+  transition: box-shadow 200ms ease;
+}
 
 /* ---------- Fotos ---------- */
 .photos-grid {
@@ -203,6 +337,70 @@ body {
   padding: 0 0.75rem 0.5rem;
   font-size: 0.75rem;
   color: #9ca3af;
+}
+
+/* Lightbox / preview */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 2rem;
+}
+.lightbox-inner {
+  max-width: 960px;
+  width: 100%;
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+.lightbox-img {
+  width: 100%;
+  height: auto;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 6px;
+}
+.lightbox-caption {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.lightbox-close {
+  align-self: flex-end;
+}
+
+/* Identification emphasized */
+.info-grid-identificacao .info-grid {
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 1.25rem;
+}
+.info-grid-identificacao .info-label {
+  color: #065f46;
+  font-size: 0.95rem;
+}
+.info-grid-identificacao .info-value {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #0f172a;
+}
+.mapa-placeholder {
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
 }
 
 /* ---------- Conclusão ---------- */

@@ -118,17 +118,38 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
       )}
 
       {aplicacoes.length > 0 && (
-        <TabelaDados
-          title="Aplicações realizadas"
-          headers={['Data', 'Tipo', 'Produto', 'Dose', 'Status']}
-          rows={aplicacoes.map((a) => [
-            formatDate(a.data as string),
-            String(a.tipo ?? '—'),
-            String(a.produto ?? '—'),
-            a.dose != null && a.unidade ? `${a.dose} ${a.unidade}` : String(a.dose ?? '—'),
-            String(a.status ?? '—'),
-          ])}
-        />
+        <section className="section">
+          <h2 className="section-title">Aplicações realizadas</h2>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Classe</th>
+                  <th>Produto</th>
+                  <th>Dose</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aplicacoes.map((a, i) => {
+                  const idx = (a as any).index ?? (a as any).pontoIndex ?? (a as any).pointIndex ?? i + 1;
+                  return (
+                    <tr key={i} data-ponto-index={idx}>
+                      <td>{formatDate(a.data as string)}</td>
+                      <td>{String(a.tipo ?? '—')}</td>
+                      <td>{String((a as any).classe ?? '—')}</td>
+                      <td>{String(a.produto ?? '—')}</td>
+                      <td>{a.dose != null && a.unidade ? `${a.dose} ${a.unidade}` : String(a.dose ?? '—')}</td>
+                      <td>{String(a.status ?? '—')}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
       {pragas.length > 0 && (

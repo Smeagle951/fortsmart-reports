@@ -1,8 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-
-export default function PrintBar({ showHome = false }: { showHome?: boolean }) {
+export default function PrintBar() {
   return (
     <div className="report no-print">
       <button
@@ -12,11 +10,6 @@ export default function PrintBar({ showHome = false }: { showHome?: boolean }) {
       >
         Baixar PDF
       </button>
-      {showHome && (
-        <Link href="/" className="btn btn-secondary" style={{ marginLeft: 8 }}>
-          Início
-        </Link>
-      )}
     </div>
   );
 }

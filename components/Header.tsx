@@ -26,11 +26,20 @@ export default function Header({ meta, propriedade, talhao, reportId }: HeaderPr
     <header className="header">
       <div className="brand">
         <span className="brand-title">FortSmart Agro</span>
+        {meta.appVersion && <span className="brand-subtitle">v{meta.appVersion}</span>}
       </div>
       <div className="header-meta">
-        <div>{formatDate(meta.dataGeracao)}</div>
-        <div>{propriedade.fazenda}</div>
-        <div>{talhao.nome} — {meta.safra}</div>
+        <div className="meta-row">
+          <div className="meta-left">
+            <div className="meta-fazenda">{propriedade.fazenda || '—'}</div>
+            <div className="meta-talhao">{talhao.nome || '—'} — {talhao.cultura || '—'}</div>
+          </div>
+          <div className="meta-right">
+            <div className="meta-date">{formatDate(meta.dataGeracao)}</div>
+            {meta.tecnico && <div className="meta-tecnico">{meta.tecnico}{meta.tecnicoCrea ? ` • CREA ${meta.tecnicoCrea}` : ''}</div>}
+            <div className="meta-id">ID: {meta.id || reportId || '—'}</div>
+          </div>
+        </div>
       </div>
     </header>
   );
