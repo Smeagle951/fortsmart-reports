@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { formatDate } from '@/utils/format';
 import { getStoragePublicUrl } from '@/lib/supabase';
