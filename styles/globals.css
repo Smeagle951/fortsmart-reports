@@ -432,6 +432,120 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+/* ---------- Relatório Lado a Lado ---------- */
+.side-by-side-header .brand-subtitle {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  margin-top: 0.15rem;
+}
+
+.side-by-side-info {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 0.35rem 1rem;
+}
+
+.side-by-side-info .full-width {
+  grid-column: 1 / -1;
+}
+
+.side-by-side-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.side-column-header {
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.side-column-header.lado-a {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #a5d6a7;
+}
+
+.side-column-header.lado-b {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #90caf9;
+}
+
+.side-column .kpis-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.observations-block,
+.recommendations-block {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.observations-block ul,
+.recommendations-block ol {
+  margin: 0.35rem 0 0 1rem;
+  padding: 0;
+}
+
+.photos-grid-sbs .photos-in-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.photos-grid-sbs .photo-figure {
+  margin: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fafafa;
+}
+
+.photos-grid-sbs .photo-img {
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.photos-grid-sbs .photo-caption {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.photo-placeholder {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+.muted {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .side-by-side-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---------- Impressão ---------- */
 @media print {
   body {

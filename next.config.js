@@ -1,9 +1,10 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
   reactStrictMode: true,
   trailingSlash: false,
-  // Evita falha de build na Vercel por ESLint (corrigir lint depois)
-  eslint: { ignoreDuringBuilds: true },
+  eslint: { ignoreDuringBuilds: true }
 };
 
 module.exports = nextConfig;

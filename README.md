@@ -1,42 +1,49 @@
 # FortSmart Reports
 
-Relatórios técnicos agrícolas — **JSON como fonte de verdade**, renderização HTML na Vercel, download em PDF pelo navegador.
+Relatórios técnicos agrícolas — **framework reutilizável**, multi-app seguro, JSON como fonte de verdade, renderização na Vercel, PDF pelo navegador.
 
 **Repositório:** [github.com/Smeagle951/fortsmart-reports](https://github.com/Smeagle951/fortsmart-reports)
 
-## Arquitetura
+## Arquitetura (Próximo Nível — Profissional)
 
-- **Frontend:** Next.js (Vercel)
-- **Dados:** Supabase (tabela `relatorios` + bucket `relatorios-imagens`)
-- **Fluxo:** App Flutter gera JSON → upload imagens Supabase Storage → salva JSON no Supabase → link compartilhável → Vercel renderiza HTML → usuário imprime como PDF
+- **Frontend:** Next.js App Router (Vercel)
+- **Dados:** Supabase — tabela `relatorios` com **isolamento por dono** (`owner_firebase_uid`, `app_id`), **compartilhamento seguro** (`share_token`, `is_public`), bucket `relatorios` para imagens
+- **Rotas:** `/relatorio/[id]` (privado, só dono) • `/r/[token]` (público, link compartilhado)
+- **Zero mistura:** cada usuário/app vê apenas seus relatórios; link público só com token
 
-## Estrutura
+## Estrutura do framework
 
 ```
 fortsmart-reports/
-├── data/
-│   ├── schema-relatorio-visita-tecnica.json   # Schema do JSON canônico
-│   └── exemplo-relatorio.json                  # Exemplo para teste local
+├── app/
+│   ├── layout.tsx
+│   ├── page.tsx                    # Home
+│   ├── relatorio/[id]/page.tsx     # Privado (cookie firebase_uid)
+│   ├── r/[token]/page.tsx          # Público (link compartilhado)
+│   └── api/relatorio/[id]/route.ts # GET privado (header X-Firebase-UID)
+├── components/
+│   ├── Header.tsx
+│   ├── Mapa.tsx
+│   ├── Galeria.tsx
+│   ├── TabelaDados.tsx
+│   ├── RelatorioContent.tsx
+│   └── PrintBar.tsx
 ├── lib/
-│   ├── supabaseClient.js
-│   └── formatters.js
-├── pages/
-│   ├── index.js
-│   └── relatorio/
-│       └── [id].js
+│   ├── supabase.ts                 # getRelatorioByShareToken, getRelatorioByIdForOwner, getStoragePublicUrl
+│   └── supabaseClient.js           # (legado pages)
+├── utils/
+│   └── format.ts
 ├── styles/
 │   └── globals.css
-├── public/
-│   └── assets/
-│       └── logo.png
+├── pages/                          # Legado (opcional)
+├── data/
 ├── package.json
-├── next.config.js
-└── vercel.json
+└── next.config.js
 ```
 
 ## Setup
 
-1. **Clone / copie** o projeto e instale dependências:
+1. **Clone e instale:**
 
    ```bash
    cd fortsmart-reports
@@ -44,30 +51,30 @@ fortsmart-reports/
    ```
 
 2. **Supabase:** crie projeto em [supabase.com](https://supabase.com). Anote:
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API → service_role; **só no server**, nunca no browser)
 
 3. **Variáveis de ambiente** (Vercel ou `.env.local`):
 
    ```
    NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+   SUPABASE_SERVICE_ROLE_KEY=eyJ...   # Para API privada /relatorio/[id]
    ```
 
-4. **Supabase — tabelas e storage:** execute o script SQL completo no **SQL Editor** do projeto:
+4. **Supabase — tabela e RLS:** execute no **SQL Editor** do projeto:
 
-   - No repositório: **`docs/supabase_relatorios_setup.sql`**
-   - Ele cria: tabela `relatorios`, RLS, bucket `relatorios-imagens` (5MB, só imagens), políticas de storage e tabela opcional `relatorio_imagens` para auditoria.
-   - Se preferir só o mínimo: tabela `relatorios` e bucket manual no Dashboard (Storage → Create bucket → `relatorios-imagens`, público).
+   - **`docs/supabase_relatorios_framework.sql`** (raiz do repositório principal)
+   - Cria: tabela `relatorios` (id uuid, owner_firebase_uid, app_id, device_id, share_token, is_public, titulo, dados jsonb), RLS (dono vê só os seus; anon só lê is_public=true), bucket `relatorios` para imagens (`relatorios/{id}/foto.jpg`).
 
 ## URLs
 
 - **Home:** `https://seu-dominio.vercel.app/`
-- **Relatório:** `https://seu-dominio.vercel.app/relatorio/[id]`
-- **Histórico por cliente:** `https://seu-dominio.vercel.app/cliente/[clienteId]` (ex: `/cliente/boa-esperanca`)
-- **Exemplo (sem Supabase):** `https://seu-dominio.vercel.app/relatorio/exemplo`
+- **Relatório privado:** `https://seu-dominio.vercel.app/relatorio/[uuid]` — exige cookie `firebase_uid` (ou app envia header ao chamar API)
+- **Link compartilhado:** `https://seu-dominio.vercel.app/r/[share_token]` — sem login; só retorna se `is_public = true`
 
-Se as variáveis do Supabase não estiverem configuradas, apenas o ID `exemplo` funciona (dados do arquivo `data/exemplo-relatorio.json`).
+**Não usar** `/relatorio?id=123` (inseguro). Sempre compartilhar via **share_token** e rota `/r/[token]`.
 
 ## Download em PDF
 
@@ -96,13 +103,11 @@ O app Flutter deve montar um objeto com (entre outros):
 
 Ver `data/schema-relatorio-visita-tecnica.json` e `data/exemplo-relatorio.json`.
 
-## Flutter: fluxo para enviar relatório
+## App (Flutter): fluxo para enviar e compartilhar
 
-1. Montar o JSON com `RelatorioWebJsonService.buildJsonForSafra(safraId)` (já inclui `meta.versao`, `assinaturaTecnica`).
-2. Para cada imagem: comprimir, upload para o bucket `relatorios-imagens`, obter URL pública e preencher `imagens[].url` no JSON.
-3. Gerar `cliente_id` com `RelatorioWebJsonService.clienteIdFromFazenda(fazendaNome)` (slug para histórico em `/cliente/[clienteId]`).
-4. Inserir na tabela Supabase `relatorios`: `id`, `cliente_id`, `cliente`, `data_relatorio`, `json_data`.
-5. Compartilhar: `https://fortsmart.vercel.app/relatorio/{id}` ou histórico: `https://fortsmart.vercel.app/cliente/{cliente_id}`.
+1. **Inserir relatório:** montar JSON (ex.: `RelatorioWebJsonService.buildJsonForSafra(safraId)`). Inserir na tabela `relatorios` com `owner_firebase_uid` = Firebase UID do usuário, `app_id` = ID do app, `dados` = JSON. Imagens: upload em `relatorios/{relatorio_id}/foto.jpg` e usar `path` no JSON (ex.: `foto.jpg`); a web resolve com `getStoragePublicUrl(relatorioId, path)`.
+2. **Ver relatório privado:** abrir no app o link `https://seu-dominio.vercel.app/relatorio/{uuid}` com o cookie `firebase_uid` definido (ao fazer login com Firebase, definir esse cookie no domínio da Vercel ou usar a API `GET /api/relatorio/[id]` com header `X-Firebase-UID`).
+3. **Compartilhar:** ao clicar "Compartilhar", backend faz `UPDATE relatorios SET share_token = gen_random_uuid()::text, is_public = true WHERE id = $1 AND owner_firebase_uid = $2` e retorna o link `https://seu-dominio.vercel.app/r/{share_token}`. Quem recebe o link acessa sem login.
 
 ## Deploy na Vercel
 
