@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
     ],
   },
   transpilePackages: ['leaflet'],
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./data/**/*'],
+  },
 
   // ✅ better-sqlite3 é uma dependência nativa Node.js — deve ser tratada
   // como externa para não ser empacotada pelo webpack (funciona em modo local).

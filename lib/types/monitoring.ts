@@ -39,6 +39,7 @@ export interface Talhao {
     poligono_geojson: GeoJSONPolygon;
     pontos: PontoMonitoramento[];
     condicoes_climaticas?: CondicoesClimaticas;
+    recomendacoes?: Recomendacao[];
 }
 
 export interface GeoJSONPolygon {

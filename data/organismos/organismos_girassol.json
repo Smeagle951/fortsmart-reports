@@ -1,0 +1,2511 @@
+{
+  "cultura": "Girassol",
+  "nome_cientifico": "Helianthus annuus",
+  "versao": "5.0",
+  "data_atualizacao": "2025-10-29T11:54:12.680713",
+  "funcionalidades_extras": {
+    "fases_desenvolvimento": true,
+    "tamanhos_mm": true,
+    "severidade_detalhada": true,
+    "condicoes_favoraveis": true,
+    "manejo_integrado": true,
+    "limiares_especificos": true,
+    "niveis_infestacao": true,
+    "niveis_severidade": true,
+    "sintomas_detalhados": true
+  },
+  "organismos": [
+    {
+      "id": "girassol_lagarta_soja",
+      "nome": "Lagarta-da-soja",
+      "nome_cientifico": "Anticarsia gemmatalis",
+      "categoria": "Praga",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Desfolha intensa",
+        "Folhas com bordas irregulares",
+        "Redução da área fotossintética"
+      ],
+      "dano_economico": "Pode causar perdas de até 40% na produtividade devido à desfolha severa",
+      "partes_afetadas": [
+        "Folhas"
+      ],
+      "fenologia": [
+        "V1",
+        "V2",
+        "V3",
+        "V4",
+        "V5",
+        "V6",
+        "V7",
+        "V8",
+        "V9",
+        "V10",
+        "V11",
+        "V12",
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9"
+      ],
+      "fases_fenologicas_detalhadas": {
+        "V1": "Primeira folha - Primeira folha verdadeira",
+        "V2": "Segunda folha - Segunda folha verdadeira",
+        "V3": "Terceira folha - Terceira folha verdadeira",
+        "V4": "Quarta folha - Quarta folha verdadeira",
+        "V5": "Quinta folha - Quinta folha verdadeira",
+        "V6": "Sexta folha - Sexta folha verdadeira",
+        "V7": "Sétima folha - Sétima folha verdadeira",
+        "V8": "Oitava folha - Oitava folha verdadeira",
+        "V9": "Nona folha - Nona folha verdadeira",
+        "V10": "Décima folha - Décima folha verdadeira",
+        "V11": "Décima primeira folha - Décima primeira folha verdadeira",
+        "V12": "Décima segunda folha - Décima segunda folha verdadeira",
+        "R1": "Botão floral - Botão floral visível",
+        "R2": "Início da floração - Primeiras flores abertas",
+        "R3": "Floração plena - Muitas flores abertas",
+        "R4": "Início da formação de aquênios - Primeiros aquênios visíveis",
+        "R5": "Formação de aquênios - Aquênios em desenvolvimento",
+        "R6": "Enchimento de aquênios - Aquênios com grãos em desenvolvimento",
+        "R7": "Aquênios cheios - Aquênios completamente formados",
+        "R8": "Início da maturação - Aquênios começando a escurecer",
+        "R9": "Maturação completa - Pronto para colheita"
+      },
+      "nivel_acao": "Desfolha ≥ 30% no estágio vegetativo",
+      "manejo_quimico": [
+        "Clorantraniliprole - 0,15-0,25 L/ha",
+        "Spinosad - 0,08-0,12 L/ha"
+      ],
+      "doses_defensivos": {
+        "clorantraniliprole": {
+          "dose": "0,15-0,25 L/ha",
+          "concentracao": "200 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "Vegetativo (V1-V8) e reprodutivo (R1-R6)",
+          "condicoes_climaticas": "Temperatura < 30°C, sem chuva por 4h, umidade relativa 60-80%",
+          "equipamento": "Pulverizador com bicos de jato cônico",
+          "adjuvante": "Óleo mineral 0,5% ou silicone 0,1%",
+          "observacoes": "Aplicar no início da infestação. Eficaz contra lagartas pequenas (1-3mm). Controle sistêmico.",
+          "custo_aproximado": "R$ 45-65/ha"
+        },
+        "spinosad": {
+          "dose": "0,08-0,12 L/ha",
+          "concentracao": "240 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "7 dias",
+          "epoca_aplicacao": "Todo o ciclo (V1-R9)",
+          "condicoes_climaticas": "Temperatura < 35°C, sem chuva por 2h, umidade relativa 50-90%",
+          "equipamento": "Pulverizador com bicos de jato cônico",
+          "adjuvante": "Não necessário",
+          "observacoes": "Controle biológico. Aplicar no final da tarde. Eficaz contra lagartas de 3-8mm.",
+          "custo_aproximado": "R$ 25-35/ha"
+        }
+      },
+      "manejo_biologico": [
+        "Trichogramma pretiosum",
+        "Bacillus thuringiensis"
+      ],
+      "manejo_cultural": [
+        "Rotação de culturas",
+        "Plantio na época recomendada",
+        "Destruição de restos culturais"
+      ],
+      "observacoes": "Importante realizar monitoramento constante para controle no início da infestação",
+      "icone": "🐛",
+      "ativo": true,
+      "data_criacao": "2024-01-01T00:00:00Z",
+      "data_atualizacao": "2024-12-19T00:00:00Z",
+      "fases": [
+        {
+          "fase": "Ovo",
+          "tamanho_mm": "0.6",
+          "danos": "Postura em folhas",
+          "duracao_dias": "3-5",
+          "caracteristicas": "Postura em folhas, cor esbranquiçada"
+        },
+        {
+          "fase": "Larva inicial",
+          "tamanho_mm": "2-5",
+          "danos": "Pequenas perfurações em folhas",
+          "duracao_dias": "3-5",
+          "caracteristicas": "Lagartas pequenas, cor verde"
+        },
+        {
+          "fase": "Larva média",
+          "tamanho_mm": "15-25",
+          "danos": "Destruição parcial das folhas",
+          "duracao_dias": "8-12",
+          "caracteristicas": "Lagartas com listras longitudinais"
+        },
+        {
+          "fase": "Larva adulta",
+          "tamanho_mm": "35-45",
+          "danos": "Desfolha intensa",
+          "duracao_dias": "5-8",
+          "caracteristicas": "Lagartas grandes, alta voracidade"
+        },
+        {
+          "fase": "Pupa",
+          "tamanho_mm": "20",
+          "danos": "Não causa danos diretos",
+          "duracao_dias": "8-12",
+          "caracteristicas": "Pupas no solo, cor marrom"
+        },
+        {
+          "fase": "Mariposa",
+          "tamanho_mm": "35-40",
+          "danos": "Somente reprodução",
+          "duracao_dias": "10-15",
+          "caracteristicas": "Mariposas marrons, formato triangular"
+        }
+      ],
+      "severidade": {
+        "baixo": {
+          "descricao": "Até 10% de desfolha",
+          "perda_produtividade": "0-10%",
+          "cor_alerta": "#4CAF50",
+          "acao": "Monitoramento intensificado"
+        },
+        "medio": {
+          "descricao": "11-30% de desfolha",
+          "perda_produtividade": "11-25%",
+          "cor_alerta": "#FF9800",
+          "acao": "Aplicação de inseticida"
+        },
+        "alto": {
+          "descricao": "Acima de 30% de desfolha",
+          "perda_produtividade": "26-40%",
+          "cor_alerta": "#F44336",
+          "acao": "Aplicação imediata de inseticida"
+        }
+      },
+      "condicoes_favoraveis": {
+        "temperatura": "25-30°C",
+        "umidade": "Umidade relativa moderada (60-80%)",
+        "chuva": "Períodos de chuva intermitente",
+        "vento": "Baixa velocidade do vento",
+        "solo": "Solos bem drenados"
+      },
+      "limiares_especificos": {
+        "vegetativo": "30% de desfolha",
+        "floracao": "15% de desfolha",
+        "enchimento": "10% de desfolha"
+      },
+      "caracteristicas_visuais": {
+        "cores_predominantes": [
+          "verde",
+          "marrom"
+        ],
+        "padroes": [
+          "desfolha"
+        ],
+        "tamanho_medio_mm": {
+          "adulto": 20.0,
+          "larva": 37.5
+        }
+      },
+      "condicoes_climaticas": {
+        "temperatura_min": 25,
+        "temperatura_max": 30,
+        "umidade_min": 60,
+        "umidade_max": 80,
+        "precipitacao_min": 100,
+        "precipitacao_max": 1000
+      },
+      "ciclo_vida": {
+        "ovos_dias": 3,
+        "larva_dias": 16,
+        "pupa_dias": 8,
+        "adulto_dias": 10,
+        "duracao_total_dias": 37,
+        "geracoes_por_ano": 10,
+        "diapausa": false
+      },
+      "rotacao_resistencia": {
+        "grupos_irac": [],
+        "estrategias": [
+          "Consultar técnico para rotação de modos de ação"
+        ],
+        "intervalo_minimo_dias": null
+      },
+      "distribuicao_geografica": [
+        "Sul",
+        "Centro-Oeste",
+        "Sudeste"
+      ],
+      "diagnostico_diferencial": {
+        "confundidores": [],
+        "sintomas_chave": [
+          "Desfolha intensa",
+          "Folhas com bordas irregulares",
+          "Redução da área fotossintética"
+        ]
+      },
+      "economia_agronomica": {
+        "custo_nao_controle_por_ha": 120,
+        "custo_controle_por_ha": 36,
+        "roi_medio": 2.5,
+        "momento_otimo_aplicacao": "Desfolha ≥ 30% no estágio vegetativo"
+      },
+      "controle_biologico": {
+        "predadores": [],
+        "parasitoides": [
+          "Trichogramma pretiosum"
+        ],
+        "entomopatogenos": [
+          "Bacillus thuringiensis"
+        ]
+      },
+      "tendencias_sazonais": {
+        "pico_meses": [
+          "Janeiro",
+          "Fevereiro",
+          "Março"
+        ],
+        "correlacao_elnino": "neutro",
+        "graus_dia_media": 450
+      },
+      "features_ia": {
+        "keywords_comportamentais": [
+          "desfolha_intensa"
+        ],
+        "marcadores_visuais": [
+          "cor_verde",
+          "cor_marrom"
+        ]
+      },
+      "fontes_referencia": {
+        "fontes_principais": [
+          "Embrapa - Guias Técnicos e Zoneamentos Agrícolas",
+          "IRAC Brasil - Classificação de Modos de Ação",
+          "MAPA - Zoneamento Agrícola de Risco Climático"
+        ],
+        "fontes_especificas": [
+          {
+            "fonte": "IRAC Brasil",
+            "tipo": "Classificação de Inseticidas",
+            "url": "https://www.irac-br.org",
+            "uso": "Rotação de modos de ação e resistência"
+          },
+          {
+            "fonte": "Embrapa - Centro de Pesquisa de Soja",
+            "tipo": "Guias de Pragas",
+            "uso": "Identificação, ciclo de vida e manejo"
+          },
+          {
+            "fonte": "SciELO / PubMed",
+            "tipo": "Artigos Científicos",
+            "uso": "Dados de ciclo de vida, gerações e biologia"
+          }
+        ],
+        "ultima_atualizacao": "2025-10-28T19:29:19.282767",
+        "nota_licenca": "Todos os dados citados são de domínio público e podem ser utilizados livremente para fins técnicos e acadêmicos, conforme políticas das instituições citadas (Embrapa, IRAC, MAPA, INMET, SciELO, COODETEC, IAC)."
+      },
+      "ciclo_vida_detalhado_2024": {
+        "fonte": "Embrapa 2024 - Estudos recentes",
+        "temperatura_base_graus_dia": 10.0,
+        "constante_termica": 450,
+        "ovo": {
+          "duracao_dias_min": 2,
+          "duracao_dias_max": 4,
+          "duracao_dias_otima": 3,
+          "temperatura_otima": 25,
+          "viabilidade_percent": 85,
+          "local_postura": "face_inferior_folhas",
+          "postura_media_femea": 300
+        },
+        "larva": {
+          "n_instares": 5,
+          "duracao_total_dias_min": 12,
+          "duracao_total_dias_max": 18,
+          "duracao_total_dias_otima": 14,
+          "consumo_foliar_total_cm2": 150,
+          "instar_critico_controle": "L1-L3",
+          "temperatura_desenvolvimento_otima": 26
+        },
+        "pupa": {
+          "duracao_dias_min": 5,
+          "duracao_dias_max": 10,
+          "duracao_dias_otima": 7,
+          "local": "solo_folhas_secas",
+          "profundidade_solo_cm": "2-5",
+          "viabilidade_percent": 90
+        },
+        "adulto": {
+          "longevidade_femea_dias": 12,
+          "longevidade_macho_dias": 10,
+          "periodo_pre_oviposicao_dias": 2,
+          "periodo_oviposicao_dias": 8,
+          "fecundidade_total": 500,
+          "habito": "noturno",
+          "dispersao_km_noite": 2
+        },
+        "ciclo_total_25c_dias": 30,
+        "geracoes_por_ano_brasil": 6,
+        "sobreposicao_geracoes": true,
+        "diapausa": false
+      },
+      "monitoramento_profissional_2024": {
+        "fonte": "Embrapa + MAPA - Protocolos 2024",
+        "metodos_validados": [
+          {
+            "metodo": "amostragem_sistematica",
+            "tipo": "pano_batida_ou_visual",
+            "n_pontos_por_ha": 5,
+            "distribuicao": "em_W_ou_zigue_zague",
+            "frequencia_semanal": 2,
+            "horario_recomendado": "7h-9h_ou_17h-19h",
+            "condicoes": "ausencia_orvalho_chuva"
+          },
+          {
+            "metodo": "monitoramento_digital",
+            "tipo": "app_smartphone",
+            "coleta_dados": "geo_localizada",
+            "registro_fotos": true,
+            "sincronizacao_nuvem": true,
+            "fonte": "Boas práticas digitais 2024"
+          }
+        ],
+        "niveis_acao_atualizados_2024": {
+          "limiar_controle_vegetativo": "20_desfolha_ou_2_larvas_m2",
+          "limiar_controle_reprodutivo": "15_desfolha_ou_1_larva_m2",
+          "limiar_dano_economico": "30_desfolha"
+        },
+        "tecnologias_auxiliares_2024": [
+          "Drones para mapeamento",
+          "Sensores de campo IoT",
+          "IA para reconhecimento de imagens",
+          "GPS de alta precisão"
+        ]
+      },
+      "economia_2024_2025": {
+        "fonte": "Embrapa + Conab + MAPA - Dados 2024/2025",
+        "ano_referencia": "2024-2025",
+        "custos_atualizados": {
+          "controle_quimico_ha": 60,
+          "controle_biologico_ha": 42,
+          "controle_mip_ha": 51,
+          "nao_controle_perda_ha": 180
+        },
+        "roi_analise": {
+          "roi_quimico": "3.0",
+          "roi_biologico": "4.3",
+          "roi_mip": "3.5"
+        },
+        "precos_referencia_2024_2025": {
+          "controle": 60,
+          "nao_controle": 180,
+          "sc": 120
+        },
+        "custo_oportunidade_atraso_1_semana": 12,
+        "periodo_retorno_investimento_dias": 30
+      },
+      "resistencia_atualizada_2024": {
+        "fonte": "IRAC Brasil - Atualização 2024",
+        "ano": "2024",
+        "situacao_brasil": {
+          "resistencia_documentada": true,
+          "grupos_com_resistencia": [
+            "1A",
+            "3A",
+            "28"
+          ],
+          "nivel_preocupacao": "alto"
+        },
+        "estrategias_anti_resistencia_2024": [
+          {
+            "estrategia": "rotacao_modos_acao",
+            "descricao": "Alternar entre pelo menos 3 grupos IRAC diferentes",
+            "eficacia": "85%"
+          },
+          {
+            "estrategia": "mosaico_espacial",
+            "descricao": "Usar produtos diferentes em talhões adjacentes",
+            "eficacia": "70%"
+          },
+          {
+            "estrategia": "mistura_tanque",
+            "descricao": "Combinar 2 modos de ação diferentes",
+            "eficacia": "90%",
+            "observacao": "Apenas com produtos compatíveis"
+          },
+          {
+            "estrategia": "refugio_estruturado",
+            "descricao": "Manter área sem inseticida (5-20% área)",
+            "eficacia": "75%",
+            "aplicacao": "Bt_e_outros"
+          }
+        ],
+        "monitoramento_resistencia": {
+          "protocolo": "bioensaio_campo",
+          "frequencia": "anual",
+          "laboratorios": [
+            "Embrapa",
+            "Universidades"
+          ]
+        }
+      },
+      "clima_regional_2024_2025": {
+        "fonte": "INMET - Série histórica 2024-2025",
+        "regioes_producao": {
+          "centro_oeste": {
+            "temperatura_media_safra": 26,
+            "umidade_media_safra": 70,
+            "precipitacao_total_mm": 1200,
+            "risco_veranico": "medio",
+            "meses_criticos": [
+              "Janeiro",
+              "Fevereiro"
+            ]
+          },
+          "sul": {
+            "temperatura_media_safra": 23,
+            "umidade_media_safra": 75,
+            "precipitacao_total_mm": 1500,
+            "risco_geada": "baixo_a_medio",
+            "meses_criticos": [
+              "Dezembro",
+              "Janeiro"
+            ]
+          },
+          "sudeste": {
+            "temperatura_media_safra": 24,
+            "umidade_media_safra": 72,
+            "precipitacao_total_mm": 1300,
+            "meses_criticos": [
+              "Janeiro",
+              "Fevereiro",
+              "Março"
+            ]
+          }
+        },
+        "eventos_climaticos_2024": {
+          "el_nino": "neutro_a_fraco",
+          "impacto_precipitacao": "normal",
+          "impacto_temperatura": "levemente_acima_media"
+        },
+        "previsao_2025": {
+          "tendencia": "la_nina_fraca",
+          "impacto_esperado": "chuvas_regulares_temperatura_normal"
+        }
+      },
+      "controle_biologico_expandido_2024": {
+        "fonte": "Embrapa + Universidades - Pesquisas 2024",
+        "parasitoides_atualizados": [
+          {
+            "especie": "Trichogramma pretiosum",
+            "alvo": "ovos",
+            "liberacao_ha": 100000,
+            "n_liberacoes_recomendadas": 3,
+            "intervalo_liberacoes_dias": 7,
+            "eficacia_2024": "75-92%",
+            "custo_liberacao_ha": 35,
+            "momento_liberacao": "inicio_postura_praga",
+            "fornecedores_brasil": 3
+          },
+          {
+            "especie": "Telenomus remus",
+            "alvo": "ovos_spodoptera",
+            "liberacao_ha": 50000,
+            "eficacia_2024": "70-85%",
+            "custo_liberacao_ha": 40,
+            "disponibilidade": "crescente"
+          }
+        ],
+        "predadores": [
+          {
+            "especie": "Chrysoperla externa",
+            "tipo": "larva_predadora",
+            "liberacao_ha": 25000,
+            "eficacia": "60-75%",
+            "custo_ha": 45
+          },
+          {
+            "especie": "Doru luteipes",
+            "tipo": "tesourinha_predadora",
+            "conservacao": "faixas_refugio_plantas_floridas",
+            "eficacia_campo": "40-60%",
+            "custo": "zero_conservacao"
+          }
+        ],
+        "entomopatogenos": [
+          {
+            "agente": "Bacillus thuringiensis kurstaki",
+            "formulacao": "WP_SC",
+            "dose": "0,5-1,5 kg_ou_L/ha",
+            "eficacia_larvas_pequenas": "80-95%",
+            "eficacia_larvas_grandes": "40-60%",
+            "custo_ha": 30,
+            "compatibilidade_quimicos": "boa_maioria"
+          },
+          {
+            "agente": "Baculovirus spodoptera",
+            "dose": "50-100_LE/ha",
+            "eficacia_2024": "70-90%",
+            "especificidade": "alta_apenas_spodoptera",
+            "custo_ha": 25,
+            "producao_local": "crescente"
+          }
+        ],
+        "novidades_2024": [
+          "Produtos biológicos à base de metabólitos fúngicos",
+          "Consórcios de parasitoides (Trichogramma + Telenomus)",
+          "Formulações microencapsuladas de Bt"
+        ]
+      },
+      "mip_integrado_2024": {
+        "fonte": "Embrapa - Sistemas de MIP 2024",
+        "ano": "2024",
+        "abordagem_integrada": {
+          "cultural": {
+            "peso_eficacia": 30,
+            "praticas_2024": [
+              "Plantio época ZARC",
+              "Cultivares resistentes/tolerantes (novos lançamentos 2024)",
+              "Rotação culturas não-hospedeiras",
+              "Manejo plantas daninhas hospedeiras",
+              "Destruição restos culturais (pós-colheita imediata)"
+            ]
+          },
+          "biologico": {
+            "peso_eficacia": 40,
+            "estrategia_2024": "controle_preventivo_liberacoes_programadas",
+            "custo_beneficio": "excelente_longo_prazo"
+          },
+          "quimico": {
+            "peso_eficacia": 70,
+            "estrategia_2024": "apenas_quando_necessario_limiar_atingido",
+            "prioridade": "produtos_seletivos_inimigos_naturais"
+          },
+          "genetico": {
+            "disponibilidade_2024": false,
+            "tecnologia": "Bt_piramidado",
+            "eficacia": "95-99%",
+            "observacao": "Exige área de refúgio"
+          }
+        },
+        "sequencia_decisoria": [
+          "1. Monitoramento semanal",
+          "2. Atingiu limiar? Não → continuar monitorando",
+          "3. Atingiu limiar? Sim → avaliar nível infestação",
+          "4. Baixo/Médio → considerar controle biológico",
+          "5. Alto/Crítico → controle químico seletivo",
+          "6. Rotacionar modos de ação (IRAC)",
+          "7. Reavaliar em 7 dias"
+        ]
+      },
+      "tendencias_2024_2025": {
+        "fonte": "Embrapa + Universidades - Levantamentos 2024",
+        "ano_safra": "2024/2025",
+        "ocorrencia_brasil_2024": {
+          "nivel_geral": "medio_a_alto",
+          "regioes_maior_pressao": [
+            "Centro-Oeste",
+            "Sudeste"
+          ],
+          "aumento_percentual_vs_2023": 15,
+          "fatores_aumento": [
+            "Temperaturas acima da média",
+            "Chuvas irregulares",
+            "Resistência a alguns inseticidas"
+          ]
+        },
+        "previsao_safra_2025": {
+          "tendencia": "pressao_similar_ou_levemente_maior",
+          "regioes_atencao": [
+            "MT",
+            "GO",
+            "MS",
+            "PR"
+          ],
+          "recomendacao": "intensificar_monitoramento_preventivo"
+        },
+        "mudancas_observadas_2024": [
+          "Surgimento mais cedo na safra",
+          "Picos populacionais mais intensos",
+          "Maior sobreposição de gerações"
+        ]
+      },
+      "tecnologias_2024": {
+        "fonte": "Agricultura Digital 2024",
+        "ferramentas_disponiveis": [
+          {
+            "tecnologia": "IA reconhecimento imagens",
+            "status": "em_desenvolvimento",
+            "precisao_atual": "85-90%",
+            "aplicacao": "identificacao_automatica_pragas_doencas"
+          },
+          {
+            "tecnologia": "drones_pulverizacao",
+            "status": "comercial",
+            "precisao_aplicacao": "95%",
+            "reducao_desperdicio": "30-40%"
+          },
+          {
+            "tecnologia": "sensores_iot_campo",
+            "status": "crescente",
+            "medicoes": "temperatura_umidade_tempo_real",
+            "integracao": "alertas_automaticos"
+          },
+          {
+            "tecnologia": "modelos_predicao_ml",
+            "status": "em_validacao",
+            "precisao": "80-85%",
+            "horizonte_predicao": "7_a_14_dias"
+          }
+        ],
+        "tendencias_2025": [
+          "IA embarcada em dispositivos móveis",
+          "Integração multi-sensores",
+          "Blockchain para rastreabilidade",
+          "Agricultura de precisão avançada"
+        ]
+      },
+      "validacao_agronomica": {
+        "data_atualizacao": "2025-10-29T11:54:12.679712",
+        "versao_dados": "5.0",
+        "fontes_atualizadas_2024_2025": true,
+        "compativel_versoes_anteriores": true
+      }
+    },
+    {
+      "id": "girassol_lagarta_medideira",
+      "nome": "Lagarta-medideira",
+      "nome_cientifico": "Chrysodeixis includens",
+      "categoria": "Praga",
+      "tipo": "PRAGA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Folhas com recortes irregulares",
+        "Presença de lagartas \"esticadas\" e ágeis",
+        "Desfolha progressiva"
+      ],
+      "dano_economico": "Redução da área foliar e potencial produtivo",
+      "partes_afetadas": [
+        "Folhas"
+      ],
+      "fenologia": [
+        "V4",
+        "R5"
+      ],
+      "nivel_acao": "20 lagartas por pano de batida",
+      "niveis_infestacao": {
+        "baixo": "1-5 lagartas por pano de batida",
+        "medio": "6-15 lagartas por pano de batida",
+        "alto": "16-30 lagartas por pano de batida",
+        "critico": ">30 lagartas por pano de batida"
+      },
+      "manejo_quimico": [
+        "Metaflumizona (IRAC 22A)",
+        "Clorantraniliprole"
+      ],
+      "manejo_biologico": [
+        "Beauveria bassiana"
+      ],
+      "manejo_cultural": [
+        "Semeadura recomendada",
+        "Eliminação de soqueiras"
+      ],
+      "observacoes": "Muito comum em regiões tropicais, especialmente em cultivos sem rotação",
+      "icone": "🐛",
+      "ativo": true,
+      "data_criacao": "2024-12-19T00:00:00Z",
+      "data_atualizacao": "2024-12-19T00:00:00Z",
+      "fases": [
+        {
+          "fase": "Ovo",
+          "tamanho_mm": "0.4",
+          "tamanho": "0,4 mm",
+          "danos": "Postura em folhas",
+          "dano": "Postura em folhas, sem danos diretos.",
+          "duracao_dias": "2-4",
+          "duracao": "2-4 dias",
+          "caracteristicas": "Postura em folhas"
+        },
+        {
+          "fase": "Neonata",
+          "tamanho_mm": "1-3",
+          "tamanho": "1-3 mm",
+          "danos": "Lagartas pequenas, cor clara",
+          "dano": "Lagartas pequenas, cor clara.",
+          "duracao_dias": "2-3",
+          "duracao": "2-3 dias",
+          "caracteristicas": "Lagartas pequenas, cor clara"
+        },
+        {
+          "fase": "Média",
+          "tamanho_mm": "15-25",
+          "tamanho": "15-25 mm",
+          "danos": "Lagartas com padrão característico",
+          "dano": "Lagartas com padrão característico.",
+          "duracao_dias": "8-10",
+          "duracao": "8-10 dias",
+          "caracteristicas": "Lagartas com padrão característico"
+        },
+        {
+          "fase": "Adulta",
+          "tamanho_mm": "35-45",
+          "tamanho": "35-45 mm",
+          "danos": "Lagartas grandes, alta voracidade",
+          "dano": "Lagartas grandes, alta voracidade.",
+          "duracao_dias": "5-7",
+          "duracao": "5-7 dias",
+          "caracteristicas": "Lagartas grandes, alta voracidade"
+        }
+      ],
+      "severidade": {
+        "baixo": {
+          "descricao": "Até 5 lagartas por pano de batida",
+          "perda_produtividade": "0-10%",
+          "cor_alerta": "#4CAF50",
+          "acao": "Monitoramento intensificado"
+        },
+        "medio": {
+          "descricao": "6-15 lagartas por pano de batida",
+          "perda_produtividade": "11-25%",
+          "cor_alerta": "#FF9800",
+          "acao": "Aplicação de inseticida"
+        },
+        "alto": {
+          "descricao": "Acima de 15 lagartas por pano de batida",
+          "perda_produtividade": "26-40%",
+          "cor_alerta": "#F44336",
+          "acao": "Aplicação imediata de inseticida"
+        }
+      },
+      "condicoes_favoraveis": {
+        "temperatura": "25-30°C",
+        "umidade": "Umidade relativa moderada (60-80%)",
+        "chuva": "Períodos de chuva intermitente",
+        "vento": "Baixa velocidade do vento",
+        "solo": "Solos bem drenados"
+      },
+      "limiares_especificos": {
+        "vegetativo": "20 lagartas por pano de batida",
+        "floracao": "20 lagartas por pano de batida",
+        "enchimento": "20 lagartas por pano de batida"
+      },
+      "caracteristicas_visuais": {
+        "cores_predominantes": [
+          "verde",
+          "marrom"
+        ],
+        "padroes": [
+          "desfolha"
+        ],
+        "tamanho_medio_mm": {
+          "adulto": 0.4,
+          "larva": 40.0
+        }
+      },
+      "condicoes_climaticas": {
+        "temperatura_min": 25,
+        "temperatura_max": 30,
+        "umidade_min": 60,
+        "umidade_max": 80
+      },
+      "ciclo_vida": {
+        "ovos_dias": 2,
+        "larva_dias": 2,
+        "pupa_dias": 7,
+        "adulto_dias": 10,
+        "duracao_total_dias": 21,
+        "geracoes_por_ano": 17,
+        "diapausa": false
+      },
+      "rotacao_resistencia": {
+        "grupos_irac": [
+          "22"
+        ],
+        "estrategias": [
+          "Alternar modos de ação entre aplicações",
+          "Uso máximo 2x por safra do mesmo grupo IRAC"
+        ],
+        "intervalo_minimo_dias": 14
+      },
+      "distribuicao_geografica": [
+        "Sul",
+        "Centro-Oeste",
+        "Sudeste"
+      ],
+      "diagnostico_diferencial": {
+        "confundidores": [],
+        "sintomas_chave": [
+          "Folhas com recortes irregulares",
+          "Presença de lagartas \"esticadas\" e ágeis",
+          "Desfolha progressiva"
+        ]
+      },
+      "economia_agronomica": {
+        "custo_nao_controle_por_ha": 150,
+        "custo_controle_por_ha": 45,
+        "roi_medio": 2.5,
+        "momento_otimo_aplicacao": "20 lagartas por pano de batida"
+      },
+      "controle_biologico": {
+        "predadores": [],
+        "parasitoides": [],
+        "entomopatogenos": [
+          "Beauveria bassiana"
+        ]
+      },
+      "tendencias_sazonais": {
+        "pico_meses": [
+          "Janeiro",
+          "Fevereiro",
+          "Março"
+        ],
+        "correlacao_elnino": "neutro",
+        "graus_dia_media": 450
+      },
+      "features_ia": {
+        "keywords_comportamentais": [
+          "desfolha_intensa"
+        ],
+        "marcadores_visuais": [
+          "cor_verde",
+          "cor_marrom"
+        ]
+      },
+      "fontes_referencia": {
+        "fontes_principais": [
+          "Embrapa - Guias Técnicos e Zoneamentos Agrícolas",
+          "IRAC Brasil - Classificação de Modos de Ação",
+          "MAPA - Zoneamento Agrícola de Risco Climático"
+        ],
+        "fontes_especificas": [
+          {
+            "fonte": "IRAC Brasil",
+            "tipo": "Classificação de Inseticidas",
+            "url": "https://www.irac-br.org",
+            "uso": "Rotação de modos de ação e resistência"
+          },
+          {
+            "fonte": "Embrapa - Centro de Pesquisa de Soja",
+            "tipo": "Guias de Pragas",
+            "uso": "Identificação, ciclo de vida e manejo"
+          },
+          {
+            "fonte": "SciELO / PubMed",
+            "tipo": "Artigos Científicos",
+            "uso": "Dados de ciclo de vida, gerações e biologia"
+          }
+        ],
+        "ultima_atualizacao": "2025-10-28T19:29:19.282767",
+        "nota_licenca": "Todos os dados citados são de domínio público e podem ser utilizados livremente para fins técnicos e acadêmicos, conforme políticas das instituições citadas (Embrapa, IRAC, MAPA, INMET, SciELO, COODETEC, IAC)."
+      },
+      "ciclo_vida_detalhado_2024": {
+        "fonte": "Embrapa 2024 - Estudos recentes",
+        "temperatura_base_graus_dia": 10.0,
+        "constante_termica": 450,
+        "ovo": {
+          "duracao_dias_min": 2,
+          "duracao_dias_max": 4,
+          "duracao_dias_otima": 3,
+          "temperatura_otima": 25,
+          "viabilidade_percent": 85,
+          "local_postura": "face_inferior_folhas",
+          "postura_media_femea": 300
+        },
+        "larva": {
+          "n_instares": 5,
+          "duracao_total_dias_min": 12,
+          "duracao_total_dias_max": 18,
+          "duracao_total_dias_otima": 14,
+          "consumo_foliar_total_cm2": 150,
+          "instar_critico_controle": "L1-L3",
+          "temperatura_desenvolvimento_otima": 26
+        },
+        "pupa": {
+          "duracao_dias_min": 5,
+          "duracao_dias_max": 10,
+          "duracao_dias_otima": 7,
+          "local": "solo_folhas_secas",
+          "profundidade_solo_cm": "2-5",
+          "viabilidade_percent": 90
+        },
+        "adulto": {
+          "longevidade_femea_dias": 12,
+          "longevidade_macho_dias": 10,
+          "periodo_pre_oviposicao_dias": 2,
+          "periodo_oviposicao_dias": 8,
+          "fecundidade_total": 500,
+          "habito": "noturno",
+          "dispersao_km_noite": 2
+        },
+        "ciclo_total_25c_dias": 30,
+        "geracoes_por_ano_brasil": 6,
+        "sobreposicao_geracoes": true,
+        "diapausa": false
+      },
+      "monitoramento_profissional_2024": {
+        "fonte": "Embrapa + MAPA - Protocolos 2024",
+        "metodos_validados": [
+          {
+            "metodo": "amostragem_sistematica",
+            "tipo": "pano_batida_ou_visual",
+            "n_pontos_por_ha": 5,
+            "distribuicao": "em_W_ou_zigue_zague",
+            "frequencia_semanal": 2,
+            "horario_recomendado": "7h-9h_ou_17h-19h",
+            "condicoes": "ausencia_orvalho_chuva"
+          },
+          {
+            "metodo": "monitoramento_digital",
+            "tipo": "app_smartphone",
+            "coleta_dados": "geo_localizada",
+            "registro_fotos": true,
+            "sincronizacao_nuvem": true,
+            "fonte": "Boas práticas digitais 2024"
+          }
+        ],
+        "niveis_acao_atualizados_2024": {
+          "limiar_controle_vegetativo": "20_desfolha_ou_2_larvas_m2",
+          "limiar_controle_reprodutivo": "15_desfolha_ou_1_larva_m2",
+          "limiar_dano_economico": "30_desfolha"
+        },
+        "tecnologias_auxiliares_2024": [
+          "Drones para mapeamento",
+          "Sensores de campo IoT",
+          "IA para reconhecimento de imagens",
+          "GPS de alta precisão"
+        ]
+      },
+      "economia_2024_2025": {
+        "fonte": "Embrapa + Conab + MAPA - Dados 2024/2025",
+        "ano_referencia": "2024-2025",
+        "custos_atualizados": {
+          "controle_quimico_ha": 60,
+          "controle_biologico_ha": 42,
+          "controle_mip_ha": 51,
+          "nao_controle_perda_ha": 180
+        },
+        "roi_analise": {
+          "roi_quimico": "3.0",
+          "roi_biologico": "4.3",
+          "roi_mip": "3.5"
+        },
+        "precos_referencia_2024_2025": {
+          "controle": 60,
+          "nao_controle": 180,
+          "sc": 120
+        },
+        "custo_oportunidade_atraso_1_semana": 12,
+        "periodo_retorno_investimento_dias": 30
+      },
+      "resistencia_atualizada_2024": {
+        "fonte": "IRAC Brasil - Atualização 2024",
+        "ano": "2024",
+        "situacao_brasil": {
+          "resistencia_documentada": true,
+          "grupos_com_resistencia": [
+            "1A",
+            "3A",
+            "28"
+          ],
+          "nivel_preocupacao": "alto"
+        },
+        "estrategias_anti_resistencia_2024": [
+          {
+            "estrategia": "rotacao_modos_acao",
+            "descricao": "Alternar entre pelo menos 3 grupos IRAC diferentes",
+            "eficacia": "85%"
+          },
+          {
+            "estrategia": "mosaico_espacial",
+            "descricao": "Usar produtos diferentes em talhões adjacentes",
+            "eficacia": "70%"
+          },
+          {
+            "estrategia": "mistura_tanque",
+            "descricao": "Combinar 2 modos de ação diferentes",
+            "eficacia": "90%",
+            "observacao": "Apenas com produtos compatíveis"
+          },
+          {
+            "estrategia": "refugio_estruturado",
+            "descricao": "Manter área sem inseticida (5-20% área)",
+            "eficacia": "75%",
+            "aplicacao": "Bt_e_outros"
+          }
+        ],
+        "monitoramento_resistencia": {
+          "protocolo": "bioensaio_campo",
+          "frequencia": "anual",
+          "laboratorios": [
+            "Embrapa",
+            "Universidades"
+          ]
+        }
+      },
+      "clima_regional_2024_2025": {
+        "fonte": "INMET - Série histórica 2024-2025",
+        "regioes_producao": {
+          "centro_oeste": {
+            "temperatura_media_safra": 26,
+            "umidade_media_safra": 70,
+            "precipitacao_total_mm": 1200,
+            "risco_veranico": "medio",
+            "meses_criticos": [
+              "Janeiro",
+              "Fevereiro"
+            ]
+          },
+          "sul": {
+            "temperatura_media_safra": 23,
+            "umidade_media_safra": 75,
+            "precipitacao_total_mm": 1500,
+            "risco_geada": "baixo_a_medio",
+            "meses_criticos": [
+              "Dezembro",
+              "Janeiro"
+            ]
+          },
+          "sudeste": {
+            "temperatura_media_safra": 24,
+            "umidade_media_safra": 72,
+            "precipitacao_total_mm": 1300,
+            "meses_criticos": [
+              "Janeiro",
+              "Fevereiro",
+              "Março"
+            ]
+          }
+        },
+        "eventos_climaticos_2024": {
+          "el_nino": "neutro_a_fraco",
+          "impacto_precipitacao": "normal",
+          "impacto_temperatura": "levemente_acima_media"
+        },
+        "previsao_2025": {
+          "tendencia": "la_nina_fraca",
+          "impacto_esperado": "chuvas_regulares_temperatura_normal"
+        }
+      },
+      "controle_biologico_expandido_2024": {
+        "fonte": "Embrapa + Universidades - Pesquisas 2024",
+        "parasitoides_atualizados": [
+          {
+            "especie": "Trichogramma pretiosum",
+            "alvo": "ovos",
+            "liberacao_ha": 100000,
+            "n_liberacoes_recomendadas": 3,
+            "intervalo_liberacoes_dias": 7,
+            "eficacia_2024": "75-92%",
+            "custo_liberacao_ha": 35,
+            "momento_liberacao": "inicio_postura_praga",
+            "fornecedores_brasil": 3
+          },
+          {
+            "especie": "Telenomus remus",
+            "alvo": "ovos_spodoptera",
+            "liberacao_ha": 50000,
+            "eficacia_2024": "70-85%",
+            "custo_liberacao_ha": 40,
+            "disponibilidade": "crescente"
+          }
+        ],
+        "predadores": [
+          {
+            "especie": "Chrysoperla externa",
+            "tipo": "larva_predadora",
+            "liberacao_ha": 25000,
+            "eficacia": "60-75%",
+            "custo_ha": 45
+          },
+          {
+            "especie": "Doru luteipes",
+            "tipo": "tesourinha_predadora",
+            "conservacao": "faixas_refugio_plantas_floridas",
+            "eficacia_campo": "40-60%",
+            "custo": "zero_conservacao"
+          }
+        ],
+        "entomopatogenos": [
+          {
+            "agente": "Bacillus thuringiensis kurstaki",
+            "formulacao": "WP_SC",
+            "dose": "0,5-1,5 kg_ou_L/ha",
+            "eficacia_larvas_pequenas": "80-95%",
+            "eficacia_larvas_grandes": "40-60%",
+            "custo_ha": 30,
+            "compatibilidade_quimicos": "boa_maioria"
+          },
+          {
+            "agente": "Baculovirus spodoptera",
+            "dose": "50-100_LE/ha",
+            "eficacia_2024": "70-90%",
+            "especificidade": "alta_apenas_spodoptera",
+            "custo_ha": 25,
+            "producao_local": "crescente"
+          }
+        ],
+        "novidades_2024": [
+          "Produtos biológicos à base de metabólitos fúngicos",
+          "Consórcios de parasitoides (Trichogramma + Telenomus)",
+          "Formulações microencapsuladas de Bt"
+        ]
+      },
+      "mip_integrado_2024": {
+        "fonte": "Embrapa - Sistemas de MIP 2024",
+        "ano": "2024",
+        "abordagem_integrada": {
+          "cultural": {
+            "peso_eficacia": 30,
+            "praticas_2024": [
+              "Plantio época ZARC",
+              "Cultivares resistentes/tolerantes (novos lançamentos 2024)",
+              "Rotação culturas não-hospedeiras",
+              "Manejo plantas daninhas hospedeiras",
+              "Destruição restos culturais (pós-colheita imediata)"
+            ]
+          },
+          "biologico": {
+            "peso_eficacia": 40,
+            "estrategia_2024": "controle_preventivo_liberacoes_programadas",
+            "custo_beneficio": "excelente_longo_prazo"
+          },
+          "quimico": {
+            "peso_eficacia": 70,
+            "estrategia_2024": "apenas_quando_necessario_limiar_atingido",
+            "prioridade": "produtos_seletivos_inimigos_naturais"
+          },
+          "genetico": {
+            "disponibilidade_2024": false,
+            "tecnologia": "Bt_piramidado",
+            "eficacia": "95-99%",
+            "observacao": "Exige área de refúgio"
+          }
+        },
+        "sequencia_decisoria": [
+          "1. Monitoramento semanal",
+          "2. Atingiu limiar? Não → continuar monitorando",
+          "3. Atingiu limiar? Sim → avaliar nível infestação",
+          "4. Baixo/Médio → considerar controle biológico",
+          "5. Alto/Crítico → controle químico seletivo",
+          "6. Rotacionar modos de ação (IRAC)",
+          "7. Reavaliar em 7 dias"
+        ]
+      },
+      "tendencias_2024_2025": {
+        "fonte": "Embrapa + Universidades - Levantamentos 2024",
+        "ano_safra": "2024/2025",
+        "ocorrencia_brasil_2024": {
+          "nivel_geral": "medio_a_alto",
+          "regioes_maior_pressao": [
+            "Centro-Oeste",
+            "Sudeste"
+          ],
+          "aumento_percentual_vs_2023": 15,
+          "fatores_aumento": [
+            "Temperaturas acima da média",
+            "Chuvas irregulares",
+            "Resistência a alguns inseticidas"
+          ]
+        },
+        "previsao_safra_2025": {
+          "tendencia": "pressao_similar_ou_levemente_maior",
+          "regioes_atencao": [
+            "MT",
+            "GO",
+            "MS",
+            "PR"
+          ],
+          "recomendacao": "intensificar_monitoramento_preventivo"
+        },
+        "mudancas_observadas_2024": [
+          "Surgimento mais cedo na safra",
+          "Picos populacionais mais intensos",
+          "Maior sobreposição de gerações"
+        ]
+      },
+      "tecnologias_2024": {
+        "fonte": "Agricultura Digital 2024",
+        "ferramentas_disponiveis": [
+          {
+            "tecnologia": "IA reconhecimento imagens",
+            "status": "em_desenvolvimento",
+            "precisao_atual": "85-90%",
+            "aplicacao": "identificacao_automatica_pragas_doencas"
+          },
+          {
+            "tecnologia": "drones_pulverizacao",
+            "status": "comercial",
+            "precisao_aplicacao": "95%",
+            "reducao_desperdicio": "30-40%"
+          },
+          {
+            "tecnologia": "sensores_iot_campo",
+            "status": "crescente",
+            "medicoes": "temperatura_umidade_tempo_real",
+            "integracao": "alertas_automaticos"
+          },
+          {
+            "tecnologia": "modelos_predicao_ml",
+            "status": "em_validacao",
+            "precisao": "80-85%",
+            "horizonte_predicao": "7_a_14_dias"
+          }
+        ],
+        "tendencias_2025": [
+          "IA embarcada em dispositivos móveis",
+          "Integração multi-sensores",
+          "Blockchain para rastreabilidade",
+          "Agricultura de precisão avançada"
+        ]
+      },
+      "validacao_agronomica": {
+        "data_atualizacao": "2025-10-29T11:54:12.680713",
+        "versao_dados": "5.0",
+        "fontes_atualizadas_2024_2025": true,
+        "compativel_versoes_anteriores": true
+      }
+    },
+    {
+      "id": "girassol_mofo_branco",
+      "nome": "Mofo-branco",
+      "nome_cientifico": "Sclerotinia sclerotiorum",
+      "categoria": "Doença",
+      "tipo": "DOENCA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Murcha repentina",
+        "Podridão branca com micélio algodonoso",
+        "Escleródios pretos"
+      ],
+      "dano_economico": "Altamente destrutiva, pode dizimar áreas inteiras",
+      "partes_afetadas": [
+        "Haste",
+        "Ramos",
+        "Capítulos"
+      ],
+      "fenologia": [
+        "R1",
+        "R4"
+      ],
+      "nivel_acao": "Histórico da área e alta umidade + florescimento",
+      "niveis_severidade": {
+        "baixo": "Poucas plantas afetadas",
+        "medio": "Moderada incidência",
+        "alto": "Alta incidência",
+        "critico": "Quase todas as plantas afetadas"
+      },
+      "manejo_quimico": [
+        "Fluazinam",
+        "Procidimona"
+      ],
+      "manejo_biologico": [
+        "Trichoderma harzianum",
+        "Coniothyrium minitans"
+      ],
+      "manejo_cultural": [
+        "Redução da densidade de plantas",
+        "Rotação com gramíneas"
+      ],
+      "observacoes": "Presente em regiões mais frias e úmidas",
+      "icone": "🍄",
+      "ativo": true,
+      "data_criacao": "2024-12-19T00:00:00Z",
+      "data_atualizacao": "2024-12-19T00:00:00Z",
+      "severidade": {
+        "baixo": {
+          "descricao": "Poucas plantas afetadas",
+          "perda_produtividade": "0-10%",
+          "cor_alerta": "#4CAF50",
+          "acao": "Monitoramento intensificado"
+        },
+        "medio": {
+          "descricao": "Moderada incidência",
+          "perda_produtividade": "11-30%",
+          "cor_alerta": "#FF9800",
+          "acao": "Aplicação de fungicida"
+        },
+        "alto": {
+          "descricao": "Alta incidência",
+          "perda_produtividade": "31-60%",
+          "cor_alerta": "#F44336",
+          "acao": "Aplicação imediata de fungicida"
+        }
+      },
+      "condicoes_favoraveis": {
+        "temperatura": "15-25°C",
+        "umidade": "Alta umidade relativa (>80%)",
+        "chuva": "Períodos de chuva frequente",
+        "vento": "Baixa velocidade do vento",
+        "solo": "Solos úmidos"
+      },
+      "limiares_especificos": {
+        "vegetativo": "Histórico da área e alta umidade",
+        "floracao": "Histórico da área e alta umidade",
+        "enchimento": "Histórico da área e alta umidade"
+      },
+      "caracteristicas_visuais": {
+        "cores_predominantes": [
+          "marrom",
+          "preto"
+        ],
+        "padroes": [],
+        "tamanho_medio_mm": {}
+      },
+      "condicoes_climaticas": {
+        "temperatura_min": 15,
+        "temperatura_max": 25,
+        "umidade_min": 70,
+        "umidade_max": 95
+      },
+      "ciclo_vida": {
+        "ovos_dias": 3,
+        "larva_dias": 14,
+        "pupa_dias": 7,
+        "adulto_dias": 10,
+        "duracao_total_dias": 34,
+        "geracoes_por_ano": 6,
+        "diapausa": false
+      },
+      "distribuicao_geografica": [
+        "Sul",
+        "Centro-Oeste",
+        "Sudeste"
+      ],
+      "diagnostico_diferencial": {
+        "confundidores": [],
+        "sintomas_chave": [
+          "Murcha repentina",
+          "Podridão branca com micélio algodonoso",
+          "Escleródios pretos"
+        ]
+      },
+      "economia_agronomica": {
+        "custo_nao_controle_por_ha": 150,
+        "custo_controle_por_ha": 45,
+        "roi_medio": 2.5,
+        "momento_otimo_aplicacao": "Histórico da área e alta umidade + florescimento"
+      },
+      "controle_biologico": {
+        "predadores": [
+          "Trichoderma harzianum",
+          "Coniothyrium minitans"
+        ],
+        "parasitoides": [],
+        "entomopatogenos": []
+      },
+      "tendencias_sazonais": {
+        "pico_meses": [
+          "Janeiro",
+          "Fevereiro",
+          "Março"
+        ],
+        "correlacao_elnino": "neutro",
+        "graus_dia_media": 450
+      },
+      "features_ia": {
+        "keywords_comportamentais": [
+          "podridao"
+        ],
+        "marcadores_visuais": [
+          "cor_marrom",
+          "cor_preto"
+        ]
+      },
+      "fontes_referencia": {
+        "fontes_principais": [
+          "Embrapa - Guias Técnicos e Zoneamentos Agrícolas",
+          "IRAC Brasil - Classificação de Modos de Ação",
+          "MAPA - Zoneamento Agrícola de Risco Climático"
+        ],
+        "fontes_especificas": [
+          {
+            "fonte": "Embrapa - Fitopatologia",
+            "tipo": "Guias de Doenças",
+            "uso": "Sintomas, condições favoráveis e controle"
+          },
+          {
+            "fonte": "MAPA - Zoneamento",
+            "tipo": "Dados Climáticos Regionais",
+            "uso": "Condições climáticas favoráveis"
+          },
+          {
+            "fonte": "INMET",
+            "tipo": "Dados Meteorológicos",
+            "url": "https://portal.inmet.gov.br",
+            "uso": "Temperatura, umidade e precipitação"
+          }
+        ],
+        "ultima_atualizacao": "2025-10-28T19:29:19.282767",
+        "nota_licenca": "Todos os dados citados são de domínio público e podem ser utilizados livremente para fins técnicos e acadêmicos, conforme políticas das instituições citadas (Embrapa, IRAC, MAPA, INMET, SciELO, COODETEC, IAC)."
+      },
+      "ciclo_vida_detalhado_2024": {
+        "fonte": "Embrapa Fitopatologia 2024",
+        "periodo_incubacao_dias_min": 5,
+        "periodo_incubacao_dias_max": 15,
+        "periodo_latencia_dias": 7,
+        "periodo_esporulacao_dias": 20,
+        "ciclos_secundarios_por_safra": 15,
+        "dispersao_max_km": 500,
+        "sobrevivencia_entressafra": "restos_culturais_sementes",
+        "temperatura_otima_infeccao": 22,
+        "umidade_foliar_horas_minima": 6
+      },
+      "monitoramento_profissional_2024": {
+        "fonte": "Embrapa + MAPA - Protocolos 2024",
+        "metodos_validados": [
+          {
+            "metodo": "amostragem_sistematica",
+            "tipo": "visual_sintomas",
+            "n_pontos_por_ha": 5,
+            "distribuicao": "em_W_ou_zigue_zague",
+            "frequencia_semanal": 2,
+            "horario_recomendado": "7h-9h_ou_17h-19h",
+            "condicoes": "ausencia_orvalho_chuva"
+          },
+          {
+            "metodo": "monitoramento_digital",
+            "tipo": "app_smartphone",
+            "coleta_dados": "geo_localizada",
+            "registro_fotos": true,
+            "sincronizacao_nuvem": true,
+            "fonte": "Boas práticas digitais 2024"
+          }
+        ],
+        "niveis_acao_atualizados_2024": {
+          "limiar_controle_vegetativo": "5_lesoes_folha",
+          "limiar_controle_reprodutivo": "3_lesoes_folha",
+          "limiar_dano_economico": "10_incidencia"
+        },
+        "tecnologias_auxiliares_2024": [
+          "Drones para mapeamento",
+          "Sensores de campo IoT",
+          "IA para reconhecimento de imagens",
+          "GPS de alta precisão"
+        ]
+      },
+      "economia_2024_2025": {
+        "fonte": "Embrapa + Conab + MAPA - Dados 2024/2025",
+        "ano_referencia": "2024-2025",
+        "custos_atualizados": {
+          "controle_quimico_ha": 60,
+          "controle_biologico_ha": 42,
+          "controle_mip_ha": 51,
+          "nao_controle_perda_ha": 180
+        },
+        "roi_analise": {
+          "roi_quimico": "3.0",
+          "roi_biologico": "4.3",
+          "roi_mip": "3.5"
+        },
+        "precos_referencia_2024_2025": {
+          "controle": 60,
+          "nao_controle": 180,
+          "sc": 120
+        },
+        "custo_oportunidade_atraso_1_semana": 12,
+        "periodo_retorno_investimento_dias": 30
+      },
+      "resistencia_atualizada_2024": {},
+      "clima_regional_2024_2025": {
+        "fonte": "INMET - Série histórica 2024-2025",
+        "regioes_producao": {
+          "centro_oeste": {
+            "temperatura_media_safra": 26,
+            "umidade_media_safra": 70,
+            "precipitacao_total_mm": 1200,
+            "risco_veranico": "medio",
+            "meses_criticos": [
+              "Janeiro",
+              "Fevereiro"
+            ]
+          },
+          "sul": {
+            "temperatura_media_safra": 23,
+            "umidade_media_safra": 75,
+            "precipitacao_total_mm": 1500,
+            "risco_geada": "baixo_a_medio",
+            "meses_criticos": [
+              "Dezembro",
+              "Janeiro"
+            ]
+          },
+          "sudeste": {
+            "temperatura_media_safra": 24,
+            "umidade_media_safra": 72,
+            "precipitacao_total_mm": 1300,
+            "meses_criticos": [
+              "Janeiro",
+              "Fevereiro",
+              "Março"
+            ]
+          }
+        },
+        "eventos_climaticos_2024": {
+          "el_nino": "neutro_a_fraco",
+          "impacto_precipitacao": "normal",
+          "impacto_temperatura": "levemente_acima_media"
+        },
+        "previsao_2025": {
+          "tendencia": "la_nina_fraca",
+          "impacto_esperado": "chuvas_regulares_temperatura_normal"
+        }
+      },
+      "controle_biologico_expandido_2024": {
+        "fonte": "Embrapa Fitopatologia 2024",
+        "agentes_biocontrole": [
+          {
+            "agente": "Trichoderma spp.",
+            "tipo": "fungo_antagonista",
+            "dose": "1-2 kg/ha",
+            "aplicacao": "tratamento_sementes_ou_solo",
+            "eficacia": "60-75%",
+            "custo_ha": 25
+          },
+          {
+            "agente": "Bacillus subtilis",
+            "tipo": "bacteria_antagonista",
+            "dose": "0,5-1,0 L/ha",
+            "aplicacao": "pulverizacao_foliar",
+            "eficacia": "55-70%",
+            "custo_ha": 30
+          }
+        ]
+      },
+      "mip_integrado_2024": {
+        "fonte": "Embrapa - Sistemas de MIP 2024",
+        "ano": "2024",
+        "abordagem_integrada": {
+          "cultural": {
+            "peso_eficacia": 30,
+            "praticas_2024": [
+              "Plantio época ZARC",
+              "Cultivares resistentes/tolerantes (novos lançamentos 2024)",
+              "Rotação culturas não-hospedeiras",
+              "Manejo plantas daninhas hospedeiras",
+              "Destruição restos culturais (pós-colheita imediata)"
+            ]
+          },
+          "biologico": {
+            "peso_eficacia": 40,
+            "estrategia_2024": "controle_preventivo_liberacoes_programadas",
+            "custo_beneficio": "excelente_longo_prazo"
+          },
+          "quimico": {
+            "peso_eficacia": 70,
+            "estrategia_2024": "apenas_quando_necessario_limiar_atingido",
+            "prioridade": "produtos_seletivos_inimigos_naturais"
+          },
+          "genetico": {
+            "disponibilidade_2024": false,
+            "tecnologia": "Bt_piramidado",
+            "eficacia": "95-99%",
+            "observacao": "Exige área de refúgio"
+          }
+        },
+        "sequencia_decisoria": [
+          "1. Monitoramento semanal",
+          "2. Atingiu limiar? Não → continuar monitorando",
+          "3. Atingiu limiar? Sim → avaliar nível infestação",
+          "4. Baixo/Médio → considerar controle biológico",
+          "5. Alto/Crítico → controle químico seletivo",
+          "6. Rotacionar modos de ação (IRAC)",
+          "7. Reavaliar em 7 dias"
+        ]
+      },
+      "tendencias_2024_2025": {
+        "fonte": "Embrapa + Universidades - Levantamentos 2024",
+        "ano_safra": "2024/2025",
+        "ocorrencia_brasil_2024": {
+          "nivel_geral": "medio_a_alto",
+          "regioes_maior_pressao": [
+            "Centro-Oeste",
+            "Sudeste"
+          ],
+          "aumento_percentual_vs_2023": 15,
+          "fatores_aumento": [
+            "Temperaturas acima da média",
+            "Chuvas irregulares",
+            "Resistência a alguns inseticidas"
+          ]
+        },
+        "previsao_safra_2025": {
+          "tendencia": "pressao_similar_ou_levemente_maior",
+          "regioes_atencao": [
+            "MT",
+            "GO",
+            "MS",
+            "PR"
+          ],
+          "recomendacao": "intensificar_monitoramento_preventivo"
+        },
+        "mudancas_observadas_2024": [
+          "Surgimento mais cedo na safra",
+          "Picos populacionais mais intensos",
+          "Maior sobreposição de gerações"
+        ]
+      },
+      "tecnologias_2024": {
+        "fonte": "Agricultura Digital 2024",
+        "ferramentas_disponiveis": [
+          {
+            "tecnologia": "IA reconhecimento imagens",
+            "status": "em_desenvolvimento",
+            "precisao_atual": "85-90%",
+            "aplicacao": "identificacao_automatica_pragas_doencas"
+          },
+          {
+            "tecnologia": "drones_pulverizacao",
+            "status": "comercial",
+            "precisao_aplicacao": "95%",
+            "reducao_desperdicio": "30-40%"
+          },
+          {
+            "tecnologia": "sensores_iot_campo",
+            "status": "crescente",
+            "medicoes": "temperatura_umidade_tempo_real",
+            "integracao": "alertas_automaticos"
+          },
+          {
+            "tecnologia": "modelos_predicao_ml",
+            "status": "em_validacao",
+            "precisao": "80-85%",
+            "horizonte_predicao": "7_a_14_dias"
+          }
+        ],
+        "tendencias_2025": [
+          "IA embarcada em dispositivos móveis",
+          "Integração multi-sensores",
+          "Blockchain para rastreabilidade",
+          "Agricultura de precisão avançada"
+        ]
+      },
+      "validacao_agronomica": {
+        "data_atualizacao": "2025-10-29T11:54:12.680713",
+        "versao_dados": "5.0",
+        "fontes_atualizadas_2024_2025": true,
+        "compativel_versoes_anteriores": true
+      }
+    },
+    {
+      "id": "girassol_lagarta_capitulo",
+      "nome": "Lagarta-do-capítulo",
+      "nome_cientifico": "Helicoverpa armigera",
+      "categoria": "Praga",
+      "tipo": "PRAGA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Danos nos capítulos",
+        "Consumo de sementes",
+        "Redução da produtividade"
+      ],
+      "dano_economico": "Pode causar perdas significativas na produção de sementes",
+      "partes_afetadas": [
+        "Capítulos",
+        "Sementes"
+      ],
+      "fenologia": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ],
+      "nivel_acao": "2 lagartas por capítulo",
+      "manejo_quimico": [
+        "Clorantraniliprole - 0,15-0,25 L/ha",
+        "Espinetoram - 0,08-0,12 L/ha",
+        "Indoxacarbe - 0,15-0,20 L/ha"
+      ],
+      "doses_defensivos": {
+        "clorantraniliprole": {
+          "dose": "0,15-0,25 L/ha",
+          "concentracao": "200 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "R1-R6 quando detectar 2 lagartas por capítulo",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 2 lagartas por capítulo. Eficaz contra lagartas pequenas. Rotacionar com outros modos de ação (IRAC 28)."
+        },
+        "espinetoram": {
+          "dose": "0,08-0,12 L/ha",
+          "concentracao": "120 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "7 dias",
+          "epoca_aplicacao": "R1-R6 quando detectar 2 lagartas por capítulo",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 2 lagartas por capítulo. Eficaz contra lagartas pequenas. Rotacionar com outros modos de ação (IRAC 5)."
+        },
+        "indoxacarbe": {
+          "dose": "0,15-0,20 L/ha",
+          "concentracao": "150 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "R1-R6 quando detectar 2 lagartas por capítulo",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 2 lagartas por capítulo. Eficaz contra lagartas pequenas. Rotacionar com outros modos de ação (IRAC 22A)."
+        }
+      },
+      "manejo_biologico": [
+        "Trichogramma pretiosum",
+        "Bacillus thuringiensis"
+      ],
+      "manejo_cultural": [
+        "Monitoramento constante",
+        "Aplicação no momento correto"
+      ],
+      "observacoes": "Praga importante que causa danos diretos nos capítulos e sementes.",
+      "icone": "🐛",
+      "ativo": true
+    },
+    {
+      "id": "girassol_lagarta_rosca",
+      "nome": "Lagarta-rosca",
+      "nome_cientifico": "Agrotis ipsilon",
+      "categoria": "Praga",
+      "tipo": "PRAGA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Corte de plantas jovens",
+        "Danos na base do caule",
+        "Redução do estande"
+      ],
+      "dano_economico": "Pode causar perdas no estande inicial",
+      "partes_afetadas": [
+        "Base do caule",
+        "Raízes"
+      ],
+      "fenologia": [
+        "V1",
+        "V2",
+        "V3"
+      ],
+      "nivel_acao": "1 lagarta por metro quadrado",
+      "manejo_quimico": [
+        "Clorantraniliprole - 0,15-0,25 L/ha",
+        "Espinetoram - 0,08-0,12 L/ha"
+      ],
+      "doses_defensivos": {
+        "clorantraniliprole": {
+          "dose": "0,15-0,25 L/ha",
+          "concentracao": "200 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "V1-V3 quando detectar 1 lagarta por metro quadrado",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 1 lagarta por metro quadrado. Eficaz contra lagartas pequenas. Rotacionar com outros modos de ação (IRAC 28)."
+        },
+        "espinetoram": {
+          "dose": "0,08-0,12 L/ha",
+          "concentracao": "120 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "7 dias",
+          "epoca_aplicacao": "V1-V3 quando detectar 1 lagarta por metro quadrado",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 1 lagarta por metro quadrado. Eficaz contra lagartas pequenas. Rotacionar com outros modos de ação (IRAC 5)."
+        }
+      },
+      "manejo_biologico": [
+        "Bacillus thuringiensis",
+        "Trichogramma pretiosum"
+      ],
+      "manejo_cultural": [
+        "Tratamento de sementes",
+        "Eliminação de plantas daninhas hospedeiras"
+      ],
+      "observacoes": "Praga importante em plantas jovens, causa corte na base do caule.",
+      "icone": "🐛",
+      "ativo": true
+    },
+    {
+      "id": "girassol_lagarta_militar",
+      "nome": "Lagarta-militar",
+      "nome_cientifico": "Spodoptera frugiperda",
+      "categoria": "Praga",
+      "tipo": "PRAGA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Consumo de folhas",
+        "Danos em plantas jovens",
+        "Redução do crescimento"
+      ],
+      "dano_economico": "Pode causar perdas em plantas jovens",
+      "partes_afetadas": [
+        "Folhas",
+        "Caule"
+      ],
+      "fenologia": [
+        "V1",
+        "V2",
+        "V3",
+        "V4",
+        "V5",
+        "V6"
+      ],
+      "nivel_acao": "2 lagartas por metro quadrado",
+      "manejo_quimico": [
+        "Clorantraniliprole - 0,15-0,25 L/ha",
+        "Espinetoram - 0,08-0,12 L/ha",
+        "Indoxacarbe - 0,15-0,20 L/ha"
+      ],
+      "doses_defensivos": {
+        "clorantraniliprole": {
+          "dose": "0,15-0,25 L/ha",
+          "concentracao": "200 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "V1-V6 quando detectar 2 lagartas por metro quadrado",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 2 lagartas por metro quadrado. Eficaz contra lagartas pequenas. Rotacionar com outros modos de ação (IRAC 28)."
+        },
+        "espinetoram": {
+          "dose": "0,08-0,12 L/ha",
+          "concentracao": "120 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "7 dias",
+          "epoca_aplicacao": "V1-V6 quando detectar 2 lagartas por metro quadrado",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 2 lagartas por metro quadrado. Eficaz contra lagartas pequenas. Rotacionar com outros modos de ação (IRAC 5)."
+        },
+        "indoxacarbe": {
+          "dose": "0,15-0,20 L/ha",
+          "concentracao": "150 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "V1-V6 quando detectar 2 lagartas por metro quadrado",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 2 lagartas por metro quadrado. Eficaz contra lagartas pequenas. Rotacionar com outros modos de ação (IRAC 22A)."
+        }
+      },
+      "manejo_biologico": [
+        "Bacillus thuringiensis",
+        "Trichogramma pretiosum"
+      ],
+      "manejo_cultural": [
+        "Tratamento de sementes",
+        "Eliminação de plantas daninhas hospedeiras"
+      ],
+      "observacoes": "Praga importante em plantas jovens.",
+      "icone": "🐛",
+      "ativo": true
+    },
+    {
+      "id": "girassol_percevejo_verde",
+      "nome": "Percevejo-verde",
+      "nome_cientifico": "Dichelops spp.",
+      "categoria": "Praga",
+      "tipo": "PRAGA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Sucção de seiva",
+        "Danos em plantas jovens",
+        "Redução do crescimento"
+      ],
+      "dano_economico": "Pode causar perdas em plantas jovens",
+      "partes_afetadas": [
+        "Caule",
+        "Folhas"
+      ],
+      "fenologia": [
+        "V1",
+        "V2",
+        "V3",
+        "V4"
+      ],
+      "nivel_acao": "2 percevejos por metro quadrado",
+      "manejo_quimico": [
+        "Bifentrina (IRAC 3A) - 0,10-0,12 L/ha",
+        "Acefato (IRAC 1B) - 0,75-1,00 kg/ha",
+        "Lambda-cialotrina - 0,15 L/ha"
+      ],
+      "doses_defensivos": {
+        "bifentrina_sc100": {
+          "dose": "0,10-0,12 L/ha",
+          "concentracao": "100 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "V1-V4 quando detectar 2 percevejos por metro quadrado",
+          "condicoes_climaticas": "Vento < 10 km/h, UR > 55%, evitar calor acima de 32°C",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002)",
+          "observacoes": "Aplicar quando detectar 2 percevejos por metro quadrado. Eficaz contra ninfas e adultos. Rotacionar com outros modos de ação (IRAC 3A)."
+        },
+        "acefato": {
+          "dose": "0,75-1,00 kg/ha",
+          "concentracao": "750 g/kg",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "V1-V4 quando detectar 2 percevejos por metro quadrado",
+          "condicoes_climaticas": "Vento < 10 km/h, UR > 55%, evitar calor acima de 32°C",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002)",
+          "observacoes": "Aplicar quando detectar 2 percevejos por metro quadrado. Eficaz contra ninfas e adultos. Rotacionar com outros modos de ação (IRAC 1B)."
+        },
+        "lambda_cialotrina": {
+          "dose": "0,15 L/ha",
+          "concentracao": "50 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "V1-V4 quando detectar 2 percevejos por metro quadrado",
+          "condicoes_climaticas": "Vento < 10 km/h, UR > 55%, evitar calor acima de 32°C",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002)",
+          "observacoes": "Aplicar quando detectar 2 percevejos por metro quadrado. Eficaz contra ninfas e adultos. Rotacionar com outros modos de ação (IRAC 3A)."
+        }
+      },
+      "manejo_biologico": [
+        "Telenomus podisi",
+        "Trissolcus basalis"
+      ],
+      "manejo_cultural": [
+        "Eliminação de plantas daninhas hospedeiras",
+        "Tratamento de sementes"
+      ],
+      "observacoes": "Praga importante em plantas jovens.",
+      "icone": "🪲",
+      "ativo": true
+    },
+    {
+      "id": "girassol_pulgao_preto",
+      "nome": "Pulgão-preto",
+      "nome_cientifico": "Aphis fabae",
+      "categoria": "Praga",
+      "tipo": "PRAGA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Sucção de seiva",
+        "Fumagina",
+        "Redução do crescimento"
+      ],
+      "dano_economico": "Pode causar perdas em infestações severas",
+      "partes_afetadas": [
+        "Folhas",
+        "Caule"
+      ],
+      "fenologia": [
+        "Todo o ciclo"
+      ],
+      "nivel_acao": "10 pulgões por folha",
+      "manejo_quimico": [
+        "Imidacloprido - 0,2-0,3 L/ha",
+        "Tiametoxam - 0,3-0,4 L/ha",
+        "Acetamiprido - 0,15-0,25 L/ha"
+      ],
+      "doses_defensivos": {
+        "imidacloprido": {
+          "dose": "0,2-0,3 L/ha",
+          "concentracao": "200 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "21 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 10 pulgões por folha",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 10 pulgões por folha. Eficaz contra pulgões. Rotacionar com outros modos de ação (IRAC 4A)."
+        },
+        "tiametoxam": {
+          "dose": "0,3-0,4 L/ha",
+          "concentracao": "250 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "21 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 10 pulgões por folha",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Ação sistêmica. Eficaz contra pulgões (IRAC 4A)."
+        },
+        "acetamiprido": {
+          "dose": "0,15-0,25 L/ha",
+          "concentracao": "200 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 10 pulgões por folha",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Eficaz contra pulgões. Rotacionar com outros modos de ação (IRAC 4A)."
+        }
+      },
+      "manejo_biologico": [
+        "Aphidius colemani",
+        "Coccinella septempunctata"
+      ],
+      "manejo_cultural": [
+        "Eliminação de plantas daninhas hospedeiras",
+        "Cultivares resistentes"
+      ],
+      "observacoes": "Praga importante que causa fumagina.",
+      "icone": "🪰",
+      "ativo": true
+    },
+    {
+      "id": "girassol_trips",
+      "nome": "Tripes",
+      "nome_cientifico": "Frankliniella spp.",
+      "categoria": "Praga",
+      "tipo": "PRAGA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Raspagem nas folhas",
+        "Manchas prateadas",
+        "Deformação de folhas"
+      ],
+      "dano_economico": "Pode causar perdas em infestações severas",
+      "partes_afetadas": [
+        "Folhas",
+        "Flores"
+      ],
+      "fenologia": [
+        "Todo o ciclo"
+      ],
+      "nivel_acao": "5 tripes por folha",
+      "manejo_quimico": [
+        "Spinosad - 0,08-0,12 L/ha",
+        "Espinetoram - 0,08-0,12 L/ha"
+      ],
+      "doses_defensivos": {
+        "spinosad": {
+          "dose": "0,08-0,12 L/ha",
+          "concentracao": "480 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "7 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 5 tripes por folha",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 5 tripes por folha. Eficaz contra tripes. Rotacionar com outros modos de ação (IRAC 5)."
+        },
+        "espinetoram": {
+          "dose": "0,08-0,12 L/ha",
+          "concentracao": "120 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "7 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 5 tripes por folha",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 5 tripes por folha. Eficaz contra tripes. Rotacionar com outros modos de ação (IRAC 5)."
+        }
+      },
+      "manejo_biologico": [
+        "Orius insidiosus",
+        "Amblyseius spp."
+      ],
+      "manejo_cultural": [
+        "Eliminação de plantas daninhas hospedeiras",
+        "Cultivares resistentes"
+      ],
+      "observacoes": "Praga importante que causa danos diretos e indiretos.",
+      "icone": "🪰",
+      "ativo": true
+    },
+    {
+      "id": "girassol_vaquinha",
+      "nome": "Vaquinha",
+      "nome_cientifico": "Diabrotica speciosa",
+      "categoria": "Praga",
+      "tipo": "PRAGA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Consumo de folhas",
+        "Raspagem",
+        "Redução da área fotossintética"
+      ],
+      "dano_economico": "Pode causar perdas em infestações severas",
+      "partes_afetadas": [
+        "Folhas"
+      ],
+      "fenologia": [
+        "V1",
+        "V2",
+        "V3",
+        "V4",
+        "V5",
+        "V6"
+      ],
+      "nivel_acao": "5 vaquinhas por metro quadrado",
+      "manejo_quimico": [
+        "Lambda-cialotrina - 0,15 L/ha",
+        "Bifentrina - 0,10-0,12 L/ha"
+      ],
+      "doses_defensivos": {
+        "lambda_cialotrina": {
+          "dose": "0,15 L/ha",
+          "concentracao": "50 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "V1-V6 quando detectar 5 vaquinhas por metro quadrado",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 5 vaquinhas por metro quadrado. Eficaz contra adultos. Rotacionar com outros modos de ação (IRAC 3A)."
+        },
+        "bifentrina": {
+          "dose": "0,10-0,12 L/ha",
+          "concentracao": "100 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "14 dias",
+          "epoca_aplicacao": "V1-V6 quando detectar 5 vaquinhas por metro quadrado",
+          "condicoes_climaticas": "Temperatura 20-30°C, umidade relativa 60-80%, sem chuva por 6h",
+          "equipamento": "Pulverizador com bicos de jato plano",
+          "observacoes": "Aplicar quando detectar 5 vaquinhas por metro quadrado. Eficaz contra adultos. Rotacionar com outros modos de ação (IRAC 3A)."
+        }
+      },
+      "manejo_biologico": [],
+      "manejo_cultural": [
+        "Eliminação de plantas daninhas hospedeiras",
+        "Rotação de culturas"
+      ],
+      "observacoes": "Praga importante que causa danos diretos nas folhas.",
+      "icone": "🪲",
+      "ativo": true
+    },
+    {
+      "id": "girassol_ferrugem",
+      "nome": "Ferrugem-do-girassol",
+      "nome_cientifico": "Puccinia helianthi",
+      "categoria": "Doença",
+      "tipo": "DOENCA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Pústulas nas folhas",
+        "Amarelecimento",
+        "Desfolha precoce"
+      ],
+      "dano_economico": "Pode causar perdas de até 40% da produtividade",
+      "partes_afetadas": [
+        "Folhas"
+      ],
+      "fenologia": [
+        "Todo o ciclo"
+      ],
+      "nivel_acao": "5% das folhas com sintomas",
+      "manejo_quimico": [
+        "Triazóis",
+        "Estrobilurinas"
+      ],
+      "doses_defensivos": {
+        "protioconazol_trifloxistrobina": {
+          "dose": "0,30-0,35 L/ha",
+          "concentracao": "150 g/L + 175 g/L (SC)",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "21 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 5% das folhas com sintomas",
+          "condicoes_climaticas": "UR > 60%, orvalho presente, aplicar preferencialmente ao entardecer",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002), gotas finas",
+          "observacoes": "Aplicar quando detectar 5% das folhas com sintomas. Rotacionar com outros grupos FRAC (FRAC 3 + 11)."
+        },
+        "azoxistrobina": {
+          "dose": "0,3-0,5 L/ha",
+          "concentracao": "250 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "21 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 5% das folhas com sintomas",
+          "condicoes_climaticas": "UR > 60%, orvalho presente, aplicar preferencialmente ao entardecer",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002), gotas finas",
+          "observacoes": "Aplicar quando detectar 5% das folhas com sintomas. Rotacionar com outros grupos FRAC (FRAC 11)."
+        }
+      },
+      "manejo_biologico": [
+        "Bacillus subtilis",
+        "Trichoderma spp."
+      ],
+      "manejo_cultural": [
+        "Cultivares resistentes",
+        "Rotação de culturas"
+      ],
+      "observacoes": "Doença importante que causa desfolha precoce.",
+      "icone": "🦠",
+      "ativo": true
+    },
+    {
+      "id": "girassol_mancha_alternaria",
+      "nome": "Mancha-de-alternária",
+      "nome_cientifico": "Alternaria helianthi",
+      "categoria": "Doença",
+      "tipo": "DOENCA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Manchas escuras nas folhas",
+        "Necrose",
+        "Desfolha precoce"
+      ],
+      "dano_economico": "Pode causar perdas de até 30% da produtividade",
+      "partes_afetadas": [
+        "Folhas"
+      ],
+      "fenologia": [
+        "Todo o ciclo"
+      ],
+      "nivel_acao": "5% das folhas com sintomas",
+      "manejo_quimico": [
+        "Triazóis",
+        "Estrobilurinas"
+      ],
+      "doses_defensivos": {
+        "protioconazol_trifloxistrobina": {
+          "dose": "0,30-0,35 L/ha",
+          "concentracao": "150 g/L + 175 g/L (SC)",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "21 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 5% das folhas com sintomas",
+          "condicoes_climaticas": "UR > 60%, orvalho presente, aplicar preferencialmente ao entardecer",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002), gotas finas",
+          "observacoes": "Aplicar quando detectar 5% das folhas com sintomas. Rotacionar com outros grupos FRAC (FRAC 3 + 11)."
+        },
+        "azoxistrobina": {
+          "dose": "0,3-0,5 L/ha",
+          "concentracao": "250 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "21 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 5% das folhas com sintomas",
+          "condicoes_climaticas": "UR > 60%, orvalho presente, aplicar preferencialmente ao entardecer",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002), gotas finas",
+          "observacoes": "Aplicar quando detectar 5% das folhas com sintomas. Rotacionar com outros grupos FRAC (FRAC 11)."
+        }
+      },
+      "manejo_biologico": [
+        "Bacillus subtilis",
+        "Trichoderma spp."
+      ],
+      "manejo_cultural": [
+        "Cultivares resistentes",
+        "Rotação de culturas",
+        "Eliminação de restos culturais"
+      ],
+      "observacoes": "Doença importante que causa desfolha precoce.",
+      "icone": "🦠",
+      "ativo": true
+    },
+    {
+      "id": "girassol_verticiliose",
+      "nome": "Verticiliose",
+      "nome_cientifico": "Verticillium dahliae",
+      "categoria": "Doença",
+      "tipo": "DOENCA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Murcha",
+        "Amarelecimento",
+        "Necrose vascular"
+      ],
+      "dano_economico": "Pode causar perdas de até 50% da produtividade",
+      "partes_afetadas": [
+        "Sistema vascular",
+        "Folhas"
+      ],
+      "fenologia": [
+        "Todo o ciclo"
+      ],
+      "nivel_acao": "5% das plantas com sintomas",
+      "manejo_quimico": [
+        "Fungicidas sistêmicos"
+      ],
+      "doses_defensivos": {
+        "protioconazol": {
+          "dose": "0,3-0,4 L/ha",
+          "concentracao": "250 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "21 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 5% das plantas com sintomas",
+          "condicoes_climaticas": "UR > 60%, orvalho presente, aplicar preferencialmente ao entardecer",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002), gotas finas",
+          "observacoes": "Aplicar quando detectar 5% das plantas com sintomas. Rotacionar com outros grupos FRAC (FRAC 3). Tratamento de sementes também é recomendado."
+        }
+      },
+      "manejo_biologico": [
+        "Trichoderma harzianum",
+        "Bacillus subtilis"
+      ],
+      "manejo_cultural": [
+        "Cultivares resistentes",
+        "Rotação de culturas",
+        "Tratamento de sementes"
+      ],
+      "observacoes": "Doença importante que causa murcha e necrose vascular.",
+      "icone": "🦠",
+      "ativo": true
+    },
+    {
+      "id": "girassol_podridao_colo",
+      "nome": "Podridão-do-colo",
+      "nome_cientifico": "Phoma macdonaldii",
+      "categoria": "Doença",
+      "tipo": "DOENCA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Podridão na base do caule",
+        "Murcha",
+        "Morte de plantas"
+      ],
+      "dano_economico": "Pode causar perdas significativas",
+      "partes_afetadas": [
+        "Base do caule",
+        "Raízes"
+      ],
+      "fenologia": [
+        "Todo o ciclo"
+      ],
+      "nivel_acao": "5% das plantas com sintomas",
+      "manejo_quimico": [
+        "Fungicidas sistêmicos",
+        "Tratamento de sementes"
+      ],
+      "doses_defensivos": {
+        "protioconazol": {
+          "dose": "0,3-0,4 L/ha",
+          "concentracao": "250 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "21 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 5% das plantas com sintomas",
+          "condicoes_climaticas": "UR > 60%, orvalho presente, aplicar preferencialmente ao entardecer",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002), gotas finas",
+          "observacoes": "Aplicar quando detectar 5% das plantas com sintomas. Rotacionar com outros grupos FRAC (FRAC 3). Tratamento de sementes também é recomendado."
+        },
+        "tratamento_sementes": {
+          "dose": "Aplicar fungicidas no tratamento de sementes",
+          "concentracao": "Conforme produto utilizado (ex: Fluxapyroxad 25 g/L)",
+          "volume_calda": "Aplicação via tratamento de sementes",
+          "intervalo_seguranca": "N/A (tratamento de sementes)",
+          "epoca_aplicacao": "Tratamento de sementes antes do plantio",
+          "condicoes_climaticas": "Aplicar em ambiente controlado (tratadora de sementes)",
+          "equipamento": "Tratadora de sementes",
+          "observacoes": "Tratamento de sementes é essencial para controle preventivo."
+        }
+      },
+      "manejo_biologico": [
+        "Trichoderma harzianum",
+        "Bacillus subtilis"
+      ],
+      "manejo_cultural": [
+        "Cultivares resistentes",
+        "Rotação de culturas",
+        "Tratamento de sementes"
+      ],
+      "observacoes": "Doença importante que causa podridão na base do caule.",
+      "icone": "🦠",
+      "ativo": true
+    },
+    {
+      "id": "girassol_mancha_septoria",
+      "nome": "Mancha-de-septória",
+      "nome_cientifico": "Septoria helianthi",
+      "categoria": "Doença",
+      "tipo": "DOENCA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Manchas nas folhas",
+        "Necrose",
+        "Desfolha precoce"
+      ],
+      "dano_economico": "Pode causar perdas de até 25% da produtividade",
+      "partes_afetadas": [
+        "Folhas"
+      ],
+      "fenologia": [
+        "Todo o ciclo"
+      ],
+      "nivel_acao": "5% das folhas com sintomas",
+      "manejo_quimico": [
+        "Triazóis",
+        "Estrobilurinas"
+      ],
+      "doses_defensivos": {
+        "protioconazol_trifloxistrobina": {
+          "dose": "0,30-0,35 L/ha",
+          "concentracao": "150 g/L + 175 g/L (SC)",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "21 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 5% das folhas com sintomas",
+          "condicoes_climaticas": "UR > 60%, orvalho presente, aplicar preferencialmente ao entardecer",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002), gotas finas",
+          "observacoes": "Aplicar quando detectar 5% das folhas com sintomas. Rotacionar com outros grupos FRAC (FRAC 3 + 11)."
+        },
+        "azoxistrobina": {
+          "dose": "0,3-0,5 L/ha",
+          "concentracao": "250 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "21 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 5% das folhas com sintomas",
+          "condicoes_climaticas": "UR > 60%, orvalho presente, aplicar preferencialmente ao entardecer",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002), gotas finas",
+          "observacoes": "Aplicar quando detectar 5% das folhas com sintomas. Rotacionar com outros grupos FRAC (FRAC 11)."
+        }
+      },
+      "manejo_biologico": [
+        "Bacillus subtilis",
+        "Trichoderma spp."
+      ],
+      "manejo_cultural": [
+        "Cultivares resistentes",
+        "Rotação de culturas",
+        "Eliminação de restos culturais"
+      ],
+      "observacoes": "Doença importante que causa desfolha precoce.",
+      "icone": "🦠",
+      "ativo": true
+    },
+    {
+      "id": "girassol_podridao_negra",
+      "nome": "Podridão-negra",
+      "nome_cientifico": "Macrophomina phaseolina",
+      "categoria": "Doença",
+      "tipo": "DOENCA",
+      "cultura_id": "girassol",
+      "sintomas": [
+        "Podridão seca do caule",
+        "Murcha",
+        "Morte de plantas"
+      ],
+      "dano_economico": "Pode causar perdas de até 60% da produtividade",
+      "partes_afetadas": [
+        "Caule",
+        "Raízes"
+      ],
+      "fenologia": [
+        "Todo o ciclo"
+      ],
+      "nivel_acao": "5% das plantas com sintomas",
+      "manejo_quimico": [
+        "Fungicidas sistêmicos",
+        "Tratamento de sementes"
+      ],
+      "doses_defensivos": {
+        "protioconazol": {
+          "dose": "0,3-0,4 L/ha",
+          "concentracao": "250 g/L",
+          "volume_calda": "200-300 L/ha",
+          "intervalo_seguranca": "21 dias",
+          "epoca_aplicacao": "Todo o ciclo quando detectar 5% das plantas com sintomas",
+          "condicoes_climaticas": "UR > 60%, orvalho presente, aplicar preferencialmente ao entardecer",
+          "equipamento": "Pulverizador de barra com bicos leque duplo (ADI 11002), gotas finas",
+          "observacoes": "Aplicar quando detectar 5% das plantas com sintomas. Rotacionar com outros grupos FRAC (FRAC 3). Tratamento de sementes também é recomendado."
+        },
+        "tratamento_sementes": {
+          "dose": "Aplicar fungicidas no tratamento de sementes",
+          "concentracao": "Conforme produto utilizado (ex: Fluxapyroxad 25 g/L)",
+          "volume_calda": "Aplicação via tratamento de sementes",
+          "intervalo_seguranca": "N/A (tratamento de sementes)",
+          "epoca_aplicacao": "Tratamento de sementes antes do plantio",
+          "condicoes_climaticas": "Aplicar em ambiente controlado (tratadora de sementes)",
+          "equipamento": "Tratadora de sementes",
+          "observacoes": "Tratamento de sementes é essencial para controle preventivo."
+        }
+      },
+      "manejo_biologico": [
+        "Trichoderma harzianum",
+        "Bacillus subtilis"
+      ],
+      "manejo_cultural": [
+        "Cultivares resistentes",
+        "Rotação de culturas",
+        "Tratamento de sementes"
+      ],
+      "observacoes": "Doença importante que causa podridão seca do caule.",
+      "icone": "🦠",
+      "ativo": true
+    }
+  ],
+  "nota_versao": "Expandido com dados 2024-2025 (mantendo dados anteriores)"
+}

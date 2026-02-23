@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDatabasePath } from '@/lib/db/findDatabase';
 import { mockRelatorio } from '@/lib/data/mock_monitoring';
 import { RelatorioMonitoramento, Talhao, PontoMonitoramento, Infestacao, TipoOrganismo } from '@/lib/types/monitoring';
+import { gerarRecomendacoes } from '@/lib/recommendations';
 
 // better-sqlite3 só está disponível em ambiente local (Node.js real).
 // Na Vercel (serverless) ele não existe — sempre cai em mock.
@@ -288,6 +289,7 @@ function readFromDatabase(dbPath: string): RelatorioMonitoramento {
                 area_ha: area,
                 poligono_geojson: poligono, // ← polígono real de poligonos_talhao
                 pontos,
+                recomendacoes: gerarRecomendacoes(pontos, sess.cultura_nome ?? 'Cultura'),
             });
         }
 
@@ -421,7 +423,15 @@ async function readFromSupabase(): Promise<RelatorioMonitoramento> {
                 };
             });
 
-            talhoes.push({ id: talhaoId, nome, cultura: sess.cultura_nome ?? 'Cultura', area_ha: area, poligono_geojson: poligono, pontos });
+            talhoes.push({
+                id: talhaoId,
+                nome,
+                cultura: sess.cultura_nome ?? 'Cultura',
+                area_ha: area,
+                poligono_geojson: poligono,
+                pontos,
+                recomendacoes: gerarRecomendacoes((pontos as any), sess.cultura_nome ?? 'Cultura')
+            });
         }
 
         return {

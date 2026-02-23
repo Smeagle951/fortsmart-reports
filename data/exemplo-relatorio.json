@@ -1,0 +1,139 @@
+{
+  "meta": {
+    "id": "2026-01-25-talhao16",
+    "dataGeracao": "2026-01-25",
+    "tecnico": "Eng. Paulo Ferreira",
+    "tecnicoCrea": "PR-12345",
+    "safra": "2025/26",
+    "appVersion": "FortSmart 3.0",
+    "versao": 1
+  },
+  "propriedade": {
+    "fazenda": "Boa Esperança",
+    "municipio": "Cascavel",
+    "estado": "PR",
+    "proprietario": "João Silva"
+  },
+  "talhao": {
+    "id": "talhao-uuid-16",
+    "nome": "Talhão 16",
+    "numero": 16,
+    "cultura": "Soja",
+    "area": 24.6,
+    "dataPlantio": "2025-10-15"
+  },
+  "contextoSafra": {
+    "materialVariedade": "TMG 2183 IPRO",
+    "empresa": "TMG",
+    "espacamentoCm": 45,
+    "populacaoAlvoPlHa": 280000,
+    "dae": 45,
+    "dap": 52
+  },
+  "fenologia": {
+    "estadio": "V4",
+    "ultimaAvaliacaoDias": 3,
+    "dataUltimaAvaliacao": "2026-01-22",
+    "historico": [
+      { "estagio": "V2", "data": "2026-01-08", "observacoes": "Bom estande" },
+      { "estagio": "V4", "data": "2026-01-22", "observacoes": "Uniforme" }
+    ]
+  },
+  "populacao": {
+    "plantasHa": 265000,
+    "estandeEfetivoPlHa": 258000,
+    "eficienciaPct": 94.2,
+    "plantasPorMetro": 11.8,
+    "situacao": "OK"
+  },
+  "aplicacoes": [
+    {
+      "tipo": "Fungicida",
+      "data": "2026-01-22",
+      "produto": "Exemplo Max",
+      "dose": "0.5",
+      "unidade": "L/ha",
+      "status": "Realizado"
+    },
+    {
+      "tipo": "Inseticida",
+      "data": "2026-01-18",
+      "produto": "Proteção Lagarta",
+      "dose": "0.15",
+      "unidade": "L/ha",
+      "status": "Realizado"
+    }
+  ],
+  "pragas": [
+    {
+      "tipo": "praga",
+      "alvo": "Lagarta-do-cartucho",
+      "incidencia": "Pontual",
+      "severidade": "Média",
+      "situacao": "Monitorar",
+      "observacoes": "Foco em bordadura"
+    },
+    {
+      "tipo": "doença",
+      "alvo": "Ferrugem asiática",
+      "incidencia": "Ausente",
+      "severidade": "Baixa",
+      "situacao": "OK",
+      "observacoes": null
+    }
+  ],
+  "condicoes": {
+    "temperatura": 28.5,
+    "umidade": 72,
+    "vento": "Leve",
+    "nebulosidade": "Parcial",
+    "soloUmidade": "Úmido",
+    "palhada": "Média",
+    "compactacao": "Leve",
+    "vigorCultura": "Alto",
+    "uniformidade": "Alta",
+    "sintomas": "Não identificados"
+  },
+  "mapa": {
+    "viewBox": "0 0 400 300",
+    "path": "M 80 50 L 320 55 L 310 250 L 90 245 Z",
+    "pontos": [
+      { "x": 120, "y": 100, "tipo": "fenologia", "severidade": null },
+      { "x": 200, "y": 140, "tipo": "praga_doenca", "severidade": "media" }
+    ]
+  },
+  "imagens": [
+    {
+      "url": "https://xxxxx.supabase.co/storage/v1/object/public/relatorios-imagens/2026-01/talhao16-ponto1.jpg",
+      "descricao": "Ponto 1 - Estádio V4",
+      "categoria": "fenologia",
+      "data": "2026-01-22"
+    },
+    {
+      "url": "https://xxxxx.supabase.co/storage/v1/object/public/relatorios-imagens/2026-01/talhao16-praga.jpg",
+      "descricao": "Lagarta-do-cartucho - bordadura",
+      "categoria": "praga",
+      "data": "2026-01-22"
+    }
+  ],
+  "diagnostico": {
+    "problemaPrincipal": "Lavoura em desenvolvimento normal com foco de lagarta em bordadura.",
+    "causaProvavel": "Maior presença de hospedeiros na borda da área.",
+    "nivelRisco": "Baixo",
+    "urgenciaAcao": "Rotina"
+  },
+  "planoAcao": {
+    "objetivoManejo": "Manter sanidade e monitorar bordaduras.",
+    "acoes": [
+      { "prioridade": "1", "acao": "Monitorar bordaduras na próxima semana", "prazo": "7 dias" },
+      { "prioridade": "2", "acao": "Avaliar necessidade de aplicação de fungicida em R1", "prazo": "14 dias" }
+    ]
+  },
+  "assinaturaTecnica": {
+    "nome": "Eng. Paulo Ferreira",
+    "crea": "PR-12345",
+    "dataAssinatura": "2026-01-25",
+    "cidade": "Cascavel/PR"
+  },
+  "conclusao": "Lavoura em V4 com estande e eficiência dentro do esperado. Infestação de lagarta em nível de monitoramento. Recomenda-se nova avaliação em 7 dias e planejamento de fungicida para R1."
+}

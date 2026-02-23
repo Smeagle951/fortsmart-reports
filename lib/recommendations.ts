@@ -1,52 +1,6 @@
-import { NivelClassificacao, NivelRecomendacao, Recomendacao, TipoOrganismo } from '../types/monitoring';
-
-// ─── Banco de produtos por organismo ──────────────────────────────────────────
-// Cada organismo tem: produto, dose, e ação técnica recomendada
-const PRODUTOS_POR_ORGANISMO: Record<string, {
-    produto: string;
-    dose: string;
-    acao: string;
-}> = {
-    // PRAGAS
-    'lagarta-alfinete': { produto: 'Intrepid 240 SC', dose: '200 mL/ha', acao: 'Aplicar inseticida em estádio V3–V5, cobrindo ponteiro' },
-    'lagarta do cartucho': { produto: 'Ampligo 150 ZC', dose: '250 mL/ha', acao: 'Aplicar no ponteiro em infestação inicial' },
-    'lagarta falsa medideira': { produto: 'Nomolt 150 SC', dose: '250 mL/ha', acao: 'Aplicar ao 1º instar, evitando chuva por 4h' },
-    'percevejo marrom': { produto: 'Engeo Pleno SC', dose: '150 mL/ha', acao: 'Controle químico direcionado ao ponteiro' },
-    'percevejo': { produto: 'Engeo Pleno SC', dose: '150 mL/ha', acao: 'Controle químico direcionado à vagem em enchimento' },
-    'pulgão': { produto: 'Actara 250 WG', dose: '100 g/ha', acao: 'Aplicar ao detectar colônias no ponteiro' },
-    'cigarrinha': { produto: 'Decis 25 EC', dose: '400 mL/ha', acao: 'Aplicar ao amanhecer, em alta infestação' },
-    'tripes': { produto: 'Trike 480 EC', dose: '600 mL/ha', acao: 'Aplicar na floração com alta umidade relativa' },
-    'mosca branca': { produto: 'Neoron 500 CE', dose: '500 mL/ha', acao: 'Aplicar em rotação; evitar resistência' },
-    'spodoptera': { produto: 'Certero 480 SC', dose: '65 mL/ha', acao: 'Aplicar no 1º instar, nas horas frescas' },
-
-    // DOENÇAS
-    'ferrugem asiática': { produto: 'Opera Ultra EC', dose: '0,75 L/ha', acao: 'Aplicar fungicida sistêmico preventivo/curativo em até 3 dias' },
-    'ferrugem': { produto: 'Opera Ultra EC', dose: '0,75 L/ha', acao: 'Aplicar fungicida sistêmico; repetir em 14 dias se necessário' },
-    'mancha alvo': { produto: 'Priori Xtra SC', dose: '300 mL/ha', acao: 'Aplicar no início dos sintomas, associado a óleo mineral' },
-    'antracnose': { produto: 'Comet 200 EC', dose: '300 mL/ha', acao: 'Aplicar de forma preventiva em período chuvoso' },
-    'oídio': { produto: 'Sphere Max SC', dose: '300 mL/ha', acao: 'Aplicar ao primeiro sinal, repetir em 10–14 dias' },
-    'cercosporiose': { produto: 'Artea 325 SC', dose: '300 mL/ha', acao: 'Aplicar preventivamente na abertura floral' },
-    'míldio': { produto: 'Aliette 800 WG', dose: '200 g/ha', acao: 'Aplicar até 48h após detecção; incluir espalhante adesivo' },
-    'soja louca': { produto: 'Vertimec 18 CE', dose: '250 mL/ha', acao: 'Controle do vetor (ácaro branco); aplicar 2× em 7 dias' },
-    'podridão de colmo': { produto: 'Derosal Plus SC', dose: '1,5 L/ha', acao: 'Aplicar via sulco no plantio ou raiz; evitar estresse hídrico' },
-    'sclerotinia': { produto: 'Folicur 200 EC', dose: '0,5 L/ha', acao: 'Aplicar preventivamente no R1–R2 (floração)' },
-
-    // PLANTAS DANINHAS
-    'buva': { produto: 'Roundup Original DI', dose: '2,0 L/ha', acao: 'Aplicar em pré-emergência ou plantas jovens; rotacionar mecanismo de ação' },
-    'capim colchão': { produto: 'Select 240 EC', dose: '600 mL/ha', acao: 'Aplicar de 3 a 5 folhas do capim' },
-    'capim braquiária': { produto: 'Fusilade Flex 125 EW', dose: '1,0 L/ha', acao: 'Aplicar no perfilhamento; evitar chuva em 4h' },
-    'corda de viola': { produto: 'Cobra 240 EC', dose: '500 mL/ha', acao: 'Aplicar com alto volume de calda (200 L/ha)' },
-    'tiririca': { produto: 'Basagran 600 EC', dose: '1,5 L/ha', acao: 'Aplicar de 3 a 5 folhas; não misturar com graminicidas' },
-    'amendoim bravo': { produto: 'Pivot H 100 SL', dose: '600 mL/ha', acao: 'Aplicar em pós-emergência da lavoura e da planta daninha' },
-    'picão preto': { produto: 'Classic 250 WG', dose: '50 g/ha', acao: 'Aplicar no início do desenvolvimento; usar espalhante adesivo' },
-};
-
-// Produto padrão caso o organismo não esteja no banco
-function getProdutoPadrao(tipo: TipoOrganismo) {
-    if (tipo === 'praga') return { produto: 'Inseticida recomendado (consultar eng. agrônomo)', dose: 'consultar bula', acao: 'Realizar controle conforme receituário agronômico' };
-    if (tipo === 'doenca') return { produto: 'Fungicida recomendado (consultar eng. agrônomo)', dose: 'consultar bula', acao: 'Aplicar fungicida conforme receituário agronômico' };
-    return { produto: 'Herbicida recomendado (consultar eng. agrônomo)', dose: 'consultar bula', acao: 'Aplicar herbicida conforme receituário agronômico' };
-}
+import fs from 'fs';
+import path from 'path';
+import { NivelClassificacao, NivelRecomendacao, Recomendacao, TipoOrganismo } from './types/monitoring';
 
 // ─── Classificação por severidade ─────────────────────────────────────────────
 export function classificarSeveridade(severidade: number): NivelClassificacao {
@@ -63,12 +17,55 @@ export function nivelRecomendacao(severidade: number): NivelRecomendacao {
     return 'PREVENTIVO';
 }
 
+function getProdutoPadrao(tipo: TipoOrganismo) {
+    if (tipo === 'praga') return { produto: 'Inseticida recomendado (consultar eng. agrônomo)', dose: 'consultar bula', acao: 'Realizar controle conforme receituário agronômico' };
+    if (tipo === 'doenca') return { produto: 'Fungicida recomendado (consultar eng. agrônomo)', dose: 'consultar bula', acao: 'Aplicar fungicida conforme receituário agronômico' };
+    return { produto: 'Herbicida recomendado (consultar eng. agrônomo)', dose: 'consultar bula', acao: 'Aplicar herbicida conforme receituário agronômico' };
+}
+
+// Cache em memória para não ficar lendo disco toda hora (útil para Supabase/API repetida)
+const jsonCache: Record<string, any> = {};
+
+function carregarCatalogoCultura(cultura: string) {
+    if (!cultura) return null;
+
+    // Normaliza cultura para combinar com os nomes de arquivos (ex: "soja", "milho", "cana_acucar")
+    let cultNorm = cultura.toLowerCase().trim()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/ /g, '_')
+        .replace(/-/g, '_');
+
+    // Nomes excepcionais se existirem
+    if (cultNorm === 'cana_de_acucar') cultNorm = 'cana_acucar';
+
+    if (jsonCache[cultNorm]) return jsonCache[cultNorm];
+
+    try {
+        const filePath = path.join(process.cwd(), 'data', 'organismos', `organismos_${cultNorm}.json`);
+        if (fs.existsSync(filePath)) {
+            const raw = fs.readFileSync(filePath, 'utf-8');
+            const data = JSON.parse(raw);
+            if (data && data.organismos) {
+                jsonCache[cultNorm] = data;
+                return data;
+            }
+        }
+    } catch (err) {
+        console.warn(`[recommendations] Falha ao carregar catálogo para ${cultura}:`, err);
+    }
+
+    return null;
+}
+
 // ─── Motor principal de recomendações ─────────────────────────────────────────
-// Recebe os pontos de um talhão e gera 1 recomendação por organismo único
 export function gerarRecomendacoes(
-    pontos: { identificador: string; infestacoes: { tipo: TipoOrganismo; nome: string; severidade: number }[] }[]
+    pontos: { identificador: string; infestacoes: { tipo: TipoOrganismo; nome: string; severidade: number }[] }[],
+    cultura: string
 ): Recomendacao[] {
-    // Agrupar por organismo (nome normalizado) e acumular pontos + severidade
+    // 1. Carrega o banco JSON da cultura
+    const catalogo = carregarCatalogoCultura(cultura);
+
+    // 2. Agrupar por organismo (nome normalizado) e acumular pontos + severidade
     const mapa: Record<string, {
         tipo: TipoOrganismo;
         nome: string;
@@ -89,11 +86,53 @@ export function gerarRecomendacoes(
         }
     }
 
-    // Gerar 1 recomendação por organismo único
+    // 3. Gerar 1 recomendação por organismo único cruzando com o catálogo
     const recomendacoes: Recomendacao[] = Object.values(mapa).map(({ tipo, nome, severidades, pontos: pts }) => {
         const severidadeMedia = severidades.reduce((a, b) => a + b, 0) / severidades.length;
         const key = nome.toLowerCase().trim();
-        const dadosProduto = PRODUTOS_POR_ORGANISMO[key] ?? getProdutoPadrao(tipo);
+
+        // Determina o dicionário severidade key ('baixo', 'medio', 'alto', 'critico')
+        let sevKey = 'baixo';
+        if (severidadeMedia >= 10) sevKey = 'medio';
+        if (severidadeMedia >= 25) sevKey = 'alto';
+        if (severidadeMedia >= 40) sevKey = 'critico';
+
+        let dadosProduto = getProdutoPadrao(tipo);
+
+        // Se temos catálogo JSON
+        if (catalogo && catalogo.organismos) {
+            // Busca o organismo pelo nome (ignorando maiúsculas e espaços)
+            const orgData = catalogo.organismos.find((o: any) => o.nome.toLowerCase().trim() === key || (o.nome_cientifico && o.nome_cientifico.toLowerCase().trim() === key));
+
+            if (orgData) {
+                // Tenta extrair a recomendação do JSON
+                let recommendedAction = orgData.acao ?? orgData.observacoes ?? 'Controle recomendado conforme bula';
+                if (orgData.severidade && orgData.severidade[sevKey] && orgData.severidade[sevKey].acao) {
+                    recommendedAction = orgData.severidade[sevKey].acao;
+                }
+
+                let recommendedProduct = dadosProduto.produto;
+                let recommendedDose = dadosProduto.dose;
+
+                // Se tiver manejo químico, pega a primeira opção
+                if (orgData.manejo_quimico && orgData.manejo_quimico.length > 0) {
+                    const ch = orgData.manejo_quimico[0]; // ex: "Clorantraniliprole (IRAC 28) - 0,15-0,25 L/ha"
+                    const parts = ch.split(' - ');
+                    if (parts.length > 1) {
+                        recommendedProduct = parts[0];
+                        recommendedDose = parts[1];
+                    } else {
+                        recommendedProduct = ch;
+                    }
+                }
+
+                dadosProduto = {
+                    produto: recommendedProduct,
+                    dose: recommendedDose,
+                    acao: recommendedAction
+                };
+            }
+        }
 
         return {
             nivel: nivelRecomendacao(severidadeMedia),

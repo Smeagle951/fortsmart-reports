@@ -3,7 +3,6 @@
 import dynamic from 'next/dynamic';
 import { Talhao } from '@/lib/types/monitoring';
 import { calcularMetricasTalhao, calcularMetricasPorPonto, corClassificacao, labelClassificacao } from '@/lib/calculations';
-import { gerarRecomendacoes } from '@/lib/recommendations';
 import ResumoExecutivo from './ResumoExecutivo';
 import PrincipaisInfestacoes from './PrincipaisInfestacoes';
 import RecomendacoesTecnicas from './RecomendacoesTecnicas';
@@ -26,7 +25,7 @@ interface TalhaoBlocoProps {
 export default function TalhaoBloco({ talhao, index, total, data }: TalhaoBlocoProps) {
     const metricas = calcularMetricasTalhao(talhao);
     const metricasPorPonto = calcularMetricasPorPonto(talhao);
-    const recomendacoes = gerarRecomendacoes(talhao.pontos);
+    const recomendacoes = talhao.recomendacoes || [];
     const cor = corClassificacao(metricas.classificacao);
     const label = labelClassificacao(metricas.classificacao);
 
