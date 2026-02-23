@@ -1,0 +1,303 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  --green-primary: #1B5E20;
+  --green-light: #2E7D32;
+  --green-100: #E8F5E9;
+  --yellow: #F9A825;
+  --yellow-100: #FFF9C4;
+  --orange: #E65100;
+  --orange-100: #FBE9E7;
+  --red: #C62828;
+  --red-100: #FFEBEE;
+  --blue: #1565C0;
+  --blue-100: #E3F2FD;
+  --bg: #F8FAFC;
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, .07), 0 1px 3px rgba(0, 0, 0, .06);
+  --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, .12), 0 2px 6px rgba(0, 0, 0, .08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  font-family: 'Inter', sans-serif;
+  color: #1A2332;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Animações ────────────────────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes progressFill {
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: var(--target-width);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.4s ease both;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease both;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.35s ease both;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.35s ease both;
+}
+
+/* Delay helpers */
+.delay-100 {
+  animation-delay: 0.1s;
+}
+
+.delay-200 {
+  animation-delay: 0.2s;
+}
+
+.delay-300 {
+  animation-delay: 0.3s;
+}
+
+.delay-400 {
+  animation-delay: 0.4s;
+}
+
+.delay-500 {
+  animation-delay: 0.5s;
+}
+
+.delay-600 {
+  animation-delay: 0.6s;
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: var(--card-shadow);
+  padding: 20px 24px;
+  transition: box-shadow .2s, transform .2s;
+}
+
+.card:hover {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-1px);
+}
+
+/* ── Progress bars animadas ─────────────────────────────────────────────────── */
+.progress-bar-animated {
+  height: 8px;
+  border-radius: 99px;
+  background: #ECEFF1;
+  overflow: hidden;
+}
+
+.progress-bar-animated .fill {
+  height: 100%;
+  border-radius: 99px;
+  animation: progressFill 1.2s cubic-bezier(.4, 0, .2, 1) forwards;
+}
+
+/* ── Badges de classificação ─────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  text-transform: uppercase;
+}
+
+.badge-controlado {
+  background: var(--green-100);
+  color: var(--green-primary);
+}
+
+.badge-atencao {
+  background: var(--yellow-100);
+  color: #8B6914;
+}
+
+.badge-alto-risco {
+  background: var(--orange-100);
+  color: var(--orange);
+}
+
+.badge-critico {
+  background: var(--red-100);
+  color: var(--red);
+}
+
+/* ── Separador de talhão ─────────────────────────────────────────────────── */
+.talhao-divider {
+  margin: 48px 0;
+  border: none;
+  border-top: 2px dashed #CBD5E1;
+  position: relative;
+}
+
+.talhao-divider::before {
+  content: attr(data-label);
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg);
+  padding: 0 16px;
+  color: #94A3B8;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+
+/* ── Modal da galeria ────────────────────────────────────────────────────── */
+.gallery-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .8);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn .2s ease;
+}
+
+.gallery-modal-content {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 560px;
+  width: 90%;
+  animation: scaleIn .25s ease;
+}
+
+/* ── Navigation lateral ──────────────────────────────────────────────────── */
+.nav-lateral {
+  position: fixed;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 1100px) {
+  .nav-lateral {
+    display: none;
+  }
+}
+
+.nav-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #CBD5E1;
+  cursor: pointer;
+  transition: all .2s;
+  border: 2px solid transparent;
+}
+
+.nav-dot.active,
+.nav-dot:hover {
+  background: var(--green-primary);
+  transform: scale(1.4);
+}
+
+/* ── Leaflet fix ──────────────────────────────────────────────────────────── */
+.leaflet-container {
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif !important;
+}
+
+/* ── Print / PDF ──────────────────────────────────────────────────────────── */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .card {
+    box-shadow: none;
+    border: 1px solid #E2E8F0;
+  }
+
+  body {
+    background: white;
+  }
+}
