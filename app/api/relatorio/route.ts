@@ -307,20 +307,157 @@ function readFromDatabase(dbPath: string): RelatorioMonitoramento {
     }
 }
 
+import { supabase } from '@/lib/db/supabase';
+
+// ─── Leitura Fallback Supabase (Ambiente Vercel / Web) ────────────────────────
+async function readFromSupabase(): Promise<RelatorioMonitoramento> {
+    try {
+        // 1. Pega todas as sessoes finalizadas recentes
+        const { data: sessions, error: sessErr } = await supabase
+            .from('monitoring_sessions')
+            .select('id, talhao_id, cultura_nome, cultura_id, started_at, status')
+            .in('status', ['finalized', 'draft'])
+            .order('started_at', { ascending: false });
+
+        if (sessErr || !sessions || sessions.length === 0) return mockRelatorio;
+
+        const sessPerTalhao: Record<string, SessionRow> = {};
+        for (const s of sessions) {
+            if (!sessPerTalhao[s.talhao_id]) sessPerTalhao[s.talhao_id] = s as SessionRow;
+        }
+
+        const talhoesIds = Object.keys(sessPerTalhao);
+
+        // 2. Info Talhoes
+        const { data: talhoesData } = await supabase
+            .from('talhoes')
+            .select('id, name, area, farm_id')
+            .in('id', talhoesIds.map(Number))
+            .is('deleted_at', null);
+
+        const talhaoInfo: Record<string, TalhaoRow> = {};
+        if (talhoesData) {
+            for (const t of talhoesData) talhaoInfo[t.id] = t as TalhaoRow;
+        }
+
+        // 3. Polígonos
+        const { data: poliData } = await supabase
+            .from('poligonos_talhao')
+            .select('talhao_id, points')
+            .in('talhao_id', talhoesIds.map(Number))
+            .eq('poligono_index', 0);
+
+        const poligonoMap: Record<string, Talhao['poligono_geojson']> = {};
+        if (poliData) {
+            for (const row of poliData) {
+                const geoJSON = pointsJsonToGeoJSON(row.points, row.talhao_id);
+                if (geoJSON) poligonoMap[String(row.talhao_id)] = geoJSON;
+            }
+        }
+
+        const talhoes: Talhao[] = [];
+        let idx = 0;
+
+        for (const [talhaoId, sess] of Object.entries(sessPerTalhao)) {
+            if (idx >= 10) break;
+            idx++;
+
+            const info = talhaoInfo[talhaoId];
+            const nome = info?.name ?? `Talhão ${String(idx).padStart(2, '0')}`;
+            const area = info?.area ?? 0;
+
+            // 4. Pontos
+            const { data: pointRows } = await supabase
+                .from('monitoring_points')
+                .select('id, session_id, numero, latitude, longitude, timestamp, attachments_json')
+                .eq('session_id', sess.id)
+                .order('numero', { ascending: true });
+
+            const poligono = poligonoMap[talhaoId] ?? buildPolygonFromPoints((pointRows as PointRow[]) || []);
+
+            // 5. Ocorrencias e Organismos
+            const { data: occRows } = await supabase
+                .from('monitoring_occurrences')
+                .select('id, point_id, organism_id, valor_bruto, observacao, organism_catalog(name, type, low_limit, medium_limit, high_limit)')
+                .in('point_id', pointRows?.map(p => p.id) || []);
+
+            const pontos: PontoMonitoramento[] = (pointRows || []).map(point => {
+                const pOccRows = occRows?.filter(o => o.point_id === point.id) || [];
+                const infestacoes: Infestacao[] = pOccRows.map(occ => {
+                    const c = Array.isArray(occ.organism_catalog) ? occ.organism_catalog[0] : (occ.organism_catalog as any);
+
+                    let imgs: string[] = [];
+                    try {
+                        if (point.attachments_json) {
+                            imgs = JSON.parse(point.attachments_json);
+                        }
+                    } catch { }
+
+                    let imagem: string | undefined;
+                    if (imgs.length > 0) {
+                        // Converter path local do supabase para URL pública se for o caso
+                        const imgPath = imgs[0];
+                        imagem = imgPath.includes('http') ? imgPath : supabase.storage.from('monitoring_images').getPublicUrl(imgPath).data.publicUrl;
+                    }
+
+                    return {
+                        id: occ.id,
+                        tipo: mapTipo(c?.type ?? 'praga'),
+                        nome: c?.name ?? occ.organism_id,
+                        terco: 'Médio',
+                        quantidade: occ.valor_bruto ?? null,
+                        severidade: calcSeveridade(occ.valor_bruto ?? 0, c?.low_limit ?? 10, c?.medium_limit ?? 25, c?.high_limit ?? 40),
+                        observacao: occ.observacao ?? undefined,
+                        imagem: imagem,
+                    };
+                });
+
+                return {
+                    id: point.id,
+                    identificador: `P${point.numero}`,
+                    lat: point.latitude,
+                    lng: point.longitude,
+                    infestacoes,
+                };
+            });
+
+            talhoes.push({ id: talhaoId, nome, cultura: sess.cultura_nome ?? 'Cultura', area_ha: area, poligono_geojson: poligono, pontos });
+        }
+
+        return {
+            fazenda: 'Fazenda (Supabase)',
+            safra: '2023/2024',
+            data: new Date().toLocaleDateString('pt-BR'),
+            tecnico: 'Engenheiro Agrônomo',
+            talhoes,
+        };
+    } catch {
+        return mockRelatorio;
+    }
+}
+
 // ─── Handler GET /api/relatorio ───────────────────────────────────────────────
 export async function GET() {
     try {
         const dbPath = getDatabasePath();
 
+        // 1. Tenta SQLite local (App desktop/mobile)
         if (dbPath) {
             const relatorio = readFromDatabase(dbPath);
             return NextResponse.json({ source: 'sqlite', dbPath, relatorio });
         }
 
+        // 2. Tenta Supabase remoto (Vercel)
+        const relatorio = await readFromSupabase();
+        if (relatorio.talhoes.length > 0 && relatorio.fazenda.includes('Supabase')) {
+            return NextResponse.json({ source: 'supabase', dbPath: 'Nuvem (PostgreSQL)', relatorio });
+        }
+
+        // 3. Fallback final para Mock
         return NextResponse.json({
             source: 'mock',
             dbPath: null,
-            message: 'Banco fortsmart_agro.db não encontrado. Execute o app Flutter e tente novamente.',
+            message: 'Banco não encontrado localmente nem dados no Supabase. Usando demonstração.',
             relatorio: mockRelatorio,
         });
     } catch (error) {

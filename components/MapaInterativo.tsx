@@ -45,10 +45,11 @@ export default function MapaInterativo({ pontos, poligono, talhaoId }: MapaInter
             const map = L.map(mapRef.current!, { zoomControl: true, scrollWheelZoom: false });
             mapInstance.current = map;
 
-            // Tile layer (Google Satellite-like via Esri)
+            // Tile layer (MapTiler Satellite - idêntico ao App Mobile)
+            const mapTilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY || 'TiQt1yLZoL6EmShd1flj';
             L.tileLayer(
-                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                { attribution: 'Esri World Imagery', maxZoom: 19 }
+                `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${mapTilerKey}`,
+                { attribution: '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a>', maxZoom: 20 }
             ).addTo(map);
 
             // Polígono verde translúcido
@@ -138,6 +139,31 @@ export default function MapaInterativo({ pontos, poligono, talhaoId }: MapaInter
 
                 L.marker([ponto.lat, ponto.lng], { icon }).bindPopup(popup).addTo(map);
             });
+
+            // Adicionar mapa de calor (Heatmap)
+            const heatData = pontos.map(p => {
+                const sev = metricasPorPonto[p.id] ?? 0;
+                return [p.lat, p.lng, sev / 100]; // [lat, lng, intensidade(0-1)]
+            });
+
+            if (heatData.length > 0) {
+                // Import dinâmico do plugin leaflet.heat para não quebrar no SSR
+                import('leaflet.heat').then(() => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (L as any).heatLayer(heatData, {
+                        radius: 65,     // raio de influencia do ponto
+                        blur: 45,       // desfoque (suavidade da borda)
+                        maxZoom: 16,    // zoom máximo onde a intensidade é preservada
+                        max: 1.0,       // escala max de intensidade
+                        gradient: {
+                            0.2: '#2E7D32', // Baixo (Verde)
+                            0.5: '#F9A825', // Médio (Amarelo)
+                            0.7: '#E65100', // Alto (Laranja)
+                            1.0: '#C62828'  // Crítico (Vermelho)
+                        }
+                    }).addTo(map);
+                }).catch(e => console.error('Falha ao carregar heatmap', e));
+            }
 
             // Legenda
             const legend = (L.control as unknown as ({ position }: { position: string }) => L.Control & { onAdd: (map: L.Map) => HTMLElement })({ position: 'bottomright' });
