@@ -1,8 +1,11 @@
 import React from 'react';
 import Header, { ReportFooter } from './Header';
+import MapaTalhao from './MapaTalhao';
+import HeaderRelatorio from './HeaderRelatorio';
 import Mapa from './Mapa';
 import Galeria from './Galeria';
 import TabelaDados, { InfoGrid, situacaoCssClass, situacaoLabel } from './TabelaDados';
+import TabelaAplicacoes from './TabelaAplicacoes';
 import { formatDate, formatArea, formatNumber, formatPercent } from '@/utils/format';
 
 export type RelatorioJson = {
@@ -51,7 +54,7 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
 
   return (
     <>
-      <Header
+      <HeaderRelatorio
         meta={meta as { dataGeracao?: string; safra?: string; tecnico?: string; tecnicoCrea?: string; id?: string; appVersion?: string; versao?: number }}
         propriedade={prop as { fazenda?: string }}
         talhao={talhao as { nome?: string; cultura?: string }}
@@ -117,40 +120,7 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
         />
       )}
 
-      {aplicacoes.length > 0 && (
-        <section className="section">
-          <h2 className="section-title">Aplicações realizadas</h2>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Tipo</th>
-                  <th>Classe</th>
-                  <th>Produto</th>
-                  <th>Dose</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {aplicacoes.map((a, i) => {
-                  const idx = (a as any).index ?? (a as any).pontoIndex ?? (a as any).pointIndex ?? i + 1;
-                  return (
-                    <tr key={i} data-ponto-index={idx}>
-                      <td>{formatDate(a.data as string)}</td>
-                      <td>{String(a.tipo ?? '—')}</td>
-                      <td>{String((a as any).classe ?? '—')}</td>
-                      <td>{String(a.produto ?? '—')}</td>
-                      <td>{a.dose != null && a.unidade ? `${a.dose} ${a.unidade}` : String(a.dose ?? '—')}</td>
-                      <td>{String(a.status ?? '—')}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+      {aplicacoes.length > 0 && <TabelaAplicacoes rows={aplicacoes as any} />}
 
       {pragas.length > 0 && (
         <TabelaDados
@@ -181,7 +151,17 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
         />
       )}
 
-      <Mapa mapa={mapa as { viewBox?: string; path?: string; pontos?: Array<{ x: number; y: number; severidade?: string }> }} relatorioId={idForStorage} />
+  <MapaTalhao
+    pontos={(mapa as any)?.pontos?.map((p: any) => ({
+      id: p.id ?? p.index,
+      latitude: p.lat ?? p.y ?? p.latitude ?? 0,
+      longitude: p.lng ?? p.x ?? p.longitude ?? 0,
+      titulo: p.titulo ?? p.label ?? undefined,
+      descricao: p.descricao ?? p.obs ?? undefined,
+      estagio: p.severidade ?? p.estagio ?? undefined,
+      data: p.data ?? undefined,
+    })) || []}
+  />
 
       <Galeria imagens={imagens} relatorioId={idForStorage} />
 

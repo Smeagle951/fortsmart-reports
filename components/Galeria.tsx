@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatDate } from '@/utils/format';
 import { getStoragePublicUrl } from '@/lib/supabase';
+import ModalImagem from './ModalImagem';
 
 type ImagemItem = {
   url?: string;
@@ -32,6 +33,7 @@ export default function Galeria({ imagens, relatorioId, bucketPathPrefix = '' }:
   };
 
   const [lightbox, setLightbox] = useState<{ src: string; descricao?: string; data?: string } | null>(null);
+  const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -58,17 +60,28 @@ export default function Galeria({ imagens, relatorioId, bucketPathPrefix = '' }:
         })}
       </div>
 
-      {lightbox && (
-        <div className="lightbox-overlay" onClick={() => setLightbox(null)} role="dialog" aria-modal="true">
-          <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
-            <img src={lightbox.src} alt={lightbox.descricao || 'Foto ampliada'} className="lightbox-img" />
-            <div className="lightbox-caption">
-              <div className="photo-caption">{lightbox.descricao}</div>
-              {lightbox.data && <div className="photo-meta">{formatDate(lightbox.data)}</div>}
-            </div>
-            <button className="btn btn-secondary lightbox-close" onClick={() => setLightbox(null)}>Fechar</button>
-          </div>
-        </div>
+      {lightbox && galleryIndex != null && (
+        <ModalImagem
+          src={lightbox.src}
+          descricao={lightbox.descricao}
+          data={lightbox.data}
+          onClose={() => {
+            setLightbox(null);
+            setGalleryIndex(null);
+          }}
+          onPrev={() => {
+            const prev = galleryIndex > 0 ? galleryIndex - 1 : imagens.length - 1;
+            const img = imagens[prev];
+            setGalleryIndex(prev);
+            setLightbox({ src: resolveUrl(img), descricao: img.descricao, data: img.data });
+          }}
+          onNext={() => {
+            const next = galleryIndex < imagens.length - 1 ? galleryIndex + 1 : 0;
+            const img = imagens[next];
+            setGalleryIndex(next);
+            setLightbox({ src: resolveUrl(img), descricao: img.descricao, data: img.data });
+          }}
+        />
       )}
     </section>
   );

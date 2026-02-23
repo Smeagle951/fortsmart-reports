@@ -202,6 +202,55 @@ body {
   border-bottom: 1px solid #e5e7eb;
 }
 
+/* SaaS table tweaks */
+.saas-table .table th {
+  background: #f8fafc;
+  color: #374151;
+  font-weight: 700;
+}
+.saas-table .table tbody tr:hover {
+  background: #fbfdff;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge-success { background: #d1fae5; color: #065f46; }
+.badge-warning { background: #fef3c7; color: #92400e; }
+.badge-danger { background: #ffedd5; color: #9a3412; }
+.badge-muted { background: #f3f4f6; color: #6b7280; }
+
+/* HeaderRelatorio */
+.header-relatorio {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #0f5132, #14532d);
+  color: white;
+  margin-bottom: 1rem;
+}
+.header-relatorio .brand-logo {
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+.header-relatorio .brand-subtitle {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.report-meta { display:flex; gap:1rem; align-items:center; }
+.report-meta-left { text-align:left; }
+.report-meta-right { text-align:right; min-width:140px; }
+.report-meta .meta-fazenda { font-weight:700; font-size:1rem; color:white; }
+.report-meta .meta-talhao { color:#d1f7d8; font-weight:600; }
+.report-meta .meta-id, .report-meta .meta-date, .report-meta .meta-tecnico { color:#dce9e0; font-size:0.85rem; }
+
 .table tbody tr:nth-child(even) {
   background: #fafafa;
 }
