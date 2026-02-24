@@ -89,6 +89,7 @@ export default async function RelatorioCompartilhadoPage({ params, searchParams 
           <div style={{ textAlign: 'center', maxWidth: 560 }}>
             <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório inválido</h1>
             <p style={{ color: '#6b7280' }}>O conteúdo do relatório está corrompido ou não pode ser exibido.</p>
+            <pre style={{ textAlign: 'left', fontSize: 10, background: '#eee', padding: 10 }}>{JSON.stringify(rawPayload).substring(0, 500)}</pre>
           </div>
         </main>
       );
@@ -116,13 +117,18 @@ export default async function RelatorioCompartilhadoPage({ params, searchParams 
         </article>
       </>
     );
-  } catch (e) {
+  } catch (e: any) {
     console.error('[fortsmart-reports] /r/[token] erro:', e);
     return (
       <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
-        <div style={{ textAlign: 'center', maxWidth: 560 }}>
+        <div style={{ textAlign: 'center', maxWidth: 860 }}>
           <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Erro ao carregar o relatório</h1>
           <p style={{ color: '#6b7280' }}>Ocorreu um erro inesperado ao carregar o relatório. Tente novamente mais tarde.</p>
+          <pre style={{ textAlign: 'left', fontSize: 10, background: '#f8d7da', color: '#721c24', padding: 10, marginTop: 20, overflowX: 'auto' }}>
+            {e?.message || String(e)}
+            {'\n'}
+            {e?.stack || ''}
+          </pre>
         </div>
       </main>
     );
