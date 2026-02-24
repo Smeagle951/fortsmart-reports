@@ -46,14 +46,17 @@ export function calcularMetricasTalhao(talhao: Talhao): MetricasTalhao {
     const daninhas_pct = Math.round((totalDaninhas / total) * 100);
 
     // Top 5 infestações por índice de ocorrência
-    const top5Infestacoes = Object.entries(contagemOrganismo)
-        .map(([nome, { count, tipo }]) => ({
-            nome,
-            tipo,
-            percentual: Math.round((count / totalPontos) * 100),
-        }))
-        .sort((a, b) => b.percentual - a.percentual)
-        .slice(0, 5);
+    const entries = Object.entries(contagemOrganismo);
+    const top5Infestacoes = entries.length > 0
+        ? entries
+            .map(([nome, { count, tipo }]) => ({
+                nome,
+                tipo,
+                percentual: Math.round((count / totalPontos) * 100),
+            }))
+            .sort((a, b) => b.percentual - a.percentual)
+            .slice(0, 5)
+        : [];
 
     return {
         totalPontos,

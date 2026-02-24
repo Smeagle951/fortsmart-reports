@@ -44,8 +44,8 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
     const [pagina, setPagina] = useState(1);
 
     // Montar linhas
-    const linhas: LinhaTabela[] = pontos.flatMap(p =>
-        p.infestacoes.map(inf => ({
+    const linhas: LinhaTabela[] = (pontos || []).flatMap(p =>
+        (p.infestacoes || []).map(inf => ({
             pontoId: p.identificador,
             tipo: inf.tipo,
             nome: inf.nome,
@@ -63,8 +63,8 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
         return 0;
     });
 
-    const totalPags = Math.ceil(ordenadas.length / PAGE_SIZE);
-    const pagSelected = ordenadas.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE);
+    const totalPags = Math.ceil((ordenadas?.length || 0) / PAGE_SIZE);
+    const pagSelected = (ordenadas || []).slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE);
 
     const handleSort = (col: keyof LinhaTabela) => {
         if (ordenacao === col) setAsc(!asc);
