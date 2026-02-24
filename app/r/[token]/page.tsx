@@ -5,7 +5,8 @@ import RelatorioContent from '@/components/RelatorioContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import PrintBar from '@/components/PrintBar';
 
-type Props = { params: { token: string }; searchParams?: { [key: string]: string | string[] | undefined } };
+type Awaitable<T> = T | Promise<T>;
+type Props = { params: Awaitable<{ token: string }>; searchParams?: Awaitable<{ [key: string]: string | string[] | undefined }> };
 
 function parsePayload(raw: unknown): Record<string, unknown> | null {
   if (raw == null) return null;
@@ -24,9 +25,11 @@ function parsePayload(raw: unknown): Record<string, unknown> | null {
 }
 
 /** Rota pública /r/[token]: usa SERVICE_ROLE se configurado; senão anon. Só filtra por share_token (não por publicado). */
-export default async function RelatorioCompartilhadoPage({ params, searchParams }: Props) {
-  const { token } = params;
-  const sp = searchParams;
+export default async function RelatorioCompartilhadoPage(props: Props) {
+  const resolvedParams = await props.params;
+  const token = resolvedParams?.token ?? '';
+  const sp = props.searchParams ? await props.searchParams : {};
+
   const debug = sp?.debug === '1' || sp?.debug === 'true';
   console.log('[fortsmart-reports] /r/[token] token recebido:', token);
   if (debug) {
