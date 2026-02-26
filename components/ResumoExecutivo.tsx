@@ -63,22 +63,22 @@ export default function ResumoExecutivo({ metricas, talhaoNome, area_ha, ultimoM
                 {/* Pontos amostrados */}
                 <StatCard delay="delay-100" icon="📍" label="Pontos Amostrados" color="#1565C0">
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                        <span style={{ fontSize: 32, fontWeight: 800, color: '#1565C0' }}>{pontos}</span>
-                        <span style={{ fontSize: 13, color: '#94A3B8' }}>pts</span>
+                        <span style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{pontos}</span>
+                        <span style={{ fontSize: 12, color: '#94A3B8' }}>pts</span>
                     </div>
                 </StatCard>
 
                 {/* Total ocorrências */}
                 <StatCard delay="delay-200" icon="🐛" label="Total de Ocorrências" color="var(--red)">
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                        <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--red)' }}>{ocorrencias}</span>
+                        <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--red)' }}>{ocorrencias}</span>
                     </div>
                 </StatCard>
 
                 {/* Índice geral */}
                 <StatCard delay="delay-300" icon="📈" label="Índice Geral" color={indiceColor}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 32, fontWeight: 800, color: indiceColor }}>{indice}%</span>
+                        <span style={{ fontSize: 26, fontWeight: 800, color: indiceColor }}>{indice}%</span>
                         <ClassifBadge nivel={metricas.classificacao} />
                     </div>
                     <div style={{ marginTop: 8 }}>
@@ -97,10 +97,10 @@ export default function ResumoExecutivo({ metricas, talhaoNome, area_ha, ultimoM
                 {/* Área do talhão */}
                 <StatCard delay="delay-400" icon="🌾" label="Área do Talhão" color="var(--green-primary)">
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                        <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--green-primary)' }}>
+                        <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--green-primary)' }}>
                             {(areaAnim / 10).toFixed(1)}
                         </span>
-                        <span style={{ fontSize: 14, color: '#64748B', fontWeight: 600 }}>ha</span>
+                        <span style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>ha</span>
                     </div>
                 </StatCard>
             </div>

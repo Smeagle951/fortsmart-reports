@@ -1,4 +1,4 @@
-import { MetricasPonto, MetricasTalhao, NivelClassificacao, Talhao, TipoOrganismo } from '../types/monitoring';
+import { MetricasPonto, MetricasTalhao, NivelClassificacao, Talhao, TipoOrganismo } from './types/monitoring';
 
 export function classificarNivel(severidade: number): NivelClassificacao {
     if (severidade < 10) return 'CONTROLADO';

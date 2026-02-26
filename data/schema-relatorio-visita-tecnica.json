@@ -1,0 +1,177 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Relatório de Visita Técnica FortSmart",
+  "description": "Fonte de verdade para o relatório web. Gerado pelo app Flutter, armazenado no Supabase, renderizado pela Vercel.",
+  "type": "object",
+  "required": ["meta", "propriedade", "talhao"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID único do relatório, ex: 2026-01-25-talhao16" },
+        "dataGeracao": { "type": "string", "format": "date" },
+        "tecnico": { "type": "string" },
+        "tecnicoCrea": { "type": "string" },
+        "safra": { "type": "string", "description": "Ex: 2025/26" },
+        "appVersion": { "type": "string" },
+        "versao": { "type": "integer", "description": "Versão do documento (versionamento)" }
+      }
+    },
+    "propriedade": {
+      "type": "object",
+      "properties": {
+        "fazenda": { "type": "string" },
+        "municipio": { "type": "string" },
+        "estado": { "type": "string" },
+        "proprietario": { "type": "string" }
+      }
+    },
+    "talhao": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "numero": { "type": ["number", "string"] },
+        "cultura": { "type": "string" },
+        "area": { "type": "number" },
+        "dataPlantio": { "type": "string", "format": "date" }
+      }
+    },
+    "contextoSafra": {
+      "type": "object",
+      "properties": {
+        "materialVariedade": { "type": "string" },
+        "empresa": { "type": "string" },
+        "espacamentoCm": { "type": "number" },
+        "populacaoAlvoPlHa": { "type": "number" },
+        "dae": { "type": "integer", "description": "Dias após emergência" },
+        "dap": { "type": "integer", "description": "Dias após plantio" }
+      }
+    },
+    "fenologia": {
+      "type": "object",
+      "properties": {
+        "estadio": { "type": "string" },
+        "ultimaAvaliacaoDias": { "type": "integer" },
+        "dataUltimaAvaliacao": { "type": "string", "format": "date" },
+        "historico": {
+          "type": "array",
+          "items": { "type": "object", "properties": { "estagio": {}, "data": {}, "observacoes": {} } }
+        }
+      }
+    },
+    "populacao": {
+      "type": "object",
+      "properties": {
+        "plantasHa": { "type": "number" },
+        "estandeEfetivoPlHa": { "type": "number" },
+        "eficienciaPct": { "type": "number" },
+        "plantasPorMetro": { "type": "number" },
+        "situacao": { "type": "string", "enum": ["OK", "Monitorar", "Atenção"] }
+      }
+    },
+    "aplicacoes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tipo": { "type": "string" },
+          "data": { "type": "string", "format": "date" },
+          "produto": { "type": "string" },
+          "dose": { "type": "string" },
+          "unidade": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      }
+    },
+    "pragas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tipo": { "type": "string", "enum": ["praga", "doença", "daninha"] },
+          "alvo": { "type": "string" },
+          "incidencia": { "type": "string" },
+          "severidade": { "type": "string" },
+          "situacao": { "type": "string" },
+          "observacoes": { "type": "string" }
+        }
+      }
+    },
+    "condicoes": {
+      "type": "object",
+      "properties": {
+        "temperatura": { "type": "number" },
+        "umidade": { "type": "number" },
+        "vento": { "type": "string" },
+        "nebulosidade": { "type": "string" },
+        "soloUmidade": { "type": "string" },
+        "palhada": { "type": "string" },
+        "compactacao": { "type": "string" },
+        "vigorCultura": { "type": "string" },
+        "uniformidade": { "type": "string" },
+        "sintomas": { "type": "string" }
+      }
+    },
+    "mapa": {
+      "type": "object",
+      "properties": {
+        "viewBox": { "type": "string" },
+        "path": { "type": "string" },
+        "pontos": {
+          "type": "array",
+          "items": { "type": "object", "properties": { "x": {}, "y": {}, "tipo": {}, "severidade": {} } }
+        }
+      }
+    },
+    "imagens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string", "description": "URL pública (Supabase Storage ou CDN)" },
+          "descricao": { "type": "string" },
+          "categoria": { "type": "string" },
+          "data": { "type": "string", "format": "date" }
+        }
+      }
+    },
+    "diagnostico": {
+      "type": "object",
+      "properties": {
+        "problemaPrincipal": { "type": "string" },
+        "causaProvavel": { "type": "string" },
+        "nivelRisco": { "type": "string" },
+        "urgenciaAcao": { "type": "string" }
+      }
+    },
+    "planoAcao": {
+      "type": "object",
+      "properties": {
+        "objetivoManejo": { "type": "string" },
+        "acoes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "prioridade": { "type": "string" },
+              "acao": { "type": "string" },
+              "prazo": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "assinaturaTecnica": {
+      "type": "object",
+      "description": "Assinatura do responsável técnico",
+      "properties": {
+        "nome": { "type": "string" },
+        "crea": { "type": "string" },
+        "dataAssinatura": { "type": "string", "format": "date" },
+        "cidade": { "type": "string" }
+      }
+    },
+    "conclusao": { "type": "string" }
+  }
+}
