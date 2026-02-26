@@ -94,9 +94,10 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
 
     return (
         <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.5px', margin: 0 }}>
-                    📋 Tabela Detalhada
+            <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, padding: '14px 16px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                <h3 style={{ fontSize: 13, fontWeight: 600, color: '#475569', margin: 0 }}>
+                    Tabela Detalhada
                 </h3>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     {/* Filtro */}
@@ -123,12 +124,12 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
                             fontSize: 11, fontWeight: 700,
                         }}
                     >
-                        ⬇ CSV
+                        Exportar CSV
                     </button>
                 </div>
             </div>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                         <thead>
@@ -214,6 +215,7 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
                         ))}
                     </div>
                 )}
+            </div>
             </div>
         </div>
     );

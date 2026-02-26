@@ -14,8 +14,8 @@
   --blue: #1565C0;
   --blue-100: #E3F2FD;
   --bg: #F8FAFC;
-  --card-shadow: 0 2px 12px rgba(0, 0, 0, .07), 0 1px 3px rgba(0, 0, 0, .06);
-  --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, .12), 0 2px 6px rgba(0, 0, 0, .08);
+  --card-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, .08), 0 2px 4px rgba(0, 0, 0, .04);
 }
 
 * {
@@ -27,7 +27,7 @@ html {
 }
 
 body {
-  background: var(--bg);
+  background: #fff;
   font-family: 'Inter', sans-serif;
   color: #1A2332;
   -webkit-font-smoothing: antialiased;
@@ -141,18 +141,10 @@ body {
   animation-delay: 0.6s;
 }
 
-/* ── Cards ─────────────────────────────────────────────────────────────────── */
 .card {
   background: #fff;
-  border-radius: 14px;
-  box-shadow: var(--card-shadow);
-  padding: 20px 24px;
-  transition: box-shadow .2s, transform .2s;
-}
-
-.card:hover {
-  box-shadow: var(--card-shadow-hover);
-  transform: translateY(-1px);
+  border: 1px solid #E2E8F0;
+  padding: 16px;
 }
 
 /* ── Progress bars animadas ─────────────────────────────────────────────────── */
@@ -239,11 +231,10 @@ body {
 
 .gallery-modal-content {
   background: #fff;
-  border-radius: 16px;
-  padding: 24px;
+  border: 1px solid #E2E8F0;
+  padding: 20px;
   max-width: 560px;
   width: 90%;
-  animation: scaleIn .25s ease;
 }
 
 /* ── Navigation lateral ──────────────────────────────────────────────────── */
@@ -282,8 +273,1687 @@ body {
 
 /* ── Leaflet fix ──────────────────────────────────────────────────────────── */
 .leaflet-container {
-  border-radius: 12px;
   font-family: 'Inter', sans-serif !important;
+  border-radius: 0 0 8px 8px;
+}
+
+/* ── Relatório de Visita Técnica ──────────────────────────────────────────── */
+.relatorio {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+  background: var(--bg);
+}
+
+/* ── Relatório Plantio (SaaS Premium) ─────────────────────────────────────── */
+.relatorio.relatorio--plantio {
+  padding-right: 140px;
+}
+
+@media print {
+  .relatorio.relatorio--plantio {
+    padding-right: 0;
+  }
+}
+
+.relatorio-plantio .relatorio-plantio-content {
+  --plantio-card-bg: #ffffff;
+  --plantio-border: #e2e8f0;
+  --plantio-text: #334155;
+  --plantio-muted: #64748b;
+  --plantio-accent: #16a34a;
+  --plantio-accent-muted: rgba(22, 163, 74, 0.12);
+}
+
+.relatorio-plantio .plantio-card {
+  background: var(--plantio-card-bg);
+  border: 1px solid var(--plantio-border);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.relatorio-plantio .plantio-card-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--plantio-muted);
+  margin-bottom: 12px;
+}
+
+/* HTML5 semântico – padrão SaaS RTV */
+.relatorio-plantio .plantio-data-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.relatorio-plantio .plantio-data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.relatorio-plantio .plantio-data-row dt {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--plantio-muted);
+}
+
+.relatorio-plantio .plantio-data-row dd {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--plantio-text);
+  margin: 0;
+}
+
+.relatorio-plantio .plantio-data-list--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.relatorio-plantio .plantio-data-list--inline .plantio-data-row {
+  flex: 0 0 auto;
+}
+
+/* Figura e legenda */
+.relatorio-plantio .plantio-figure {
+  margin: 0 0 12px;
+}
+
+.relatorio-plantio .plantio-figcaption {
+  font-size: 0.75rem;
+  color: var(--plantio-muted);
+  margin-top: 8px;
+}
+
+.relatorio-plantio .plantio-figcaption--stats {
+  font-weight: 500;
+  color: var(--plantio-text);
+}
+
+/* Linha de plantio – visualização rolável */
+/* Linha da trena: linha horizontal + bolinhas por espaçamento */
+.relatorio-plantio .plantio-trena {
+  display: flex;
+  align-items: flex-end;
+  overflow-x: auto;
+  padding: 12px 12px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--plantio-border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  scrollbar-width: thin;
+  min-height: 44px;
+  border-bottom: 2px solid #94a3b8;
+}
+
+.relatorio-plantio .plantio-trena-marcas {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: max-content;
+  flex-shrink: 0;
+  margin-bottom: -6px;
+}
+
+.relatorio-plantio .plantio-trena-grupo {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.relatorio-plantio .plantio-trena-grupo--dupla {
+  gap: 1px;
+}
+
+.relatorio-plantio .plantio-trena-grupo--tripla {
+  gap: 1px;
+}
+
+.relatorio-plantio .plantio-trena-bolinha {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: block;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.relatorio-plantio .plantio-trena-falha {
+  display: inline-block;
+  width: 20px;
+  min-width: 20px;
+  height: 2px;
+  background: #fecaca;
+  border-radius: 1px;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.relatorio-plantio .plantio-trena-more {
+  flex-shrink: 0;
+  align-self: center;
+  padding-left: 12px;
+  font-size: 0.75rem;
+  color: var(--plantio-muted);
+}
+
+.relatorio-plantio .plantio-trena--mini .plantio-trena-bolinha {
+  width: 8px;
+  height: 8px;
+  border-width: 1px;
+}
+
+.relatorio-plantio .plantio-trena--mini .plantio-trena-grupo {
+  gap: 1px;
+}
+
+.relatorio-plantio .plantio-trena--mini .plantio-trena-falha {
+  width: 14px;
+  min-width: 14px;
+  height: 1px;
+  margin-bottom: 3px;
+}
+
+.relatorio-plantio .plantio-trena--mini {
+  padding: 10px;
+  min-height: 36px;
+}
+
+.relatorio-plantio .plantio-trena--mini .plantio-trena-marcas {
+  gap: 4px;
+  margin-bottom: -5px;
+}
+
+.relatorio-plantio .plantio-figure--linha-mini {
+  margin-bottom: 12px;
+}
+
+.relatorio-plantio .plantio-figure--linha-mini .plantio-figcaption {
+  margin-top: 4px;
+}
+
+.relatorio-plantio .plantio-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin: 0 0 12px;
+}
+
+.relatorio-plantio .plantio-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.relatorio-plantio .plantio-legend-item dt,
+.relatorio-plantio .plantio-legend-item dd {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--plantio-text);
+}
+
+.relatorio-plantio .plantio-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.relatorio-plantio .plantio-legend-dot--ok { background: #10b981; }
+.relatorio-plantio .plantio-legend-dot--dupla { background: #fbbf24; }
+.relatorio-plantio .plantio-legend-dot--tripla { background: #8b5cf6; }
+.relatorio-plantio .plantio-legend-dot--falha { background: #ef4444; }
+
+.relatorio-plantio .plantio-indice-box {
+  padding: 10px 14px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.relatorio-plantio .plantio-indice-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--plantio-muted);
+}
+
+.relatorio-plantio .plantio-indice-valor {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--plantio-text);
+}
+
+.relatorio-plantio .plantio-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.relatorio-plantio .plantio-tag {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.relatorio-plantio .plantio-tag--ok { background: #d1fae5; color: #065f46; }
+.relatorio-plantio .plantio-tag--dupla { background: #fef3c7; color: #92400e; }
+.relatorio-plantio .plantio-tag--tripla { background: #ede9fe; color: #5b21b6; }
+.relatorio-plantio .plantio-tag--falha { background: #fee2e2; color: #991b1b; }
+
+.relatorio-plantio .plantio-chart-wrap {
+  height: 140px;
+  position: relative;
+}
+
+.relatorio-plantio .plantio-resumo-linha {
+  margin-top: 16px;
+}
+
+.relatorio-plantio .plantio-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.relatorio-plantio .plantio-top-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--plantio-border);
+}
+
+.relatorio-plantio .plantio-top-bar .plantio-brand {
+  font-size: 0.9375rem;
+  color: var(--plantio-text);
+}
+
+.relatorio-plantio .plantio-top-bar .plantio-meta {
+  font-size: 0.8125rem;
+  color: var(--plantio-muted);
+}
+
+/* Cabeçalho institucional técnico (RTV / Pesquisa / Multinacional) */
+.relatorio-plantio .plantio-header-institucional {
+  background: var(--plantio-card-bg);
+  border: 1px solid var(--plantio-border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.relatorio-plantio .plantio-header-institucional__logo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--plantio-border);
+}
+
+.relatorio-plantio .plantio-header-institucional__logo-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--plantio-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.relatorio-plantio .plantio-header-institucional__logo-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.relatorio-plantio .plantio-header-institucional__empresa {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--plantio-text);
+  letter-spacing: -0.02em;
+}
+
+.relatorio-plantio .plantio-header-institucional__tipo {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--plantio-muted);
+  margin-top: 2px;
+}
+
+.relatorio-plantio .plantio-header-institucional__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px 24px;
+}
+
+.relatorio-plantio .plantio-header-institucional__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.relatorio-plantio .plantio-header-institucional__label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--plantio-muted);
+}
+
+.relatorio-plantio .plantio-header-institucional__value {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--plantio-text);
+}
+
+.relatorio-plantio .plantio-header-institucional__status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--plantio-accent-muted);
+  color: var(--plantio-accent);
+}
+
+@media (min-width: 640px) {
+  .relatorio-plantio .plantio-header-institucional__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .relatorio-plantio .plantio-header-institucional__grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Cabeçalho institucional — Relatório Técnico de Visita (sem versão do app) */
+.relatorio--visita-tecnica .visita-header-institucional {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.relatorio--visita-tecnica .visita-header-institucional__logo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.relatorio--visita-tecnica .visita-header-institucional__logo-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.relatorio--visita-tecnica .visita-header-institucional__empresa {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1a2332;
+  letter-spacing: -0.02em;
+}
+
+.relatorio--visita-tecnica .visita-header-institucional__tipo {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.relatorio--visita-tecnica .visita-header-institucional__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px 24px;
+}
+
+.relatorio--visita-tecnica .visita-header-institucional__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.relatorio--visita-tecnica .visita-header-institucional__label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.relatorio--visita-tecnica .visita-header-institucional__value {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+.relatorio--visita-tecnica .visita-header-institucional__status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(22, 163, 74, 0.12);
+  color: #16a34a;
+}
+
+@media (min-width: 640px) {
+  .relatorio--visita-tecnica .visita-header-institucional__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .relatorio--visita-tecnica .visita-header-institucional__grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.relatorio-plantio .plantio-breadcrumb {
+  font-size: 0.8125rem;
+  color: var(--plantio-muted);
+}
+
+.relatorio-plantio .plantio-tabs {
+  gap: 4px;
+  padding: 4px;
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.relatorio-plantio .plantio-tabs button {
+  padding: 8px 16px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.relatorio-plantio .plantio-tabs button:not(.active):hover {
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--plantio-text);
+}
+
+.relatorio-plantio .plantio-tabs button.active {
+  background: #fff;
+  color: var(--plantio-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.relatorio-plantio .plantio-title-block {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--plantio-border);
+}
+
+.relatorio-plantio .plantio-title-block h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--plantio-text);
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.relatorio-plantio .plantio-title-block .plantio-breadcrumb {
+  font-size: 0.8125rem;
+  color: var(--plantio-muted);
+}
+
+@media (min-width: 768px) {
+  .relatorio {
+    padding: 32px 24px 100px;
+  }
+}
+
+.section {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--green-primary);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--green-100);
+}
+
+.report-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #1A2332;
+  margin-bottom: 12px;
+}
+
+.report-subtitle {
+  font-size: 0.95rem;
+  color: #64748B;
+  margin-bottom: 24px;
+}
+
+.report-intro {
+  margin-bottom: 24px;
+}
+
+/* InfoGrid */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+
+@media (max-width: 600px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* dt/dd no info-grid (lista de definição semântica) */
+.info-grid dt,
+.info-grid .info-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.info-grid dd,
+.info-grid .info-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1A2332;
+  margin: 0 0 4px 0;
+}
+
+.info-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.info-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1A2332;
+}
+
+/* Header do relatório — tons claros, profissional */
+.header-relatorio,
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  background: #fff;
+  color: #1a2332;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Header Pro com tabela de identificação */
+.header-relatorio--pro {
+  flex-direction: column;
+  padding: 20px 24px;
+}
+
+.header-relatorio__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.header-relatorio__meta {
+  text-align: right;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.header-relatorio--pro .meta-fazenda {
+  color: #1a2332;
+  font-weight: 700;
+}
+
+.header-relatorio--pro .meta-talhao,
+.header-relatorio--pro .meta-date,
+.header-relatorio--pro .meta-tecnico,
+.header-relatorio--pro .meta-id {
+  color: #64748b;
+}
+
+.header-relatorio__identificacao {
+  width: 100%;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.header-relatorio__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.header-relatorio__table th {
+  text-align: left;
+  padding: 6px 12px 6px 0;
+  font-weight: 600;
+  color: #64748b;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.header-relatorio__table td {
+  padding: 6px 16px 6px 0;
+  font-weight: 500;
+  color: #1a2332;
+}
+
+.header-relatorio__table tr:not(:last-child) th,
+.header-relatorio__table tr:not(:last-child) td {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.brand,
+.brand-logo,
+.brand-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--green-primary);
+}
+
+.brand-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.report-meta,
+.header-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+.report-meta-left {
+  margin-bottom: 2px;
+}
+
+.report-meta-left .meta-fazenda,
+.meta-fazenda {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.report-meta-left .meta-talhao,
+.meta-talhao {
+  font-size: 0.875rem;
+  opacity: 0.95;
+}
+
+.meta-date,
+.meta-tecnico,
+.meta-id {
+  font-size: 0.8rem;
+  opacity: 0.95;
+}
+
+/* Tabelas */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.table th {
+  background: var(--green-100);
+  color: var(--green-primary);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table tbody tr:hover {
+  background: #F8FAFC;
+}
+
+/* Botões */
+.btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--green-primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--green-light);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #E2E8F0;
+  color: #475569;
+}
+
+.btn-secondary:hover {
+  background: #CBD5E1;
+}
+
+/* PrintBar */
+.report {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+}
+
+.btn-print {
+  box-shadow: 0 4px 12px rgba(27, 94, 32, 0.3);
+}
+
+/* Galeria de fotos */
+.photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.photo-card {
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 10px;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.photo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.photo-img {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+}
+
+.photo-caption {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #1A2332;
+}
+
+.photo-meta {
+  padding: 0 12px 8px;
+  font-size: 0.75rem;
+  color: #64748B;
+}
+
+/* Galeria Pro (SaaS/agronômico) */
+.galeria-section .galeria-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.galeria-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.galeria-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.galeria-card__img-wrap {
+  position: relative;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+  cursor: pointer;
+  background: #f1f5f9;
+}
+
+.galeria-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.galeria-card__badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(27, 94, 32, 0.9);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.galeria-card__body {
+  padding: 14px 16px;
+}
+
+.galeria-card__caption {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #1a2332;
+  line-height: 1.4;
+  margin: 0 0 6px 0;
+}
+
+.galeria-card__date {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Lightbox */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.lightbox-inner {
+  max-width: 90vw;
+  max-height: 90vh;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  overflow: auto;
+  animation: scaleIn 0.25s ease;
+}
+
+.lightbox-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.lightbox-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.lightbox-close {
+  margin-bottom: 12px;
+}
+
+/* Mapa */
+.mapa-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  position: relative;
+}
+
+.mapa-section .mapa-wrap {
+  min-height: 200px;
+}
+
+.mapa-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.mapa-overlay {
+  position: absolute;
+  z-index: 10;
+  min-width: 200px;
+}
+
+.mapa-overlay-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--card-shadow-hover);
+  border: 1px solid #E2E8F0;
+}
+
+.mapa-overlay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mapa-popup {
+  min-width: 200px;
+  padding: 4px 0;
+}
+
+.mapa-popup-row {
+  margin-top: 4px;
+  font-size: 0.9rem;
+}
+
+.mapa-popup-desc {
+  margin-top: 8px;
+  font-size: 0.875rem;
+  color: #475569;
+}
+
+.mapa-popup-date {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Contexto da safra e Fenologia — tabelas */
+.contextoSafra-section .table tbody th,
+.fenologia-content .table tbody th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.contextoSafra-section .table tbody td,
+.fenologia-content .table tbody td {
+  font-size: 0.9rem;
+}
+
+.fenologia-historico-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 12px;
+}
+
+.fenologia-table {
+  font-size: 0.875rem;
+}
+
+.mapa-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94A3B8;
+  font-size: 0.9rem;
+}
+
+/* Conclusão e assinatura */
+.conclusao-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #334155;
+}
+
+.assinatura-section .assinatura-box {
+  padding: 20px;
+  background: var(--green-100);
+  border-radius: 10px;
+  border-left: 4px solid var(--green-primary);
+}
+
+.assinatura-nome {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1A2332;
+}
+
+.assinatura-crea,
+.assinatura-data,
+.assinatura-cidade {
+  font-size: 0.85rem;
+  color: #64748B;
+  margin-top: 4px;
+}
+
+.plano-objetivo {
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+/* Footer do relatório */
+.footer {
+  margin-top: 32px;
+  padding: 24px;
+  text-align: center;
+  border-top: 1px solid #E2E8F0;
+  font-size: 0.85rem;
+  color: #64748B;
+}
+
+/* Badges para tabelas (TabelaAplicacoes) */
+.badge-success {
+  background: var(--green-100);
+  color: var(--green-primary);
+}
+
+.badge-warning {
+  background: var(--yellow-100);
+  color: #8B6914;
+}
+
+.badge-danger {
+  background: var(--red-100);
+  color: var(--red);
+}
+
+.badge-muted {
+  background: #F1F5F9;
+  color: #64748B;
+}
+
+/* ── Visual SaaS Moderno (Relatório Visita Técnica) ───────────────────────── */
+.relatorio--visita-tecnica .min-h-screen {
+  background: #F8FAFC;
+}
+
+.relatorio--visita-tecnica .saas-section {
+  padding: 24px 0;
+  animation: saasSectionIn 0.35s ease both;
+}
+
+@keyframes saasSectionIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Cards brancos, sombras suaves, bordas arredondadas */
+.relatorio--visita-tecnica .saas-section .rounded-xl,
+.relatorio--visita-tecnica .saas-kpi-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.relatorio--visita-tecnica .saas-section .rounded-xl:hover,
+.relatorio--visita-tecnica .saas-kpi-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Status: Verde OK | Amarelo Atenção | Vermelho Crítico */
+.relatorio--visita-tecnica .status-ok,
+.relatorio--visita-tecnica .bg-emerald-100.text-emerald-800 {
+  background: #d1fae5 !important;
+  color: #065f46 !important;
+}
+
+.relatorio--visita-tecnica .status-atencao,
+.relatorio--visita-tecnica .bg-amber-100.text-amber-800,
+.relatorio--visita-tecnica .bg-amber-50.text-amber-800,
+.relatorio--visita-tecnica .bg-amber-50.text-amber-900 {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+.relatorio--visita-tecnica .status-critico,
+.relatorio--visita-tecnica .bg-red-100.text-red-800,
+.relatorio--visita-tecnica .bg-red-50.text-red-800 {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+/* Linha expandida: animação suave do drill-down técnico */
+.relatorio--visita-tecnica .drill-down-row .drill-down-content {
+  animation: drillDownIn 0.25s ease both;
+}
+
+@keyframes drillDownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes galeriaModalIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── SaaS Relatório Agronômico Premium ────────────────────────────────────── */
+.saas-section {
+  padding: 24px 0;
+}
+
+.saas-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+}
+
+.saas-btn {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.saas-btn-primary {
+  background: #16a34a;
+  color: #fff;
+}
+
+.saas-btn-primary:hover {
+  background: #15803d;
+}
+
+.saas-btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.saas-btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+.saas-table {
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.saas-th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.saas-td {
+  padding: 12px 16px;
+  text-align: left;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.saas-kpi-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+/* SaaS header refinements */
+.saas-header {
+  border-radius: 10px;
+  padding: 8px 0;
+}
+.saas-header img {
+  display: block;
+}
+.saas-header .saas-btn {
+  min-width: 44px;
+}
+.saas-header .inline-flex.items-center > span {
+  line-height: 1;
+}
+
+/* ── Relatório Avaliação Lado a Lado (SaaS) ────────────────────────────────── */
+.relatorio--lado-a-lado .sbs-report {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 0 80px;
+}
+
+.sbs-header-institucional {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 20px 24px;
+  background: #fff;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.sbs-header-institucional__logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sbs-header-institucional__logo-icon {
+  flex-shrink: 0;
+}
+
+.sbs-header-institucional__empresa {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--green-primary);
+}
+
+.sbs-header-institucional__tipo {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+
+.sbs-header-institucional__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px 24px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sbs-header-institucional__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sbs-header-institucional__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sbs-header-institucional__value {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1a2332;
+}
+
+.sbs-section {
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  border: 1px solid #e2e8f0;
+}
+
+.sbs-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--green-primary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--green-100);
+}
+
+.sbs-section-desc {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.sbs-muted {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.sbs-text-block {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #334155;
+  margin: 0;
+}
+
+.sbs-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+
+@media (max-width: 600px) {
+  .sbs-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sbs-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sbs-info-row-full {
+  grid-column: 1 / -1;
+}
+
+.sbs-info-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sbs-info-value {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #1a2332;
+}
+
+.sbs-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 700px) {
+  .sbs-two-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sbs-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sbs-column-badge {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.sbs-column-a .sbs-column-badge {
+  background: rgba(27, 94, 32, 0.12);
+  color: var(--green-primary);
+}
+
+.sbs-column-b .sbs-column-badge {
+  background: rgba(21, 101, 192, 0.12);
+  color: #1565c0;
+}
+
+.sbs-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #334155;
+}
+
+.sbs-list-ordered {
+  list-style: decimal;
+  padding-left: 22px;
+}
+
+.sbs-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.sbs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.sbs-table th,
+.sbs-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.sbs-table th {
+  background: var(--green-100);
+  color: var(--green-primary);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sbs-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.sbs-th-right,
+.sbs-td-right {
+  text-align: right !important;
+}
+
+.sbs-table-comparison .sbs-th-right:first-of-type,
+.sbs-table-comparison .sbs-td-right:first-of-type {
+  text-align: right !important;
+}
+
+.sbs-diff-positive {
+  color: var(--green-primary);
+  font-weight: 600;
+}
+
+.sbs-photos-columns {
+  align-items: start;
+}
+
+.sbs-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.sbs-figure {
+  margin: 0;
+}
+
+.sbs-photo-img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  display: block;
+}
+
+.sbs-photo-placeholder {
+  min-height: 120px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  border: 1px dashed #cbd5e1;
+}
+
+.sbs-figcaption {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.sbs-recommendations {
+  margin-top: 12px;
+}
+
+.sbs-recommendations-title {
+  display: block;
+  font-size: 0.8125rem;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.sbs-conclusao-text {
+  margin-bottom: 12px;
+}
+
+.sbs-signature-section .sbs-signature-box {
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.sbs-signature-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a2332;
+}
+
+.sbs-signature-crea,
+.sbs-signature-city {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.sbs-footer {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 0.8125rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.sbs-footer-meta {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+@media print {
+  .relatorio--lado-a-lado .sbs-report .sbs-section {
+    box-shadow: none;
+    border: 1px solid #e2e8f0;
+  }
 }
 
 /* ── Print / PDF ──────────────────────────────────────────────────────────── */
@@ -299,5 +1969,14 @@ body {
 
   body {
     background: white;
+  }
+
+  .relatorio {
+    padding: 16px;
+  }
+
+  .section {
+    box-shadow: none;
+    border: 1px solid #E2E8F0;
   }
 }

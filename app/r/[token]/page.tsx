@@ -2,6 +2,9 @@ import { notFound } from 'next/navigation';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
 import RelatorioContent from '@/components/RelatorioContent';
+import RelatorioPlantioContent from '@/components/plantio/RelatorioPlantioContent';
+import RelatorioMonitoramentoContent from '@/components/RelatorioMonitoramentoContent';
+import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import PrintBar from '@/components/PrintBar';
 
@@ -92,20 +95,56 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
           <div style={{ textAlign: 'center', maxWidth: 560 }}>
             <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório inválido</h1>
             <p style={{ color: '#6b7280' }}>O conteúdo do relatório está corrompido ou não pode ser exibido.</p>
-            <pre style={{ textAlign: 'left', fontSize: 10, background: '#eee', padding: 10 }}>{JSON.stringify(rawPayload).substring(0, 500)}</pre>
+            <pre style={{ textAlign: 'left', fontSize: 10, background: '#eee', padding: 10 }}>
+              {(() => {
+                try {
+                  const s = JSON.stringify(rawPayload);
+                  if (typeof s === 'string') return s.substring(0, 500);
+                  const f = String(rawPayload ?? '');
+                  return f.length > 500 ? f.slice(0, 500) : f;
+                } catch {
+                  return '';
+                }
+              })()}
+            </pre>
           </div>
         </main>
       );
     }
 
     const tipo = relatorio.tipo as string | undefined;
+    const tipoRelatorio = relatorio.tipoRelatorio as string | undefined;
     const isSideBySide = tipo === 'avaliacao_lado_a_lado';
+    const isPlantio = tipoRelatorio === 'plantio';
+    const isVisitaTecnica = tipo === 'visita_tecnica';
+    const hasTalhoes = Array.isArray(relatorio.talhoes) && (relatorio.talhoes as unknown[]).length > 0;
+    const isMonitoramento = tipo === 'monitoramento' && hasTalhoes;
+
+    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, hasTalhoes, topKeys: Object.keys(relatorio).slice(0, 12) });
 
     return (
       <>
         <PrintBar />
-        <article className="relatorio">
-          {isSideBySide ? (
+        <article className={`relatorio ${isPlantio ? 'relatorio--plantio' : ''} ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isVisitaTecnica ? 'relatorio--visita-tecnica' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''}`}>
+          {isPlantio ? (
+            <RelatorioPlantioContent
+              relatorio={relatorio}
+              reportId={row.titulo || row.id}
+              relatorioUuid={row.id}
+            />
+          ) : isVisitaTecnica ? (
+            <RelatorioVisitaTecnicaContent
+              relatorio={relatorio as import('@/components/RelatorioVisitaTecnicaContent').PayloadVisitaTecnica}
+              reportId={row.titulo || row.id}
+              relatorioUuid={row.id}
+            />
+          ) : isMonitoramento ? (
+            <RelatorioMonitoramentoContent
+              relatorio={relatorio as import('@/components/RelatorioMonitoramentoContent').PayloadMonitoramento}
+              reportId={row.titulo || row.id}
+              relatorioUuid={row.id}
+            />
+          ) : isSideBySide ? (
             <SideBySideReportContent
               data={relatorio as SideBySideReportData}
               reportId={row.titulo || row.id}

@@ -309,11 +309,15 @@ function readFromDatabase(dbPath: string): RelatorioMonitoramento {
     }
 }
 
-import { supabase } from '@/lib/db/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { supabase as clientSupabase } from '@/lib/db/supabase';
 
 // ─── Leitura Fallback Supabase (Ambiente Vercel / Web) ────────────────────────
 async function readFromSupabase(): Promise<RelatorioMonitoramento> {
     try {
+        const supabase = getSupabaseAdmin() ?? clientSupabase;
+        if (!supabase) return mockRelatorio;
+
         // 1. Pega todas as sessoes finalizadas recentes
         const { data: sessions, error: sessErr } = await supabase
             .from('monitoring_sessions')

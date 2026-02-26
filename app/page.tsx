@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { RelatorioMonitoramento } from '@/lib/types/monitoring';
 import { mockRelatorio } from '@/lib/data/mock_monitoring';
 import ReportHeader from '@/components/ReportHeader';
@@ -8,11 +9,22 @@ import TalhaoBloco from '@/components/TalhaoBloco';
 import { calcularMetricasTalhao, corClassificacao } from '@/lib/calculations';
 
 export default function HomePage() {
+  const searchParams = useSearchParams();
+  const tokenFromUrl = searchParams.get('token');
   const [relatorio, setRelatorio] = useState<RelatorioMonitoramento>(mockRelatorio);
   const [source, setSource] = useState<'sqlite' | 'mock' | 'loading'>('loading');
   const [dbPath, setDbPath] = useState<string | null>(null);
 
+  // Se tiver ?token= na URL, redireciona para /r/[token] (relatório publicado)
   useEffect(() => {
+    if (tokenFromUrl && typeof window !== 'undefined') {
+      window.location.href = `/r/${tokenFromUrl}`;
+      return;
+    }
+  }, [tokenFromUrl]);
+
+  useEffect(() => {
+    if (tokenFromUrl) return;
     fetch('/api/relatorio')
       .then(r => r.json())
       .then(data => {
@@ -24,7 +36,7 @@ export default function HomePage() {
         setRelatorio(mockRelatorio);
         setSource('mock');
       });
-  }, []);
+  }, [tokenFromUrl]);
 
   const handleExportPDF = async () => {
     const { default: html2pdf } = await import('html2pdf.js');
@@ -58,10 +70,15 @@ export default function HomePage() {
     XLSX.writeFile(wb, `FortSmart_${relatorio.data.replace(/\//g, '-')}.xlsx`);
   };
 
-  return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 60 }}>
+  const cardStyle = { background: '#fff', borderRadius: 8, border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 
-      {/* Navegação lateral */}
+  if (tokenFromUrl) {
+    return <div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>Redirecionando para o relatório…</div>;
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#F8FAFC', paddingBottom: 60 }}>
+
       <nav className="nav-lateral no-print">
         {relatorio.talhoes.map(t => (
           <a key={t.id} href={`#talhao-${t.id}`} title={t.nome} className="nav-dot"
@@ -70,93 +87,79 @@ export default function HomePage() {
         ))}
       </nav>
 
-      <div id="relatorio-content" style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px 0' }}>
+      <div id="relatorio-content" style={{ maxWidth: 960, margin: '0 auto', padding: '24px 24px 0' }}>
 
-        {/* Header */}
         <ReportHeader relatorio={relatorio} onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
 
-        {/* Badge de fonte dos dados */}
-        <div className="animate-slideDown" style={{
-          marginBottom: 20,
-          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-        }}>
-          {source === 'loading' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#94A3B8' }}>
-              <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#CBD5E1', animation: 'shimmer 1s infinite' }} />
-              Carregando dados do banco…
-            </div>
-          ) : source === 'sqlite' ? (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              background: '#E8F5E9', border: '1.5px solid #2E7D32', borderRadius: 99,
-              padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#1B5E20',
-            }}>
-              ✅ Dados reais do SQLite
-              {dbPath && <span style={{ fontWeight: 400, opacity: 0.7, fontSize: 10 }}>· {dbPath.split(/[\\/]/).slice(-3).join('/')}</span>}
-            </div>
-          ) : (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              background: '#FFF9C4', border: '1.5px solid #F9A825', borderRadius: 99,
-              padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#8B6914',
-            }}>
-              🔵 Dados de demonstração
-              <span style={{ fontWeight: 400, fontSize: 10 }}>· Execute o app Flutter para usar dados reais</span>
-            </div>
-          )}
+        <div className="no-print" style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <a href="/monitoramento/preview" style={{ fontSize: 12, color: '#1B5E20', textDecoration: 'underline', fontWeight: 500 }}>Preview Monitoramento</a>
+          <a href="/visita/preview" style={{ fontSize: 12, color: '#1B5E20', textDecoration: 'underline', fontWeight: 500 }}>Preview Visita Técnica</a>
+          <a href="/plantio/preview" style={{ fontSize: 12, color: '#1B5E20', textDecoration: 'underline', fontWeight: 500 }}>Preview Plantio</a>
         </div>
 
-        {/* Sumário multi-talhão */}
+        {source === 'loading' && (
+          <div style={{ marginBottom: 16, fontSize: 12, color: '#64748B' }}>Carregando dados…</div>
+        )}
+        {source === 'sqlite' && (
+          <div style={{ marginBottom: 16, fontSize: 11, color: '#64748B', padding: '6px 12px', background: '#E8F5E9', borderRadius: 6, display: 'inline-block' }}>
+            Dados do banco local{dbPath ? ` · ${dbPath.split(/[\\/]/).slice(-2).join('/')}` : ''}
+          </div>
+        )}
+        {source === 'mock' && (
+          <div style={{ marginBottom: 16, fontSize: 11, color: '#64748B', padding: '6px 12px', background: '#F1F5F9', borderRadius: 6, display: 'inline-block' }}>
+            Dados de demonstração
+          </div>
+        )}
+
         {relatorio.talhoes.length > 0 && (
-          <div className="card animate-fadeInUp delay-200" style={{ marginBottom: 28, padding: '16px 24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 12,
-                background: 'linear-gradient(135deg,#1565C0,#1E88E5)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <span style={{ fontSize: 22 }}>📋</span>
-              </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#1A2332' }}>
-                  Relatório Multi-Talhão · {relatorio.talhoes.length} talhão{relatorio.talhoes.length !== 1 ? 's' : ''}
-                </div>
-                <div style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>
-                  {relatorio.talhoes.map(t => t.nome).join(' · ')} · Total:{' '}
-                  {relatorio.talhoes.reduce((s, t) => s + (t.area_ha ?? 0), 0).toFixed(1)} ha
-                </div>
-              </div>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          <div style={{ ...cardStyle, marginBottom: 28, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontSize: 13, fontWeight: 600, color: '#475569' }}>
+              Resumo dos talhões
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: '#FAFBFC' }}>
+                  <th style={{ padding: 12, textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '1px solid #E2E8F0' }}>Talhão</th>
+                  <th style={{ padding: 12, textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '1px solid #E2E8F0' }}>Área (ha)</th>
+                  <th style={{ padding: 12, textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '1px solid #E2E8F0' }}>Índice</th>
+                  <th style={{ padding: 12, textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '1px solid #E2E8F0' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
                 {relatorio.talhoes.map(t => {
                   const m = calcularMetricasTalhao(t);
                   const cor = corClassificacao(m.classificacao);
                   return (
-                    <a key={t.id} href={`#talhao-${t.id}`}
-                      onClick={e => { e.preventDefault(); document.getElementById(`talhao-${t.id}`)?.scrollIntoView({ behavior: 'smooth' }); }}
-                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, textDecoration: 'none', cursor: 'pointer' }}>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: cor }}>{m.indiceOcorrencia}%</div>
-                      <div style={{ fontSize: 11, color: '#94A3B8', fontWeight: 500 }}>{t.nome}</div>
-                    </a>
+                    <tr key={t.id} style={{ borderBottom: '1px solid #E2E8F0' }}>
+                      <td style={{ padding: 12, borderBottom: '1px solid #E2E8F0' }}>
+                        <a href={`#talhao-${t.id}`} onClick={e => { e.preventDefault(); document.getElementById(`talhao-${t.id}`)?.scrollIntoView({ behavior: 'smooth' }); }} style={{ color: '#1B5E20', fontWeight: 600, textDecoration: 'none' }}>
+                          {t.nome}
+                        </a>
+                      </td>
+                      <td style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid #E2E8F0' }}>{(t.area_ha ?? 0).toFixed(1)}</td>
+                      <td style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid #E2E8F0', fontWeight: 700, color: cor }}>{m.indiceOcorrencia}%</td>
+                      <td style={{ padding: 12, borderBottom: '1px solid #E2E8F0' }}>
+                        <span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: `${cor}18`, color: cor }}>{m.classificacao.replace('_', ' ')}</span>
+                      </td>
+                    </tr>
                   );
                 })}
-              </div>
-            </div>
+                <tr style={{ background: '#F8FAFC' }}>
+                  <td style={{ padding: 12, fontWeight: 600 }}>Total</td>
+                  <td style={{ padding: 12, textAlign: 'right', fontWeight: 600 }}>{relatorio.talhoes.reduce((s, t) => s + (t.area_ha ?? 0), 0).toFixed(1)}</td>
+                  <td colSpan={2} style={{ padding: 12 }} />
+                </tr>
+              </tbody>
+            </table>
           </div>
         )}
 
-        {/* Talhões */}
         {relatorio.talhoes.map((talhao, idx) => (
           <TalhaoBloco key={talhao.id} talhao={talhao} index={idx + 1} total={relatorio.talhoes.length} data={relatorio.data} />
         ))}
 
-        {/* Rodapé */}
-        <footer style={{ textAlign: 'center', padding: '32px 0', borderTop: '1px solid #E2E8F0' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#94A3B8' }}>
-            🌿 FortSmart Agro · Relatório gerado em {relatorio.data} · {relatorio.tecnico}
-          </div>
-          <div style={{ fontSize: 11, color: '#CBD5E1', marginTop: 6 }}>
-            Este relatório possui validade técnica conforme data de emissão. Para dúvidas, consulte seu engenheiro agrônomo.
-          </div>
+        <footer style={{ textAlign: 'center', padding: '32px 0', borderTop: '1px solid #E2E8F0', fontSize: 12, color: '#64748B' }}>
+          FortSmart Agro · Relatório gerado em {relatorio.data} · {relatorio.tecnico}
         </footer>
       </div>
     </div>

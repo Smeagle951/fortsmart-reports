@@ -22,14 +22,13 @@ export default function GaleriaOcorrencias({ pontos }: GaleriaOcorrenciasProps) 
 
     return (
         <div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 14 }}>
-                📷 Galeria de Ocorrências
-            </h3>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 16 }}>
+                Galeria de Ocorrências
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
                 {items.map((item, idx) => (
                     <div
                         key={idx}
-                        className={`animate-fadeInUp delay-${Math.min(idx * 100 + 100, 600)}`}
                         onClick={() => setModalImg({
                             imagem: item.imagem!,
                             nome: item.nome,
@@ -39,20 +38,7 @@ export default function GaleriaOcorrencias({ pontos }: GaleriaOcorrenciasProps) 
                             lat: item.lat,
                             lng: item.lng,
                         })}
-                        style={{
-                            borderRadius: 12, overflow: 'hidden', cursor: 'pointer',
-                            boxShadow: '0 2px 8px rgba(0,0,0,.08)',
-                            transition: 'transform .2s, box-shadow .2s',
-                            background: '#fff',
-                        }}
-                        onMouseEnter={e => {
-                            (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)';
-                            (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,.15)';
-                        }}
-                        onMouseLeave={e => {
-                            (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)';
-                            (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,.08)';
-                        }}
+                        style={{ border: '1px solid #E2E8F0', borderRadius: 8, overflow: 'hidden', cursor: 'pointer', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
                     >
                         <div style={{ position: 'relative', height: 110, overflow: 'hidden' }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -104,9 +90,9 @@ export default function GaleriaOcorrencias({ pontos }: GaleriaOcorrenciasProps) 
                             style={{ width: '100%', borderRadius: 12, maxHeight: 320, objectFit: 'cover', marginBottom: 14 }}
                         />
                         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                            <InfoTag icon="📍" label="Coordenadas" value={`${modalImg.lat.toFixed(4)}, ${modalImg.lng.toFixed(4)}`} />
-                            <InfoTag icon="📈" label="Severidade" value={`${modalImg.severidade}%`} />
-                            <InfoTag icon="🌱" label="Terço" value={modalImg.terco} />
+                            <InfoTag label="Coordenadas" value={`${modalImg.lat.toFixed(4)}, ${modalImg.lng.toFixed(4)}`} />
+                            <InfoTag label="Severidade" value={`${modalImg.severidade}%`} />
+                            <InfoTag label="Terço" value={modalImg.terco} />
                         </div>
                     </div>
                 </div>
@@ -115,13 +101,11 @@ export default function GaleriaOcorrencias({ pontos }: GaleriaOcorrenciasProps) 
     );
 }
 
-function InfoTag({ icon, label, value }: { icon: string; label: string; value: string }) {
+function InfoTag({ label, value }: { label: string; value: string }) {
     return (
-        <div style={{ background: '#F8FAFC', borderRadius: 8, padding: '6px 12px' }}>
-            <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.4px' }}>
-                {icon} {label}
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#1A2332' }}>{value}</div>
+        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '6px 12px' }}>
+            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>{label}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#1A2332' }}>{value}</div>
         </div>
     );
 }
