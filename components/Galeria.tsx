@@ -9,6 +9,7 @@ type ImagemItem = {
   url?: string;
   path?: string;
   descricao?: string;
+  categoria?: string;
   data?: string;
 };
 
@@ -17,6 +18,16 @@ interface GaleriaProps {
   relatorioId?: string;
   bucketPathPrefix?: string;
 }
+
+const categoriaLabel: Record<string, string> = {
+  fenologia: 'Fenologia',
+  praga: 'Praga',
+  doença: 'Doença',
+  daninha: 'Planta daninha',
+  operacao: 'Operação',
+  desvio: 'Desvio',
+  evidencia: 'Evidência',
+};
 
 export default function Galeria({ imagens, relatorioId, bucketPathPrefix = '' }: GaleriaProps) {
   if (!imagens?.length) return null;
@@ -32,7 +43,7 @@ export default function Galeria({ imagens, relatorioId, bucketPathPrefix = '' }:
     return '';
   };
 
-  const [lightbox, setLightbox] = useState<{ src: string; descricao?: string; data?: string } | null>(null);
+  const [lightbox, setLightbox] = useState<{ src: string; descricao?: string; data?: string; categoria?: string } | null>(null);
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -44,23 +55,39 @@ export default function Galeria({ imagens, relatorioId, bucketPathPrefix = '' }:
   }, []);
 
   return (
-    <section className="section">
+    <section className="section galeria-section">
       <h2 className="section-title">Registros fotográficos</h2>
-      <div className="grid photos-grid">
+      <div className="galeria-grid">
         {imagens.map((img, i) => {
           const src = resolveUrl(img);
           if (!src) return null;
+          const cat = (img.categoria || '').toLowerCase();
+          const catLabel = categoriaLabel[cat] || cat || 'Registro';
           return (
-            <div key={i} className="card photo-card" role="button" data-ponto-index={(img as any).index ?? (img as any).pointIndex ?? (img as any).pontoIndex ?? i + 1} onClick={() => setLightbox({ src, descricao: img.descricao, data: img.data })} onKeyDown={() => {}} tabIndex={0}>
-              <img src={src} alt={img.descricao || 'Foto'} className="photo-img" />
-              <div className="photo-caption">{img.descricao}</div>
-              {img.data && <div className="photo-meta">{formatDate(img.data)}</div>}
-            </div>
+            <article key={i} className="galeria-card">
+              <div
+                className="galeria-card__img-wrap"
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setGalleryIndex(i);
+                  setLightbox({ src, descricao: img.descricao, data: img.data, categoria: img.categoria });
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && (setGalleryIndex(i), setLightbox({ src, descricao: img.descricao, data: img.data, categoria: img.categoria }))}
+              >
+                <img src={src} alt={img.descricao || 'Foto'} className="galeria-card__img" loading="lazy" />
+                <span className="galeria-card__badge">{catLabel}</span>
+              </div>
+              <div className="galeria-card__body">
+                <p className="galeria-card__caption">{img.descricao || '—'}</p>
+                {img.data && <time className="galeria-card__date">{formatDate(img.data)}</time>}
+              </div>
+            </article>
           );
         })}
       </div>
 
-      {lightbox && galleryIndex != null && (
+      {lightbox && (
         <ModalImagem
           src={lightbox.src}
           descricao={lightbox.descricao}
@@ -70,16 +97,16 @@ export default function Galeria({ imagens, relatorioId, bucketPathPrefix = '' }:
             setGalleryIndex(null);
           }}
           onPrev={() => {
-            const prev = galleryIndex > 0 ? galleryIndex - 1 : imagens.length - 1;
+            const prev = (galleryIndex ?? 0) > 0 ? (galleryIndex ?? 0) - 1 : imagens.length - 1;
             const img = imagens[prev];
             setGalleryIndex(prev);
-            setLightbox({ src: resolveUrl(img), descricao: img.descricao, data: img.data });
+            setLightbox({ src: resolveUrl(img), descricao: img.descricao, data: img.data, categoria: img.categoria });
           }}
           onNext={() => {
-            const next = galleryIndex < imagens.length - 1 ? galleryIndex + 1 : 0;
+            const next = (galleryIndex ?? 0) < imagens.length - 1 ? (galleryIndex ?? 0) + 1 : 0;
             const img = imagens[next];
             setGalleryIndex(next);
-            setLightbox({ src: resolveUrl(img), descricao: img.descricao, data: img.data });
+            setLightbox({ src: resolveUrl(img), descricao: img.descricao, data: img.data, categoria: img.categoria });
           }}
         />
       )}

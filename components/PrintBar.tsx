@@ -8,7 +8,7 @@ export default function PrintBar() {
         className="btn btn-primary btn-print"
         onClick={() => window.print()}
       >
-        Baixar PDF
+        Exportar PDF
       </button>
     </div>
   );

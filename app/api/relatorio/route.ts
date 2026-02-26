@@ -316,6 +316,7 @@ import { supabase as clientSupabase } from '@/lib/db/supabase';
 async function readFromSupabase(): Promise<RelatorioMonitoramento> {
     try {
         const supabase = getSupabaseAdmin() ?? clientSupabase;
+        if (!supabase) return mockRelatorio;
 
         // 1. Pega todas as sessoes finalizadas recentes
         const { data: sessions, error: sessErr } = await supabase

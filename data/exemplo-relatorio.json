@@ -53,6 +53,7 @@
       "produto": "Exemplo Max",
       "dose": "0.5",
       "unidade": "L/ha",
+      "classe": "III",
       "status": "Realizado"
     },
     {
@@ -61,6 +62,7 @@
       "produto": "Proteção Lagarta",
       "dose": "0.15",
       "unidade": "L/ha",
+      "classe": "II",
       "status": "Realizado"
     }
   ],
@@ -97,9 +99,17 @@
   "mapa": {
     "viewBox": "0 0 400 300",
     "path": "M 80 50 L 320 55 L 310 250 L 90 245 Z",
+    "polygon": [
+      [-24.958, -53.448],
+      [-24.956, -53.445],
+      [-24.954, -53.450],
+      [-24.958, -53.453],
+      [-24.96, -53.448],
+      [-24.958, -53.448]
+    ],
     "pontos": [
-      { "x": 120, "y": 100, "tipo": "fenologia", "severidade": null },
-      { "x": 200, "y": 140, "tipo": "praga_doenca", "severidade": "media" }
+      { "lat": -24.957, "lng": -53.447, "titulo": "Fenologia: V4", "descricao": "Ponto de avaliação fenológica", "tipo": "fenologia", "data": "2026-01-22" },
+      { "lat": -24.955, "lng": -53.449, "titulo": "Praga: Lagarta", "descricao": "Foco em bordadura", "tipo": "praga_doenca", "severidade": "media", "data": "2026-01-22" }
     ]
   },
   "imagens": [

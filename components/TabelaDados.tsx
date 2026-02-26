@@ -11,15 +11,16 @@ interface TabelaDadosProps {
 export default function TabelaDados({ title, headers, rows, className = '' }: TabelaDadosProps) {
   if (!headers?.length || !rows?.length) return null;
 
+  const tableId = title ? `table-${title.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase()}` : undefined;
   return (
-    <section className={`section ${className}`}>
-      {title ? <h2 className="section-title">{title}</h2> : null}
-      <div className="table-wrap">
+    <section className={`section ${className}`} aria-labelledby={tableId}>
+      {title ? <h2 id={tableId} className="section-title">{title}</h2> : null}
+      <div className="table-wrap" role="region" aria-label={title || 'Tabela de dados'}>
         <table className="table">
           <thead>
             <tr>
               {headers.map((h) => (
-                <th key={h}>{h}</th>
+                <th key={h} scope="col">{h}</th>
               ))}
             </tr>
           </thead>
@@ -50,20 +51,21 @@ export function InfoGrid({
   if (!items?.length) return null;
 
   const sectionClass = `section ${className} ${title === 'Identificação' ? 'info-grid-identificacao' : ''}`;
+  const sectionId = title ? `section-${title.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase()}` : undefined;
 
   return (
-    <section className={sectionClass}>
-      {title && <h2 className="section-title">{title}</h2>}
-      <div className="info-grid">
+    <section className={sectionClass} aria-labelledby={sectionId} id={sectionId}>
+      {title && <h2 id={sectionId} className="section-title">{title}</h2>}
+      <dl className="info-grid">
         {items.map(([label, value]) => (
-          <div key={label} className="info-row">
-            <span className="info-label">{label}</span>
-            <span className="info-value">
+          <React.Fragment key={label}>
+            <dt className="info-label">{label}</dt>
+            <dd className="info-value">
               {value == null ? '—' : typeof value === 'object' && 'type' in value ? value : value}
-            </span>
-          </div>
+            </dd>
+          </React.Fragment>
         ))}
-      </div>
+      </dl>
     </section>
   );
 }

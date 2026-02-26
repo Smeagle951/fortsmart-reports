@@ -60,11 +60,11 @@ export async function getRelatorioByShareToken(token: string): Promise<Relatorio
     .maybeSingle();
 
   if (error) {
-    console.error('[fortsmart-reports] getRelatorioByShareToken:', error.message, 'token=', token.slice(0, 8) + '…');
+    console.error('[fortsmart-reports] getRelatorioByShareToken:', error.message, 'token=', (token || '').slice(0, 8) + '…');
     return null;
   }
   if (!data) {
-    console.warn('[fortsmart-reports] getRelatorioByShareToken: nenhum registro para token', token.slice(0, 8) + '…');
+    console.warn('[fortsmart-reports] getRelatorioByShareToken: nenhum registro para token', (token || '').slice(0, 8) + '…');
     return null;
   }
   const rowData = data as any;

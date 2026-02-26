@@ -6,98 +6,60 @@ interface PrincipaisInfestacoesProps {
     metricas: MetricasTalhao;
 }
 
-const TIPO_ICON: Record<TipoOrganismo, string> = {
-    praga: '🐛', doenca: '🦠', daninha: '🌿',
+const TIPO_LABEL: Record<TipoOrganismo, string> = {
+    praga: 'Praga', doenca: 'Doença', daninha: 'Daninha',
 };
 
 function getClassifStyle(pct: number) {
-    if (pct < 10) return { label: 'Baixo', color: '#2E7D32', bg: '#E8F5E9' };
-    if (pct < 25) return { label: 'Médio', color: '#8B6914', bg: '#FFF9C4' };
-    if (pct < 40) return { label: 'Alto Risco', color: '#E65100', bg: '#FBE9E7' };
-    return { label: 'Crítico', color: '#C62828', bg: '#FFEBEE' };
+    if (pct < 10) return { label: 'Baixo', color: '#2E7D32' };
+    if (pct < 25) return { label: 'Médio', color: '#F59E0B' };
+    if (pct < 40) return { label: 'Alto', color: '#E65100' };
+    return { label: 'Crítico', color: '#C62828' };
 }
+
+const cardStyle = { background: '#fff', borderRadius: 8, border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 
 export default function PrincipaisInfestacoes({ metricas }: PrincipaisInfestacoesProps) {
     const top = metricas.top5Infestacoes;
 
     return (
-        <div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 14 }}>
-                🏆 Principais Infestações
-            </h3>
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                {top.map((inf, idx) => {
-                    const estilo = getClassifStyle(inf.percentual);
-                    return (
-                        <div
-                            key={idx}
-                            className={`animate-fadeInUp delay-${Math.min(idx * 100 + 100, 500)}`}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: 12,
-                                padding: '12px 16px',
-                                borderBottom: idx < top.length - 1 ? '1px solid #F1F5F9' : 'none',
-                                transition: 'background .15s',
-                            }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#FAFBFF'; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
-                        >
-                            {/* Rank */}
-                            <div style={{
-                                width: 28, height: 28, borderRadius: '50%',
-                                background: idx === 0 ? '#FFF9C4' : idx === 1 ? '#F1F5F9' : '#FAFAFA',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 13, fontWeight: 800, color: idx === 0 ? '#F9A825' : '#94A3B8',
-                                flexShrink: 0,
-                            }}>
-                                {idx + 1}
-                            </div>
-
-                            {/* Ícone tipo */}
-                            <span style={{ fontSize: 20, flexShrink: 0 }}>{TIPO_ICON[inf.tipo]}</span>
-
-                            {/* Nome */}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 14, fontWeight: 600, color: '#1A2332', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {inf.nome}
-                                </div>
-                                <div style={{ fontSize: 11, color: '#94A3B8', textTransform: 'capitalize' }}>{inf.tipo}</div>
-                            </div>
-
-                            {/* Progress bar mini */}
-                            <div style={{ width: 80, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                <div style={{ height: 5, borderRadius: 99, background: '#ECEFF1', overflow: 'hidden' }}>
-                                    <div style={{
-                                        height: '100%', width: `${inf.percentual}%`,
-                                        background: estilo.color, borderRadius: 99,
-                                        transition: 'width 1s ease',
-                                    }} />
-                                </div>
-                            </div>
-
-                            {/* Percentual */}
-                            <div style={{ fontSize: 15, fontWeight: 800, color: estilo.color, minWidth: 40, textAlign: 'right' }}>
-                                {inf.percentual}%
-                            </div>
-
-                            {/* Badge */}
-                            <div style={{
-                                padding: '3px 10px', borderRadius: 99,
-                                background: estilo.bg, color: estilo.color,
-                                fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px',
-                                flexShrink: 0,
-                            }}>
-                                {estilo.label}
-                            </div>
-                        </div>
-                    );
-                })}
-
-                {top.length === 0 && (
-                    <div style={{ padding: 24, textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>
-                        Nenhuma infestação registrada.
-                    </div>
-                )}
+        <div style={{ ...cardStyle, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 16px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontSize: 13, fontWeight: 600, color: '#475569' }}>
+                Principais infestações
             </div>
+            {top.length === 0 ? (
+                <div style={{ padding: 24, textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>Nenhuma infestação registrada.</div>
+            ) : (
+                <div style={{ padding: 12 }}>
+                    {top.map((inf, idx) => {
+                        const estilo = getClassifStyle(inf.percentual);
+                        return (
+                            <div
+                                key={idx}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 16,
+                                    padding: '10px 12px',
+                                    borderBottom: idx < top.length - 1 ? '1px solid #E2E8F0' : 'none',
+                                }}
+                            >
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1E293B' }}>{inf.nome}</div>
+                                    <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{TIPO_LABEL[inf.tipo]}</div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <div style={{ width: 60, height: 6, background: '#E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+                                        <div style={{ width: `${Math.min(inf.percentual, 100)}%`, height: '100%', background: estilo.color, borderRadius: 3 }} />
+                                    </div>
+                                    <span style={{ fontSize: 14, fontWeight: 700, color: estilo.color, minWidth: 36, textAlign: 'right' }}>{inf.percentual}%</span>
+                                    <span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, background: `${estilo.color}18`, color: estilo.color }}>{estilo.label}</span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

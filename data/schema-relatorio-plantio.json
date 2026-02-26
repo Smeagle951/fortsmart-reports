@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Relatório de Plantio FortSmart",
+  "description": "Schema extendido para relatório web de plantio. Herda base de visita técnica e adiciona IAT, plantabilidade, estande, diagnóstico integrado.",
+  "type": "object",
+  "required": ["meta", "propriedade", "talhao"],
+  "properties": {
+    "tipoRelatorio": {
+      "type": "string",
+      "enum": ["plantio", "visita_tecnica"],
+      "description": "Tipo do relatório para roteamento de componentes"
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "dataGeracao": { "type": "string", "format": "date" },
+        "tecnico": { "type": "string" },
+        "tecnicoCrea": { "type": "string" },
+        "safra": { "type": "string" },
+        "versao": { "type": "integer" },
+        "status": { "type": "string", "enum": ["Preliminar", "Final"] }
+      }
+    },
+    "propriedade": {
+      "type": "object",
+      "properties": {
+        "fazenda": { "type": "string" },
+        "municipio": { "type": "string" },
+        "estado": { "type": "string" },
+        "proprietario": { "type": "string" }
+      }
+    },
+    "talhao": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "numero": { "type": ["number", "string"] },
+        "cultura": { "type": "string" },
+        "area": { "type": "number" },
+        "dataPlantio": { "type": "string", "format": "date" }
+      }
+    },
+    "contextoSafra": {
+      "type": "object",
+      "properties": {
+        "materialVariedade": { "type": "string" },
+        "empresa": { "type": "string" },
+        "espacamentoCm": { "type": "number" },
+        "populacaoAlvoPlHa": { "type": "number" },
+        "dae": { "type": "integer" },
+        "dap": { "type": "integer" }
+      }
+    },
+    "indiceAgronomicoTalhao": {
+      "type": "object",
+      "description": "IAT - Índice Agronômico do Talhão (0-100)",
+      "properties": {
+        "valor": { "type": "number" },
+        "maximo": { "type": "number", "default": 100 },
+        "status": { "type": "string", "enum": ["Saudável", "Atenção", "Crítico"] },
+        "itens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "valor": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "evolucaoCultura": {
+      "type": "object",
+      "properties": {
+        "estadioAtual": { "type": "string" },
+        "estadioPrevisto": { "type": "string" },
+        "somaTermica": { "type": "number", "description": "Soma térmica em ºC" },
+        "atrasoFenologico": { "type": "integer", "description": "Folhas de atraso (negativo)" }
+      }
+    },
+    "plantabilidade": {
+      "type": "object",
+      "properties": {
+        "espacamentoIdealCm": { "type": "number" },
+        "espacamentoRealCm": { "type": "number" },
+        "cvPercentual": { "type": "number" },
+        "duplasPct": { "type": "number" },
+        "triplasPct": { "type": "number" },
+        "falhasPct": { "type": "number" },
+        "okPct": { "type": "number" },
+        "indicePlantabilidade": { "type": "number" },
+        "linha": {
+          "type": "array",
+          "description": "Pontos da linha de plantio para visualização rolável",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tipo": { "type": "string", "enum": ["ok", "dupla", "tripla", "falha"] },
+              "posicao": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "estande": {
+      "type": "object",
+      "properties": {
+        "registros": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "data": { "type": "string", "format": "date" },
+              "plantasPorMetro": { "type": "number" },
+              "plantasHa": { "type": "number" }
+            }
+          }
+        },
+        "perdaTotalPct": { "type": "number" },
+        "perdaSemanalPct": { "type": "number" }
+      }
+    },
+    "fitossanidade": {
+      "type": "object",
+      "properties": {
+        "lagarta": { "type": "string" },
+        "percevejo": { "type": "string" },
+        "ferrugem": { "type": "string" },
+        "ipe": { "type": "number", "description": "Índice de Pressão Entomológica" },
+        "ipeStatus": { "type": "string" }
+      }
+    },
+    "diagnosticoIntegrado": {
+      "type": "object",
+      "properties": {
+        "resumo": { "type": "array", "items": { "type": "string" } },
+        "spt": { "type": "number", "description": "Score de Precisão do Talhão (0-100)" },
+        "hipoteses": { "type": "array", "items": { "type": "string" } },
+        "recomendacoes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "fenologia": { "$ref": "#/definitions/fenologia" },
+    "populacao": { "$ref": "#/definitions/populacao" },
+    "aplicacoes": { "type": "array", "items": { "type": "object" } },
+    "pragas": { "type": "array", "items": { "type": "object" } },
+    "condicoes": { "type": "object" },
+    "mapa": { "type": "object" },
+    "imagens": { "type": "array", "items": { "type": "object" } },
+    "diagnostico": { "type": "object" },
+    "planoAcao": { "type": "object" },
+    "assinaturaTecnica": { "type": "object" },
+    "conclusao": { "type": "string" }
+  },
+  "definitions": {
+    "fenologia": {
+      "type": "object",
+      "properties": {
+        "estadio": { "type": "string" },
+        "ultimaAvaliacaoDias": { "type": "integer" },
+        "dataUltimaAvaliacao": { "type": "string" },
+        "historico": { "type": "array" }
+      }
+    },
+    "populacao": {
+      "type": "object",
+      "properties": {
+        "plantasHa": { "type": "number" },
+        "estandeEfetivoPlHa": { "type": "number" },
+        "eficienciaPct": { "type": "number" },
+        "plantasPorMetro": { "type": "number" },
+        "situacao": { "type": "string" }
+      }
+    }
+  }
+}
