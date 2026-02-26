@@ -41,7 +41,7 @@ export interface RelatorioPlantioData {
     falhasPct?: number;
     okPct?: number;
     indicePlantabilidade?: number;
-    linha?: Array<{ tipo: string; posicao?: number }>;
+    linha?: Array<{ tipo: 'ok' | 'dupla' | 'tripla' | 'falha'; posicao?: number }>;
   };
   estande?: {
     registros?: Array<{ data: string; plantasPorMetro: number; plantasHa?: number }>;
