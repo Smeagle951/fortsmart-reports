@@ -53,28 +53,37 @@ function defaultPolygon(pontos: PontoMonitoramento[]): GeoJSONPolygon {
   };
 }
 
+function safeNum(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function normalizeTalhao(raw: Record<string, unknown>): Talhao {
-  const pontosRaw = (raw.pontos ?? []) as Record<string, unknown>[];
-  const pontos: PontoMonitoramento[] = pontosRaw.map((p, i) => {
-    const infRaw = (p.infestacoes ?? []) as Record<string, unknown>[];
-    const infestacoes: Infestacao[] = infRaw.map((inf, j) => ({
-      id: (inf.id as string) ?? `inf-${i}-${j}`,
-      tipo: ((inf.tipo as string) ?? 'praga') as TipoOrganismo,
-      nome: (inf.nome as string) ?? '—',
-      terco: (inf.terco as string) ?? 'Médio',
-      quantidade: inf.quantidade != null ? Number(inf.quantidade) : null,
-      severidade: Number(inf.severidade ?? 0),
-      observacao: (inf.observacao as string) || undefined,
-      imagem: (inf.imagem as string) || undefined,
-    }));
-    return {
-      id: (p.id as string) ?? `p-${i}`,
-      identificador: (p.identificador as string) ?? `P${i + 1}`,
-      lat: Number(p.lat ?? 0),
-      lng: Number(p.lng ?? 0),
-      infestacoes,
-    };
-  });
+  const pontosRaw = Array.isArray(raw.pontos) ? raw.pontos : [];
+  const pontos: PontoMonitoramento[] = pontosRaw
+    .filter((p): p is Record<string, unknown> => p != null && typeof p === 'object')
+    .map((p, i) => {
+      const infRaw = Array.isArray(p.infestacoes) ? p.infestacoes : [];
+      const infestacoes: Infestacao[] = infRaw
+        .filter((inf): inf is Record<string, unknown> => inf != null && typeof inf === 'object')
+        .map((inf, j) => ({
+          id: String(inf.id ?? `inf-${i}-${j}`),
+          tipo: (['praga', 'doenca', 'daninha'].includes(String(inf.tipo ?? '')) ? inf.tipo : 'praga') as TipoOrganismo,
+          nome: String(inf.nome ?? '—'),
+          terco: String(inf.terco ?? 'Médio'),
+          quantidade: inf.quantidade != null ? safeNum(inf.quantidade) : null,
+          severidade: safeNum(inf.severidade ?? 0),
+          observacao: (inf.observacao != null && String(inf.observacao)) ? String(inf.observacao) : undefined,
+          imagem: (inf.imagem != null && String(inf.imagem)) ? String(inf.imagem) : undefined,
+        }));
+      return {
+        id: String(p.id ?? `p-${i}`),
+        identificador: String(p.identificador ?? `P${i + 1}`),
+        lat: safeNum(p.lat ?? 0),
+        lng: safeNum(p.lng ?? 0),
+        infestacoes,
+      };
+    });
 
   const poligono = raw.poligono_geojson as GeoJSONPolygon | undefined;
   const cond = raw.condicoes_climaticas as Record<string, unknown> | undefined;
@@ -97,13 +106,14 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
     };
   });
 
+  const areaHa = safeNum(raw.area_ha ?? raw.area ?? 0);
   return {
-    id: (raw.id as string) ?? 't1',
-    nome: (raw.nome as string) ?? 'Talhão',
-    cultura: (raw.cultura as string) ?? '—',
-    area_ha: Number(raw.area_ha ?? raw.area ?? 0),
-    variedade: (raw.variedade as string) || undefined,
-    estagio: (raw.estagio as string) || undefined,
+    id: String(raw.id ?? 't1'),
+    nome: String(raw.nome ?? 'Talhão'),
+    cultura: String(raw.cultura ?? '—'),
+    area_ha: Number.isFinite(areaHa) ? areaHa : 0,
+    variedade: (raw.variedade != null && String(raw.variedade)) ? String(raw.variedade) : undefined,
+    estagio: (raw.estagio != null && String(raw.estagio)) ? String(raw.estagio) : undefined,
     poligono_geojson: poligono?.type === 'Feature' && poligono?.geometry ? poligono : defaultPolygon(pontos),
     pontos,
     condicoes_climaticas,
@@ -124,7 +134,7 @@ export type PayloadMonitoramento = Record<string, unknown> & {
   fenologia?: Record<string, unknown>;
   observacoes?: string | null;
   alertas?: string[] | null;
-  imagens?: Array<{ url?: string; descricao?: string }>;
+  imagens?: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
 };
 
 interface RelatorioMonitoramentoContentProps {
@@ -135,14 +145,15 @@ interface RelatorioMonitoramentoContentProps {
 
 export default function RelatorioMonitoramentoContent({ relatorio, reportId, relatorioUuid }: RelatorioMonitoramentoContentProps) {
   const normalized = useMemo((): RelatorioMonitoramento => {
-    const prop = relatorio.propriedade as Record<string, unknown> | undefined;
-    const meta = relatorio.meta as Record<string, unknown> | undefined;
-    const fazenda = (relatorio.fazenda ?? prop?.fazenda ?? 'Fazenda') as string;
-    const safra = (relatorio.safra ?? meta?.safra ?? '') as string;
-    const data = (relatorio.data ?? meta?.dataGeracao ?? '') as string;
-    const tecnico = (relatorio.tecnico ?? meta?.tecnico ?? '') as string;
-    const talhoesRaw = (relatorio.talhoes ?? []) as Record<string, unknown>[];
-    const talhoes = talhoesRaw.map(normalizeTalhao);
+    const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? relatorio.propriedade as Record<string, unknown> : undefined;
+    const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? relatorio.meta as Record<string, unknown> : undefined;
+    const fazenda = String(relatorio.fazenda ?? prop?.fazenda ?? 'Fazenda').trim() || 'Fazenda';
+    const safra = String(relatorio.safra ?? meta?.safra ?? '').trim();
+    const dataRaw = relatorio.data ?? meta?.dataGeracao ?? '';
+    const data = typeof dataRaw === 'string' ? dataRaw : (dataRaw != null ? String(dataRaw) : '');
+    const tecnico = String(relatorio.tecnico ?? meta?.tecnico ?? 'FortSmart Agro').trim() || 'FortSmart Agro';
+    const talhoesRaw = Array.isArray(relatorio.talhoes) ? relatorio.talhoes : [];
+    const talhoes = talhoesRaw.map((t: unknown) => normalizeTalhao(t != null && typeof t === 'object' ? t as Record<string, unknown> : {}));
     return { fazenda, safra, data, tecnico, talhoes };
   }, [relatorio]);
 
@@ -150,9 +161,11 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
     const { default: html2pdf } = await import('html2pdf.js');
     const el = document.getElementById('relatorio-monitoramento-content');
     if (!el) return;
+    const safeFazenda = (normalized.fazenda || 'Relatorio').replace(/\s/g, '_');
+    const safeData = (normalized.data || '').replace(/\//g, '-').replace(/\s/g, '_') || 'data';
     html2pdf().set({
       margin: [10, 10, 10, 10],
-      filename: `FortSmart_Monitoramento_${normalized.fazenda.replace(/\s/g, '_')}_${normalized.data.replace(/\//g, '-')}.pdf`,
+      filename: `FortSmart_Monitoramento_${safeFazenda}_${safeData}.pdf`,
       image: { type: 'jpeg', quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -173,7 +186,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
       sheet['!cols'] = [{ wch: 8 }, { wch: 10 }, { wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 14 }];
       XLSX.utils.book_append_sheet(wb, sheet, t.nome.substring(0, 31));
     });
-    XLSX.writeFile(wb, `FortSmart_Monitoramento_${normalized.data.replace(/\//g, '-')}.xlsx`);
+    XLSX.writeFile(wb, `FortSmart_Monitoramento_${(normalized.data || '').replace(/\//g, '-') || 'export'}.xlsx`);
   };
 
   const metricas = relatorio.metricas as Record<string, unknown> | undefined;
@@ -182,7 +195,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
   const fenologia = relatorio.fenologia as Record<string, unknown> | undefined;
   const observacoes = relatorio.observacoes as string | undefined | null;
   const alertas = relatorio.alertas as string[] | undefined | null;
-  const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string }>;
+  const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
 
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', paddingBottom: 60 }}>
@@ -223,7 +236,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
                 <Row label="Estande" value={estande.plantasPorMetro != null ? `${estande.plantasPorMetro} plantas/m` : `${estande.populacao} plantas/ha`} />
               )}
               {cv && (cv.cvPercent != null || cv.cvClassificacao != null) && (
-                <Row label="CV" value={cv.cvClassificacao ?? (cv.cvPercent != null ? `${cv.cvPercent}%` : '—')} />
+                <Row label="CV" value={typeof cv.cvClassificacao === 'string' ? cv.cvClassificacao : (cv.cvPercent != null ? `${cv.cvPercent}%` : '—')} />
               )}
               {fenologia && (fenologia.estadio || fenologia.dae != null) && (
                 <Row label="Fenologia" value={[fenologia.estadio, fenologia.dae != null ? `DAE ${fenologia.dae}` : ''].filter(Boolean).join(' · ') || '—'} />

@@ -4,6 +4,7 @@ import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
 import RelatorioContent from '@/components/RelatorioContent';
 import RelatorioPlantioContent from '@/components/plantio/RelatorioPlantioContent';
 import RelatorioMonitoramentoContent from '@/components/RelatorioMonitoramentoContent';
+import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import PrintBar from '@/components/PrintBar';
 
@@ -115,40 +116,31 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const tipoRelatorio = relatorio.tipoRelatorio as string | undefined;
     const isSideBySide = tipo === 'avaliacao_lado_a_lado';
     const isPlantio = tipoRelatorio === 'plantio';
-    const isMonitoramento = tipo === 'monitoramento';
-    const meta = (relatorio as Record<string, unknown>).meta as Record<string, unknown> | undefined;
-    const prop = (relatorio as Record<string, unknown>).propriedade as Record<string, unknown> | undefined;
-    const talhao = (relatorio as Record<string, unknown>).talhao as Record<string, unknown> | undefined;
-    const hasVisitaStructure = Boolean(
-      'meta' in relatorio && 'propriedade' in relatorio && 'talhao' in relatorio &&
-      meta && typeof meta === 'object' &&
-      prop != null && typeof prop === 'object' &&
-      talhao != null && typeof talhao === 'object'
-    );
-    // Fallback: payload com blocos típicos de visita (aplicacoes, pragas, fenologia, imagens) = visita técnica
-    const hasVisitaBlocks = Boolean(
-      (Array.isArray((relatorio as any).aplicacoes) || Array.isArray((relatorio as any).pragas)) &&
-      (typeof (relatorio as any).fenologia === 'object' || Array.isArray((relatorio as any).imagens))
-    );
-    const isVisitaTecnica =
-      tipo === 'visita_tecnica' ||
-      (!isPlantio && !isSideBySide && !isMonitoramento && (hasVisitaStructure || hasVisitaBlocks));
+    const isVisitaTecnica = tipo === 'visita_tecnica';
+    const hasTalhoes = Array.isArray(relatorio.talhoes) && (relatorio.talhoes as unknown[]).length > 0;
+    const isMonitoramento = tipo === 'monitoramento' && hasTalhoes;
 
-    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, isPlantio, isSideBySide, isMonitoramento, hasVisitaStructure, hasVisitaBlocks, isVisitaTecnica, topKeys: Object.keys(relatorio).slice(0, 12) });
+    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, hasTalhoes, topKeys: Object.keys(relatorio).slice(0, 12) });
 
     return (
       <>
         <PrintBar />
-        <article className={`relatorio ${isPlantio ? 'relatorio--plantio' : ''} ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''} ${isVisitaTecnica ? 'relatorio--visita-tecnica' : ''}`}>
+        <article className={`relatorio ${isPlantio ? 'relatorio--plantio' : ''} ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isVisitaTecnica ? 'relatorio--visita-tecnica' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''}`}>
           {isPlantio ? (
             <RelatorioPlantioContent
               relatorio={relatorio}
               reportId={row.titulo || row.id}
               relatorioUuid={row.id}
             />
+          ) : isVisitaTecnica ? (
+            <RelatorioVisitaTecnicaContent
+              relatorio={relatorio as import('@/components/RelatorioVisitaTecnicaContent').PayloadVisitaTecnica}
+              reportId={row.titulo || row.id}
+              relatorioUuid={row.id}
+            />
           ) : isMonitoramento ? (
             <RelatorioMonitoramentoContent
-              relatorio={relatorio}
+              relatorio={relatorio as import('@/components/RelatorioMonitoramentoContent').PayloadMonitoramento}
               reportId={row.titulo || row.id}
               relatorioUuid={row.id}
             />
