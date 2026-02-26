@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatDate } from '@/utils/format';
+import { formatDate } from '../utils/format';
 
 type Meta = {
   dataGeracao?: string;

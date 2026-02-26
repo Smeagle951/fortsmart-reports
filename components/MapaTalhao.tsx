@@ -27,7 +27,7 @@ export default function MapaTalhao({ pontos = [], centro = [-15.6, -54.3], zoom 
   const markers = pontos.map((p) => ({ lat: p.latitude, lng: p.longitude, meta: p }));
 
   // If polygon coordinates provided via pontos polygon sequence, draw polygon
-  const polygonCoords = pontos.length > 2 ? pontos.map((p) => [p.latitude, p.longitude]) : undefined;
+  const polygonCoords: [number, number][] | undefined = pontos.length > 2 ? pontos.map((p) => [p.latitude, p.longitude] as [number, number]) : undefined;
 
   return (
     <section className="section mapa-section">

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRelatorioByIdForOwner } from '@/lib/supabase';
+import { getRelatorioByIdForOwner } from '../../../../lib/supabase';
 
 /**
  * GET /api/relatorio/[id]

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { getRelatorioByShareToken } from '@/lib/supabase';
+import { getSupabaseAdmin } from '../../../lib/supabase-admin';
+import { getRelatorioByShareToken } from '../../../lib/supabase';
 
 /** Causas possíveis do 404 (em ordem de prioridade) */
 export type Causa404 =

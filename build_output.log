@@ -1,23 +1,35 @@
-
-> fortsmart-reports@1.0.0 build
-> next build
-
+[Browserslist] Could not parse C:\Users\fortu\fortsmart_agro_new\package.json. Ignoring it.
   Γû▓ Next.js 14.2.21
   - Environments: .env.local
 
    Creating an optimized production build ...
- Γ£ô Compiled successfully
-   Skipping linting
-   Checking validity of types ...
+[Browserslist] Could not parse C:\Users\fortu\fortsmart_agro_new\package.json. Ignoring it.
 Failed to compile.
 
-./app/api/relatorio-public/route.ts:125:13
-Type error: Conversion of type '{ id: any; share_token: any; titulo: any; is_public: any; created_at: any; }' to type 'null' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+./app/api/relatorio-public/route.ts
+Module not found: Can't resolve '@/lib/supabase-admin'
 
-  123 |     } else if (data) {
-  124 |       source = 'admin';
-> 125 |       row = data as typeof row;
-      |             ^
-  126 |     }
-  127 |   }
-  128 |
+https://nextjs.org/docs/messages/module-not-found
+
+./app/api/relatorio-public/route.ts
+Module not found: Can't resolve '@/lib/supabase'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./app/api/relatorio/[id]/route.ts
+Module not found: Can't resolve '@/lib/supabase'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./app/layout.tsx
+Module not found: Can't resolve '@/styles/globals.css'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./app/r/[token]/page.tsx
+Module not found: Can't resolve '@/lib/supabase-admin'
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+> Build failed because of webpack errors

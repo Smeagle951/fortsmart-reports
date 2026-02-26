@@ -1,0 +1,23 @@
+
+> fortsmart-reports@1.0.0 build
+> next build
+
+  Γû▓ Next.js 14.2.21
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./components/RelatorioMonitoramento.tsx:90:64
+Type error: Type '{}' is not assignable to type 'ReactNode'.
+
+  88 |         <div className="flex items-center justify-center gap-2 mt-3 text-sm font-semibold text-gray-500 uppercase">
+  89 |           <span className="bg-gray-100 px-3 py-1 rounded-full">{relatorio.fazenda || 'Fazenda'}</span>
+> 90 |           <span className="bg-gray-100 px-3 py-1 rounded-full">{principalTalhao.nome || 'Talh├úo'}</span>
+     |                                                                ^
+  91 |           <span className="bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200">{principalTalhao.cultura || 'Cultura'}</span>
+  92 |         </div>
+  93 |       </div>

@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { getRelatorioByIdForOwner } from '@/lib/supabase';
-import RelatorioContent from '@/components/RelatorioContent';
-import PrintBar from '@/components/PrintBar';
+import { getRelatorioByIdForOwner } from '../../../lib/supabase';
+import RelatorioContent from '../../../components/RelatorioContent';
+import PrintBar from '../../../components/PrintBar';
 
 type Props = { params: Promise<{ id: string }> };
 

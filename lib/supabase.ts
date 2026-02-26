@@ -33,53 +33,31 @@ export type RelatorioRow = {
   is_public?: boolean;
   share_expires_at?: string | null;
   titulo?: string | null;
-  /** JSON do relatório (coluna `dados` ou `json_data` no Supabase). */
   dados: Record<string, unknown>;
   json_data?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
 };
 
-/**
- * Busca relatório por share_token (rota pública /r/[token]).
- * No servidor usa service_role se disponível (evita 404 por RLS/env); senão usa anon.
- * Só retorna se is_public != false e token não expirado.
- */
 export async function getRelatorioByShareToken(token: string): Promise<RelatorioRow | null> {
   const serviceClient = getSupabaseService();
   const anonClient = getSupabase();
   const client = serviceClient ?? anonClient;
-  if (!client) {
-    console.error('[fortsmart-reports] getRelatorioByShareToken: nenhum cliente Supabase. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel.');
-    return null;
-  }
+  if (!client) return null;
   const { data, error } = await client
     .from('relatorios')
     .select('*')
     .eq('share_token', token)
     .maybeSingle();
-
-  if (error) {
-    console.error('[fortsmart-reports] getRelatorioByShareToken:', error.message, 'token=', token.slice(0, 8) + '…');
-    return null;
-  }
-  if (!data) {
-    console.warn('[fortsmart-reports] getRelatorioByShareToken: nenhum registro para token', token.slice(0, 8) + '…');
-    return null;
-  }
+  if (error || !data) return null;
   const rowData = data as any;
   if (rowData.is_public === false) return null;
   if (rowData.share_expires_at && new Date(rowData.share_expires_at) < new Date()) return null;
-  // Compatível com colunas: dados, json_data, dados_json (schema variável)
-  const row = data as RelatorioRow & { json_data?: Record<string, unknown>; dados_json?: Record<string, unknown> };
-  if (!row.dados) row.dados = row.json_data ?? row.dados_json ?? {};
+  const row = data as RelatorioRow & { json_data?: Record<string, unknown>; dados_json?: unknown };
+  if (!row.dados) row.dados = (row.json_data ?? row.dados_json ?? {}) as Record<string, unknown>;
   return row;
 }
 
-/**
- * Busca relatório por ID (rota privada /relatorio/[id]).
- * Deve ser chamada apenas no server com owner_firebase_uid validado (API route com service_role).
- */
 export async function getRelatorioByIdForOwner(
   id: string,
   ownerFirebaseUid: string
@@ -92,18 +70,10 @@ export async function getRelatorioByIdForOwner(
     .eq('id', id)
     .eq('owner_firebase_uid', ownerFirebaseUid)
     .maybeSingle();
-
-  if (error) {
-    console.error('[fortsmart-reports] getRelatorioByIdForOwner:', error.message);
-    return null;
-  }
+  if (error) return null;
   return data as any as RelatorioRow;
 }
 
-/**
- * URL pública de um arquivo no bucket relatorios.
- * Estrutura: relatorios/{relatorioId}/logo.png | mapa.svg | foto1.jpg
- */
 export function getStoragePublicUrl(relatorioId: string, path: string): string {
   const client = getSupabase();
   if (!client) return '';

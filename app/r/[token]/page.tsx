@@ -1,27 +1,13 @@
-import { notFound } from 'next/navigation';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
-import RelatorioContent from '@/components/RelatorioContent';
-import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
-import PrintBar from '@/components/PrintBar';
+import { getSupabaseAdmin } from '../../../lib/supabase-admin';
+import { getRelatorioByShareToken, type RelatorioRow } from '../../../lib/supabase';
+import { parsePayload } from '../../../utils/parsePayload';
+import RelatorioContent from '../../../components/RelatorioContent';
+import RelatorioMonitoramento, { MonitoramentoJson } from '../../../components/RelatorioMonitoramento';
+import RelatorioPlantio, { PlantioJson } from '../../../components/RelatorioPlantio';
+import SideBySideReportContent, { type SideBySideReportData } from '../../../components/SideBySideReportContent';
+import PrintBar from '../../../components/PrintBar';
 
 type Props = { params: { token: string }; searchParams?: { [key: string]: string | string[] | undefined } };
-
-function parsePayload(raw: unknown): Record<string, unknown> | null {
-  if (raw == null) return null;
-  if (typeof raw === 'object' && !Array.isArray(raw)) return raw as Record<string, unknown>;
-  if (typeof raw === 'string') {
-    try {
-      const parsed = JSON.parse(raw) as unknown;
-      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
-        ? (parsed as Record<string, unknown>)
-        : null;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
 
 /** Rota pública /r/[token]: usa SERVICE_ROLE se configurado; senão anon. Só filtra por share_token (não por publicado). */
 export default async function RelatorioCompartilhadoPage({ params, searchParams }: Props) {
@@ -96,6 +82,8 @@ export default async function RelatorioCompartilhadoPage({ params, searchParams 
 
     const tipo = relatorio.tipo as string | undefined;
     const isSideBySide = tipo === 'avaliacao_lado_a_lado';
+    const isMonitoramento = tipo === 'monitoramento';
+    const isPlantio = tipo === 'plantio' || relatorio.tipoRelatorio === 'plantio';
 
     return (
       <>
@@ -104,6 +92,16 @@ export default async function RelatorioCompartilhadoPage({ params, searchParams 
           {isSideBySide ? (
             <SideBySideReportContent
               data={relatorio as SideBySideReportData}
+              reportId={row.titulo || row.id}
+            />
+          ) : isMonitoramento ? (
+            <RelatorioMonitoramento
+              relatorio={relatorio as MonitoramentoJson}
+              reportId={row.titulo || row.id}
+            />
+          ) : isPlantio ? (
+            <RelatorioPlantio
+              relatorio={relatorio as PlantioJson}
               reportId={row.titulo || row.id}
             />
           ) : (

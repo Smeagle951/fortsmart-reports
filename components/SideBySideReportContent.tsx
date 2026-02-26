@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatDate, formatNumber } from '@/utils/format';
+import { formatDate, formatNumber } from '../utils/format';
 
 export type SideBySideReportData = {
   tipo: string;

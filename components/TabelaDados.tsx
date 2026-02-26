@@ -1,5 +1,5 @@
 import React from 'react';
-import { situacaoCssClass, situacaoLabel } from '@/utils/format';
+import { situacaoCssClass, situacaoLabel } from '../utils/format';
 
 interface TabelaDadosProps {
   title: string;
