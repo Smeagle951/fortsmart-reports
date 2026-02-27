@@ -1,18 +1,37 @@
-import { getSupabaseAdmin } from '../../../lib/supabase-admin';
-import { getRelatorioByShareToken, type RelatorioRow } from '../../../lib/supabase';
-import { parsePayload } from '../../../utils/parsePayload';
-import RelatorioContent from '../../../components/RelatorioContent';
-import RelatorioMonitoramento, { MonitoramentoJson } from '../../../components/RelatorioMonitoramento';
-import RelatorioPlantio, { PlantioJson } from '../../../components/RelatorioPlantio';
-import SideBySideReportContent, { type SideBySideReportData } from '../../../components/SideBySideReportContent';
-import PrintBar from '../../../components/PrintBar';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
+import RelatorioContent from '@/components/RelatorioContent';
+import RelatorioPlantioContent from '@/components/plantio/RelatorioPlantioContent';
+import RelatorioMonitoramentoContent from '@/components/RelatorioMonitoramentoContent';
+import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaContent';
+import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
+import PrintBar from '@/components/PrintBar';
 
-type Props = { params: { token: string }; searchParams?: { [key: string]: string | string[] | undefined } };
+type Awaitable<T> = T | Promise<T>;
+type Props = { params: Awaitable<{ token: string }>; searchParams?: Awaitable<{ [key: string]: string | string[] | undefined }> };
+
+function parsePayload(raw: unknown): Record<string, unknown> | null {
+  if (raw == null) return null;
+  if (typeof raw === 'object' && !Array.isArray(raw)) return raw as Record<string, unknown>;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 /** Rota pública /r/[token]: usa SERVICE_ROLE se configurado; senão anon. Só filtra por share_token (não por publicado). */
-export default async function RelatorioCompartilhadoPage({ params, searchParams }: Props) {
-  const { token } = params;
-  const sp = searchParams;
+export default async function RelatorioCompartilhadoPage(props: Props) {
+  const resolvedParams = await props.params;
+  const token = resolvedParams?.token ?? '';
+  const sp = props.searchParams ? await props.searchParams : {};
+
   const debug = sp?.debug === '1' || sp?.debug === 'true';
   console.log('[fortsmart-reports] /r/[token] token recebido:', token);
   if (debug) {
@@ -75,33 +94,58 @@ export default async function RelatorioCompartilhadoPage({ params, searchParams 
           <div style={{ textAlign: 'center', maxWidth: 560 }}>
             <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório inválido</h1>
             <p style={{ color: '#6b7280' }}>O conteúdo do relatório está corrompido ou não pode ser exibido.</p>
+            <pre style={{ textAlign: 'left', fontSize: 10, background: '#eee', padding: 10 }}>
+              {(() => {
+                try {
+                  const s = JSON.stringify(rawPayload);
+                  if (typeof s === 'string') return s.substring(0, 500);
+                  const f = String(rawPayload ?? '');
+                  return f.length > 500 ? f.slice(0, 500) : f;
+                } catch {
+                  return '';
+                }
+              })()}
+            </pre>
           </div>
         </main>
       );
     }
 
     const tipo = relatorio.tipo as string | undefined;
+    const tipoRelatorio = relatorio.tipoRelatorio as string | undefined;
     const isSideBySide = tipo === 'avaliacao_lado_a_lado';
-    const isMonitoramento = tipo === 'monitoramento';
-    const isPlantio = tipo === 'plantio' || relatorio.tipoRelatorio === 'plantio';
+    const isPlantio = tipoRelatorio === 'plantio';
+    const isVisitaTecnica = tipo === 'visita_tecnica';
+    const hasTalhoes = Array.isArray(relatorio.talhoes) && (relatorio.talhoes as unknown[]).length > 0;
+    const isMonitoramento = tipo === 'monitoramento' && hasTalhoes;
+
+    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, hasTalhoes, topKeys: Object.keys(relatorio).slice(0, 12) });
 
     return (
       <>
-        <PrintBar />
-        <article className="relatorio">
-          {isSideBySide ? (
-            <SideBySideReportContent
-              data={relatorio as SideBySideReportData}
+        {!isVisitaTecnica && <PrintBar />}
+        <article className={`relatorio ${isPlantio ? 'relatorio--plantio' : ''} ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isVisitaTecnica ? 'relatorio--visita-tecnica' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''}`}>
+          {isPlantio ? (
+            <RelatorioPlantioContent
+              relatorio={relatorio}
               reportId={row.titulo || row.id}
+              relatorioUuid={row.id}
+            />
+          ) : isVisitaTecnica ? (
+            <RelatorioVisitaTecnicaContent
+              relatorio={relatorio as import('@/components/RelatorioVisitaTecnicaContent').PayloadVisitaTecnica}
+              reportId={row.titulo || row.id}
+              relatorioUuid={row.id}
             />
           ) : isMonitoramento ? (
-            <RelatorioMonitoramento
-              relatorio={relatorio as MonitoramentoJson}
+            <RelatorioMonitoramentoContent
+              relatorio={relatorio as import('@/components/RelatorioMonitoramentoContent').PayloadMonitoramento}
               reportId={row.titulo || row.id}
+              relatorioUuid={row.id}
             />
-          ) : isPlantio ? (
-            <RelatorioPlantio
-              relatorio={relatorio as PlantioJson}
+          ) : isSideBySide ? (
+            <SideBySideReportContent
+              data={relatorio as SideBySideReportData}
               reportId={row.titulo || row.id}
             />
           ) : (
@@ -114,13 +158,18 @@ export default async function RelatorioCompartilhadoPage({ params, searchParams 
         </article>
       </>
     );
-  } catch (e) {
+  } catch (e: any) {
     console.error('[fortsmart-reports] /r/[token] erro:', e);
     return (
       <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
-        <div style={{ textAlign: 'center', maxWidth: 560 }}>
+        <div style={{ textAlign: 'center', maxWidth: 860 }}>
           <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Erro ao carregar o relatório</h1>
           <p style={{ color: '#6b7280' }}>Ocorreu um erro inesperado ao carregar o relatório. Tente novamente mais tarde.</p>
+          <pre style={{ textAlign: 'left', fontSize: 10, background: '#f8d7da', color: '#721c24', padding: 10, marginTop: 20, overflowX: 'auto' }}>
+            {e?.message || String(e)}
+            {'\n'}
+            {e?.stack || ''}
+          </pre>
         </div>
       </main>
     );

@@ -80,6 +80,8 @@
           "produto": { "type": "string" },
           "dose": { "type": "string" },
           "unidade": { "type": "string" },
+          "classe": { "type": "string", "description": "Classe toxicológica" },
+          "alvo": { "type": "string", "description": "Alvo biológico" },
           "status": { "type": "string" }
         }
       }

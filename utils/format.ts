@@ -1,15 +1,44 @@
 /**
- * Formatadores para exibição no relatório.
+ * Formatadores para exibição no relatório (datas, números, área).
  */
+
 export function formatDate(isoString: string | null | undefined): string {
   if (!isoString) return '—';
   try {
     const d = new Date(isoString);
     if (isNaN(d.getTime())) return String(isoString);
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return d.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
   } catch {
     return String(isoString);
   }
+}
+
+export function formatDateTime(isoString: string | null | undefined): string {
+  if (!isoString) return '—';
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return String(isoString);
+    return d.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return String(isoString);
+  }
+}
+
+export function formatArea(ha: number | string | null | undefined): string {
+  if (ha == null || ha === '') return '—';
+  const n = Number(ha);
+  if (Number.isNaN(n)) return String(ha);
+  return `${n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} ha`;
 }
 
 export function formatNumber(
@@ -21,7 +50,8 @@ export function formatNumber(
   if (Number.isNaN(n)) return String(value);
   return n.toLocaleString('pt-BR', {
     minimumFractionDigits: options.decimals ?? 0,
-    maximumFractionDigits: options.decimals ?? 2,
+    maximumFractionDigits: options.decimals ?? 0,
+    ...options,
   });
 }
 

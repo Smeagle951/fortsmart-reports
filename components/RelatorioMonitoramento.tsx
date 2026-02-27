@@ -40,17 +40,37 @@ export default function RelatorioMonitoramento({ relatorio, reportId }: { relato
   const condicoes = (principalTalhao.condicoes_climaticas as Record<string, unknown>) || {};
   const recomendacoes = (principalTalhao.recomendacoes as Array<{ acao: string }>) || (relatorio as any).recomendacoes || [];
 
-  // Mapear pontos para o formato do MapaInterativo
-  const pontosMap = (principalTalhao.pontos as any[])?.map(p => ({
+  // Mapear pontos para o formato do MapaInterativo (PontoMonitoramento: id, identificador, lat, lng, infestacoes)
+  const pontosMap = (principalTalhao.pontos as any[])?.map((p, i) => ({
     id: p.id || String(Math.random()),
-    latitude: p.lat || p.latitude || 0,
-    longitude: p.lng || p.longitude || 0,
-    titulo: `Ponto ${p.identificador || ''}`,
-    descricao: p.observacao || '',
-    estagio: p.estagio || '',
-    severidade: p.infestacoes?.length > 0 ? (p.infestacoes.reduce((acc: number, f: any) => acc + (f.severidade || 0), 0) / p.infestacoes.length) : 0,
-    infestacoes: p.infestacoes || []
+    identificador: p.identificador || `P${i + 1}`,
+    lat: p.lat ?? p.latitude ?? 0,
+    lng: p.lng ?? p.longitude ?? 0,
+    infestacoes: (p.infestacoes || []).map((inf: any, j: number) => ({
+      id: String(inf.id ?? `inf-${i}-${j}`),
+      tipo: (['praga', 'doenca', 'daninha'].includes(String(inf.tipo ?? '')) ? inf.tipo : 'praga'),
+      nome: String(inf.nome ?? '—'),
+      terco: String(inf.terco ?? 'Médio'),
+      quantidade: inf.quantidade != null ? Number(inf.quantidade) : null,
+      severidade: Number(inf.severidade ?? 0),
+      observacao: inf.observacao != null ? String(inf.observacao) : undefined,
+      imagem: inf.imagem ?? inf.url,
+    })),
   })) || [];
+
+  const poligonoDefault = (() => {
+    if (principalTalhao.poligono_geojson && typeof (principalTalhao.poligono_geojson as any).geometry === 'object') {
+      const g = (principalTalhao.poligono_geojson as any);
+      return { type: g.type || 'Feature', geometry: g.geometry, properties: g.properties };
+    }
+    if (pontosMap.length > 0) {
+      let minLat = pontosMap[0].lat, maxLat = pontosMap[0].lat, minLng = pontosMap[0].lng, maxLng = pontosMap[0].lng;
+      pontosMap.forEach(p => { if (p.lat < minLat) minLat = p.lat; if (p.lat > maxLat) maxLat = p.lat; if (p.lng < minLng) minLng = p.lng; if (p.lng > maxLng) maxLng = p.lng; });
+      const pad = 0.0001;
+      return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[minLng - pad, minLat - pad], [maxLng + pad, minLat - pad], [maxLng + pad, maxLat + pad], [minLng - pad, maxLat + pad], [minLng - pad, minLat - pad]]] } };
+    }
+    return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[-48, -16], [-47.9, -16], [-47.9, -15.9], [-48, -15.9], [-48, -16]]] } };
+  })();
 
   // Galeria de Ocorrencias
   let extractedImagens = relatorio.imagens || [];
@@ -178,7 +198,8 @@ export default function RelatorioMonitoramento({ relatorio, reportId }: { relato
           <div className="bg-white p-2 border border-gray-200 shadow-sm rounded-xl">
             <MapaInterativo
               pontos={pontosMap}
-              style={{ width: '100%', height: '450px', borderRadius: '8px', zIndex: 0 }}
+              poligono={poligonoDefault}
+              talhaoId={String(principalTalhao.id ?? 'talhao')}
             />
           </div>
           <p className="text-xs text-gray-400 mt-2 text-center uppercase tracking-widest font-semibold">Os pontos no mapa indicam as ocorrências. Clique para exibir os detalhes básicos existentes no ponto.</p>
@@ -217,7 +238,7 @@ export default function RelatorioMonitoramento({ relatorio, reportId }: { relato
             <svg className="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
             Imagens de Cada Ponto (Galeria com Preview Zoom)
           </h3>
-          <GaleriaOcorrencias imagens={extractedImagens as any} />
+          <GaleriaOcorrencias pontos={pontosMap} />
         </section>
       )}
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatDate } from '../utils/format';
+import { formatDate } from '@/utils/format';
 
 type Aplicacao = {
   id?: string;
@@ -49,7 +49,7 @@ export default function TabelaAplicacoes({ rows }: Props) {
                 <td>{formatDate(r.data as string)}</td>
                 <td>{r.tipo || '—'}</td>
                 <td>{r.produto || '—'}</td>
-                <td>{r.dose != null ? `${r.dose}${r.unidade ? ` ${r.unidade}` : ''}` : '—'}</td>
+                <td>{r.dose != null ? `${r.dose} ${r.unidade || 'L/ha'}`.trim() : '—'}</td>
                 <td>{r.classe || '—'}</td>
                 <td><span className={`badge ${statusClass(r.status)}`}>{r.status || '—'}</span></td>
               </tr>

@@ -1,124 +1,111 @@
 'use client';
 
 import { useState } from 'react';
+import { Infestacao, PontoMonitoramento } from '@/lib/types/monitoring';
 
-interface InfoTagProps {
-    label: string;
-    value: string;
+interface GaleriaOcorrenciasProps {
+    pontos: PontoMonitoramento[];
 }
 
-function InfoTag({ label, value }: InfoTagProps) {
-    return (
-        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '6px 12px', borderRadius: '6px' }}>
-            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>{label}</div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#1A2332' }}>{value}</div>
-        </div>
+export default function GaleriaOcorrencias({ pontos }: GaleriaOcorrenciasProps) {
+    const [modalImg, setModalImg] = useState<{
+        imagem: string; nome: string; ponto: string; terco: string; severidade: number; lat: number; lng: number
+    } | null>(null);
+
+    const items = pontos.flatMap(p =>
+        p.infestacoes
+            .filter(inf => inf.imagem)
+            .map(inf => ({ ...inf, pontoId: p.identificador, lat: p.lat, lng: p.lng }))
     );
-}
 
-interface GaleriaProps {
-    imagens: Array<{
-        url?: string;
-        descricao?: string;
-        lat?: number;
-        lng?: number;
-        severidade?: number;
-        terco?: string;
-        identificadorPonto?: string;
-    }>;
-}
-
-export default function GaleriaOcorrencias({ imagens }: GaleriaProps) {
-    const [modalImg, setModalImg] = useState<any>(null);
-
-    const validImages = imagens.filter(i => !!i.url);
-    if (validImages.length === 0) return null;
+    if (items.length === 0) return null;
 
     return (
         <div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {validImages.map((img, idx) => (
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 16 }}>
+                Galeria de Ocorrências
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+                {items.map((item, idx) => (
                     <div
                         key={idx}
-                        onClick={() => setModalImg(img)}
-                        className="border border-gray-200 rounded-lg overflow-hidden cursor-pointer bg-white shadow-sm hover:shadow-md transition-shadow relative"
+                        onClick={() => setModalImg({
+                            imagem: item.imagem!,
+                            nome: item.nome,
+                            ponto: item.pontoId,
+                            terco: item.terco,
+                            severidade: item.severidade,
+                            lat: item.lat,
+                            lng: item.lng,
+                        })}
+                        style={{ border: '1px solid #E2E8F0', borderRadius: 8, overflow: 'hidden', cursor: 'pointer', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
                     >
-                        <div className="relative h-40 overflow-hidden bg-gray-100">
+                        <div style={{ position: 'relative', height: 110, overflow: 'hidden' }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                                src={img.url}
-                                alt={img.descricao || 'Imagem do monitoramento'}
-                                className="w-full h-full object-cover"
+                                src={item.imagem}
+                                alt={item.nome}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
-                            {img.severidade != null && typeof img.severidade === 'number' && (
-                                <div className="absolute top-2 right-2 bg-black/60 rounded-full px-2 py-0.5 text-xs font-bold text-white">
-                                    {img.severidade}%
-                                </div>
-                            )}
-                        </div>
-                        <div className="p-3">
-                            <div className="text-sm font-semibold text-gray-800 truncate">
-                                {img.descricao || 'Ocorrência'}
+                            <div style={{
+                                position: 'absolute', top: 6, right: 6,
+                                background: 'rgba(0,0,0,.55)', borderRadius: 99,
+                                padding: '2px 7px', fontSize: 10, fontWeight: 700, color: '#fff',
+                            }}>
+                                {item.severidade}%
                             </div>
-                            <div className="text-xs text-slate-500 mt-1">
-                                {img.identificadorPonto ? `Ponto: ${img.identificadorPonto}` : 'Ponto Mapeado'} {img.terco ? `· ${img.terco}` : ''}
+                        </div>
+                        <div style={{ padding: '8px 10px' }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#1A2332', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {item.nome}
+                            </div>
+                            <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>
+                                {item.pontoId} · {item.terco}
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Modal de Zoom */}
+            {/* Modal */}
             {modalImg && (
-                <div
-                    className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 sm:p-6"
-                    onClick={() => setModalImg(null)}
-                >
-                    <div
-                        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                <div className="gallery-modal-overlay" onClick={() => setModalImg(null)}>
+                    <div className="gallery-modal-content" onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900">{modalImg.descricao || 'Ocorrência Identificada'}</h3>
-                                <p className="text-sm text-gray-500">
-                                    {modalImg.identificadorPonto ? `Ponto ${modalImg.identificadorPonto}` : 'Fazenda'}
-                                    {modalImg.terco ? ` · Terço: ${modalImg.terco}` : ''}
-                                </p>
+                                <div style={{ fontSize: 16, fontWeight: 700, color: '#1A2332' }}>{modalImg.nome}</div>
+                                <div style={{ fontSize: 12, color: '#94A3B8' }}>Ponto {modalImg.ponto} · Terço: {modalImg.terco}</div>
                             </div>
                             <button
                                 onClick={() => setModalImg(null)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}
                             >
                                 ✕
                             </button>
                         </div>
-
-                        <div className="flex-1 overflow-auto p-4 bg-gray-50 flex justify-center items-center">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                                src={modalImg.url}
-                                alt={modalImg.descricao}
-                                className="max-w-full rounded-lg max-h-[60vh] object-contain shadow-sm"
-                            />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={modalImg.imagem}
+                            alt={modalImg.nome}
+                            style={{ width: '100%', borderRadius: 12, maxHeight: 320, objectFit: 'cover', marginBottom: 14 }}
+                        />
+                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                            <InfoTag label="Coordenadas" value={`${modalImg.lat.toFixed(4)}, ${modalImg.lng.toFixed(4)}`} />
+                            <InfoTag label="Severidade" value={`${modalImg.severidade}%`} />
+                            <InfoTag label="Terço" value={modalImg.terco} />
                         </div>
-
-                        {(modalImg.lat != null || modalImg.lng != null || modalImg.severidade != null || modalImg.terco != null) && (
-                            <div className="p-4 border-t border-gray-100 bg-white flex gap-3 flex-wrap">
-                                {modalImg.lat != null && modalImg.lng != null && (
-                                    <InfoTag label="Coordenadas" value={`${Number(modalImg.lat).toFixed(5)}, ${Number(modalImg.lng).toFixed(5)}`} />
-                                )}
-                                {modalImg.severidade != null && (
-                                    <InfoTag label="Severidade" value={`${modalImg.severidade}%`} />
-                                )}
-                                {modalImg.terco && (
-                                    <InfoTag label="Terço" value={modalImg.terco} />
-                                )}
-                            </div>
-                        )}
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+function InfoTag({ label, value }: { label: string; value: string }) {
+    return (
+        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '6px 12px' }}>
+            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>{label}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#1A2332' }}>{value}</div>
         </div>
     );
 }
