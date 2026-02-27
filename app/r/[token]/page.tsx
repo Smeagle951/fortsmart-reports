@@ -124,7 +124,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
 
     return (
       <>
-        <PrintBar />
+        {!isVisitaTecnica && <PrintBar />}
         <article className={`relatorio ${isPlantio ? 'relatorio--plantio' : ''} ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isVisitaTecnica ? 'relatorio--visita-tecnica' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''}`}>
           {isPlantio ? (
             <RelatorioPlantioContent

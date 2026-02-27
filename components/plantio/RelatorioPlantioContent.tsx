@@ -66,23 +66,6 @@ export default function RelatorioPlantioContent({
               </button>
             ))}
           </div>
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                const token = relatorioUuid || reportId || meta.id;
-                if (token) {
-                  window.open(`/r/${token}`, '_blank');
-                } else {
-                  // fallback: open route without token
-                  window.open('/r', '_blank');
-                }
-              }}
-              className="saas-btn saas-btn-primary rounded-lg px-3 py-2 text-sm font-medium"
-            >
-              Relatório Web
-            </button>
-          </div>
         </nav>
 
         {/* Conteúdo da aba ativa (oculto na impressão) */}

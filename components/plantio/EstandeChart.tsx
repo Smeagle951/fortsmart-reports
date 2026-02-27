@@ -131,7 +131,7 @@ export default function EstandeChart({
         </div>
         {showStats && (
           <figcaption className="plantio-figcaption plantio-figcaption--stats">
-            Mín: {minVal.toFixed(1)} / Máx: {maxVal.toFixed(1)} / Média: {media.toFixed(1)} plantas/m
+            Mín: {minVal.toFixed(2)} / Máx: {maxVal.toFixed(2)} / Média: {media.toFixed(2)} plantas/m
           </figcaption>
         )}
       </figure>

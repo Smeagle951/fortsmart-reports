@@ -102,6 +102,17 @@
               "posicao": { "type": "number" }
             }
           }
+        },
+        "espacamentosIndividuais": {
+          "type": "array",
+          "description": "Espaçamento em cm por semente para lista 'Espaçamentos individuais calculados'",
+          "items": {
+            "type": "object",
+            "properties": {
+              "cm": { "type": "number" },
+              "tipo": { "type": "string", "enum": ["ok", "dupla", "tripla", "falha"] }
+            }
+          }
         }
       }
     },

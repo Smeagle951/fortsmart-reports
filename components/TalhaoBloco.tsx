@@ -64,7 +64,7 @@ export default function TalhaoBloco({ talhao, index, total, data }: TalhaoBlocoP
                         gap: 16,
                         alignItems: 'center',
                     }}>
-                        <MetricaItem label="Área" value={`${(talhao.area_ha ?? 0).toFixed(1)} ha`} />
+                        <MetricaItem label="Área" value={talhao.area_ha != null && talhao.area_ha > 0 ? `${talhao.area_ha.toFixed(1)} ha` : '—'} />
                         <MetricaItem label="Pontos" value={String(metricas.totalPontos)} />
                         <MetricaItem label="Ocorrências" value={String(metricas.totalOcorrencias)} />
                         <MetricaItem label="Índice" value={`${metricas.indiceOcorrencia}%`} highlight color={cor} />
@@ -107,6 +107,19 @@ export default function TalhaoBloco({ talhao, index, total, data }: TalhaoBlocoP
                 {talhao.condicoes_climaticas && <CondicoesClimaticasCard condicoes={talhao.condicoes_climaticas} />}
             </div>
 
+            {(talhao.estagio || talhao.dae != null || talhao.populacao_estande != null || (talhao.condicoes_climaticas && (talhao.condicoes_climaticas.temperatura != null || talhao.condicoes_climaticas.umidade != null))) && (
+                <div style={{ ...cardStyle, padding: 16, marginBottom: 20 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 12 }}>Dados complementares</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                        {talhao.estagio && <DadoItem label="Estágio" value={talhao.estagio} />}
+                        {talhao.dae != null && Number.isFinite(talhao.dae) && <DadoItem label="DAE" value={String(talhao.dae)} />}
+                        {talhao.populacao_estande != null && Number.isFinite(talhao.populacao_estande) && <DadoItem label="Pop. estande" value={`${talhao.populacao_estande} pl/ha`} />}
+                        {talhao.condicoes_climaticas?.temperatura != null && Number.isFinite(talhao.condicoes_climaticas.temperatura) && <DadoItem label="Temperatura" value={`${talhao.condicoes_climaticas.temperatura} °C`} />}
+                        {talhao.condicoes_climaticas?.umidade != null && Number.isFinite(talhao.condicoes_climaticas.umidade) && <DadoItem label="Umidade" value={`${talhao.condicoes_climaticas.umidade}%`} />}
+                    </div>
+                </div>
+            )}
+
             <div style={{ ...cardStyle, padding: 20, marginBottom: 20 }}>
                 <RecomendacoesTecnicas recomendacoes={recomendacoes} />
             </div>
@@ -139,6 +152,15 @@ function MetricaItem({ label, value, highlight, color }: { label: string; value:
         <div>
             <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>{label}</div>
             <div style={{ fontSize: 15, fontWeight: 700, color: highlight && color ? color : '#1E293B' }}>{value}</div>
+        </div>
+    );
+}
+
+function DadoItem({ label, value }: { label: string; value: string }) {
+    return (
+        <div>
+            <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>{label}: </span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#1E293B' }}>{value}</span>
         </div>
     );
 }

@@ -106,7 +106,10 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
     };
   });
 
-  const areaHa = safeNum(raw.area_ha ?? raw.area ?? 0);
+  const areaHa = safeNum(raw.area_ha ?? raw.area ?? raw.areaHa ?? 0);
+  const dae = raw.dae != null ? safeNum(raw.dae) : undefined;
+  const estandeRaw = raw.estande != null && typeof raw.estande === 'object' ? raw.estande as Record<string, unknown> : undefined;
+  const populacaoEstande = estandeRaw?.plantasPorMetro != null ? safeNum(estandeRaw.plantasPorMetro) : (estandeRaw?.populacao != null ? safeNum(estandeRaw.populacao) : undefined);
   return {
     id: String(raw.id ?? 't1'),
     nome: String(raw.nome ?? 'Talhão'),
@@ -114,6 +117,8 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
     area_ha: Number.isFinite(areaHa) ? areaHa : 0,
     variedade: (raw.variedade != null && String(raw.variedade)) ? String(raw.variedade) : undefined,
     estagio: (raw.estagio != null && String(raw.estagio)) ? String(raw.estagio) : undefined,
+    dae: dae != null && Number.isFinite(dae) ? dae : undefined,
+    populacao_estande: populacaoEstande != null && Number.isFinite(populacaoEstande) ? populacaoEstande : undefined,
     poligono_geojson: poligono?.type === 'Feature' && poligono?.geometry ? poligono : defaultPolygon(pontos),
     pontos,
     condicoes_climaticas,
@@ -277,6 +282,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
                 {normalized.talhoes.map(t => {
                   const m = calcularMetricasTalhao(t);
                   const cor = corClassificacao(m.classificacao);
+                  const areaStr = t.area_ha != null && t.area_ha > 0 ? t.area_ha.toFixed(1) : '—';
                   return (
                     <tr key={t.id} style={{ borderBottom: '1px solid #E2E8F0' }}>
                       <td style={{ padding: 12, borderBottom: '1px solid #E2E8F0' }}>
@@ -284,7 +290,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
                           {t.nome}
                         </a>
                       </td>
-                      <td style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid #E2E8F0' }}>{(t.area_ha ?? 0).toFixed(1)}</td>
+                      <td style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid #E2E8F0' }}>{areaStr}</td>
                       <td style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid #E2E8F0', fontWeight: 700, color: cor }}>{m.indiceOcorrencia}%</td>
                       <td style={{ padding: 12, borderBottom: '1px solid #E2E8F0' }}>
                         <span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: `${cor}18`, color: cor }}>{labelClassificacao(m.classificacao)}</span>
@@ -294,7 +300,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
                 })}
                 <tr style={{ background: '#F8FAFC' }}>
                   <td style={{ padding: 12, fontWeight: 600 }}>Total</td>
-                  <td style={{ padding: 12, textAlign: 'right', fontWeight: 600 }}>{normalized.talhoes.reduce((s, t) => s + (t.area_ha ?? 0), 0).toFixed(1)}</td>
+                  <td style={{ padding: 12, textAlign: 'right', fontWeight: 600 }}>{normalized.talhoes.reduce((s, t) => s + (t.area_ha ?? 0), 0) > 0 ? normalized.talhoes.reduce((s, t) => s + (t.area_ha ?? 0), 0).toFixed(1) : '—'}</td>
                   <td colSpan={2} style={{ padding: 12 }} />
                 </tr>
               </tbody>

@@ -18,8 +18,10 @@ function parseHipoteses(causaProvavel?: string, problemaPrincipal?: string, hipo
 export interface RelatorioPlantioData {
   meta?: { safra?: string; dataGeracao?: string };
   propriedade?: { fazenda?: string };
-  talhao?: { nome?: string; cultura?: string; area?: number };
-  contextoSafra?: { espacamentoCm?: number };
+  talhao?: { nome?: string; cultura?: string; area?: number; dataPlantio?: string };
+  contextoSafra?: { espacamentoCm?: number; dae?: number; dap?: number; populacaoAlvoPlHa?: number; materialVariedade?: string; empresa?: string };
+  populacao?: { plantasHa?: number; plantasPorMetro?: number; estandeEfetivoPlHa?: number; eficienciaPct?: number; situacao?: string };
+  fenologia?: { estadio?: string; dataUltimaAvaliacao?: string; ultimaAvaliacaoDias?: number };
   indiceAgronomicoTalhao?: {
     valor?: number;
     maximo?: number;
@@ -42,6 +44,7 @@ export interface RelatorioPlantioData {
     okPct?: number;
     indicePlantabilidade?: number;
     linha?: Array<{ tipo: 'ok' | 'dupla' | 'tripla' | 'falha'; posicao?: number }>;
+    espacamentosIndividuais?: Array<{ cm?: number; tipo: string }>;
   };
   estande?: {
     registros?: Array<{ data: string; plantasPorMetro: number; plantasHa?: number }>;

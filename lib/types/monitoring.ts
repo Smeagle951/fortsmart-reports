@@ -36,6 +36,8 @@ export interface Talhao {
     area_ha: number;
     variedade?: string;
     estagio?: string;        // Ex: R1, V4...
+    dae?: number;            // Dias após emergência
+    populacao_estande?: number;  // plantas/ha ou plantas/m conforme origem
     poligono_geojson: GeoJSONPolygon;
     pontos: PontoMonitoramento[];
     condicoes_climaticas?: CondicoesClimaticas;

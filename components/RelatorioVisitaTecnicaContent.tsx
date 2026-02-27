@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import FortSmartLogo from '@/components/FortSmartLogo';
 import ModalImagem from '@/components/ModalImagem';
+import Mapa from '@/components/Mapa';
 
 export type PayloadVisitaTecnica = Record<string, unknown> & {
   tipo?: string;
@@ -108,7 +109,17 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const estado = prop?.estado != null ? String(prop.estado) : undefined;
   const proprietario = prop?.proprietario != null ? String(prop.proprietario) : undefined;
 
-  const aplicacoes = (relatorio.aplicacoes ?? []) as NonNullable<PayloadVisitaTecnica['aplicacoes']>;
+  const aplicacoesRaw = relatorio.aplicacoes ?? [];
+  const aplicacoes = (Array.isArray(aplicacoesRaw) ? aplicacoesRaw : []).map((a: any) => ({
+    tipo: a.tipo ?? a.tipoAplicacao ?? '—',
+    data: a.data ?? '—',
+    produto: a.produto ?? a.produtoNome ?? '—',
+    dose: a.dose != null ? String(a.dose) : undefined,
+    unidade: a.unidade ?? 'L/ha',
+    classe: a.classe ?? a.classeToxicologica ?? '—',
+    status: a.status ?? '—',
+    alvo: a.alvo ?? a.target ?? a.alvoBiologico ?? '—',
+  })) as NonNullable<PayloadVisitaTecnica['aplicacoes']>;
   const diagnostico = relatorio.diagnostico as Record<string, unknown> | undefined;
   const planoAcao = relatorio.planoAcao;
   const conclusao = relatorio.conclusao as string | undefined;
@@ -116,6 +127,14 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const condicoes = (relatorio.condicoes ?? {}) as Record<string, unknown>;
   const fenologia = (relatorio.fenologia ?? {}) as Record<string, unknown>;
   const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
+  const imagensFenologia = imagens.filter((img) => (img.categoria ?? '').toLowerCase() === 'fenologia');
+  const mapa = (relatorio.mapa ?? {}) as Record<string, unknown> & {
+    viewBox?: string;
+    path?: string;
+    polygon?: number[][];
+    pontos?: Array<Record<string, unknown> & { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string }>;
+  };
+  const hasMapa = (mapa.path != null && String(mapa.path).trim() !== '') || (Array.isArray(mapa.pontos) && mapa.pontos.length > 0);
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -234,7 +253,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
         )}
 
         {/* 3. Fenologia e estande */}
-        {(fenologia.estadio != null || fenologia.estagio != null || populacao?.plantasHa != null || populacao?.eficienciaPct != null) && (
+        {(fenologia.estadio != null || fenologia.estagio != null || populacao?.plantasHa != null || populacao?.eficienciaPct != null || (Array.isArray(fenologia.historico) && (fenologia.historico as unknown[]).length > 0) || imagensFenologia.length > 0) && (
           <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
             <div style={sectionTitleStyle}>3. Fenologia e estande</div>
             <div style={{ padding: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 20 }}>
@@ -248,6 +267,62 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
               {populacao?.eficienciaPct != null && <Row label="Eficiência" value={`${Number(populacao.eficienciaPct)}%`} />}
               {populacao?.situacao != null && <Row label="Situação estande" value={String(populacao.situacao)} />}
             </div>
+            {imagensFenologia.length > 0 && (
+              <div style={{ padding: '0 24px 24px', borderTop: '1px solid #E2E8F0', marginTop: 8, paddingTop: 16 }}>
+                <div style={{ fontSize: 11, color: '#64748B', fontWeight: 700, marginBottom: 12, textTransform: 'uppercase' }}>Registros fotográficos — Fenologia</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  {imagensFenologia.map((img, idx) => {
+                    const globalIndex = imagens.findIndex((i) => i.url === img.url);
+                    const src = img.url;
+                    if (!src) return null;
+                    return (
+                      <button
+                        key={`fenologia-${idx}`}
+                        type="button"
+                        onClick={() => setLightboxIndex(globalIndex >= 0 ? globalIndex : 0)}
+                        style={{
+                          display: 'block',
+                          padding: 0,
+                          margin: 0,
+                          border: '1px solid #E2E8F0',
+                          borderRadius: 8,
+                          overflow: 'hidden',
+                          background: '#fff',
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                          width: 100,
+                          height: 100,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <img
+                          src={src}
+                          alt={img.descricao ?? `Fenologia ${idx + 1}`}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+                {imagensFenologia.some((img) => img.descricao) && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: '#64748B' }}>
+                    {imagensFenologia.map((img, i) => (img.descricao ? <div key={i} style={{ marginBottom: 4 }}>{img.descricao}</div> : null))}
+                  </div>
+                )}
+              </div>
+            )}
+            {Array.isArray(fenologia.historico) && (fenologia.historico as Array<{ estagio?: string; data?: string; observacoes?: string }>).length > 0 && (
+              <div style={{ padding: '0 24px 24px', borderTop: '1px solid #E2E8F0', marginTop: 8, paddingTop: 16 }}>
+                <div style={{ fontSize: 11, color: '#64748B', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Histórico fenológico</div>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: '#334155', lineHeight: 1.6 }}>
+                  {(fenologia.historico as Array<{ estagio?: string; data?: string; observacoes?: string }>).slice(0, 10).map((h, i) => (
+                    <li key={i} style={{ marginBottom: 4 }}>
+                      {[h.estagio, h.data, h.observacoes].filter(Boolean).join(' · ')}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
         )}
 
@@ -270,10 +345,35 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           </section>
         )}
 
-        {/* 5. Aplicações realizadas (Prescrição Premium / visita) */}
-        {aplicacoes.length > 0 && (
+        {/* 4.5 Mapa do talhão — polígono e pontos georreferenciados (ocorrências, desvios, fenologia) */}
+        {hasMapa && (
           <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
-            <div style={sectionTitleStyle}>5. Aplicações realizadas</div>
+            <div style={sectionTitleStyle}>Mapa do talhão — pontos georreferenciados</div>
+            <div style={{ padding: 24 }}>
+              <Mapa
+                mapa={{
+                  viewBox: mapa.viewBox ?? '0 0 400 300',
+                  path: mapa.path ?? undefined,
+                  pontos: (mapa.pontos ?? []).map((p: { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string }, i: number) => ({
+                  x: p.x ?? 0,
+                  y: p.y ?? 0,
+                  index: p.index ?? i + 1,
+                  severidade: p.severidade,
+                  descricao: [p.titulo, p.descricao].filter(Boolean).join(' — ') || p.descricao,
+                  data: p.data,
+                })),
+                }}
+                relatorioId={relatorioUuid || reportId}
+                className="relatorio--visita-tecnica"
+              />
+            </div>
+          </section>
+        )}
+
+        {/* 5. Aplicações realizadas (Prescrição Premium / visita) — sempre exibida */}
+        <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
+          <div style={sectionTitleStyle}>5. Aplicações realizadas</div>
+          {aplicacoes.length > 0 ? (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 640 }}>
                 <thead>
@@ -316,8 +416,12 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                 </tbody>
               </table>
             </div>
-          </section>
-        )}
+          ) : (
+            <div style={{ padding: 24, color: '#64748B', fontSize: 14 }}>
+              Nenhuma aplicação registrada nesta visita.
+            </div>
+          )}
+        </section>
 
         {/* 6. Pragas e doenças observadas */}
         {pragas.length > 0 && (

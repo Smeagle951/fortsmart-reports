@@ -21,14 +21,16 @@ export default function QualidadePlantio({
   okPct,
   indicePlantabilidade,
 }: QualidadePlantioProps) {
-  if (
-    espacamentoIdealCm == null &&
-    espacamentoRealCm == null &&
-    cvPercentual == null &&
-    indicePlantabilidade == null
-  ) {
-    return null;
-  }
+  const hasAny =
+    espacamentoIdealCm != null ||
+    espacamentoRealCm != null ||
+    cvPercentual != null ||
+    indicePlantabilidade != null ||
+    okPct != null ||
+    duplasPct != null ||
+    triplasPct != null ||
+    falhasPct != null;
+  if (!hasAny) return null;
 
   return (
     <section className="plantio-card" aria-labelledby="qualidade-plantio-titulo">
@@ -50,9 +52,7 @@ export default function QualidadePlantio({
         </div>
       </dl>
       <div className="plantio-tags">
-        {okPct != null && (
-          <span className="plantio-tag plantio-tag--ok">OK: {okPct}%</span>
-        )}
+        <span className="plantio-tag plantio-tag--ok">OK: {okPct != null ? `${okPct}%` : '—'}</span>
         <span className="plantio-tag plantio-tag--dupla">Duplas: {duplasPct != null ? `${duplasPct}%` : '—'}</span>
         <span className="plantio-tag plantio-tag--tripla">Triplas: {triplasPct != null ? `${triplasPct}%` : '—'}</span>
         <span className="plantio-tag plantio-tag--falha">Falhas: {falhasPct != null ? `${falhasPct}%` : '—'}</span>
