@@ -239,7 +239,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
                 </>
               )}
               {estande && (estande.populacao != null || estande.plantasPorMetro != null) && (
-                <Row label="Estande" value={estande.plantasPorMetro != null ? `${formatDecimal2(estande.plantasPorMetro)} plantas/m` : `${formatDecimal2(estande.populacao)} plantas/ha`} />
+                <Row label="Estande" value={estande.plantasPorMetro != null ? `${formatDecimal2(Number(estande.plantasPorMetro))} plantas/m` : `${formatDecimal2(Number(estande.populacao))} plantas/ha`} />
               )}
               {cv && (cv.cvPercent != null || cv.cvClassificacao != null) && (
                 <Row label="CV" value={typeof cv.cvClassificacao === 'string' ? cv.cvClassificacao : (cv.cvPercent != null ? `${cv.cvPercent}%` : '—')} />
