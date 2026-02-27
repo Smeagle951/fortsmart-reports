@@ -17,11 +17,13 @@ type TipoFiltro = 'todos' | 'Herbicida' | 'Inseticida' | 'Fungicida';
 
 interface ApplicationsTableProps {
   rows: AplicacaoRow[];
-  /** Gera URL da ficha técnica com dados reais do módulo (visita técnica / Prescrições Premium). */
+  /** Se false, mostra apenas o nome do produto (sem link para ficha). Padrão true para compatibilidade. */
+  mostrarApenasNomeProduto?: boolean;
+  /** Gera URL da ficha técnica (usado apenas se mostrarApenasNomeProduto for false). */
   fichaTecnicaUrl?: (row: AplicacaoRow) => string;
 }
 
-export default function ApplicationsTable({ rows, fichaTecnicaUrl }: ApplicationsTableProps) {
+export default function ApplicationsTable({ rows, mostrarApenasNomeProduto = true, fichaTecnicaUrl }: ApplicationsTableProps) {
   const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>('todos');
 
   const filteredRows = useMemo(() => {
@@ -66,8 +68,8 @@ export default function ApplicationsTable({ rows, fichaTecnicaUrl }: Application
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md">
-          <table className="saas-table w-full min-w-[700px]">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md print:break-inside-avoid">
+          <table className="saas-table w-full min-w-[520px] print:min-w-0">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="saas-th">Data</th>
@@ -77,15 +79,15 @@ export default function ApplicationsTable({ rows, fichaTecnicaUrl }: Application
                 <th className="saas-th">Alvo</th>
                 <th className="saas-th">Talhão</th>
                 <th className="saas-th">Responsável</th>
-                {fichaTecnicaUrl && <th className="saas-th w-24 text-center">Ficha</th>}
+                {!mostrarApenasNomeProduto && fichaTecnicaUrl && <th className="saas-th w-24 text-center">Ficha</th>}
               </tr>
             </thead>
             <tbody>
               {filteredRows.map((row) => (
                 <tr key={row.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/50">
-                  <td className="saas-td font-medium">{row.data}</td>
-                  <td className="saas-td">
-                    {fichaTecnicaUrl ? (
+                  <td className="saas-td font-medium text-slate-700">{row.data}</td>
+                  <td className="saas-td font-medium text-slate-800">
+                    {!mostrarApenasNomeProduto && fichaTecnicaUrl ? (
                       <a
                         href={fichaTecnicaUrl(row)}
                         target="_blank"
@@ -98,7 +100,7 @@ export default function ApplicationsTable({ rows, fichaTecnicaUrl }: Application
                         </svg>
                       </a>
                     ) : (
-                      row.produto
+                      row.produto || '—'
                     )}
                   </td>
                   <td className="saas-td">
@@ -110,7 +112,7 @@ export default function ApplicationsTable({ rows, fichaTecnicaUrl }: Application
                   <td className="saas-td">{row.alvo || '—'}</td>
                   <td className="saas-td">{row.talhao ?? '—'}</td>
                   <td className="saas-td">{row.responsavel ?? '—'}</td>
-                  {fichaTecnicaUrl && (
+                  {!mostrarApenasNomeProduto && fichaTecnicaUrl && (
                     <td className="saas-td text-center">
                       <a
                         href={fichaTecnicaUrl(row)}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import FortSmartLogo from '@/components/FortSmartLogo';
 
 export type StatusGeral = 'Saudável' | 'Atenção' | 'Crítico';
 
@@ -13,7 +14,6 @@ interface HeaderSectionProps {
   responsavel?: string;
   status?: StatusGeral;
   onExportPdf?: () => void;
-  onExportExcel?: () => void;
   onCompartilhar?: () => void;
 }
 
@@ -32,7 +32,6 @@ export default function HeaderSection({
   responsavel = '—',
   status = 'Saudável',
   onExportPdf,
-  onExportExcel,
   onCompartilhar,
 }: HeaderSectionProps) {
   const [copied, setCopied] = useState(false);
@@ -60,8 +59,8 @@ export default function HeaderSection({
         <div className="flex items-start justify-between gap-4">
           {/* Left: brand */}
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-[--plantio-card-bg] border border-slate-200 flex items-center justify-center overflow-hidden">
-              <img src="/favicon.ico" alt="FortSmart" className="w-9 h-9 object-contain" />
+            <div className="w-12 h-12 rounded-lg bg-[--plantio-card-bg] border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+              <FortSmartLogo size={40} className="shrink-0" />
             </div>
             <div>
               <div className="text-sm font-semibold text-slate-700">FortSmart Agro</div>
@@ -103,17 +102,6 @@ export default function HeaderSection({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <span className="hidden sm:inline">PDF</span>
-              </button>
-              <button
-                type="button"
-                onClick={onExportExcel}
-                className="saas-btn saas-btn-secondary inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
-                title="Exportar Excel"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span className="hidden sm:inline">Excel</span>
               </button>
               <button
                 type="button"

@@ -10,12 +10,12 @@ const cardStyle = { background: '#fff', borderRadius: 8, border: '1px solid #E2E
 
 function formatTemp(n: number): string {
     if (n == null || !Number.isFinite(n)) return '—';
-    return `${n} °C`;
+    return `${Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} °C`;
 }
 
 function formatUmidade(n: number): string {
     if (n == null || !Number.isFinite(n)) return '—';
-    return `${n}%`;
+    return `${Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 }
 
 function formatChuva(s: string | undefined): string {

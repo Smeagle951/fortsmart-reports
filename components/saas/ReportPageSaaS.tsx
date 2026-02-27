@@ -14,7 +14,14 @@ export interface ReportPageSaaSData {
   meta?: { dataGeracao?: string; tecnico?: string; tecnicoCrea?: string; id?: string; versao?: number; status?: string; safra?: string };
   propriedade?: { fazenda?: string; proprietario?: string; municipio?: string; estado?: string };
   talhao?: { nome?: string; cultura?: string };
-  contextoSafra?: { dae?: number; materialVariedade?: string; empresa?: string };
+  contextoSafra?: {
+    dae?: number;
+    dap?: number;
+    materialVariedade?: string;
+    empresa?: string;
+    espacamentoCm?: number;
+    populacaoAlvoPlHa?: number;
+  };
   fenologia?: { estadio?: string };
   plantabilidade?: {
     cvPercentual?: number;
@@ -37,6 +44,7 @@ export interface ReportPageSaaSData {
   populacao?: { plantasPorMetro?: number; eficienciaPct?: number };
   aplicacoes?: Array<{
     tipo?: string;
+    classe?: string;
     data?: string;
     produto?: string;
     dose?: string;
@@ -47,6 +55,11 @@ export interface ReportPageSaaSData {
   }>;
   imagens?: Array<{ url?: string; descricao?: string; data?: string; categoria?: string }>;
   avaliacoes?: AvaliacaoRow[];
+  pragas?: Array<{ tipo?: string; nome?: string; alvo?: string; incidencia?: string; severidade?: string; situacao?: string; observacoes?: string }>;
+  desvios?: Array<{ tipo?: string; descricao?: string; data?: string; severidade?: string; local?: string; acaoRecomendada?: string }>;
+  diagnostico?: { problemaPrincipal?: string; causaProvavel?: string; nivelRisco?: string; urgenciaAcao?: string; recomendacoes?: string[] };
+  planoAcao?: { objetivoManejo?: string; acoes?: Array<{ prioridade?: string; acao?: string; prazo?: string }> };
+  conclusao?: string;
 }
 
 interface ReportPageSaaSProps {
@@ -149,7 +162,7 @@ function buildAplicacoes(d: ReportPageSaaSData): AplicacaoRow[] {
     id: `app-${i}`,
     data: a.data ?? '—',
     produto: a.produto ?? '—',
-    classe: a.tipo ?? '—',
+    classe: a.classe ?? a.tipo ?? '—',
     dose: a.dose ? `${a.dose} ${a.unidade ?? ''}`.trim() : '—',
     alvo: a.alvo ?? '—',
     talhao: a.talhao,
@@ -295,7 +308,6 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
             responsavel={meta.tecnico}
             status={statusGeral}
             onExportPdf={handleExportPdf}
-            onExportExcel={handleExportExcel}
             onCompartilhar={() => {}}
           />
         </>
@@ -306,26 +318,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         <EvaluationTable rows={avaliacoes} onExportCsv={handleExportCsv} />
         {estatisticas.length > 0 && <StatisticsSection items={estatisticas} />}
         {aplicacoes.length > 0 && (
-          <ApplicationsTable
-            rows={aplicacoes}
-            fichaTecnicaUrl={(row) => {
-              const slug = String(row.produto)
-                .toLowerCase()
-                .normalize('NFKD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/(^-|-$)/g, '');
-              const params = new URLSearchParams();
-              if (row.data) params.set('data', row.data);
-              if (row.dose) params.set('dose', row.dose);
-              if (row.classe) params.set('classe', row.classe);
-              if (row.alvo) params.set('alvo', row.alvo);
-              if (row.talhao) params.set('talhao', row.talhao);
-              if (row.responsavel) params.set('responsavel', row.responsavel);
-              const qs = params.toString();
-              return `/produtos/${slug}${qs ? `?${qs}` : ''}`;
-            }}
-          />
+          <ApplicationsTable rows={aplicacoes} mostrarApenasNomeProduto />
         )}
         {imagens.length > 0 && (
           <ImageGallerySaaS imagens={imagens} marcaDagua="FortSmart" />
@@ -336,6 +329,158 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
             labelAvaliacao1={data.estande?.registros?.[0]?.data}
             labelAvaliacao2={data.estande?.registros?.[data.estande.registros.length - 1]?.data}
           />
+        )}
+
+        {/* Contexto da safra */}
+        {(data.contextoSafra?.materialVariedade != null || data.contextoSafra?.dae != null || data.contextoSafra?.espacamentoCm != null || data.contextoSafra?.populacaoAlvoPlHa != null) && (
+          <section className="saas-section print:break-inside-avoid">
+            <div className="mx-auto max-w-7xl">
+              <h2 className="saas-section-title">Contexto da safra</h2>
+              <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+                  {data.contextoSafra?.materialVariedade != null && (
+                    <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Material / Variedade</p><p className="font-medium text-slate-800 mt-0.5">{data.contextoSafra.materialVariedade}</p></div>
+                  )}
+                  {data.contextoSafra?.empresa != null && (
+                    <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Empresa</p><p className="font-medium text-slate-800 mt-0.5">{data.contextoSafra.empresa}</p></div>
+                  )}
+                  {data.contextoSafra?.espacamentoCm != null && (
+                    <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Espaçamento</p><p className="font-medium text-slate-800 mt-0.5">{data.contextoSafra.espacamentoCm} cm</p></div>
+                  )}
+                  {data.contextoSafra?.populacaoAlvoPlHa != null && (
+                    <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">População alvo</p><p className="font-medium text-slate-800 mt-0.5">{data.contextoSafra.populacaoAlvoPlHa.toLocaleString('pt-BR')} pl/ha</p></div>
+                  )}
+                  {data.contextoSafra?.dae != null && (
+                    <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">DAE</p><p className="font-medium text-slate-800 mt-0.5">{data.contextoSafra.dae} dias</p></div>
+                  )}
+                  {data.contextoSafra?.dap != null && (
+                    <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">DAP</p><p className="font-medium text-slate-800 mt-0.5">{data.contextoSafra.dap} dias</p></div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Pragas e doenças */}
+        {data.pragas != null && data.pragas.length > 0 && (
+          <section className="saas-section print:break-inside-avoid">
+            <div className="mx-auto max-w-7xl">
+              <h2 className="saas-section-title">Pragas e doenças observadas</h2>
+              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                <table className="saas-table w-full min-w-[500px]">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className="saas-th">Tipo</th>
+                      <th className="saas-th">Alvo / Nome</th>
+                      <th className="saas-th">Incidência</th>
+                      <th className="saas-th">Severidade</th>
+                      <th className="saas-th">Situação</th>
+                      <th className="saas-th">Observações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.pragas.map((p, i) => (
+                      <tr key={i} className="border-b border-slate-100">
+                        <td className="saas-td">{p.tipo ?? '—'}</td>
+                        <td className="saas-td font-medium">{p.nome ?? p.alvo ?? '—'}</td>
+                        <td className="saas-td">{p.incidencia ?? '—'}</td>
+                        <td className="saas-td">{p.severidade ?? '—'}</td>
+                        <td className="saas-td">{p.situacao ?? '—'}</td>
+                        <td className="saas-td text-slate-600 max-w-[200px]">{p.observacoes ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Desvios */}
+        {data.desvios != null && data.desvios.length > 0 && (
+          <section className="saas-section print:break-inside-avoid">
+            <div className="mx-auto max-w-7xl">
+              <h2 className="saas-section-title">Desvios registrados</h2>
+              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                <table className="saas-table w-full min-w-[500px]">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className="saas-th">Data</th>
+                      <th className="saas-th">Tipo</th>
+                      <th className="saas-th">Descrição</th>
+                      <th className="saas-th">Severidade</th>
+                      <th className="saas-th">Local</th>
+                      <th className="saas-th">Ação recomendada</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.desvios.map((d, i) => (
+                      <tr key={i} className="border-b border-slate-100">
+                        <td className="saas-td">{d.data ?? '—'}</td>
+                        <td className="saas-td font-medium">{d.tipo ?? '—'}</td>
+                        <td className="saas-td text-slate-700">{d.descricao ?? '—'}</td>
+                        <td className="saas-td">{d.severidade ?? '—'}</td>
+                        <td className="saas-td">{d.local ?? '—'}</td>
+                        <td className="saas-td text-slate-600">{d.acaoRecomendada ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Diagnóstico final */}
+        {data.diagnostico != null && (data.diagnostico.problemaPrincipal != null || data.diagnostico.causaProvavel != null || (data.diagnostico.recomendacoes?.length ?? 0) > 0) && (
+          <section className="saas-section print:break-inside-avoid">
+            <div className="mx-auto max-w-7xl">
+              <h2 className="saas-section-title">Diagnóstico final</h2>
+              <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5 space-y-4">
+                {data.diagnostico.problemaPrincipal != null && (
+                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Problema principal</p><p className="text-sm text-slate-800 mt-1">{data.diagnostico.problemaPrincipal}</p></div>
+                )}
+                {data.diagnostico.causaProvavel != null && (
+                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Causa provável</p><p className="text-sm text-slate-700 mt-1">{data.diagnostico.causaProvavel}</p></div>
+                )}
+                {(data.diagnostico.nivelRisco != null || data.diagnostico.urgenciaAcao != null) && (
+                  <div className="flex flex-wrap gap-4">
+                    {data.diagnostico.nivelRisco != null && <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Nível de risco</p><p className="text-sm font-medium text-slate-800 mt-0.5">{data.diagnostico.nivelRisco}</p></div>}
+                    {data.diagnostico.urgenciaAcao != null && <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Urgência de ação</p><p className="text-sm font-medium text-slate-800 mt-0.5">{data.diagnostico.urgenciaAcao}</p></div>}
+                  </div>
+                )}
+                {(data.diagnostico.recomendacoes?.length ?? 0) > 0 && (
+                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Recomendações</p><ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">{data.diagnostico.recomendacoes!.map((r, i) => <li key={i}>{r}</li>)}</ul></div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Plano de ação */}
+        {data.planoAcao != null && (data.planoAcao.objetivoManejo != null || (data.planoAcao.acoes?.length ?? 0) > 0) && (
+          <section className="saas-section print:break-inside-avoid">
+            <div className="mx-auto max-w-7xl">
+              <h2 className="saas-section-title">Plano de ação</h2>
+              <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5 space-y-4">
+                {data.planoAcao.objetivoManejo != null && <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Objetivo de manejo</p><p className="text-sm text-slate-800 mt-1 whitespace-pre-wrap">{data.planoAcao.objetivoManejo}</p></div>}
+                {(data.planoAcao.acoes?.length ?? 0) > 0 && (
+                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Ações</p><ol className="list-decimal pl-5 space-y-2 text-sm text-slate-700">{data.planoAcao.acoes!.map((a, i) => <li key={i}><span className="font-medium">{a.acao ?? '—'}</span>{(a.prioridade != null || a.prazo != null) && <span className="text-slate-500 text-xs ml-2">{[a.prioridade != null && `Prioridade ${a.prioridade}`, a.prazo].filter(Boolean).join(' · ')}</span>}</li>)}</ol></div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Conclusão */}
+        {data.conclusao != null && String(data.conclusao).trim() !== '' && (
+          <section className="saas-section print:break-inside-avoid">
+            <div className="mx-auto max-w-7xl">
+              <h2 className="saas-section-title">Conclusão do consultor</h2>
+              <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5"><p className="text-sm text-slate-800 whitespace-pre-wrap">{data.conclusao}</p></div>
+            </div>
+          </section>
         )}
       </main>
     </div>

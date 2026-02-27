@@ -106,7 +106,7 @@ export default function RelatorioTecnicoPdf({
       {/* Fenologia - só exibe quando houver pelo menos um dado */}
       {(evolucao.estadioAtual != null && evolucao.estadioAtual !== '') ||
        (evolucao.estadioPrevisto != null && evolucao.estadioPrevisto !== '') ||
-       evolucao.atrasoFenologico != null ? (
+       (evolucao.atrasoFenologico != null && evolucao.atrasoFenologico !== '') ? (
         <div>
           <h3 className="mb-2 text-sm font-semibold uppercase text-slate-600">
             Fenologia
