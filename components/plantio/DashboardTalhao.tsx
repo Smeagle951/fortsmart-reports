@@ -128,7 +128,7 @@ export default function DashboardTalhao({ data, relatorioId }: DashboardTalhaoPr
           {/* Distribuição Longitudinal + Índice Plantabilidade */}
           <div className="plantio-card">
             <h3 className="plantio-card-title">
-              Perdas e Projeção
+              Qualidade do Plantio (CV%) e distribuição
             </h3>
             <LinhaPlantioVisualizer
               linha={plantabilidade.linha || []}
@@ -137,6 +137,7 @@ export default function DashboardTalhao({ data, relatorioId }: DashboardTalhaoPr
               triplasPct={plantabilidade.triplasPct}
               falhasPct={plantabilidade.falhasPct}
               indicePlantabilidade={plantabilidade.indicePlantabilidade}
+              espacamentosIndividuais={plantabilidade.espacamentosIndividuais}
               embedded
             />
             {plantabilidade.indicePlantabilidade != null && (
