@@ -1,0 +1,35 @@
+
+> fortsmart_report@0.1.0 build
+> next build
+
+ΓÜá Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\fortu\fortsmart_agro_new\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\fortu\fortsmart_agro_new\fortsmart_report\package-lock.json
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 6.0s
+  Running TypeScript ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/5) ...
+  Generating static pages using 15 workers (1/5) 
+  Generating static pages using 15 workers (2/5) 
+  Generating static pages using 15 workers (3/5) 
+Γ£ô Generating static pages using 15 workers (5/5) in 588.1ms
+  Finalizing page optimization ...
+
+Route (app)
+Γöî Γùï /
+Γö£ Γùï /_not-found
+Γö£ ╞Æ /api/relatorio
+Γö£ ╞Æ /r/[token]
+Γöö ╞Æ /relatorio/[id]
+
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+
