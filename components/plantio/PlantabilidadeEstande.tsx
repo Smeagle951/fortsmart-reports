@@ -21,9 +21,20 @@ export default function PlantabilidadeEstande({ data }: { data: RelatorioPlantio
 
   const espacamentoIdeal = plantabilidade.espacamentoIdealCm ?? contextoSafra.espacamentoCm;
   const espacamentoReal = plantabilidade.espacamentoRealCm;
-  const dae = contextoSafra.dae;
-  const dap = contextoSafra.dap;
-  const estadio = evolucaoCultura.estadioAtual ?? fenologia.estadio;
+  // DAE/DAP/Estádio/Data: submódulos Estande e Evolução Fenológica (contextoSafra, evolucaoCultura, fenologia, último registro estande)
+  const ultimoEstande = estande.registros?.length ? estande.registros[estande.registros.length - 1] : undefined;
+  const dae =
+    contextoSafra.dae ??
+    evolucaoCultura.dae ??
+    fenologia.dae ??
+    (ultimoEstande as { dae?: number } | undefined)?.dae;
+  const dap =
+    contextoSafra.dap ??
+    evolucaoCultura.dap ??
+    fenologia.dap ??
+    (ultimoEstande as { dap?: number } | undefined)?.dap;
+  const estadio = evolucaoCultura.estadioAtual ?? fenologia.estadio ?? (fenologia as { estagio?: string }).estagio;
+  const dataPlantio = talhao.dataPlantio ?? (contextoSafra as { dataPlantio?: string }).dataPlantio;
   const plantasHa = populacao.plantasHa ?? (estande.registros?.length ? estande.registros[estande.registros.length - 1]?.plantasHa : undefined);
   const plantasPorMetro = populacao.plantasPorMetro ?? (estande.registros?.length ? estande.registros[estande.registros.length - 1]?.plantasPorMetro : undefined);
   const populacaoAlvo = contextoSafra.populacaoAlvoPlHa;
@@ -62,7 +73,7 @@ export default function PlantabilidadeEstande({ data }: { data: RelatorioPlantio
           </div>
           <div className="plantio-data-row">
             <dt>Data do plantio</dt>
-            <dd>{formatDate(talhao.dataPlantio)}</dd>
+            <dd>{formatDate(dataPlantio)}</dd>
           </div>
           <div className="plantio-data-row">
             <dt>População alvo</dt>
@@ -113,6 +124,8 @@ export default function PlantabilidadeEstande({ data }: { data: RelatorioPlantio
         falhasPct={plantabilidade.falhasPct}
         okPct={plantabilidade.okPct}
         indicePlantabilidade={plantabilidade.indicePlantabilidade}
+        linha={plantabilidade.linha}
+        espacamentosIndividuais={plantabilidade.espacamentosIndividuais}
       />
     </article>
   );

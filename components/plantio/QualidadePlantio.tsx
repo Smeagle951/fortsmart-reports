@@ -1,5 +1,10 @@
 'use client';
 
+import LinhaPlantioVisualizer from './LinhaPlantioVisualizer';
+
+type LinhaPonto = { tipo: 'ok' | 'dupla' | 'tripla' | 'falha'; posicao?: number };
+type EspacamentoItem = { cm?: number; tipo: string };
+
 interface QualidadePlantioProps {
   espacamentoIdealCm?: number;
   espacamentoRealCm?: number;
@@ -9,6 +14,10 @@ interface QualidadePlantioProps {
   falhasPct?: number;
   okPct?: number;
   indicePlantabilidade?: number;
+  /** Pontos da linha de plantio para visualização (submódulo qualidade / app) */
+  linha?: LinhaPonto[];
+  /** Espaçamento em cm por semente: Semente 1: 31 cm → OK (submódulo qualidade / app) */
+  espacamentosIndividuais?: EspacamentoItem[];
 }
 
 export default function QualidadePlantio({
@@ -20,8 +29,10 @@ export default function QualidadePlantio({
   falhasPct,
   okPct,
   indicePlantabilidade,
+  linha,
+  espacamentosIndividuais,
 }: QualidadePlantioProps) {
-  const hasAny =
+  const hasResumo =
     espacamentoIdealCm != null ||
     espacamentoRealCm != null ||
     cvPercentual != null ||
@@ -30,7 +41,8 @@ export default function QualidadePlantio({
     duplasPct != null ||
     triplasPct != null ||
     falhasPct != null;
-  if (!hasAny) return null;
+  const hasLinha = (linha && linha.length > 0) || (espacamentosIndividuais && espacamentosIndividuais.length > 0);
+  if (!hasResumo && !hasLinha) return null;
 
   return (
     <section className="plantio-card" aria-labelledby="qualidade-plantio-titulo">
@@ -63,6 +75,17 @@ export default function QualidadePlantio({
           <span className="plantio-indice-valor">{indicePlantabilidade}/100</span>
         </div>
       )}
+      {/* Linha de qualidade do plantio com medições (igual ao app: trena + espaçamentos individuais) */}
+      <LinhaPlantioVisualizer
+        linha={linha ?? []}
+        okPct={okPct}
+        duplasPct={duplasPct}
+        triplasPct={triplasPct}
+        falhasPct={falhasPct}
+        indicePlantabilidade={indicePlantabilidade}
+        espacamentosIndividuais={espacamentosIndividuais}
+        embedded
+      />
     </section>
   );
 }
