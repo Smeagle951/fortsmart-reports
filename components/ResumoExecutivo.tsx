@@ -1,6 +1,7 @@
 'use client';
 
 import { MetricasTalhao, NivelClassificacao } from '@/lib/types/monitoring';
+import { formatPercent2, formatDecimal2 } from '@/utils/format';
 
 interface ResumoExecutivoProps {
     metricas: MetricasTalhao;
@@ -27,9 +28,9 @@ export default function ResumoExecutivo({ metricas, talhaoNome, area_ha, ultimoM
             <div style={{ padding: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
                 <Row label="Pontos amostrados" value={String(metricas.totalPontos)} />
                 <Row label="Total de ocorrências" value={String(metricas.totalOcorrencias)} />
-                <Row label="Índice geral" value={`${metricas.indiceOcorrencia}%`} bold />
+                <Row label="Índice geral" value={formatPercent2(metricas.indiceOcorrencia)} bold />
                 <Row label="Classificação" value={CLASSIF[metricas.classificacao]} />
-                <Row label="Área (ha)" value={(area_ha ?? 0).toFixed(1)} />
+                <Row label="Área (ha)" value={(area_ha != null && Number(area_ha) > 0) ? formatDecimal2(area_ha) : '—'} />
                 <Row label="Último monitoramento" value={ultimoMonitoramento} />
             </div>
         </div>

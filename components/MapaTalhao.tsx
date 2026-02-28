@@ -4,6 +4,11 @@ import React, { useMemo } from 'react';
 import { MapContainer, TileLayer, Polygon, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
+const MAPTILER_KEY = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_MAPTILER_KEY : undefined;
+const mapTilerUrl = MAPTILER_KEY
+  ? `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`
+  : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
 type Ponto = {
   id?: string;
   latitude: number;
@@ -21,9 +26,11 @@ interface Props {
   pontos?: Ponto[];
   centro?: [number, number];
   zoom?: number;
+  /** Quando true, não renderiza o título da seção (para uso embutido no relatório) */
+  hideSectionTitle?: boolean;
 }
 
-export default function MapaTalhao({ polygon: polygonProp, pontos = [], centro = [-15.6, -54.3], zoom = 15 }: Props) {
+export default function MapaTalhao({ polygon: polygonProp, pontos = [], centro = [-15.6, -54.3], zoom = 15, hideSectionTitle }: Props) {
   const markers = pontos.filter((p) => Math.abs(p.latitude) <= 90 && Math.abs(p.longitude) <= 180).map((p) => ({ lat: p.latitude, lng: p.longitude, meta: p }));
 
   const polygonCoords = useMemo((): [number, number][] | undefined => {
@@ -53,12 +60,14 @@ export default function MapaTalhao({ polygon: polygonProp, pontos = [], centro =
 
   return (
     <section className="section mapa-section">
-      <h2 className="section-title">Mapa do talhão — pontos georreferenciados</h2>
+      {!hideSectionTitle && (
+        <h2 className="section-title">Mapa do talhão — pontos georreferenciados</h2>
+      )}
       <div className="mapa-wrap">
         <MapContainer center={mapCenter} zoom={zoom} style={{ height: 360, width: '100%' }} scrollWheelZoom={true}>
           <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution={MAPTILER_KEY ? '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' : '&copy; OpenStreetMap contributors'}
+            url={mapTilerUrl}
           />
           {polygonCoords && <Polygon positions={polygonCoords} pathOptions={{ color: '#2e7d32', weight: 3, fillColor: '#e8f5e9', fillOpacity: 0.4 }} />}
           {markers.map((m) => (

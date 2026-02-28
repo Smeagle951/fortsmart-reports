@@ -50,7 +50,8 @@
         "espacamentoCm": { "type": "number" },
         "populacaoAlvoPlHa": { "type": "number" },
         "dae": { "type": "integer" },
-        "dap": { "type": "integer" }
+        "dap": { "type": "integer" },
+        "dataPlantio": { "type": "string", "format": "date" }
       }
     },
     "indiceAgronomicoTalhao": {
@@ -78,7 +79,9 @@
         "estadioAtual": { "type": "string" },
         "estadioPrevisto": { "type": "string" },
         "somaTermica": { "type": "number", "description": "Soma térmica em ºC" },
-        "atrasoFenologico": { "type": "integer", "description": "Folhas de atraso (negativo)" }
+        "atrasoFenologico": { "type": "integer", "description": "Folhas de atraso (negativo)" },
+        "dae": { "type": "integer", "description": "Dias Após Emergência" },
+        "dap": { "type": "integer", "description": "Dias Após Plantio" }
       }
     },
     "plantabilidade": {
@@ -126,7 +129,9 @@
             "properties": {
               "data": { "type": "string", "format": "date" },
               "plantasPorMetro": { "type": "number" },
-              "plantasHa": { "type": "number" }
+              "plantasHa": { "type": "number" },
+              "dae": { "type": "integer" },
+              "dap": { "type": "integer" }
             }
           }
         },
@@ -170,8 +175,11 @@
       "type": "object",
       "properties": {
         "estadio": { "type": "string" },
+        "estagio": { "type": "string" },
         "ultimaAvaliacaoDias": { "type": "integer" },
         "dataUltimaAvaliacao": { "type": "string" },
+        "dae": { "type": "integer" },
+        "dap": { "type": "integer" },
         "historico": { "type": "array" }
       }
     },

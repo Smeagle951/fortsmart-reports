@@ -12,6 +12,7 @@ import {
   TipoOrganismo,
 } from '@/lib/types/monitoring';
 import { calcularMetricasTalhao, corClassificacao, labelClassificacao } from '@/lib/calculations';
+import { formatPercent2, formatDecimal2 } from '@/utils/format';
 import ReportHeader from './ReportHeader';
 import TalhaoBloco from './TalhaoBloco';
 
@@ -74,7 +75,7 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
           quantidade: inf.quantidade != null ? safeNum(inf.quantidade) : null,
           severidade: safeNum(inf.severidade ?? 0),
           observacao: (inf.observacao != null && String(inf.observacao)) ? String(inf.observacao) : undefined,
-          imagem: (inf.imagem != null && String(inf.imagem)) ? String(inf.imagem) : undefined,
+          imagem: (inf.imagem != null && String(inf.imagem)) ? String(inf.imagem) : (inf.url != null && String(inf.url)) ? String(inf.url) : undefined,
         }));
       return {
         id: String(p.id ?? `p-${i}`),
@@ -106,7 +107,13 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
     };
   });
 
-  const areaHa = safeNum(raw.area_ha ?? raw.area ?? raw.areaHa ?? 0);
+  const rawTalhao = raw.talhao != null && typeof raw.talhao === 'object' ? (raw.talhao as Record<string, unknown>) : null;
+  const rawDetalhes = raw.detalhes != null && typeof raw.detalhes === 'object' ? (raw.detalhes as Record<string, unknown>) : null;
+  const areaHa = safeNum(
+    raw.area_ha ?? raw.area ?? raw.areaHa ?? raw.area_hectares ?? raw.hectares
+    ?? rawTalhao?.area_ha ?? rawTalhao?.area ?? rawDetalhes?.area_ha ?? rawDetalhes?.area
+    ?? raw.superficie ?? raw.tamanho_ha ?? 0
+  );
   const dae = raw.dae != null ? safeNum(raw.dae) : undefined;
   const estandeRaw = raw.estande != null && typeof raw.estande === 'object' ? raw.estande as Record<string, unknown> : undefined;
   const populacaoEstande = estandeRaw?.plantasPorMetro != null ? safeNum(estandeRaw.plantasPorMetro) : (estandeRaw?.populacao != null ? safeNum(estandeRaw.populacao) : undefined);
@@ -152,7 +159,14 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
   const normalized = useMemo((): RelatorioMonitoramento => {
     const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? relatorio.propriedade as Record<string, unknown> : undefined;
     const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? relatorio.meta as Record<string, unknown> : undefined;
-    const fazenda = String(relatorio.fazenda ?? prop?.fazenda ?? 'Fazenda').trim() || 'Fazenda';
+    const fazenda = String(
+      relatorio.fazenda
+      ?? prop?.fazenda
+      ?? prop?.nome
+      ?? (relatorio as any).nomeFazenda
+      ?? (relatorio as any).fazenda_nome
+      ?? ''
+    ).trim();
     const safra = String(relatorio.safra ?? meta?.safra ?? '').trim();
     const dataRaw = relatorio.data ?? meta?.dataGeracao ?? '';
     const data = typeof dataRaw === 'string' ? dataRaw : (dataRaw != null ? String(dataRaw) : '');
@@ -220,7 +234,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
       </nav>
 
       <div id="relatorio-monitoramento-content" style={{ maxWidth: 960, margin: '0 auto', padding: '24px 24px 0' }}>
-        <ReportHeader relatorio={normalized} onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
+        <ReportHeader relatorio={normalized} onExportPDF={handleExportPDF} hideExcel />
 
         {(metricas || estande || cv || fenologia || observacoes || (alertas && alertas.length > 0)) && (
           <div style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
@@ -233,12 +247,12 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
                   {metricas.totalPontos != null && <Row label="Total de pontos" value={String(metricas.totalPontos)} />}
                   {metricas.totalOcorrencias != null && <Row label="Ocorrências" value={String(metricas.totalOcorrencias)} />}
                   {metricas.nivelRisco != null && <Row label="Nível de risco" value={String(metricas.nivelRisco)} />}
-                  {metricas.confiancaDados != null && <Row label="Confiança dos dados" value={`${Number(metricas.confiancaDados) * 100}%`} />}
-                  {metricas.severidadeMedia != null && <Row label="Severidade média" value={`${Number(metricas.severidadeMedia)}%`} />}
+                  {metricas.confiancaDados != null && <Row label="Confiança dos dados" value={formatPercent2(Number(metricas.confiancaDados) * 100)} />}
+                  {metricas.severidadeMedia != null && <Row label="Severidade média" value={formatPercent2(Number(metricas.severidadeMedia))} />}
                 </>
               )}
               {estande && (estande.populacao != null || estande.plantasPorMetro != null) && (
-                <Row label="Estande" value={estande.plantasPorMetro != null ? `${estande.plantasPorMetro} plantas/m` : `${estande.populacao} plantas/ha`} />
+                <Row label="Estande" value={estande.plantasPorMetro != null ? `${formatDecimal2(Number(estande.plantasPorMetro))} plantas/m` : `${formatDecimal2(Number(estande.populacao))} plantas/ha`} />
               )}
               {cv && (cv.cvPercent != null || cv.cvClassificacao != null) && (
                 <Row label="CV" value={typeof cv.cvClassificacao === 'string' ? cv.cvClassificacao : (cv.cvPercent != null ? `${cv.cvPercent}%` : '—')} />
@@ -282,7 +296,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
                 {normalized.talhoes.map(t => {
                   const m = calcularMetricasTalhao(t);
                   const cor = corClassificacao(m.classificacao);
-                  const areaStr = t.area_ha != null && t.area_ha > 0 ? t.area_ha.toFixed(1) : '—';
+                  const areaStr = t.area_ha != null && Number(t.area_ha) > 0 ? formatDecimal2(t.area_ha) : '—';
                   return (
                     <tr key={t.id} style={{ borderBottom: '1px solid #E2E8F0' }}>
                       <td style={{ padding: 12, borderBottom: '1px solid #E2E8F0' }}>
@@ -291,7 +305,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
                         </a>
                       </td>
                       <td style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid #E2E8F0' }}>{areaStr}</td>
-                      <td style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid #E2E8F0', fontWeight: 700, color: cor }}>{m.indiceOcorrencia}%</td>
+                      <td style={{ padding: 12, textAlign: 'right', borderBottom: '1px solid #E2E8F0', fontWeight: 700, color: cor }}>{formatPercent2(m.indiceOcorrencia)}</td>
                       <td style={{ padding: 12, borderBottom: '1px solid #E2E8F0' }}>
                         <span style={{ padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: `${cor}18`, color: cor }}>{labelClassificacao(m.classificacao)}</span>
                       </td>
@@ -300,7 +314,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
                 })}
                 <tr style={{ background: '#F8FAFC' }}>
                   <td style={{ padding: 12, fontWeight: 600 }}>Total</td>
-                  <td style={{ padding: 12, textAlign: 'right', fontWeight: 600 }}>{normalized.talhoes.reduce((s, t) => s + (t.area_ha ?? 0), 0) > 0 ? normalized.talhoes.reduce((s, t) => s + (t.area_ha ?? 0), 0).toFixed(1) : '—'}</td>
+                  <td style={{ padding: 12, textAlign: 'right', fontWeight: 600 }}>{normalized.talhoes.reduce((s, t) => s + (t.area_ha ?? 0), 0) > 0 ? formatDecimal2(normalized.talhoes.reduce((s, t) => s + (t.area_ha ?? 0), 0)) : '—'}</td>
                   <td colSpan={2} style={{ padding: 12 }} />
                 </tr>
               </tbody>

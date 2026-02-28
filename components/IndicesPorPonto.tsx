@@ -166,30 +166,39 @@ function OcorrenciaItem({ inf, pontoId, onImageClick }: { inf: Infestacao; ponto
             padding: 12,
             background: '#fff',
             border: '1px solid #E2E8F0',
-            borderRadius: 6,
+            borderRadius: 8,
             borderLeft: `4px solid ${cfg.color}`,
         }}>
-            {inf.imagem && (
-                <div
-                    onClick={() => onImageClick({ imagem: inf.imagem!, nome: inf.nome, ponto: pontoId })}
-                    style={{
-                        width: 80,
-                        height: 80,
-                        borderRadius: 6,
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                        cursor: 'pointer',
-                        border: '1px solid #E2E8F0',
-                    }}
-                >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* Sempre reservar espaço para imagem: miniatura ou placeholder */}
+            <div
+                onClick={() => inf.imagem && onImageClick({ imagem: inf.imagem, nome: inf.nome, ponto: pontoId })}
+                style={{
+                    width: 100,
+                    height: 100,
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    cursor: inf.imagem ? 'pointer' : 'default',
+                    border: '1px solid #E2E8F0',
+                    background: inf.imagem ? undefined : '#F1F5F9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+            >
+                {inf.imagem ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                         src={inf.imagem}
                         alt={inf.nome}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
-                </div>
-            )}
+                ) : (
+                    <span style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textAlign: 'center', padding: 8 }}>
+                        Sem imagem
+                    </span>
+                )}
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
                     <span style={{ fontSize: 14, fontWeight: 600, color: '#1E293B' }}>{inf.nome}</span>

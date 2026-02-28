@@ -7,10 +7,12 @@ import { RelatorioMonitoramento } from '@/lib/types/monitoring';
 interface ReportHeaderProps {
     relatorio: RelatorioMonitoramento;
     onExportPDF: () => void;
-    onExportExcel: () => void;
+    onExportExcel?: () => void;
+    /** Quando true, oculta o botão Exportar Excel (ex.: relatório de monitoramento). */
+    hideExcel?: boolean;
 }
 
-export default function ReportHeader({ relatorio, onExportPDF, onExportExcel }: ReportHeaderProps) {
+export default function ReportHeader({ relatorio, onExportPDF, onExportExcel, hideExcel = false }: ReportHeaderProps) {
     return (
         <header style={{
             background: '#fff',
@@ -59,21 +61,23 @@ export default function ReportHeader({ relatorio, onExportPDF, onExportExcel }: 
                     >
                         Exportar PDF
                     </button>
-                    <button
-                        onClick={onExportExcel}
-                        style={{
-                            padding: '10px 18px',
-                            border: 'none',
-                            background: '#1B5E20',
-                            color: '#fff',
-                            borderRadius: 6,
-                            cursor: 'pointer',
-                            fontSize: 13,
-                            fontWeight: 600,
-                        }}
-                    >
-                        Exportar Excel
-                    </button>
+                    {!hideExcel && onExportExcel && (
+                        <button
+                            onClick={onExportExcel}
+                            style={{
+                                padding: '10px 18px',
+                                border: 'none',
+                                background: '#1B5E20',
+                                color: '#fff',
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                                fontSize: 13,
+                                fontWeight: 600,
+                            }}
+                        >
+                            Exportar Excel
+                        </button>
+                    )}
                 </div>
             </div>
         </header>
@@ -81,10 +85,11 @@ export default function ReportHeader({ relatorio, onExportPDF, onExportExcel }: 
 }
 
 function MetaItem({ label, value }: { label: string; value: string }) {
+    const display = (value || '').trim() || '—';
     return (
         <div>
             <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>{label}</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#1E293B' }}>{value}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: display === '—' ? '#94A3B8' : '#1E293B' }}>{display}</div>
         </div>
     );
 }

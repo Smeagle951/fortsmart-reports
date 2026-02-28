@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Infestacao, PontoMonitoramento, TipoOrganismo } from '@/lib/types/monitoring';
+import { formatPercent2 } from '@/utils/format';
 
 interface TabelaDetalhadaProps {
     pontos: PontoMonitoramento[];
@@ -16,6 +17,7 @@ interface LinhaTabela {
     terco: string;
     quantidade: number | null;
     severidade: number;
+    imagem?: string;
 }
 
 const TIPO_LABEL: Record<TipoOrganismo, string> = {
@@ -42,6 +44,7 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
     const [ordenacao, setOrdenacao] = useState<keyof LinhaTabela>('pontoId');
     const [asc, setAsc] = useState(true);
     const [pagina, setPagina] = useState(1);
+    const [modalImg, setModalImg] = useState<{ src: string; nome: string; pontoId: string; terco: string; severidade: number } | null>(null);
 
     // Montar linhas
     const linhas: LinhaTabela[] = (pontos || []).flatMap(p =>
@@ -52,6 +55,7 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
             terco: inf.terco,
             quantidade: inf.quantidade,
             severidade: inf.severidade,
+            imagem: inf.imagem,
         }))
     );
 
@@ -135,6 +139,7 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
                         <thead>
                             <tr style={{ background: '#F8FAFC', borderBottom: '1.5px solid #E2E8F0' }}>
                                 {[
+                                    { key: 'imagem', label: 'Foto' },
                                     { key: 'pontoId', label: 'Ponto' },
                                     { key: 'tipo', label: 'Tipo' },
                                     { key: 'nome', label: 'Infestação' },
@@ -167,6 +172,20 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
                                         onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = '#FAFBFF'; }}
                                         onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
                                     >
+                                        <td style={{ padding: '8px 14px', width: 56, verticalAlign: 'middle' }}>
+                                            {l.imagem ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setModalImg({ src: l.imagem!, nome: l.nome, pontoId: l.pontoId, terco: l.terco, severidade: l.severidade })}
+                                                    style={{ padding: 0, border: 'none', borderRadius: 6, overflow: 'hidden', cursor: 'pointer', background: '#f1f5f9', display: 'block' }}
+                                                >
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img src={l.imagem} alt={l.nome} style={{ width: 44, height: 44, objectFit: 'cover', display: 'block' }} />
+                                                </button>
+                                            ) : (
+                                                <span style={{ fontSize: 10, color: '#94A3B8' }}>—</span>
+                                            )}
+                                        </td>
                                         <td style={{ padding: '10px 14px', fontWeight: 700, color: '#1B5E20' }}>{l.pontoId}</td>
                                         <td style={{ padding: '10px 14px' }}>
                                             <span style={{ background: tipo.bg, color: tipo.text, padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
@@ -177,7 +196,7 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
                                         <td style={{ padding: '10px 14px', color: '#64748B' }}>{l.terco}</td>
                                         <td style={{ padding: '10px 14px', color: '#64748B' }}>{l.quantidade ?? 'N/A'}</td>
                                         <td style={{ padding: '10px 14px' }}>
-                                            <span style={{ color: sev.color, fontWeight: 700 }}>{l.severidade}%</span>
+                                            <span style={{ color: sev.color, fontWeight: 700 }}>{formatPercent2(l.severidade)}</span>
                                             <span style={{ fontSize: 10, background: sev.color + '22', color: sev.color, padding: '1px 6px', borderRadius: 99, marginLeft: 6, fontWeight: 600 }}>
                                                 {sev.label}
                                             </span>
@@ -187,7 +206,7 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
                             })}
                             {pagSelected.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} style={{ textAlign: 'center', padding: 24, color: '#94A3B8', fontSize: 13 }}>
+                                    <td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#94A3B8', fontSize: 13 }}>
                                         Nenhum dado para exibir.
                                     </td>
                                 </tr>
@@ -217,6 +236,28 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
                 )}
             </div>
             </div>
+
+            {/* Modal preview/zoom da imagem da ocorrência */}
+            {modalImg && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    onClick={() => setModalImg(null)}
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+                >
+                    <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, maxWidth: '90vw', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #E2E8F0' }}>
+                            <div>
+                                <div style={{ fontSize: 16, fontWeight: 700, color: '#1A2332' }}>{modalImg.nome}</div>
+                                <div style={{ fontSize: 12, color: '#94A3B8' }}>Ponto {modalImg.pontoId} · Terço {modalImg.terco} · Severidade {formatPercent2(modalImg.severidade)}</div>
+                            </div>
+                            <button type="button" onClick={() => setModalImg(null)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 18 }}>×</button>
+                        </div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={modalImg.src} alt={modalImg.nome} style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain', display: 'block' }} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

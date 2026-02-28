@@ -19,9 +19,9 @@ export interface RelatorioPlantioData {
   meta?: { safra?: string; dataGeracao?: string };
   propriedade?: { fazenda?: string };
   talhao?: { nome?: string; cultura?: string; area?: number; dataPlantio?: string };
-  contextoSafra?: { espacamentoCm?: number; dae?: number; dap?: number; populacaoAlvoPlHa?: number; materialVariedade?: string; empresa?: string };
+  contextoSafra?: { espacamentoCm?: number; dae?: number; dap?: number; populacaoAlvoPlHa?: number; materialVariedade?: string; empresa?: string; dataPlantio?: string };
   populacao?: { plantasHa?: number; plantasPorMetro?: number; estandeEfetivoPlHa?: number; eficienciaPct?: number; situacao?: string };
-  fenologia?: { estadio?: string; dataUltimaAvaliacao?: string; ultimaAvaliacaoDias?: number };
+  fenologia?: { estadio?: string; estagio?: string; dataUltimaAvaliacao?: string; ultimaAvaliacaoDias?: number; dae?: number; dap?: number };
   indiceAgronomicoTalhao?: {
     valor?: number;
     maximo?: number;
@@ -33,6 +33,8 @@ export interface RelatorioPlantioData {
     estadioPrevisto?: string;
     somaTermica?: number;
     atrasoFenologico?: number;
+    dae?: number;
+    dap?: number;
   };
   plantabilidade?: {
     espacamentoIdealCm?: number;
@@ -47,7 +49,7 @@ export interface RelatorioPlantioData {
     espacamentosIndividuais?: Array<{ cm?: number; tipo: string }>;
   };
   estande?: {
-    registros?: Array<{ data: string; plantasPorMetro: number; plantasHa?: number }>;
+    registros?: Array<{ data: string; plantasPorMetro: number; plantasHa?: number; dae?: number; dap?: number }>;
     perdaTotalPct?: number;
     perdaSemanalPct?: number;
   };

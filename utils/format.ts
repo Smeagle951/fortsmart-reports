@@ -62,6 +62,22 @@ export function formatPercent(value: number | string | null | undefined): string
   return `${n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 }
 
+/** Porcentagem com exatamente 2 casas decimais para relatórios. */
+export function formatPercent2(value: number | string | null | undefined): string {
+  if (value == null || value === '') return '—';
+  const n = Number(value);
+  if (Number.isNaN(n)) return String(value);
+  return `${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+}
+
+/** Número com 2 casas decimais para relatórios. */
+export function formatDecimal2(value: number | string | null | undefined): string {
+  if (value == null || value === '') return '—';
+  const n = Number(value);
+  if (Number.isNaN(n)) return String(value);
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export function situacaoLabel(situacao: string | null | undefined): string {
   const s = (situacao || '').toLowerCase();
   if (s === 'ok' || s === 'baixa') return 'OK';
