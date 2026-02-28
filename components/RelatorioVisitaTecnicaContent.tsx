@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import FortSmartLogo from '@/components/FortSmartLogo';
 import ModalImagem from '@/components/ModalImagem';
@@ -146,6 +146,31 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const hasPolygonOrGeoPontos = (Array.isArray(mapa.polygon) && mapa.polygon.length >= 3) ||
     (Array.isArray(mapa.pontos) && mapa.pontos.some((p: any) => (p.latitude != null && p.longitude != null) || (p.lat != null && p.lng != null)));
   const hasMapa = hasPolygonOrGeoPontos || (mapa.path != null && String(mapa.path).trim() !== '') || (Array.isArray(mapa.pontos) && mapa.pontos.length > 0);
+
+  // Polígono no formato Leaflet [[lat, lng], ...] — Flutter envia [latitude, longitude]
+  const polygonForMap = useMemo(() => {
+    if (!Array.isArray(mapa.polygon) || mapa.polygon.length < 3) return undefined;
+    return mapa.polygon.map((c: unknown) => {
+      if (Array.isArray(c) && c.length >= 2 && typeof c[0] === 'number' && typeof c[1] === 'number') return [c[0], c[1]] as [number, number];
+      return null;
+    }).filter((x): x is [number, number] => x !== null);
+  }, [mapa.polygon]);
+  const pontosForMap = useMemo(() => {
+    return (mapa.pontos ?? []).map((p: any) => {
+      const lat = p.latitude ?? p.lat;
+      const lng = p.longitude ?? p.lng;
+      if (lat == null || lng == null || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+      return {
+        latitude: lat,
+        longitude: lng,
+        id: p.id ?? p.index,
+        titulo: p.titulo,
+        descricao: p.descricao ?? [p.titulo, p.descricao].filter(Boolean).join(' — '),
+        estagio: p.estagio,
+        data: p.data,
+      };
+    }).filter(Boolean);
+  }, [mapa.pontos]);
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -361,23 +386,10 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
             <div style={sectionTitleStyle}>Mapa do talhão — pontos georreferenciados</div>
             <div style={{ padding: 24 }}>
-              {hasPolygonOrGeoPontos ? (
+              {hasPolygonOrGeoPontos && (polygonForMap?.length >= 3 || pontosForMap.length > 0) ? (
                 <MapaTalhaoDynamic
-                  polygon={Array.isArray(mapa.polygon) ? mapa.polygon : undefined}
-                  pontos={(mapa.pontos ?? []).map((p: any) => {
-                    const lat = p.latitude ?? p.lat;
-                    const lng = p.longitude ?? p.lng;
-                    if (lat == null || lng == null || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
-                    return {
-                      latitude: lat,
-                      longitude: lng,
-                      id: p.id ?? p.index,
-                      titulo: p.titulo,
-                      descricao: p.descricao ?? [p.titulo, p.descricao].filter(Boolean).join(' — '),
-                      estagio: p.estagio,
-                      data: p.data,
-                    };
-                  }).filter(Boolean)}
+                  polygon={polygonForMap?.length >= 3 ? polygonForMap : undefined}
+                  pontos={pontosForMap}
                   hideSectionTitle
                 />
               ) : (

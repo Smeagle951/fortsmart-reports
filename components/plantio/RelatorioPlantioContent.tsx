@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { normalizeRelatorioPlantio } from '@/lib/normalize-relatorio-plantio';
 import HeaderRelatorio from '@/components/HeaderRelatorio';
 import DashboardTalhao, { type RelatorioPlantioData } from './DashboardTalhao';
 import PlantabilidadeEstande from './PlantabilidadeEstande';
@@ -28,12 +29,13 @@ export default function RelatorioPlantioContent({
   relatorioUuid,
 }: RelatorioPlantioContentProps) {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
-  const data = relatorio as RelatorioPlantioData;
-  const meta = (relatorio.meta || {}) as { dataGeracao?: string; safra?: string; tecnico?: string; tecnicoCrea?: string; id?: string; versao?: number; status?: string };
-  const prop = (relatorio.propriedade || {}) as { fazenda?: string; proprietario?: string; municipio?: string; estado?: string };
-  const talhao = (relatorio.talhao || {}) as { nome?: string; cultura?: string };
-  const contextoSafra = (relatorio.contextoSafra || {}) as { materialVariedade?: string; empresa?: string };
-  const assinaturaTecnica = (relatorio.assinaturaTecnica || {}) as { nome?: string; crea?: string; dataAssinatura?: string; cidade?: string };
+  const normalized = normalizeRelatorioPlantio(relatorio as Record<string, unknown>);
+  const data = normalized as RelatorioPlantioData;
+  const meta = (normalized.meta || {}) as { dataGeracao?: string; safra?: string; tecnico?: string; tecnicoCrea?: string; id?: string; versao?: number; status?: string };
+  const prop = (normalized.propriedade || {}) as { fazenda?: string; proprietario?: string; municipio?: string; estado?: string };
+  const talhao = (normalized.talhao || {}) as { nome?: string; cultura?: string };
+  const contextoSafra = (normalized.contextoSafra || {}) as { materialVariedade?: string; empresa?: string };
+  const assinaturaTecnica = (normalized.assinaturaTecnica || {}) as { nome?: string; crea?: string; dataAssinatura?: string; cidade?: string };
 
   return (
     <div className="relatorio-plantio">
