@@ -7,6 +7,10 @@ import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaCo
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import PrintBar from '@/components/PrintBar';
 
+// Disable Vercel's SSR cache so the latest Supabase data is always served
+export const dynamic = 'force-dynamic';
+
+
 type Awaitable<T> = T | Promise<T>;
 type Props = { params: Awaitable<{ token: string }>; searchParams?: Awaitable<{ [key: string]: string | string[] | undefined }> };
 
