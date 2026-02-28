@@ -75,7 +75,7 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
           quantidade: inf.quantidade != null ? safeNum(inf.quantidade) : null,
           severidade: safeNum(inf.severidade ?? 0),
           observacao: (inf.observacao != null && String(inf.observacao)) ? String(inf.observacao) : undefined,
-          imagem: (inf.imagem != null && String(inf.imagem)) ? String(inf.imagem) : undefined,
+          imagem: (inf.imagem != null && String(inf.imagem)) ? String(inf.imagem) : (inf.url != null && String(inf.url)) ? String(inf.url) : undefined,
         }));
       return {
         id: String(p.id ?? `p-${i}`),
@@ -107,7 +107,13 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
     };
   });
 
-  const areaHa = safeNum(raw.area_ha ?? raw.area ?? raw.areaHa ?? raw.area_hectares ?? raw.hectares ?? 0);
+  const rawTalhao = raw.talhao != null && typeof raw.talhao === 'object' ? (raw.talhao as Record<string, unknown>) : null;
+  const rawDetalhes = raw.detalhes != null && typeof raw.detalhes === 'object' ? (raw.detalhes as Record<string, unknown>) : null;
+  const areaHa = safeNum(
+    raw.area_ha ?? raw.area ?? raw.areaHa ?? raw.area_hectares ?? raw.hectares
+    ?? rawTalhao?.area_ha ?? rawTalhao?.area ?? rawDetalhes?.area_ha ?? rawDetalhes?.area
+    ?? raw.superficie ?? raw.tamanho_ha ?? 0
+  );
   const dae = raw.dae != null ? safeNum(raw.dae) : undefined;
   const estandeRaw = raw.estande != null && typeof raw.estande === 'object' ? raw.estande as Record<string, unknown> : undefined;
   const populacaoEstande = estandeRaw?.plantasPorMetro != null ? safeNum(estandeRaw.plantasPorMetro) : (estandeRaw?.populacao != null ? safeNum(estandeRaw.populacao) : undefined);
@@ -153,7 +159,14 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
   const normalized = useMemo((): RelatorioMonitoramento => {
     const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? relatorio.propriedade as Record<string, unknown> : undefined;
     const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? relatorio.meta as Record<string, unknown> : undefined;
-    const fazenda = String(relatorio.fazenda ?? prop?.fazenda ?? 'Fazenda').trim() || 'Fazenda';
+    const fazenda = String(
+      relatorio.fazenda
+      ?? prop?.fazenda
+      ?? prop?.nome
+      ?? (relatorio as any).nomeFazenda
+      ?? (relatorio as any).fazenda_nome
+      ?? ''
+    ).trim();
     const safra = String(relatorio.safra ?? meta?.safra ?? '').trim();
     const dataRaw = relatorio.data ?? meta?.dataGeracao ?? '';
     const data = typeof dataRaw === 'string' ? dataRaw : (dataRaw != null ? String(dataRaw) : '');
@@ -221,7 +234,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
       </nav>
 
       <div id="relatorio-monitoramento-content" style={{ maxWidth: 960, margin: '0 auto', padding: '24px 24px 0' }}>
-        <ReportHeader relatorio={normalized} onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
+        <ReportHeader relatorio={normalized} onExportPDF={handleExportPDF} hideExcel />
 
         {(metricas || estande || cv || fenologia || observacoes || (alertas && alertas.length > 0)) && (
           <div style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>

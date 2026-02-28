@@ -20,90 +20,83 @@ const NIVEL_COLOR: Record<NivelRecomendacao, string> = {
     PREVENTIVO: '#2E7D32',
 };
 
-const NIVEL_ORDER: NivelRecomendacao[] = ['ACAO_IMEDIATA', 'ALTO_RISCO', 'MONITORAR', 'PREVENTIVO'];
+const RECOMENDACOES_PADRAO: { nivel: NivelRecomendacao; texto: string }[] = [
+    { nivel: 'MONITORAR', texto: 'Realizar monitoramento semanal para acompanhar a evolução do estande e possíveis surtos de pragas e doenças.' },
+    { nivel: 'PREVENTIVO', texto: 'Manter registro fotográfico e amostragens representativas para análise de tendências e tomada de decisão em próximas visitas.' },
+    { nivel: 'MONITORAR', texto: 'Avaliar condições climáticas e estádio da cultura para alinhar recomendações de manejo ao momento fenológico.' },
+];
 
 function hasContent(rec: Recomendacao): boolean {
     const acao = (rec.acao ?? '').trim();
     return acao.length > 0 && acao !== '—' && acao !== '-';
 }
 
-/** Agrupa recomendações por nível e gera um resumo curto por nível (máx. 2 ações resumidas). */
-function buildResumoGeral(recomendacoes: Recomendacao[]): { nivel: NivelRecomendacao; texto: string }[] {
-    const list = recomendacoes.filter(hasContent);
-    if (list.length === 0) return [];
+/** Lista até 5 recomendações reais; completa com padrões elegantes até ter pelo menos 3 cards. */
+function buildCards(recomendacoes: Recomendacao[]): { nivel: NivelRecomendacao; texto: string }[] {
+    const list = recomendacoes.filter(hasContent).map(rec => ({
+        nivel: rec.nivel,
+        texto: (rec.acao ?? '').trim(),
+    })).filter(x => x.texto.length > 0);
 
-    const porNivel: Record<NivelRecomendacao, string[]> = {
-        ACAO_IMEDIATA: [],
-        ALTO_RISCO: [],
-        MONITORAR: [],
-        PREVENTIVO: [],
-    };
-    for (const rec of list) {
-        const acao = (rec.acao ?? '').trim();
-        if (acao && porNivel[rec.nivel]) {
-            porNivel[rec.nivel].push(acao);
-        }
+    const cards: { nivel: NivelRecomendacao; texto: string }[] = [];
+    for (const item of list.slice(0, 5)) {
+        cards.push({ nivel: item.nivel, texto: item.texto });
+    }
+    while (cards.length < 3) {
+        const idx = cards.length % RECOMENDACOES_PADRAO.length;
+        cards.push(RECOMENDACOES_PADRAO[idx]);
     }
 
-    const out: { nivel: NivelRecomendacao; texto: string }[] = [];
-    for (const nivel of NIVEL_ORDER) {
-        const acoes = porNivel[nivel];
-        if (acoes.length === 0) continue;
-        const texto = acoes.length <= 2
-            ? acoes.join(' ')
-            : acoes.slice(0, 2).join(' ') + (acoes.length > 2 ? ' (e mais ' + (acoes.length - 2) + ')' : '');
-        out.push({ nivel, texto });
-    }
-    return out;
+    return cards;
 }
 
 export default function RecomendacoesTecnicas({ recomendacoes }: RecomendacoesTecnicasProps) {
-    const resumo = buildResumoGeral(recomendacoes);
-    if (resumo.length === 0) {
-        return (
-            <section aria-labelledby="rec-tec-title">
-                <h2 id="rec-tec-title" style={{ fontSize: 14, fontWeight: 600, color: '#475569', marginBottom: 14 }}>
-                    Recomendações técnicas
-                </h2>
-                <p style={{ color: '#94A3B8', fontSize: 13, margin: 0 }}>Nenhuma recomendação registrada para este talhão.</p>
-            </section>
-        );
-    }
+    const cards = buildCards(recomendacoes);
 
     return (
         <section aria-labelledby="rec-tec-title">
             <h2 id="rec-tec-title" style={{ fontSize: 14, fontWeight: 600, color: '#475569', marginBottom: 14 }}>
                 Recomendações técnicas
             </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {resumo.map(({ nivel, texto }, idx) => {
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+                {cards.map(({ nivel, texto }, idx) => {
                     const cor = NIVEL_COLOR[nivel];
                     return (
                         <div
                             key={idx}
                             style={{
-                                padding: '12px 14px',
-                                background: '#FAFBFC',
+                                padding: '16px 18px',
+                                background: `linear-gradient(135deg, ${cor}08 0%, #fff 100%)`,
                                 border: '1px solid #E2E8F0',
-                                borderRadius: 8,
+                                borderRadius: 10,
                                 borderLeft: `4px solid ${cor}`,
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                             }}
                         >
-                            <span
-                                style={{
-                                    display: 'inline-block',
-                                    marginBottom: 6,
-                                    padding: '2px 8px',
-                                    borderRadius: 6,
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    background: `${cor}18`,
-                                    color: cor,
-                                }}
-                            >
-                                {NIVEL_LABEL[nivel]}
-                            </span>
-                            <p style={{ fontSize: 13, color: '#334155', lineHeight: 1.5, margin: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                <span
+                                    style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        background: cor,
+                                        flexShrink: 0,
+                                    }}
+                                />
+                                <span
+                                    style={{
+                                        padding: '2px 8px',
+                                        borderRadius: 6,
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        background: `${cor}20`,
+                                        color: cor,
+                                    }}
+                                >
+                                    {NIVEL_LABEL[nivel]}
+                                </span>
+                            </div>
+                            <p style={{ fontSize: 13, color: '#334155', lineHeight: 1.55, margin: 0 }}>
                                 {texto}
                             </p>
                         </div>
