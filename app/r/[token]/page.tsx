@@ -3,6 +3,7 @@ import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
 import RelatorioContent from '@/components/RelatorioContent';
 import RelatorioPlantioContent from '@/components/plantio/RelatorioPlantioContent';
 import RelatorioMonitoramentoContent from '@/components/RelatorioMonitoramentoContent';
+import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitarioContent';
 import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import PrintBar from '@/components/PrintBar';
@@ -128,7 +129,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     return (
       <>
         {!isVisitaTecnica && <PrintBar />}
-        <article className={`relatorio ${isPlantio ? 'relatorio--plantio' : ''} ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isVisitaTecnica ? 'relatorio--visita-tecnica' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''}`}>
+        <article className={`relatorio ${isPlantio ? 'relatorio--plantio' : ''} ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isVisitaTecnica ? 'relatorio--visita-tecnica' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''}`} style={isMonitoramento ? { minHeight: '100vh', background: '#F1F5F9' } : undefined}>
           {isPlantio ? (
             <RelatorioPlantioContent
               relatorio={relatorio}
@@ -142,8 +143,8 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
               relatorioUuid={row.id}
             />
           ) : isMonitoramento ? (
-            <RelatorioMonitoramentoContent
-              relatorio={relatorio as import('@/components/RelatorioMonitoramentoContent').PayloadMonitoramento}
+            <RelatorioFitossanitarioContent
+              relatorio={relatorio as import('@/components/RelatorioFitossanitarioContent').PayloadFitossanitario}
               reportId={row.titulo || row.id}
               relatorioUuid={row.id}
             />
