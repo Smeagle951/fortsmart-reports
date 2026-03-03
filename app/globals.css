@@ -1956,10 +1956,24 @@ body {
   }
 }
 
+/* ── Export PDF (html2pdf): esconde botões e textos interativos ao capturar ── */
+.exporting-pdf .no-print {
+  display: none !important;
+}
+
+/* Blocos que não devem quebrar entre páginas (relatório fitossanitário) */
+.pdf-keep-together {
+  page-break-inside: avoid;
+}
+
 /* ── Print / PDF ──────────────────────────────────────────────────────────── */
 @media print {
   .no-print {
     display: none !important;
+  }
+
+  .pdf-keep-together {
+    page-break-inside: avoid;
   }
 
   .card {

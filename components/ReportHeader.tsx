@@ -10,9 +10,11 @@ interface ReportHeaderProps {
     onExportExcel?: () => void;
     /** Quando true, oculta o botão Exportar Excel (ex.: relatório de monitoramento). */
     hideExcel?: boolean;
+    /** Quando 'app', exibe indicador "Dados do aplicativo" (payload veio do link compartilhado /r/[token]). */
+    origemDados?: 'app';
 }
 
-export default function ReportHeader({ relatorio, onExportPDF, onExportExcel, hideExcel = false }: ReportHeaderProps) {
+export default function ReportHeader({ relatorio, onExportPDF, onExportExcel, hideExcel = false, origemDados }: ReportHeaderProps) {
     return (
         <header style={{
             background: '#fff',
@@ -42,7 +44,13 @@ export default function ReportHeader({ relatorio, onExportPDF, onExportExcel, hi
                 <div style={{ flex: 1, padding: 20, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 24 }}>
                     <MetaItem label="Fazenda" value={relatorio.fazenda} />
                     <MetaItem label="Safra" value={relatorio.safra} />
-                    <MetaItem label="Data" value={relatorio.data} />
+                    <MetaItem label="Data" value={relatorio.data ?? ''} />
+                    {origemDados === 'app' && (
+                      <div>
+                        <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Origem</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1B5E20' }}>Dados do aplicativo</div>
+                      </div>
+                    )}
                     <MetaItem label="Técnico" value={`${relatorio.tecnico}${relatorio.crea ? ` · ${relatorio.crea}` : ''}`} />
                 </div>
                 <div style={{ padding: 20, borderLeft: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: 10 }} className="no-print">

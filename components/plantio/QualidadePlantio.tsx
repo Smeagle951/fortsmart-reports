@@ -56,6 +56,7 @@ export default function QualidadePlantio({
         </div>
         <div className="plantio-data-row">
           <dt>Espaçamento Real</dt>
+<<<<<<< HEAD
           <dd>{espacamentoRealCm != null ? `${espacamentoRealCm} cm` : '—'}</dd>
         </div>
         <div className="plantio-data-row">
@@ -68,6 +69,20 @@ export default function QualidadePlantio({
         <span className="plantio-tag plantio-tag--dupla">Duplas: {duplasPct != null ? `${duplasPct}%` : '—'}</span>
         <span className="plantio-tag plantio-tag--tripla">Triplas: {triplasPct != null ? `${triplasPct}%` : '—'}</span>
         <span className="plantio-tag plantio-tag--falha">Falhas: {falhasPct != null ? `${falhasPct}%` : '—'}</span>
+=======
+          <dd>{espacamentoRealCm != null ? `${Number(espacamentoRealCm).toFixed(1)} cm` : '—'}</dd>
+        </div>
+        <div className="plantio-data-row">
+          <dt>CV%</dt>
+          <dd>{cvPercentual != null ? `${Number(cvPercentual).toFixed(1)}%` : '—'}</dd>
+        </div>
+      </dl>
+      <div className="plantio-tags">
+        <span className="plantio-tag plantio-tag--ok">OK: {okPct != null ? `${Number(okPct).toFixed(1)}%` : '—'}</span>
+        <span className="plantio-tag plantio-tag--dupla">Duplas: {duplasPct != null ? `${Number(duplasPct).toFixed(1)}%` : '—'}</span>
+        <span className="plantio-tag plantio-tag--tripla">Triplas: {triplasPct != null ? `${Number(triplasPct).toFixed(1)}%` : '—'}</span>
+        <span className="plantio-tag plantio-tag--falha">Falhas: {falhasPct != null ? `${Number(falhasPct).toFixed(1)}%` : '—'}</span>
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
       </div>
       {indicePlantabilidade != null && (
         <div className="plantio-indice-box">

@@ -1,0 +1,429 @@
+{
+    "$comment": "FortSmart — Exemplo preenchido V2, módulo VISITA TÉCNICA. Soja V4, Talhão 16, Cascavel/PR, 45 DAE.",
+    "core": {
+        "reportId": "rpt-v2-2025-talhao16-vt-001",
+        "reportType": "visita_tecnica",
+        "version": 2,
+        "status": "published",
+        "createdAt": "2025-12-03T09:00:00-03:00",
+        "updatedAt": "2025-12-03T14:30:00-03:00",
+        "publishedAt": "2025-12-03T14:30:00-03:00",
+        "generatedBy": {
+            "userId": "usr-paulo-ferreira",
+            "nome": "Eng. Paulo Ferreira",
+            "role": "agronomo",
+            "crea": "PR-12345"
+        },
+        "system": {
+            "appVersion": "FortSmart 3.2.0",
+            "backendVersion": "1.8.0",
+            "schemaVersion": 2
+        }
+    },
+    "propriedade": {
+        "fazendaId": "faz-boa-esperanca-001",
+        "fazenda": "Fazenda Boa Esperança",
+        "municipio": "Cascavel",
+        "estado": "PR",
+        "proprietario": "João Silva",
+        "latitude": -24.9580,
+        "longitude": -53.4480
+    },
+    "talhao": {
+        "id": "talhao-uuid-16",
+        "nome": "Talhão 16",
+        "numero": 16,
+        "cultura": "Soja",
+        "culturaId": "soja",
+        "areaHa": 24.6,
+        "dataPlantio": "2025-10-20",
+        "safra": "2025/26"
+    },
+    "contextoSafra": {
+        "hibrido": "TMG 2183 IPRO",
+        "empresa": "TMG",
+        "lote": "LOT-2025-TMG-0421",
+        "germinacaoPct": 95.0,
+        "tratamentoSementes": "Carbendazim + Thiram + Co-Mo",
+        "espacamentoCm": 45,
+        "populacaoAlvoPlHa": 300000,
+        "dae": 45,
+        "dap": 50
+    },
+    "modulos": {
+        "visitaTecnica": {
+            "evolucaoFenologica": {
+                "dataRegistro": "2025-12-03",
+                "dae": 45,
+                "estagioFenologico": "V4",
+                "estagioOrigem": "user_provided",
+                "estagioConfianca": 1.0,
+                "aiSuggestedStage": "V3",
+                "descricaoEstagio": "Quarto trifólio completamente desenvolvido — fase vegetativa intensa",
+                "medicoesCrescimento": {
+                    "alturaCm": 32.4,
+                    "numeroFolhas": 4,
+                    "numeroFolhasTrifolioladas": 4,
+                    "diametroColmoMm": null,
+                    "numeroNos": 4,
+                    "espacamentoEntreNosCm": 8.1,
+                    "espacamentosIndividuais": [
+                        7.8,
+                        8.5,
+                        7.6,
+                        8.4,
+                        8.2,
+                        8.0,
+                        7.9,
+                        8.3
+                    ],
+                    "espacamentoDesvioPadrao": 0.30,
+                    "espacamentoCVPercent": 3.7,
+                    "numeroAfilhos": null,
+                    "comprimentoPaniculaCm": null,
+                    "insercaoEspigaCm": null,
+                    "comprimentoEspigaCm": null,
+                    "numeroFileirasGraos": null,
+                    "numeroRamosVegetativos": null,
+                    "numeroRamosReprodutivos": null,
+                    "alturaPrimeiroRamoFrutiferoCm": null,
+                    "numeroBotoesFlorais": null,
+                    "numeroMacasCapulhos": null
+                },
+                "medicoesProdutivas": {
+                    "vagensPlanta": null,
+                    "comprimentoVagensCm": null,
+                    "graosVagem": null,
+                    "graosVagemIndividuais": [],
+                    "graosVagemMedia": null,
+                    "graosVagemDesvioPadrao": null,
+                    "graosVagemCVPercent": null,
+                    "diametroVagensCmMedia": null,
+                    "diametroCapulhoMmMedia": null,
+                    "pesoCapulhoGMedia": null,
+                    "espigasPlanta": null,
+                    "pmgGramas": null
+                },
+                "estandeEDensidade": {
+                    "estandePlantasHa": 264000,
+                    "percentualFalhas": 2.8,
+                    "percentualSanidade": 96.5
+                },
+                "condicoesCampo": {
+                    "temperaturaMediaC": 28.5,
+                    "umidadeRelativaPct": 72.0,
+                    "sintomasObservados": "Folhas com leve clorose marginal em alguns trifólios basais. Suspeita de deficiência de Mn.",
+                    "presencaPragas": true,
+                    "presencaDoencas": false
+                },
+                "gps": {
+                    "latitude": -24.9568,
+                    "longitude": -53.4472
+                },
+                "responsavel": "Eng. Paulo Ferreira",
+                "observacoes": "Lavoura em desenvolvimento uniforme. Estágio V4 confirmado por contagem de nós. Crescimento conforme esperado para a variedade e condições climáticas regionais."
+            },
+            "fitossanidade": {
+                "pragas": [
+                    {
+                        "alvo": "Lagarta-do-cartucho (Spodoptera frugiperda)",
+                        "culturaId": "soja",
+                        "incidencia": "Pontual",
+                        "severidade": "media",
+                        "nivelAcao": "20% das plantas com danos",
+                        "nivelContagem": "2 lagartas / pano de batida",
+                        "situacao": "Monitorar",
+                        "lat": -24.9562,
+                        "lng": -53.4468,
+                        "observacoes": "Foco concentrado na bordadura norte. Lagartas jovens (neonata-média, 3-10mm). Ainda abaixo do nível de ação."
+                    },
+                    {
+                        "alvo": "Percevejo-marrom (Euschistus heros)",
+                        "culturaId": "soja",
+                        "incidencia": "Ausente",
+                        "severidade": "baixa",
+                        "nivelAcao": "≥ 1 percevejo por metro",
+                        "nivelContagem": "0 percevejos / metro",
+                        "situacao": "OK",
+                        "lat": null,
+                        "lng": null,
+                        "observacoes": "Nenhum percevejo encontrado. Monitoramento preventivo para fase R3."
+                    }
+                ],
+                "doencas": [
+                    {
+                        "alvo": "Ferrugem-asiática (Phakopsora pachyrhizi)",
+                        "incidencia": "Ausente",
+                        "severidade": "baixa",
+                        "situacao": "OK",
+                        "observacoes": "Condições favoráveis iniciando (temperatura 28°C, umidade 72%). Manter monitoramento semanal."
+                    }
+                ],
+                "daninhas": [
+                    {
+                        "especie": "Buva (Conyza spp.)",
+                        "infestacao": "Leve",
+                        "situacao": "Controlar",
+                        "observacoes": "Presença leve em bordadura sul. Plantas pequenas (10-15 cm), boa janela de controle."
+                    }
+                ],
+                "scoreSanitario": 88
+            },
+            "aplicacoesRealizadas": [
+                {
+                    "tipo": "Herbicida",
+                    "data": "2025-11-10",
+                    "produto": "Roundup Ready (Glifosato 480 g/L)",
+                    "dose": "2.5",
+                    "unidade": "L/ha",
+                    "classeToxico": "IV",
+                    "status": "Executada",
+                    "prescricaoId": "presc-001-t16"
+                }
+            ],
+            "diagnostico": {
+                "problemaPrincipal": "Foco pontual de lagarta-do-cartucho em bordadura norte, abaixo do nível de ação.",
+                "causaProvavel": "Maior disponibilidade de hospedeiros alternativos na borda, favorecendo migração de lagartas.",
+                "nivelRisco": "baixo",
+                "urgenciaAcao": "baixa"
+            },
+            "planoAcao": {
+                "objetivoManejo": "Manter lavoura saudável até R1. Monitorar pragas e iniciar proteção fungicida preventiva antes do florescimento.",
+                "prioridadeGeral": 32,
+                "acoes": [
+                    {
+                        "prioridade": "1",
+                        "acao": "Monitorar bordadura norte — nova avaliação de lagarta em 5 dias",
+                        "prazo": "5 dias"
+                    },
+                    {
+                        "prioridade": "2",
+                        "acao": "Planejar aplicação de fungicida (Triazol + Estrobilurina) para R1-R2",
+                        "prazo": "15 dias"
+                    },
+                    {
+                        "prioridade": "3",
+                        "acao": "Controlar buva em bordadura sul com herbicida pós-emergente",
+                        "prazo": "7 dias"
+                    }
+                ]
+            }
+        }
+    },
+    "indicadores": {
+        "indiceAgronomicoTalhao": 86,
+        "indiceImplantacao": 78,
+        "indiceSanitario": 88,
+        "indiceOperacional": 84,
+        "riscoAtual": "baixo",
+        "tendencia": "estavel",
+        "scoreGeral": 84,
+        "itemsIAT": [
+            {
+                "label": "Estande Atual",
+                "valor": "264.000 pl/ha (88%)",
+                "peso": 0.35
+            },
+            {
+                "label": "Sanidade da Lavoura",
+                "valor": "96.5% plantas sadias",
+                "peso": 0.30
+            },
+            {
+                "label": "Score Sanitário",
+                "valor": "88/100",
+                "peso": 0.25
+            },
+            {
+                "label": "Uniformidade V4",
+                "valor": "CV entre-nós 3.7%",
+                "peso": 0.10
+            }
+        ]
+    },
+    "analytics": {
+        "comparativoSafraAnterior": {
+            "variacaoPopulacaoPct": 1.5,
+            "variacaoIncidenciaPragasPct": -8.0,
+            "variacaoCVPct": 0,
+            "safraReferenciaId": "rpt-v1-2024-talhao16-vt-001"
+        },
+        "tendencia7Dias": {
+            "risco": 22,
+            "crescimentoPragas": 4
+        },
+        "previsaoCurtoPrazo": {
+            "probabilidadeIntervencaoPct": 18,
+            "confiancaModelo": 0.68,
+            "modeloVersao": "fortsmart-ml-v1.2"
+        }
+    },
+    "mapa": {
+        "geodata": {
+            "polygon": [
+                [
+                    -24.9580,
+                    -53.4480
+                ],
+                [
+                    -24.9560,
+                    -53.4450
+                ],
+                [
+                    -24.9540,
+                    -53.4500
+                ],
+                [
+                    -24.9580,
+                    -53.4530
+                ],
+                [
+                    -24.9600,
+                    -53.4480
+                ],
+                [
+                    -24.9580,
+                    -53.4480
+                ]
+            ],
+            "centroid": {
+                "lat": -24.9570,
+                "lng": -53.4487
+            }
+        },
+        "marcadores": [
+            {
+                "tipo": "fenologia",
+                "titulo": "Avaliação Fenológica V4",
+                "descricao": "Estágio V4 confirmado — 45 DAE, altura 32.4 cm, 4 nós",
+                "severidade": "baixa",
+                "lat": -24.9568,
+                "lng": -53.4472,
+                "data": "2025-12-03"
+            },
+            {
+                "tipo": "praga",
+                "titulo": "Foco Lagarta-do-cartucho",
+                "descricao": "2 lagartas/pano de batida — bordadura norte. Abaixo do NA.",
+                "severidade": "media",
+                "lat": -24.9562,
+                "lng": -53.4468,
+                "data": "2025-12-03"
+            },
+            {
+                "tipo": "daninha",
+                "titulo": "Buva — bordadura sul",
+                "descricao": "Infestação leve, plantas 10-15 cm, boa janela de controle",
+                "severidade": "baixa",
+                "lat": -24.9595,
+                "lng": -53.4490,
+                "data": "2025-12-03"
+            }
+        ],
+        "heatmap": [
+            {
+                "lat": -24.9562,
+                "lng": -53.4468,
+                "intensidade": 0.45
+            },
+            {
+                "lat": -24.9558,
+                "lng": -53.4464,
+                "intensidade": 0.30
+            }
+        ]
+    },
+    "anexos": {
+        "imagens": [
+            {
+                "url": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/vt001/fenologia-v4-ponto1.jpg",
+                "thumbnailUrl": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/vt001/thumb-fenologia-v4-ponto1.jpg",
+                "legenda": "Estágio V4 — 4 trifólios desenvolvidos, altura 32 cm, nós visíveis no colmo",
+                "categoria": "fenologia",
+                "data": "2025-12-03",
+                "lat": -24.9568,
+                "lng": -53.4472,
+                "suportaZoom": true,
+                "ordem": 1
+            },
+            {
+                "url": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/vt001/lagarta-bordadura-norte.jpg",
+                "thumbnailUrl": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/vt001/thumb-lagarta-bordadura-norte.jpg",
+                "legenda": "Lagarta-do-cartucho — fase neonata a média (3-10 mm), bordadura norte, 2 por pano — abaixo do nível de ação",
+                "categoria": "praga",
+                "data": "2025-12-03",
+                "lat": -24.9562,
+                "lng": -53.4468,
+                "suportaZoom": true,
+                "ordem": 2
+            },
+            {
+                "url": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/vt001/lavoura-geral.jpg",
+                "thumbnailUrl": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/vt001/thumb-lavoura-geral.jpg",
+                "legenda": "Vista geral — lavoura uniforme em V4, sem sintomas de doenças foliares",
+                "categoria": "geral",
+                "data": "2025-12-03",
+                "lat": -24.9570,
+                "lng": -53.4487,
+                "suportaZoom": true,
+                "ordem": 3
+            },
+            {
+                "url": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/vt001/buva-bordadura-sul.jpg",
+                "thumbnailUrl": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/vt001/thumb-buva-bordadura-sul.jpg",
+                "legenda": "Buva (Conyza spp.) — infestação leve na bordadura sul, plantas 10-15 cm",
+                "categoria": "daninha",
+                "data": "2025-12-03",
+                "lat": -24.9595,
+                "lng": -53.4490,
+                "suportaZoom": true,
+                "ordem": 4
+            }
+        ],
+        "documentos": []
+    },
+    "assinatura": {
+        "nome": "Eng. Paulo Ferreira",
+        "crea": "PR-12345",
+        "dataAssinatura": "2025-12-03",
+        "cidade": "Cascavel/PR",
+        "conclusao": "Lavoura em desenvolvimento normal no estágio V4, com 45 DAE. Estande de 264.000 pl/ha (88% do alvo) dentro do aceitável. Presença de lagarta-do-cartucho pontual na bordadura norte, abaixo do nível de ação — monitorar. Iniciar planejamento de fungicida preventivo para R1. Nova visita recomendada em 10 dias."
+    },
+    "auditoria": {
+        "historicoVersoes": [
+            {
+                "versao": 1,
+                "data": "2025-12-03T09:00:00-03:00",
+                "autor": "Eng. Paulo Ferreira",
+                "resumo": "Criação pós-visita de campo"
+            },
+            {
+                "versao": 2,
+                "data": "2025-12-03T14:30:00-03:00",
+                "autor": "Eng. Paulo Ferreira",
+                "resumo": "Adição de imagens e ajuste no plano de ação"
+            }
+        ],
+        "log": [
+            {
+                "acao": "create",
+                "userId": "usr-paulo-ferreira",
+                "data": "2025-12-03T09:00:00-03:00",
+                "ip": "177.X.X.X"
+            },
+            {
+                "acao": "update",
+                "userId": "usr-paulo-ferreira",
+                "data": "2025-12-03T12:00:00-03:00",
+                "ip": "177.X.X.X"
+            },
+            {
+                "acao": "publish",
+                "userId": "usr-paulo-ferreira",
+                "data": "2025-12-03T14:30:00-03:00",
+                "ip": "177.X.X.X"
+            }
+        ],
+        "hashIntegridade": "sha256:a3f4e8b1c92d4e5f68b2c7df4a3891bcde12345678901234567890abcdef01234"
+    }
+}

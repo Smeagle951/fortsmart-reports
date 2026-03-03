@@ -1,0 +1,329 @@
+{
+    "$comment": "FortSmart — Exemplo preenchido V2, módulo PLANTIO. Soja, Cascavel/PR, Safra 2025/26.",
+    "core": {
+        "reportId": "rpt-v2-2025-talhao16-plantio",
+        "reportType": "plantio",
+        "version": 1,
+        "status": "published",
+        "createdAt": "2025-11-05T08:30:00-03:00",
+        "updatedAt": "2025-11-05T10:15:00-03:00",
+        "publishedAt": "2025-11-05T10:15:00-03:00",
+        "generatedBy": {
+            "userId": "usr-paulo-ferreira",
+            "nome": "Eng. Paulo Ferreira",
+            "role": "agronomo",
+            "crea": "PR-12345"
+        },
+        "system": {
+            "appVersion": "FortSmart 3.2.0",
+            "backendVersion": "1.8.0",
+            "schemaVersion": 2
+        }
+    },
+    "propriedade": {
+        "fazendaId": "faz-boa-esperanca-001",
+        "fazenda": "Fazenda Boa Esperança",
+        "municipio": "Cascavel",
+        "estado": "PR",
+        "proprietario": "João Silva",
+        "latitude": -24.9580,
+        "longitude": -53.4480
+    },
+    "talhao": {
+        "id": "talhao-uuid-16",
+        "nome": "Talhão 16",
+        "numero": 16,
+        "cultura": "Soja",
+        "culturaId": "soja",
+        "areaHa": 24.6,
+        "dataPlantio": "2025-10-20",
+        "safra": "2025/26"
+    },
+    "contextoSafra": {
+        "hibrido": "TMG 2183 IPRO",
+        "empresa": "TMG",
+        "lote": "LOT-2025-TMG-0421",
+        "germinacaoPct": 95.0,
+        "tratamentoSementes": "Carbendazim + Thiram + Co-Mo",
+        "espacamentoCm": 45,
+        "populacaoAlvoPlHa": 300000,
+        "dae": 15,
+        "dap": 20
+    },
+    "modulos": {
+        "plantio": {
+            "equipamento": {
+                "modelo": "Jumil Exacta Pro 5100",
+                "linhas": 11,
+                "velocidadeKmh": 5.5,
+                "pressaoPneuBar": 1.6,
+                "profundidadeCm": 3.0
+            },
+            "plantabilidade": {
+                "espacamentoIdealCm": 45.0,
+                "espacamentoRealCm": 46.3,
+                "cvPercentual": 18.7,
+                "cvClassificacao": "bom",
+                "falhasPct": 4.2,
+                "duplasPct": 8.1,
+                "triplasPct": 1.3,
+                "okPct": 86.4,
+                "scorePlantabilidade": 78,
+                "espacamentosIndividuais": [
+                    {
+                        "cm": 42.0,
+                        "tipo": "ok"
+                    },
+                    {
+                        "cm": 45.5,
+                        "tipo": "ok"
+                    },
+                    {
+                        "cm": 48.2,
+                        "tipo": "ok"
+                    },
+                    {
+                        "cm": 91.0,
+                        "tipo": "dupla"
+                    },
+                    {
+                        "cm": 43.8,
+                        "tipo": "ok"
+                    },
+                    {
+                        "cm": 46.0,
+                        "tipo": "ok"
+                    },
+                    {
+                        "cm": 0.0,
+                        "tipo": "falha"
+                    },
+                    {
+                        "cm": 44.1,
+                        "tipo": "ok"
+                    },
+                    {
+                        "cm": 49.3,
+                        "tipo": "ok"
+                    },
+                    {
+                        "cm": 45.0,
+                        "tipo": "ok"
+                    }
+                ],
+                "linha": [
+                    {
+                        "tipo": "ok",
+                        "posicao": 0
+                    },
+                    {
+                        "tipo": "ok",
+                        "posicao": 1
+                    },
+                    {
+                        "tipo": "dupla",
+                        "posicao": 2
+                    },
+                    {
+                        "tipo": "ok",
+                        "posicao": 3
+                    },
+                    {
+                        "tipo": "falha",
+                        "posicao": 4
+                    },
+                    {
+                        "tipo": "ok",
+                        "posicao": 5
+                    },
+                    {
+                        "tipo": "ok",
+                        "posicao": 6
+                    },
+                    {
+                        "tipo": "ok",
+                        "posicao": 7
+                    },
+                    {
+                        "tipo": "ok",
+                        "posicao": 8
+                    },
+                    {
+                        "tipo": "ok",
+                        "posicao": 9
+                    }
+                ]
+            },
+            "estandeEmergencia": {
+                "dataAvaliacao": "2025-10-30",
+                "comprimentoLinhaAvaliado": 5.0,
+                "numeroLinhasAvaliadas": 3,
+                "espacamentoEntreLinhas": 0.45,
+                "plantasContadas": 45,
+                "plantasPorMetro": 10.0,
+                "populacaoRealHa": 266667,
+                "populacaoAlvoHa": 300000,
+                "percentualAtingidoAlvo": 88.9,
+                "desvioEmergencia": -33333,
+                "germinacaoTeoricaPct": 95.0,
+                "classificacao": "bom",
+                "scoreEstande": 82,
+                "observacoes": "Bom estande homogêneo. Leve redução em bordadura norte por excesso de compactação."
+            }
+        }
+    },
+    "indicadores": {
+        "indiceAgronomicoTalhao": 82,
+        "indiceImplantacao": 78,
+        "indiceSanitario": null,
+        "indiceOperacional": 84,
+        "riscoAtual": "baixo",
+        "tendencia": "estavel",
+        "scoreGeral": 81,
+        "itemsIAT": [
+            {
+                "label": "Plantabilidade (CV%)",
+                "valor": "18.7% — Bom",
+                "peso": 0.30
+            },
+            {
+                "label": "Estande de Emergência",
+                "valor": "88.9% do alvo",
+                "peso": 0.40
+            },
+            {
+                "label": "Qualidade das Sementes",
+                "valor": "95% germinação",
+                "peso": 0.20
+            },
+            {
+                "label": "Performance Equipamento",
+                "valor": "5.5 km/h — OK",
+                "peso": 0.10
+            }
+        ]
+    },
+    "analytics": {
+        "comparativoSafraAnterior": {
+            "variacaoPopulacaoPct": 2.1,
+            "variacaoIncidenciaPragasPct": 0,
+            "variacaoCVPct": -3.4,
+            "safraReferenciaId": "rpt-v1-2024-talhao16-plantio"
+        },
+        "tendencia7Dias": {
+            "risco": 12,
+            "crescimentoPragas": 0
+        },
+        "previsaoCurtoPrazo": {
+            "probabilidadeIntervencaoPct": 8,
+            "confiancaModelo": 0.72,
+            "modeloVersao": "fortsmart-ml-v1.2"
+        }
+    },
+    "mapa": {
+        "geodata": {
+            "polygon": [
+                [
+                    -24.9580,
+                    -53.4480
+                ],
+                [
+                    -24.9560,
+                    -53.4450
+                ],
+                [
+                    -24.9540,
+                    -53.4500
+                ],
+                [
+                    -24.9580,
+                    -53.4530
+                ],
+                [
+                    -24.9600,
+                    -53.4480
+                ],
+                [
+                    -24.9580,
+                    -53.4480
+                ]
+            ],
+            "centroid": {
+                "lat": -24.9570,
+                "lng": -53.4487
+            },
+            "areaCentroide": 24.6
+        },
+        "marcadores": [
+            {
+                "tipo": "estande",
+                "titulo": "Ponto Estande A",
+                "descricao": "45 plantas contadas em 3 linhas × 5m",
+                "severidade": "baixa",
+                "lat": -24.9565,
+                "lng": -53.4475,
+                "data": "2025-10-30"
+            }
+        ],
+        "heatmap": []
+    },
+    "anexos": {
+        "imagens": [
+            {
+                "url": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/plantio-estande-a.jpg",
+                "thumbnailUrl": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/thumb-plantio-estande-a.jpg",
+                "legenda": "Estande ponto A — 3 linhas × 5m, 45 plantas contadas",
+                "categoria": "estande",
+                "data": "2025-10-30",
+                "lat": -24.9565,
+                "lng": -53.4475,
+                "suportaZoom": true,
+                "ordem": 1
+            },
+            {
+                "url": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/plantio-sulco.jpg",
+                "thumbnailUrl": "https://xxxx.supabase.co/storage/v1/object/public/relatorios/talhao16/thumb-plantio-sulco.jpg",
+                "legenda": "Sulco de plantio — profundidade 3 cm, boa cobertura",
+                "categoria": "equipamento",
+                "data": "2025-10-20",
+                "lat": -24.9572,
+                "lng": -53.4482,
+                "suportaZoom": true,
+                "ordem": 2
+            }
+        ],
+        "documentos": []
+    },
+    "assinatura": {
+        "nome": "Eng. Paulo Ferreira",
+        "crea": "PR-12345",
+        "dataAssinatura": "2025-11-05",
+        "cidade": "Cascavel/PR",
+        "conclusao": "Plantio do Talhão 16 realizado em condições adequadas. Estande de 88,9% indica implantação de boa qualidade. Recomenda-se acompanhamento fenológico a partir dos 25 DAE."
+    },
+    "auditoria": {
+        "historicoVersoes": [
+            {
+                "versao": 1,
+                "data": "2025-11-05T08:30:00-03:00",
+                "autor": "Eng. Paulo Ferreira",
+                "resumo": "Criação inicial"
+            }
+        ],
+        "log": [
+            {
+                "acao": "create",
+                "userId": "usr-paulo-ferreira",
+                "data": "2025-11-05T08:30:00-03:00",
+                "ip": "177.X.X.X"
+            },
+            {
+                "acao": "publish",
+                "userId": "usr-paulo-ferreira",
+                "data": "2025-11-05T10:15:00-03:00",
+                "ip": "177.X.X.X"
+            }
+        ],
+        "hashIntegridade": "sha256:b94d27b9934d3e08a52e52d7da7dabfac484efe04294e576de9e78ed695c7a"
+    }
+}

@@ -1,13 +1,20 @@
 'use client';
 
+<<<<<<< HEAD
 import React, { useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+=======
+import React, { useState, useCallback } from 'react';
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
 import FortSmartLogo from '@/components/FortSmartLogo';
 import ModalImagem from '@/components/ModalImagem';
 import Mapa from '@/components/Mapa';
 
+<<<<<<< HEAD
 const MapaTalhaoDynamic = dynamic(() => import('@/components/MapaTalhaoDynamic'), { ssr: false });
 
+=======
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
 export type PayloadVisitaTecnica = Record<string, unknown> & {
   tipo?: string;
   meta?: Record<string, unknown>;
@@ -28,9 +35,24 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
     classe?: string;
     status?: string;
     alvo?: string;
+<<<<<<< HEAD
     talhaoId?: string;
     talhaoNome?: string;
     aplicacaoId?: string;
+    responsavel?: string;
+    tipoOperacao?: string;
+    areaTrabalhoHa?: number;
+    volumeLHa?: number;
+    quantidade?: number;
+    quantidadePorTanque?: number;
+    grupoQuimico?: string;
+    intervaloSeguranca?: string;
+    custoUnitario?: number;
+    custoPorHa?: number;
+    custoTotal?: number;
+    observacoes?: string;
+=======
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
   }>;
   diagnostico?: Record<string, unknown>;
   planoAcao?: {
@@ -125,9 +147,24 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
     classe: a.classe ?? a.classeToxicologica ?? '—',
     status: a.status ?? '—',
     alvo: a.alvo ?? a.target ?? a.alvoBiologico ?? '—',
+<<<<<<< HEAD
     talhaoId: a.talhaoId,
     talhaoNome: a.talhaoNome,
     aplicacaoId: a.aplicacaoId ?? a.prescricaoId,
+    responsavel: a.responsavel,
+    tipoOperacao: a.tipoOperacao,
+    areaTrabalhoHa: a.areaTrabalhoHa,
+    volumeLHa: a.volumeLHa,
+    quantidade: a.quantidade,
+    quantidadePorTanque: a.quantidadePorTanque,
+    grupoQuimico: a.grupoQuimico,
+    intervaloSeguranca: a.intervaloSeguranca,
+    custoUnitario: a.custoUnitario,
+    custoPorHa: a.custoPorHa,
+    custoTotal: a.custoTotal,
+    observacoes: a.observacoes,
+=======
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
   })) as NonNullable<PayloadVisitaTecnica['aplicacoes']>;
   const diagnostico = relatorio.diagnostico as Record<string, unknown> | undefined;
   const planoAcao = relatorio.planoAcao;
@@ -140,23 +177,41 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const mapa = (relatorio.mapa ?? {}) as Record<string, unknown> & {
     viewBox?: string;
     path?: string;
-    polygon?: number[][];
+<<<<<<< HEAD
+    polygon?: number[][] | string;
     pontos?: Array<Record<string, unknown> & { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string; latitude?: number; longitude?: number; lat?: number; lng?: number }>;
   };
-  const hasPolygonOrGeoPontos = (Array.isArray(mapa.polygon) && mapa.polygon.length >= 3) ||
-    (Array.isArray(mapa.pontos) && mapa.pontos.some((p: any) => (p.latitude != null && p.longitude != null) || (p.lat != null && p.lng != null)));
-  const hasMapa = hasPolygonOrGeoPontos || (mapa.path != null && String(mapa.path).trim() !== '') || (Array.isArray(mapa.pontos) && mapa.pontos.length > 0);
 
   // Polígono no formato Leaflet [[lat, lng], ...] — Flutter envia [latitude, longitude]
+  // Aceita: array de [lat,lng], string JSON, ou array de {lat,lng}/{latitude,longitude}
   const polygonForMap = useMemo(() => {
-    if (!Array.isArray(mapa.polygon) || mapa.polygon.length < 3) return undefined;
-    return mapa.polygon.map((c: unknown) => {
-      if (Array.isArray(c) && c.length >= 2 && typeof c[0] === 'number' && typeof c[1] === 'number') return [c[0], c[1]] as [number, number];
-      return null;
-    }).filter((x): x is [number, number] => x !== null);
+    let raw = mapa.polygon;
+    if (typeof raw === 'string') {
+      try { raw = JSON.parse(raw) as unknown; } catch { return undefined; }
+    }
+    if (!Array.isArray(raw) || raw.length < 3) return undefined;
+    const out: [number, number][] = [];
+    for (const c of raw) {
+      if (Array.isArray(c) && c.length >= 2) {
+        const a = Number(c[0]);
+        const b = Number(c[1]);
+        if (!Number.isNaN(a) && !Number.isNaN(b)) {
+          const lat = Math.abs(a) <= 90 && Math.abs(b) <= 180 ? a : b;
+          const lng = Math.abs(a) <= 90 && Math.abs(b) <= 180 ? b : a;
+          if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) out.push([lat, lng]);
+        }
+      } else if (c && typeof c === 'object' && !Array.isArray(c)) {
+        const lat = Number((c as any).lat ?? (c as any).latitude);
+        const lng = Number((c as any).lng ?? (c as any).longitude);
+        if (!Number.isNaN(lat) && !Number.isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) out.push([lat, lng]);
+      }
+    }
+    return out.length >= 3 ? out : undefined;
   }, [mapa.polygon]);
   const pontosForMap = useMemo(() => {
-    return (mapa.pontos ?? []).map((p: any) => {
+    const pts = mapa.pontos ?? [];
+    if (!Array.isArray(pts)) return [];
+    return pts.map((p: any) => {
       const lat = p.latitude ?? p.lat;
       const lng = p.longitude ?? p.lng;
       if (lat == null || lng == null || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
@@ -171,6 +226,21 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
       };
     }).filter(Boolean);
   }, [mapa.pontos]);
+
+  // Decidir pelo polígono/pontos JÁ NORMALIZADOS (assim aceita polygon vindo como string do Supabase)
+  const hasValidPolygon = (polygonForMap?.length ?? 0) >= 3;
+  const hasValidGeoPontos = pontosForMap.length > 0;
+  const hasPolygonOrGeoPontos = hasValidPolygon || hasValidGeoPontos;
+  const hasMapa = hasPolygonOrGeoPontos || (mapa.path != null && String(mapa.path).trim() !== '') || (Array.isArray(mapa.pontos) && mapa.pontos.length > 0);
+
+  // Priorizar mapa real sempre que houver polígono válido OU pontos com lat/lon
+  const useRealMap = hasValidPolygon || hasValidGeoPontos;
+=======
+    polygon?: number[][];
+    pontos?: Array<Record<string, unknown> & { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string }>;
+  };
+  const hasMapa = (mapa.path != null && String(mapa.path).trim() !== '') || (Array.isArray(mapa.pontos) && mapa.pontos.length > 0);
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -381,14 +451,19 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           </section>
         )}
 
+<<<<<<< HEAD
         {/* 4.5 Mapa do talhão — mapa real (MapTiler) com polígono e alfinetes, ou fallback SVG */}
+=======
+        {/* 4.5 Mapa do talhão — polígono e pontos georreferenciados (ocorrências, desvios, fenologia) */}
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
         {hasMapa && (
           <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
             <div style={sectionTitleStyle}>Mapa do talhão — pontos georreferenciados</div>
             <div style={{ padding: 24 }}>
-              {hasPolygonOrGeoPontos && (polygonForMap?.length >= 3 || pontosForMap.length > 0) ? (
+<<<<<<< HEAD
+              {useRealMap ? (
                 <MapaTalhaoDynamic
-                  polygon={polygonForMap?.length >= 3 ? polygonForMap : undefined}
+                  polygon={polygonForMap && polygonForMap.length >= 3 ? polygonForMap : undefined}
                   pontos={pontosForMap}
                   hideSectionTitle
                 />
@@ -398,6 +473,13 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                     viewBox: mapa.viewBox ?? '0 0 400 300',
                     path: mapa.path ?? undefined,
                     pontos: (mapa.pontos ?? []).map((p: { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string }, i: number) => ({
+=======
+              <Mapa
+                mapa={{
+                  viewBox: mapa.viewBox ?? '0 0 400 300',
+                  path: mapa.path ?? undefined,
+                  pontos: (mapa.pontos ?? []).map((p: { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string }, i: number) => ({
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
                   x: p.x ?? 0,
                   y: p.y ?? 0,
                   index: p.index ?? i + 1,
@@ -405,11 +487,18 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                   descricao: [p.titulo, p.descricao].filter(Boolean).join(' — ') || p.descricao,
                   data: p.data,
                 })),
+<<<<<<< HEAD
                   }}
                   relatorioId={relatorioUuid || reportId}
                   className="relatorio--visita-tecnica"
                 />
               )}
+=======
+                }}
+                relatorioId={relatorioUuid || reportId}
+                className="relatorio--visita-tecnica"
+              />
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
             </div>
           </section>
         )}
@@ -429,12 +518,27 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                     <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Classe</th>
                     <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Alvo</th>
                     <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Status</th>
+<<<<<<< HEAD
                     {(aplicacoes.some((a) => a.talhaoNome || a.talhaoId)) && (
                       <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Talhão</th>
                     )}
                     {(aplicacoes.some((a) => a.aplicacaoId)) && (
                       <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Aplicação</th>
                     )}
+                    {(aplicacoes.some((a) => a.responsavel)) && (
+                      <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Responsável</th>
+                    )}
+                    {(aplicacoes.some((a) => a.quantidade != null)) && (
+                      <th style={{ padding: 14, textAlign: 'right', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Quantidade</th>
+                    )}
+                    {(aplicacoes.some((a) => a.custoPorHa != null)) && (
+                      <th style={{ padding: 14, textAlign: 'right', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>R$/ha</th>
+                    )}
+                    {(aplicacoes.some((a) => a.custoTotal != null)) && (
+                      <th style={{ padding: 14, textAlign: 'right', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>R$ talhão</th>
+                    )}
+=======
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
                   </tr>
                 </thead>
                 <tbody>
@@ -460,6 +564,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                         </td>
                         <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>{String(a.alvo ?? '—')}</td>
                         <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#334155' }}>{String(a.status ?? '—')}</td>
+<<<<<<< HEAD
                         {(aplicacoes.some((b) => b.talhaoNome || b.talhaoId)) && (
                           <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#334155', fontSize: 12 }} title={a.talhaoId ?? ''}>
                             {a.talhaoNome ?? (a.talhaoId ? `ID: ${a.talhaoId}` : '—')}
@@ -470,6 +575,26 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                             {a.aplicacaoId ?? '—'}
                           </td>
                         )}
+                        {(aplicacoes.some((b) => b.responsavel)) && (
+                          <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#334155', fontSize: 12 }}>{a.responsavel ?? '—'}</td>
+                        )}
+                        {(aplicacoes.some((b) => b.quantidade != null)) && (
+                          <td style={{ padding: 14, textAlign: 'right', borderBottom: '1px solid #E2E8F0', color: '#334155', fontSize: 12 }}>
+                            {a.quantidade != null ? `${Number(a.quantidade).toFixed(2)} ${a.unidade ?? ''}`.trim() : '—'}
+                          </td>
+                        )}
+                        {(aplicacoes.some((b) => b.custoPorHa != null)) && (
+                          <td style={{ padding: 14, textAlign: 'right', borderBottom: '1px solid #E2E8F0', color: '#334155', fontSize: 12 }}>
+                            {a.custoPorHa != null ? `R$ ${Number(a.custoPorHa).toFixed(2)}` : '—'}
+                          </td>
+                        )}
+                        {(aplicacoes.some((b) => b.custoTotal != null)) && (
+                          <td style={{ padding: 14, textAlign: 'right', borderBottom: '1px solid #E2E8F0', color: '#334155', fontSize: 12 }}>
+                            {a.custoTotal != null ? `R$ ${Number(a.custoTotal).toFixed(2)}` : '—'}
+                          </td>
+                        )}
+=======
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
                       </tr>
                     );
                   })}

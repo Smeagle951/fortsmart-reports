@@ -103,8 +103,13 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
       };
     });
 
+<<<<<<< HEAD
   const poligonoRaw = raw.poligono_geojson ?? raw.poligono ?? raw.polygon ?? raw.geometry ?? raw.geojson;
   const poligono = (poligonoRaw?.type === 'Feature' && (poligonoRaw as GeoJSONPolygon).geometry?.type === 'Polygon' && Array.isArray((poligonoRaw as GeoJSONPolygon).geometry?.coordinates))
+=======
+  const poligonoRaw = (raw.poligono_geojson ?? raw.poligono ?? raw.polygon ?? raw.geometry ?? raw.geojson) as GeoJSONPolygon | undefined | null;
+  const poligono = (poligonoRaw && typeof poligonoRaw === 'object' && 'type' in poligonoRaw && poligonoRaw.type === 'Feature' && (poligonoRaw as GeoJSONPolygon).geometry?.type === 'Polygon' && Array.isArray((poligonoRaw as GeoJSONPolygon).geometry?.coordinates))
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
     ? (poligonoRaw as GeoJSONPolygon)
     : defaultPolygon(pontos);
   const cond = raw.condicoes_climaticas as Record<string, unknown> | undefined;
@@ -282,7 +287,11 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
       </nav>
 
       <div id="relatorio-monitoramento-content" style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 24px 0' }}>
+<<<<<<< HEAD
+        <ReportHeader relatorio={normalized} onExportPDF={handleExportPDF} hideExcel origemDados={relatorioUuid ? 'app' : undefined} />
+=======
         <ReportHeader relatorio={normalized} onExportPDF={handleExportPDF} hideExcel />
+>>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
 
         {(metricas || estande || cv || fenologia || observacoes || (alertas && alertas.length > 0)) && (
           <div style={{ ...cardStyle, marginBottom: 28, overflow: 'hidden' }}>
