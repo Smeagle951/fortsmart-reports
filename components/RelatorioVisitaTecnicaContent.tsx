@@ -1,20 +1,13 @@
 'use client';
 
-<<<<<<< HEAD
 import React, { useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-=======
-import React, { useState, useCallback } from 'react';
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
 import FortSmartLogo from '@/components/FortSmartLogo';
 import ModalImagem from '@/components/ModalImagem';
 import Mapa from '@/components/Mapa';
 
-<<<<<<< HEAD
 const MapaTalhaoDynamic = dynamic(() => import('@/components/MapaTalhaoDynamic'), { ssr: false });
 
-=======
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
 export type PayloadVisitaTecnica = Record<string, unknown> & {
   tipo?: string;
   meta?: Record<string, unknown>;
@@ -35,7 +28,6 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
     classe?: string;
     status?: string;
     alvo?: string;
-<<<<<<< HEAD
     talhaoId?: string;
     talhaoNome?: string;
     aplicacaoId?: string;
@@ -51,8 +43,6 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
     custoPorHa?: number;
     custoTotal?: number;
     observacoes?: string;
-=======
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
   }>;
   diagnostico?: Record<string, unknown>;
   planoAcao?: {
@@ -147,7 +137,6 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
     classe: a.classe ?? a.classeToxicologica ?? '—',
     status: a.status ?? '—',
     alvo: a.alvo ?? a.target ?? a.alvoBiologico ?? '—',
-<<<<<<< HEAD
     talhaoId: a.talhaoId,
     talhaoNome: a.talhaoNome,
     aplicacaoId: a.aplicacaoId ?? a.prescricaoId,
@@ -163,8 +152,6 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
     custoPorHa: a.custoPorHa,
     custoTotal: a.custoTotal,
     observacoes: a.observacoes,
-=======
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
   })) as NonNullable<PayloadVisitaTecnica['aplicacoes']>;
   const diagnostico = relatorio.diagnostico as Record<string, unknown> | undefined;
   const planoAcao = relatorio.planoAcao;
@@ -177,17 +164,14 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const mapa = (relatorio.mapa ?? {}) as Record<string, unknown> & {
     viewBox?: string;
     path?: string;
-<<<<<<< HEAD
     polygon?: number[][] | string;
     pontos?: Array<Record<string, unknown> & { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string; latitude?: number; longitude?: number; lat?: number; lng?: number }>;
   };
 
-  // Polígono no formato Leaflet [[lat, lng], ...] — Flutter envia [latitude, longitude]
-  // Aceita: array de [lat,lng], string JSON, ou array de {lat,lng}/{latitude,longitude}
   const polygonForMap = useMemo(() => {
-    let raw = mapa.polygon;
+    let raw: string | number[][] | undefined = mapa.polygon;
     if (typeof raw === 'string') {
-      try { raw = JSON.parse(raw) as unknown; } catch { return undefined; }
+      try { raw = JSON.parse(raw) as number[][]; } catch { return undefined; }
     }
     if (!Array.isArray(raw) || raw.length < 3) return undefined;
     const out: [number, number][] = [];
@@ -201,46 +185,39 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) out.push([lat, lng]);
         }
       } else if (c && typeof c === 'object' && !Array.isArray(c)) {
-        const lat = Number((c as any).lat ?? (c as any).latitude);
-        const lng = Number((c as any).lng ?? (c as any).longitude);
+        const lat = Number((c as Record<string, unknown>).lat ?? (c as Record<string, unknown>).latitude);
+        const lng = Number((c as Record<string, unknown>).lng ?? (c as Record<string, unknown>).longitude);
         if (!Number.isNaN(lat) && !Number.isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) out.push([lat, lng]);
       }
     }
     return out.length >= 3 ? out : undefined;
   }, [mapa.polygon]);
-  const pontosForMap = useMemo(() => {
+  type PontoMapa = { latitude: number; longitude: number; id?: string; titulo?: string; descricao?: string; estagio?: string; data?: string };
+  const pontosForMap = useMemo((): PontoMapa[] => {
     const pts = mapa.pontos ?? [];
     if (!Array.isArray(pts)) return [];
-    return pts.map((p: any) => {
-      const lat = p.latitude ?? p.lat;
-      const lng = p.longitude ?? p.lng;
+    const mapped = pts.map((p: Record<string, unknown>) => {
+      const lat = (p.latitude ?? p.lat) as number | undefined;
+      const lng = (p.longitude ?? p.lng) as number | undefined;
       if (lat == null || lng == null || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
       return {
         latitude: lat,
         longitude: lng,
-        id: p.id ?? p.index,
-        titulo: p.titulo,
-        descricao: p.descricao ?? [p.titulo, p.descricao].filter(Boolean).join(' — '),
-        estagio: p.estagio,
-        data: p.data,
+        id: p.id != null || p.index != null ? String(p.id ?? p.index) : undefined,
+        titulo: p.titulo != null ? String(p.titulo) : undefined,
+        descricao: [p.titulo, p.descricao].filter(Boolean).join(' — ') || (p.descricao != null ? String(p.descricao) : undefined),
+        estagio: p.estagio != null ? String(p.estagio) : undefined,
+        data: p.data != null ? String(p.data) : undefined,
       };
-    }).filter(Boolean);
+    });
+    return mapped.filter(Boolean) as PontoMapa[];
   }, [mapa.pontos]);
 
-  // Decidir pelo polígono/pontos JÁ NORMALIZADOS (assim aceita polygon vindo como string do Supabase)
   const hasValidPolygon = (polygonForMap?.length ?? 0) >= 3;
   const hasValidGeoPontos = pontosForMap.length > 0;
   const hasPolygonOrGeoPontos = hasValidPolygon || hasValidGeoPontos;
   const hasMapa = hasPolygonOrGeoPontos || (mapa.path != null && String(mapa.path).trim() !== '') || (Array.isArray(mapa.pontos) && mapa.pontos.length > 0);
-
-  // Priorizar mapa real sempre que houver polígono válido OU pontos com lat/lon
   const useRealMap = hasValidPolygon || hasValidGeoPontos;
-=======
-    polygon?: number[][];
-    pontos?: Array<Record<string, unknown> & { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string }>;
-  };
-  const hasMapa = (mapa.path != null && String(mapa.path).trim() !== '') || (Array.isArray(mapa.pontos) && mapa.pontos.length > 0);
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -451,16 +428,11 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           </section>
         )}
 
-<<<<<<< HEAD
         {/* 4.5 Mapa do talhão — mapa real (MapTiler) com polígono e alfinetes, ou fallback SVG */}
-=======
-        {/* 4.5 Mapa do talhão — polígono e pontos georreferenciados (ocorrências, desvios, fenologia) */}
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
         {hasMapa && (
           <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
             <div style={sectionTitleStyle}>Mapa do talhão — pontos georreferenciados</div>
             <div style={{ padding: 24 }}>
-<<<<<<< HEAD
               {useRealMap ? (
                 <MapaTalhaoDynamic
                   polygon={polygonForMap && polygonForMap.length >= 3 ? polygonForMap : undefined}
@@ -473,32 +445,18 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                     viewBox: mapa.viewBox ?? '0 0 400 300',
                     path: mapa.path ?? undefined,
                     pontos: (mapa.pontos ?? []).map((p: { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string }, i: number) => ({
-=======
-              <Mapa
-                mapa={{
-                  viewBox: mapa.viewBox ?? '0 0 400 300',
-                  path: mapa.path ?? undefined,
-                  pontos: (mapa.pontos ?? []).map((p: { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string }, i: number) => ({
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
-                  x: p.x ?? 0,
-                  y: p.y ?? 0,
-                  index: p.index ?? i + 1,
-                  severidade: p.severidade,
-                  descricao: [p.titulo, p.descricao].filter(Boolean).join(' — ') || p.descricao,
-                  data: p.data,
-                })),
-<<<<<<< HEAD
+                      x: p.x ?? 0,
+                      y: p.y ?? 0,
+                      index: p.index ?? i + 1,
+                      severidade: p.severidade,
+                      descricao: [p.titulo, p.descricao].filter(Boolean).join(' — ') || p.descricao,
+                      data: p.data,
+                    })),
                   }}
                   relatorioId={relatorioUuid || reportId}
                   className="relatorio--visita-tecnica"
                 />
               )}
-=======
-                }}
-                relatorioId={relatorioUuid || reportId}
-                className="relatorio--visita-tecnica"
-              />
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
             </div>
           </section>
         )}
@@ -518,7 +476,6 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                     <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Classe</th>
                     <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Alvo</th>
                     <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Status</th>
-<<<<<<< HEAD
                     {(aplicacoes.some((a) => a.talhaoNome || a.talhaoId)) && (
                       <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Talhão</th>
                     )}
@@ -537,8 +494,6 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                     {(aplicacoes.some((a) => a.custoTotal != null)) && (
                       <th style={{ padding: 14, textAlign: 'right', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>R$ talhão</th>
                     )}
-=======
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
                   </tr>
                 </thead>
                 <tbody>
@@ -564,7 +519,6 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                         </td>
                         <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>{String(a.alvo ?? '—')}</td>
                         <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#334155' }}>{String(a.status ?? '—')}</td>
-<<<<<<< HEAD
                         {(aplicacoes.some((b) => b.talhaoNome || b.talhaoId)) && (
                           <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#334155', fontSize: 12 }} title={a.talhaoId ?? ''}>
                             {a.talhaoNome ?? (a.talhaoId ? `ID: ${a.talhaoId}` : '—')}
@@ -593,8 +547,6 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                             {a.custoTotal != null ? `R$ ${Number(a.custoTotal).toFixed(2)}` : '—'}
                           </td>
                         )}
-=======
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
                       </tr>
                     );
                   })}

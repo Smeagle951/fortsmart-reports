@@ -84,8 +84,7 @@ export default function RelatorioTecnicoPdf({
       {/* Distribuição Longitudinal: trena com linha real ou simulada a partir das % */}
       {((plantabilidade.linha && plantabilidade.linha.length > 0) ||
         plantabilidade.okPct != null || plantabilidade.duplasPct != null ||
-        plantabilidade.triplasPct != null || plantabilidade.falhasPct != null) && (
-<<<<<<< HEAD
+        plantabilidade.triplasPct != null ||         plantabilidade.falhasPct != null) && (
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase text-slate-600">
             Visualização da qualidade do plantio
@@ -106,32 +105,8 @@ export default function RelatorioTecnicoPdf({
 
       {/* Fenologia - só exibe quando houver pelo menos um dado */}
       {(evolucao.estadioAtual != null && evolucao.estadioAtual !== '') ||
-       (evolucao.estadioPrevisto != null && evolucao.estadioPrevisto !== '') ||
-       (evolucao.atrasoFenologico != null && evolucao.atrasoFenologico !== '') ? (
-=======
-          <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase text-slate-600">
-              Visualização da qualidade do plantio
-            </h3>
-            <LinhaPlantioVisualizer
-              linha={plantabilidade.linha || []}
-              okPct={plantabilidade.okPct}
-              duplasPct={plantabilidade.duplasPct}
-              triplasPct={plantabilidade.triplasPct}
-              falhasPct={plantabilidade.falhasPct}
-              espacamentosIndividuais={plantabilidade.espacamentosIndividuais}
-            />
-            <p className="mt-2 text-sm text-slate-600">
-              OK: {(plantabilidade.okPct ?? 0) !== 0 || plantabilidade.okPct != null ? `${Number(plantabilidade.okPct ?? 0).toFixed(1)}` : 0}% | Duplas: {Number(plantabilidade.duplasPct ?? 0).toFixed(1)}% | Triplas: {Number(plantabilidade.triplasPct ?? 0).toFixed(1)}% | Falhas: {Number(plantabilidade.falhasPct ?? 0).toFixed(1)}%
-            </p>
-          </div>
-        )}
-
-      {/* Fenologia - só exibe quando houver pelo menos um dado */}
-      {(evolucao.estadioAtual != null && evolucao.estadioAtual !== '') ||
         (evolucao.estadioPrevisto != null && evolucao.estadioPrevisto !== '') ||
         (evolucao.atrasoFenologico != null) ? (
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
         <div>
           <h3 className="mb-2 text-sm font-semibold uppercase text-slate-600">
             Fenologia

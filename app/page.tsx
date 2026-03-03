@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { RelatorioMonitoramento } from '@/lib/types/monitoring';
 import { mockRelatorio } from '@/lib/data/mock_monitoring';
@@ -8,7 +8,7 @@ import ReportHeader from '@/components/ReportHeader';
 import TalhaoBloco from '@/components/TalhaoBloco';
 import { calcularMetricasTalhao, corClassificacao } from '@/lib/calculations';
 
-export default function HomePage() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const tokenFromUrl = searchParams.get('token');
   const [relatorio, setRelatorio] = useState<RelatorioMonitoramento>(mockRelatorio);
@@ -163,5 +163,13 @@ export default function HomePage() {
         </footer>
       </div>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8FAFC', color: '#64748B' }}>Carregando…</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

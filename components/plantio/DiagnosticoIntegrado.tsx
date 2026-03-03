@@ -23,32 +23,9 @@ export default function DiagnosticoIntegrado({ data }: DiagnosticoIntegradoProps
   const resumo = diag.resumo || [];
   const spt = diag.spt;
   const evolucao = data.evolucaoCultura || {};
-<<<<<<< HEAD
   const plantabilidade = data.plantabilidade || {};
   const contextoSafra = data.contextoSafra || {};
   const estande = data.estande || {};
-=======
-
-  const dataPlantioStr = (data as any).dataPlantio;
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '—';
-    try {
-      let dStr = dateStr;
-      if (dStr.includes('T')) dStr = dStr.split('T')[0];
-      const parts = dStr.trim().split('-');
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-      }
-      return dStr;
-    } catch {
-      return dateStr;
-    }
-  };
-  const dataPlantioFormatted = formatDate(dataPlantioStr);
-  const plantabilidade = data.plantabilidade || {};
-  const contextoSafra = data.contextoSafra || {};
-  const estande = (data as any).estande || {};
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
   const fitossanidade = data.fitossanidade || {};
 
   // Hipóteses: prioridade para dados do agrônomo (diagnostico.causaProvavel)
@@ -105,7 +82,6 @@ export default function DiagnosticoIntegrado({ data }: DiagnosticoIntegradoProps
               <h4 className="mb-2 font-medium text-slate-700">Fenologia</h4>
               <p className="text-sm text-slate-600">
                 {(evolucao.estadioAtual != null && evolucao.estadioAtual !== '') ||
-<<<<<<< HEAD
                  (evolucao.estadioPrevisto != null && evolucao.estadioPrevisto !== '') ||
                  (evolucao.atrasoFenologico != null) ? (
                   <>
@@ -115,20 +91,6 @@ export default function DiagnosticoIntegrado({ data }: DiagnosticoIntegradoProps
                   </>
                 ) : (
                   <>Estágio Atual: — — Estágio Esperado: — — Atraso: —</>
-=======
-                  (evolucao.estadioPrevisto != null && evolucao.estadioPrevisto !== '') ||
-                  (evolucao.atrasoFenologico != null) || estande?.dae != null || dataPlantioStr != null ? (
-                  <>
-                    {(dataPlantioStr != null) && <><strong>Data do Plantio:</strong> {dataPlantioFormatted}<br /></>}
-                    {(estande?.dap != null) && <><strong>DAP:</strong> {estande.dap}<br /></>}
-                    {(estande?.dae != null) && <><strong>DAE:</strong> {estande.dae}<br /></>}
-                    {(estande?.estadio != null && estande.estadio !== '') && <><strong>Estádio Atual:</strong> {estande.estadio}<br /></>}
-                    {(evolucao.estadioPrevisto != null && evolucao.estadioPrevisto !== '') && <><strong>Estádio Esperado:</strong> {evolucao.estadioPrevisto}<br /></>}
-                    {(evolucao.atrasoFenologico != null) && <><strong>Atraso:</strong> {evolucao.atrasoFenologico} folha(s)</>}
-                  </>
-                ) : (
-                  <><strong>Data do Plantio:</strong> {dataPlantioFormatted}<br />Estágio Atual: —<br />Estágio Esperado: —<br />Atraso: —</>
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
                 )}
               </p>
             </div>
@@ -151,11 +113,7 @@ export default function DiagnosticoIntegrado({ data }: DiagnosticoIntegradoProps
                 <br />
                 Espaçamento real: {plantabilidade.espacamentoRealCm != null || contextoSafra?.espacamentoCm != null ? `${plantabilidade.espacamentoRealCm ?? contextoSafra?.espacamentoCm} cm` : '—'}
                 <br />
-<<<<<<< HEAD
-                Falhas críticas &gt; 20 cm: {plantabilidade.falhasPct != null ? `${plantabilidade.falhasPct}%` : '—'}
-=======
                 Falhas críticas &gt; 20 cm: {plantabilidade.falhasPct != null ? `${Number(plantabilidade.falhasPct).toFixed(1)}%` : '—'}
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
               </p>
             </div>
 

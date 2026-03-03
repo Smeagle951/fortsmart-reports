@@ -7,16 +7,11 @@ import type { RelatorioPlantioData } from './DashboardTalhao';
 
 function formatDate(s: string | undefined | null): string {
   if (!s || typeof s !== 'string') return '—';
-<<<<<<< HEAD
-  return s.trim() || '—';
-=======
   const t = s.trim();
   if (!t) return '—';
-  // Accepts ISO: 2026-01-10 → 10/01/2026
   const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m) return `${m[3]}/${m[2]}/${m[1]}`;
   return t;
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
 }
 
 export default function PlantabilidadeEstande({ data }: { data: RelatorioPlantioData }) {
@@ -66,11 +61,7 @@ export default function PlantabilidadeEstande({ data }: { data: RelatorioPlantio
           </div>
           <div className="plantio-data-row">
             <dt>Espaçamento Real Médio</dt>
-<<<<<<< HEAD
-            <dd>{espacamentoReal != null ? `${espacamentoReal} cm` : '—'}</dd>
-=======
             <dd>{espacamentoReal != null ? `${Number(espacamentoReal).toFixed(1)} cm` : '—'}</dd>
->>>>>>> e461e4262c2f2378d357100a0c42507b208e143f
           </div>
           <div className="plantio-data-row">
             <dt>DAE</dt>
