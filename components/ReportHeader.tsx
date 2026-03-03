@@ -16,13 +16,13 @@ export default function ReportHeader({ relatorio, onExportPDF, onExportExcel, hi
     return (
         <header style={{
             background: '#fff',
-            borderRadius: 8,
+            borderRadius: 12,
             border: '1px solid #E2E8F0',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-            marginBottom: 24,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)',
+            marginBottom: 28,
             overflow: 'hidden',
         }}>
-            <div style={{ background: 'linear-gradient(180deg, #1B5E20 0%, #2E7D32 100%)', height: 4 }} />
+            <div style={{ background: 'linear-gradient(90deg, #1B5E20 0%, #2E7D32 50%, #388E3C 100%)', height: 4 }} />
             <div style={{ display: 'flex', alignItems: 'stretch', flexWrap: 'wrap' }}>
                 <div style={{
                     padding: 20,
@@ -88,8 +88,8 @@ function MetaItem({ label, value }: { label: string; value: string }) {
     const display = (value || '').trim() || '—';
     return (
         <div>
-            <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>{label}</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: display === '—' ? '#94A3B8' : '#1E293B' }}>{display}</div>
+            <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: display === '—' ? '#94A3B8' : '#1E293B', letterSpacing: '-0.01em' }}>{display}</div>
         </div>
     );
 }

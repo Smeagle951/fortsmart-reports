@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { MetricasPonto, NivelClassificacao, PontoMonitoramento, Infestacao } from '@/lib/types/monitoring';
 import { classificarNivel } from '@/lib/calculations';
+import { formatPercent2 } from '@/utils/format';
 
 interface IndicesPorPontoProps {
     metricasPorPonto: MetricasPonto[];
@@ -67,7 +68,7 @@ export default function IndicesPorPonto({ metricasPorPonto, pontos = [] }: Indic
                                         {expandido ? '▼' : '▶'}
                                     </td>
                                     <td style={{ padding: '10px 16px', fontWeight: 600, color: '#1E293B' }}>{mp.identificador}</td>
-                                    <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: cfg.color }}>{mp.severidadeMedia}%</td>
+                                    <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: cfg.color }}>{formatPercent2(mp.severidadeMedia)}</td>
                                     <td style={{ padding: '10px 16px', textAlign: 'center', color: '#64748B' }}>
                                         {mp.numOcorrencias} ocorrência{mp.numOcorrencias !== 1 ? 's' : ''}
                                     </td>
@@ -104,7 +105,7 @@ export default function IndicesPorPonto({ metricasPorPonto, pontos = [] }: Indic
                     style={{
                         position: 'fixed',
                         inset: 0,
-                        background: 'rgba(0,0,0,0.7)',
+                        background: 'rgba(0,0,0,0.85)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -112,7 +113,7 @@ export default function IndicesPorPonto({ metricasPorPonto, pontos = [] }: Indic
                         cursor: 'pointer',
                     }}
                 >
-                    <div onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '90vh' }}>
+                    <div onClick={e => e.stopPropagation()} style={{ maxWidth: '95vw', maxHeight: '95vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={modalImg.imagem}
@@ -122,6 +123,14 @@ export default function IndicesPorPonto({ metricasPorPonto, pontos = [] }: Indic
                         <div style={{ color: '#fff', textAlign: 'center', marginTop: 12, fontSize: 14 }}>
                             {modalImg.nome} · {modalImg.ponto}
                         </div>
+                        <a
+                            href={modalImg.imagem}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ marginTop: 8, color: '#93C5FD', fontSize: 13 }}
+                        >
+                            Abrir em tamanho real
+                        </a>
                     </div>
                 </div>
             )}
