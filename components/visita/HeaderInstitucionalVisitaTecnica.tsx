@@ -39,7 +39,7 @@ interface HeaderInstitucionalVisitaTecnicaProps {
   reportId?: string;
 }
 
-/** Cabeçalho institucional para Relatório Técnico de Visita — padrão SaaS, sem versão do app */
+/** Cabeçalho institucional para Relatório Técnico de Visita — layout claro e hierarquia visual */
 export default function HeaderInstitucionalVisitaTecnica({
   meta,
   propriedade,
@@ -50,64 +50,75 @@ export default function HeaderInstitucionalVisitaTecnica({
   const cliente = propriedade.proprietario;
   const culturaHibrido = [talhao.cultura, contextoSafra.materialVariedade].filter(Boolean).join(' / ');
   const status = meta.status || 'Final';
+  const dataFormatada = formatDate(meta.dataGeracao) || '—';
 
   return (
-    <header className="visita-header-institucional">
-      <div className="visita-header-institucional__logo">
-        <div className="visita-header-institucional__logo-icon">
-          <FortSmartLogo size={48} />
-        </div>
-        <div>
-          <div className="visita-header-institucional__empresa">FortSmart Agro</div>
-          <div className="visita-header-institucional__tipo">Relatório Técnico de Visita</div>
-        </div>
-      </div>
-
-      <div className="visita-header-institucional__grid">
-        <div className="visita-header-institucional__item">
-          <span className="visita-header-institucional__label">Consultor</span>
-          <span className="visita-header-institucional__value">
-            {meta.tecnico || '—'}
-            {meta.tecnicoCrea ? ` • CREA ${meta.tecnicoCrea}` : ''}
-          </span>
-        </div>
-        <div className="visita-header-institucional__item">
-          <span className="visita-header-institucional__label">Cliente</span>
-          <span className="visita-header-institucional__value">{cliente || '—'}</span>
-        </div>
-        <div className="visita-header-institucional__item">
-          <span className="visita-header-institucional__label">Fazenda</span>
-          <span className="visita-header-institucional__value">{propriedade.fazenda || '—'}</span>
-        </div>
-        <div className="visita-header-institucional__item">
-          <span className="visita-header-institucional__label">Talhão</span>
-          <span className="visita-header-institucional__value">{talhao.nome || '—'}</span>
-        </div>
-        <div className="visita-header-institucional__item">
-          <span className="visita-header-institucional__label">Safra</span>
-          <span className="visita-header-institucional__value">{meta.safra || '—'}</span>
-        </div>
-        <div className="visita-header-institucional__item">
-          <span className="visita-header-institucional__label">Cultura / Híbrido</span>
-          <span className="visita-header-institucional__value">{culturaHibrido || '—'}</span>
-        </div>
-        <div className="visita-header-institucional__item">
-          <span className="visita-header-institucional__label">Data da visita</span>
-          <span className="visita-header-institucional__value">{formatDate(meta.dataGeracao) || '—'}</span>
-        </div>
-        <div className="visita-header-institucional__item">
-          <span className="visita-header-institucional__label">Código do relatório</span>
-          <span className="visita-header-institucional__value">{meta.id || reportId || '—'}</span>
-        </div>
-        {meta.versao != null && (
-          <div className="visita-header-institucional__item">
-            <span className="visita-header-institucional__label">Versão do documento</span>
-            <span className="visita-header-institucional__value">{meta.versao}</span>
+    <header className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden print:shadow-none">
+      {/* Faixa verde de identidade */}
+      <div className="h-1 bg-gradient-to-r from-emerald-700 to-emerald-500" />
+      <div className="p-5 sm:p-6">
+        {/* Linha 1: Logo + Título */}
+        <div className="flex flex-wrap items-center gap-4 pb-4 border-b border-slate-100">
+          <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-slate-50 border border-slate-200 shrink-0">
+            <FortSmartLogo size={44} />
           </div>
-        )}
-        <div className="visita-header-institucional__item">
-          <span className="visita-header-institucional__label">Status</span>
-          <span className="visita-header-institucional__value visita-header-institucional__status">{status}</span>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">FortSmart Agro</h1>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Relatório Técnico de Visita</p>
+          </div>
+        </div>
+
+        {/* Linha 2: Dados em grid legível */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-4 mt-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Consultor</p>
+            <p className="text-sm font-medium text-slate-800 mt-0.5">
+              {meta.tecnico || '—'}
+              {meta.tecnicoCrea ? <span className="text-slate-500 font-normal"> · CREA {meta.tecnicoCrea}</span> : ''}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Cliente</p>
+            <p className="text-sm font-medium text-slate-800 mt-0.5">{cliente || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Fazenda</p>
+            <p className="text-sm font-medium text-slate-800 mt-0.5">{propriedade.fazenda || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Talhão</p>
+            <p className="text-sm font-medium text-slate-800 mt-0.5">{talhao.nome || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Safra</p>
+            <p className="text-sm font-medium text-slate-800 mt-0.5">{meta.safra || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Cultura / Híbrido</p>
+            <p className="text-sm font-medium text-slate-800 mt-0.5">{culturaHibrido || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Data da visita</p>
+            <p className="text-sm font-medium text-slate-800 mt-0.5">{dataFormatada}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Código do relatório</p>
+            <p className="text-sm font-medium text-slate-800 mt-0.5 font-mono">{meta.id || reportId || '—'}</p>
+          </div>
+          {meta.versao != null && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Versão</p>
+              <p className="text-sm font-medium text-slate-800 mt-0.5">{meta.versao}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Status</p>
+            <p className="mt-0.5">
+              <span className="inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800">
+                {status}
+              </span>
+            </p>
+          </div>
         </div>
       </div>
     </header>

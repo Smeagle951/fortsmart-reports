@@ -18,8 +18,10 @@ function parseHipoteses(causaProvavel?: string, problemaPrincipal?: string, hipo
 export interface RelatorioPlantioData {
   meta?: { safra?: string; dataGeracao?: string };
   propriedade?: { fazenda?: string };
-  talhao?: { nome?: string; cultura?: string; area?: number };
-  contextoSafra?: { espacamentoCm?: number };
+  talhao?: { nome?: string; cultura?: string; area?: number; dataPlantio?: string };
+  contextoSafra?: { espacamentoCm?: number; dae?: number; dap?: number; populacaoAlvoPlHa?: number; materialVariedade?: string; empresa?: string; dataPlantio?: string };
+  populacao?: { plantasHa?: number; plantasPorMetro?: number; estandeEfetivoPlHa?: number; eficienciaPct?: number; situacao?: string };
+  fenologia?: { estadio?: string; estagio?: string; dataUltimaAvaliacao?: string; ultimaAvaliacaoDias?: number; dae?: number; dap?: number };
   indiceAgronomicoTalhao?: {
     valor?: number;
     maximo?: number;
@@ -31,6 +33,8 @@ export interface RelatorioPlantioData {
     estadioPrevisto?: string;
     somaTermica?: number;
     atrasoFenologico?: number;
+    dae?: number;
+    dap?: number;
   };
   plantabilidade?: {
     espacamentoIdealCm?: number;
@@ -42,9 +46,10 @@ export interface RelatorioPlantioData {
     okPct?: number;
     indicePlantabilidade?: number;
     linha?: Array<{ tipo: 'ok' | 'dupla' | 'tripla' | 'falha'; posicao?: number }>;
+    espacamentosIndividuais?: Array<{ cm?: number; tipo: string }>;
   };
   estande?: {
-    registros?: Array<{ data: string; plantasPorMetro: number; plantasHa?: number }>;
+    registros?: Array<{ data: string; plantasPorMetro: number; plantasHa?: number; dae?: number; dap?: number }>;
     perdaTotalPct?: number;
     perdaSemanalPct?: number;
   };
@@ -125,7 +130,7 @@ export default function DashboardTalhao({ data, relatorioId }: DashboardTalhaoPr
           {/* Distribuição Longitudinal + Índice Plantabilidade */}
           <div className="plantio-card">
             <h3 className="plantio-card-title">
-              Perdas e Projeção
+              Qualidade do Plantio (CV%) e distribuição
             </h3>
             <LinhaPlantioVisualizer
               linha={plantabilidade.linha || []}
@@ -134,6 +139,7 @@ export default function DashboardTalhao({ data, relatorioId }: DashboardTalhaoPr
               triplasPct={plantabilidade.triplasPct}
               falhasPct={plantabilidade.falhasPct}
               indicePlantabilidade={plantabilidade.indicePlantabilidade}
+              espacamentosIndividuais={plantabilidade.espacamentosIndividuais}
               embedded
             />
             {plantabilidade.indicePlantabilidade != null && (

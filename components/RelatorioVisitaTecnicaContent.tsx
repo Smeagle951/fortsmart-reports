@@ -1,8 +1,12 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import FortSmartLogo from '@/components/FortSmartLogo';
 import ModalImagem from '@/components/ModalImagem';
+import Mapa from '@/components/Mapa';
+
+const MapaTalhaoDynamic = dynamic(() => import('@/components/MapaTalhaoDynamic'), { ssr: false });
 
 export type PayloadVisitaTecnica = Record<string, unknown> & {
   tipo?: string;
@@ -24,6 +28,21 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
     classe?: string;
     status?: string;
     alvo?: string;
+    talhaoId?: string;
+    talhaoNome?: string;
+    aplicacaoId?: string;
+    responsavel?: string;
+    tipoOperacao?: string;
+    areaTrabalhoHa?: number;
+    volumeLHa?: number;
+    quantidade?: number;
+    quantidadePorTanque?: number;
+    grupoQuimico?: string;
+    intervaloSeguranca?: string;
+    custoUnitario?: number;
+    custoPorHa?: number;
+    custoTotal?: number;
+    observacoes?: string;
   }>;
   diagnostico?: Record<string, unknown>;
   planoAcao?: {
@@ -108,7 +127,32 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const estado = prop?.estado != null ? String(prop.estado) : undefined;
   const proprietario = prop?.proprietario != null ? String(prop.proprietario) : undefined;
 
-  const aplicacoes = (relatorio.aplicacoes ?? []) as NonNullable<PayloadVisitaTecnica['aplicacoes']>;
+  const aplicacoesRaw = relatorio.aplicacoes ?? [];
+  const aplicacoes = (Array.isArray(aplicacoesRaw) ? aplicacoesRaw : []).map((a: any) => ({
+    tipo: a.tipo ?? a.tipoAplicacao ?? '—',
+    data: a.data ?? '—',
+    produto: a.produto ?? a.produtoNome ?? '—',
+    dose: a.dose != null ? String(a.dose) : undefined,
+    unidade: a.unidade ?? 'L/ha',
+    classe: a.classe ?? a.classeToxicologica ?? '—',
+    status: a.status ?? '—',
+    alvo: a.alvo ?? a.target ?? a.alvoBiologico ?? '—',
+    talhaoId: a.talhaoId,
+    talhaoNome: a.talhaoNome,
+    aplicacaoId: a.aplicacaoId ?? a.prescricaoId,
+    responsavel: a.responsavel,
+    tipoOperacao: a.tipoOperacao,
+    areaTrabalhoHa: a.areaTrabalhoHa,
+    volumeLHa: a.volumeLHa,
+    quantidade: a.quantidade,
+    quantidadePorTanque: a.quantidadePorTanque,
+    grupoQuimico: a.grupoQuimico,
+    intervaloSeguranca: a.intervaloSeguranca,
+    custoUnitario: a.custoUnitario,
+    custoPorHa: a.custoPorHa,
+    custoTotal: a.custoTotal,
+    observacoes: a.observacoes,
+  })) as NonNullable<PayloadVisitaTecnica['aplicacoes']>;
   const diagnostico = relatorio.diagnostico as Record<string, unknown> | undefined;
   const planoAcao = relatorio.planoAcao;
   const conclusao = relatorio.conclusao as string | undefined;
@@ -116,6 +160,64 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const condicoes = (relatorio.condicoes ?? {}) as Record<string, unknown>;
   const fenologia = (relatorio.fenologia ?? {}) as Record<string, unknown>;
   const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
+  const imagensFenologia = imagens.filter((img) => (img.categoria ?? '').toLowerCase() === 'fenologia');
+  const mapa = (relatorio.mapa ?? {}) as Record<string, unknown> & {
+    viewBox?: string;
+    path?: string;
+    polygon?: number[][] | string;
+    pontos?: Array<Record<string, unknown> & { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string; latitude?: number; longitude?: number; lat?: number; lng?: number }>;
+  };
+
+  const polygonForMap = useMemo(() => {
+    let raw: string | number[][] | undefined = mapa.polygon;
+    if (typeof raw === 'string') {
+      try { raw = JSON.parse(raw) as number[][]; } catch { return undefined; }
+    }
+    if (!Array.isArray(raw) || raw.length < 3) return undefined;
+    const out: [number, number][] = [];
+    for (const c of raw) {
+      if (Array.isArray(c) && c.length >= 2) {
+        const a = Number(c[0]);
+        const b = Number(c[1]);
+        if (!Number.isNaN(a) && !Number.isNaN(b)) {
+          const lat = Math.abs(a) <= 90 && Math.abs(b) <= 180 ? a : b;
+          const lng = Math.abs(a) <= 90 && Math.abs(b) <= 180 ? b : a;
+          if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) out.push([lat, lng]);
+        }
+      } else if (c && typeof c === 'object' && !Array.isArray(c)) {
+        const lat = Number((c as Record<string, unknown>).lat ?? (c as Record<string, unknown>).latitude);
+        const lng = Number((c as Record<string, unknown>).lng ?? (c as Record<string, unknown>).longitude);
+        if (!Number.isNaN(lat) && !Number.isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) out.push([lat, lng]);
+      }
+    }
+    return out.length >= 3 ? out : undefined;
+  }, [mapa.polygon]);
+  type PontoMapa = { latitude: number; longitude: number; id?: string; titulo?: string; descricao?: string; estagio?: string; data?: string };
+  const pontosForMap = useMemo((): PontoMapa[] => {
+    const pts = mapa.pontos ?? [];
+    if (!Array.isArray(pts)) return [];
+    const mapped = pts.map((p: Record<string, unknown>) => {
+      const lat = (p.latitude ?? p.lat) as number | undefined;
+      const lng = (p.longitude ?? p.lng) as number | undefined;
+      if (lat == null || lng == null || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+      return {
+        latitude: lat,
+        longitude: lng,
+        id: p.id != null || p.index != null ? String(p.id ?? p.index) : undefined,
+        titulo: p.titulo != null ? String(p.titulo) : undefined,
+        descricao: [p.titulo, p.descricao].filter(Boolean).join(' — ') || (p.descricao != null ? String(p.descricao) : undefined),
+        estagio: p.estagio != null ? String(p.estagio) : undefined,
+        data: p.data != null ? String(p.data) : undefined,
+      };
+    });
+    return mapped.filter(Boolean) as PontoMapa[];
+  }, [mapa.pontos]);
+
+  const hasValidPolygon = (polygonForMap?.length ?? 0) >= 3;
+  const hasValidGeoPontos = pontosForMap.length > 0;
+  const hasPolygonOrGeoPontos = hasValidPolygon || hasValidGeoPontos;
+  const hasMapa = hasPolygonOrGeoPontos || (mapa.path != null && String(mapa.path).trim() !== '') || (Array.isArray(mapa.pontos) && mapa.pontos.length > 0);
+  const useRealMap = hasValidPolygon || hasValidGeoPontos;
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -234,7 +336,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
         )}
 
         {/* 3. Fenologia e estande */}
-        {(fenologia.estadio != null || fenologia.estagio != null || populacao?.plantasHa != null || populacao?.eficienciaPct != null) && (
+        {(fenologia.estadio != null || fenologia.estagio != null || populacao?.plantasHa != null || populacao?.eficienciaPct != null || (Array.isArray(fenologia.historico) && (fenologia.historico as unknown[]).length > 0) || imagensFenologia.length > 0) && (
           <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
             <div style={sectionTitleStyle}>3. Fenologia e estande</div>
             <div style={{ padding: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 20 }}>
@@ -248,6 +350,62 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
               {populacao?.eficienciaPct != null && <Row label="Eficiência" value={`${Number(populacao.eficienciaPct)}%`} />}
               {populacao?.situacao != null && <Row label="Situação estande" value={String(populacao.situacao)} />}
             </div>
+            {imagensFenologia.length > 0 && (
+              <div style={{ padding: '0 24px 24px', borderTop: '1px solid #E2E8F0', marginTop: 8, paddingTop: 16 }}>
+                <div style={{ fontSize: 11, color: '#64748B', fontWeight: 700, marginBottom: 12, textTransform: 'uppercase' }}>Registros fotográficos — Fenologia</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  {imagensFenologia.map((img, idx) => {
+                    const globalIndex = imagens.findIndex((i) => i.url === img.url);
+                    const src = img.url;
+                    if (!src) return null;
+                    return (
+                      <button
+                        key={`fenologia-${idx}`}
+                        type="button"
+                        onClick={() => setLightboxIndex(globalIndex >= 0 ? globalIndex : 0)}
+                        style={{
+                          display: 'block',
+                          padding: 0,
+                          margin: 0,
+                          border: '1px solid #E2E8F0',
+                          borderRadius: 8,
+                          overflow: 'hidden',
+                          background: '#fff',
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                          width: 100,
+                          height: 100,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <img
+                          src={src}
+                          alt={img.descricao ?? `Fenologia ${idx + 1}`}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+                {imagensFenologia.some((img) => img.descricao) && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: '#64748B' }}>
+                    {imagensFenologia.map((img, i) => (img.descricao ? <div key={i} style={{ marginBottom: 4 }}>{img.descricao}</div> : null))}
+                  </div>
+                )}
+              </div>
+            )}
+            {Array.isArray(fenologia.historico) && (fenologia.historico as Array<{ estagio?: string; data?: string; observacoes?: string }>).length > 0 && (
+              <div style={{ padding: '0 24px 24px', borderTop: '1px solid #E2E8F0', marginTop: 8, paddingTop: 16 }}>
+                <div style={{ fontSize: 11, color: '#64748B', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Histórico fenológico</div>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: '#334155', lineHeight: 1.6 }}>
+                  {(fenologia.historico as Array<{ estagio?: string; data?: string; observacoes?: string }>).slice(0, 10).map((h, i) => (
+                    <li key={i} style={{ marginBottom: 4 }}>
+                      {[h.estagio, h.data, h.observacoes].filter(Boolean).join(' · ')}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
         )}
 
@@ -270,10 +428,43 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           </section>
         )}
 
-        {/* 5. Aplicações realizadas (Prescrição Premium / visita) */}
-        {aplicacoes.length > 0 && (
+        {/* 4.5 Mapa do talhão — mapa real (MapTiler) com polígono e alfinetes, ou fallback SVG */}
+        {hasMapa && (
           <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
-            <div style={sectionTitleStyle}>5. Aplicações realizadas</div>
+            <div style={sectionTitleStyle}>Mapa do talhão — pontos georreferenciados</div>
+            <div style={{ padding: 24 }}>
+              {useRealMap ? (
+                <MapaTalhaoDynamic
+                  polygon={polygonForMap && polygonForMap.length >= 3 ? polygonForMap : undefined}
+                  pontos={pontosForMap}
+                  hideSectionTitle
+                />
+              ) : (
+                <Mapa
+                  mapa={{
+                    viewBox: mapa.viewBox ?? '0 0 400 300',
+                    path: mapa.path ?? undefined,
+                    pontos: (mapa.pontos ?? []).map((p: { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string }, i: number) => ({
+                      x: p.x ?? 0,
+                      y: p.y ?? 0,
+                      index: p.index ?? i + 1,
+                      severidade: p.severidade,
+                      descricao: [p.titulo, p.descricao].filter(Boolean).join(' — ') || p.descricao,
+                      data: p.data,
+                    })),
+                  }}
+                  relatorioId={relatorioUuid || reportId}
+                  className="relatorio--visita-tecnica"
+                />
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* 5. Aplicações realizadas (Prescrição Premium / visita) — sempre exibida */}
+        <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
+          <div style={sectionTitleStyle}>5. Aplicações realizadas</div>
+          {aplicacoes.length > 0 ? (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 640 }}>
                 <thead>
@@ -285,6 +476,24 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                     <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Classe</th>
                     <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Alvo</th>
                     <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Status</th>
+                    {(aplicacoes.some((a) => a.talhaoNome || a.talhaoId)) && (
+                      <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Talhão</th>
+                    )}
+                    {(aplicacoes.some((a) => a.aplicacaoId)) && (
+                      <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Aplicação</th>
+                    )}
+                    {(aplicacoes.some((a) => a.responsavel)) && (
+                      <th style={{ padding: 14, textAlign: 'left', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Responsável</th>
+                    )}
+                    {(aplicacoes.some((a) => a.quantidade != null)) && (
+                      <th style={{ padding: 14, textAlign: 'right', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>Quantidade</th>
+                    )}
+                    {(aplicacoes.some((a) => a.custoPorHa != null)) && (
+                      <th style={{ padding: 14, textAlign: 'right', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>R$/ha</th>
+                    )}
+                    {(aplicacoes.some((a) => a.custoTotal != null)) && (
+                      <th style={{ padding: 14, textAlign: 'right', fontWeight: 700, color: '#475569', borderBottom: '2px solid #E2E8F0' }}>R$ talhão</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -310,14 +519,46 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                         </td>
                         <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>{String(a.alvo ?? '—')}</td>
                         <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#334155' }}>{String(a.status ?? '—')}</td>
+                        {(aplicacoes.some((b) => b.talhaoNome || b.talhaoId)) && (
+                          <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#334155', fontSize: 12 }} title={a.talhaoId ?? ''}>
+                            {a.talhaoNome ?? (a.talhaoId ? `ID: ${a.talhaoId}` : '—')}
+                          </td>
+                        )}
+                        {(aplicacoes.some((b) => b.aplicacaoId)) && (
+                          <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#64748B', fontSize: 12 }} title="ID da aplicação/prescrição">
+                            {a.aplicacaoId ?? '—'}
+                          </td>
+                        )}
+                        {(aplicacoes.some((b) => b.responsavel)) && (
+                          <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#334155', fontSize: 12 }}>{a.responsavel ?? '—'}</td>
+                        )}
+                        {(aplicacoes.some((b) => b.quantidade != null)) && (
+                          <td style={{ padding: 14, textAlign: 'right', borderBottom: '1px solid #E2E8F0', color: '#334155', fontSize: 12 }}>
+                            {a.quantidade != null ? `${Number(a.quantidade).toFixed(2)} ${a.unidade ?? ''}`.trim() : '—'}
+                          </td>
+                        )}
+                        {(aplicacoes.some((b) => b.custoPorHa != null)) && (
+                          <td style={{ padding: 14, textAlign: 'right', borderBottom: '1px solid #E2E8F0', color: '#334155', fontSize: 12 }}>
+                            {a.custoPorHa != null ? `R$ ${Number(a.custoPorHa).toFixed(2)}` : '—'}
+                          </td>
+                        )}
+                        {(aplicacoes.some((b) => b.custoTotal != null)) && (
+                          <td style={{ padding: 14, textAlign: 'right', borderBottom: '1px solid #E2E8F0', color: '#334155', fontSize: 12 }}>
+                            {a.custoTotal != null ? `R$ ${Number(a.custoTotal).toFixed(2)}` : '—'}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-          </section>
-        )}
+          ) : (
+            <div style={{ padding: 24, color: '#64748B', fontSize: 14 }}>
+              Nenhuma aplicação registrada nesta visita.
+            </div>
+          )}
+        </section>
 
         {/* 6. Pragas e doenças observadas */}
         {pragas.length > 0 && (

@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Relatório de Monitoramento FortSmart",
+  "description": "Contrato app Flutter ↔ front web. Gerado pelo app em publishMonitoramento, armazenado no Supabase (relatorios.dados), renderizado em /r/[token] por RelatorioMonitoramentoContent.",
+  "type": "object",
+  "required": ["tipo", "talhoes"],
+  "properties": {
+    "tipo": {
+      "type": "string",
+      "const": "monitoramento",
+      "description": "Identificador para roteamento no front (RelatorioMonitoramentoContent)"
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "dataGeracao": { "type": "string" },
+        "safra": { "type": "string" },
+        "tecnico": { "type": "string" },
+        "appVersion": { "type": "string" }
+      }
+    },
+    "propriedade": {
+      "type": "object",
+      "properties": {
+        "fazenda": { "type": "string" },
+        "municipio": { "type": "string" },
+        "estado": { "type": "string" }
+      }
+    },
+    "fazenda": { "type": "string" },
+    "safra": { "type": "string" },
+    "data": { "type": "string", "description": "Data formatada (ex: DD/MM/YYYY)" },
+    "tecnico": { "type": "string" },
+    "crea": { "type": "string" },
+    "talhoes": {
+      "type": "array",
+      "description": "Um item por talhão monitorado; multi-talhão suportado",
+      "items": {
+        "type": "object",
+        "required": ["id", "nome", "cultura", "area_ha", "pontos"],
+        "properties": {
+          "id": { "type": "string" },
+          "nome": { "type": "string" },
+          "cultura": { "type": "string" },
+          "area_ha": { "type": "number" },
+          "estagio": { "type": "string" },
+          "poligono_geojson": {
+            "type": "object",
+            "description": "GeoJSON Feature Polygon (polígono real do talhão)",
+            "properties": {
+              "type": { "const": "Feature" },
+              "geometry": {
+                "type": "object",
+                "properties": {
+                  "type": { "const": "Polygon" },
+                  "coordinates": { "type": "array" }
+                }
+              }
+            }
+          },
+          "pontos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "identificador": { "type": "string" },
+                "lat": { "type": "number" },
+                "lng": { "type": "number" },
+                "infestacoes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "string" },
+                      "tipo": { "type": "string", "enum": ["praga", "doenca", "daninha"] },
+                      "nome": { "type": "string" },
+                      "terco": { "type": "string" },
+                      "quantidade": { "type": "number" },
+                      "severidade": { "type": "number" },
+                      "observacao": { "type": "string" },
+                      "imagem": { "type": "string", "description": "URL da foto da ocorrência" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "condicoes_climaticas": {
+            "type": "object",
+            "properties": {
+              "temperatura": { "type": "number" },
+              "umidade": { "type": "number" },
+              "chuva": { "type": "string" }
+            }
+          },
+          "recomendacoes": {
+            "type": "array",
+            "description": "Lista estruturada (organismo + produto + dose) ou lista de { acao }",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nivel": { "type": "string", "enum": ["ACAO_IMEDIATA", "ALTO_RISCO", "MONITORAR", "PREVENTIVO"] },
+                "organismo": { "type": "string" },
+                "tipo": { "type": "string" },
+                "produto": { "type": "string" },
+                "dose": { "type": "string" },
+                "acao": { "type": "string" },
+                "pontos": { "type": "array", "items": { "type": "string" } },
+                "severidade": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "metricas": {
+      "type": "object",
+      "properties": {
+        "totalPontos": { "type": "number" },
+        "totalOcorrencias": { "type": "number" },
+        "nivelRisco": { "type": "string" },
+        "confiancaDados": { "type": "number" },
+        "severidadeMedia": { "type": "number" },
+        "quantidadeMedia": { "type": "number" }
+      }
+    },
+    "estande": {
+      "type": "object",
+      "properties": {
+        "populacao": { "type": "number" },
+        "plantasPorMetro": { "type": "number" },
+        "eficienciaEstande": { "type": "number" },
+        "espacamento": { "type": "number" }
+      }
+    },
+    "cv": {
+      "type": "object",
+      "properties": {
+        "cvPercent": { "type": "number" },
+        "cvClassificacao": { "type": "string" }
+      }
+    },
+    "fenologia": {
+      "type": "object",
+      "properties": {
+        "estadio": { "type": "string" },
+        "dae": { "type": "number" }
+      }
+    },
+    "observacoes": { "type": "string" },
+    "alertas": { "type": "array", "items": { "type": "string" } },
+    "organismos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nome": { "type": "string" },
+          "pontosAfetados": { "type": "number" },
+          "severidadeMedia": { "type": "number" }
+        }
+      }
+    },
+    "imagens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string" },
+          "descricao": { "type": "string" }
+        }
+      }
+    }
+  }
+}

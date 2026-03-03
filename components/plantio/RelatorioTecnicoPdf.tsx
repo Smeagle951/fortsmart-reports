@@ -4,6 +4,7 @@ import EstandeChart from './EstandeChart';
 import LinhaPlantioVisualizer from './LinhaPlantioVisualizer';
 import FitossanidadeResumo from './FitossanidadeResumo';
 import GaleriaImagens from './GaleriaImagens';
+import FortSmartLogo from '@/components/FortSmartLogo';
 import { formatArea, formatDate } from '@/utils/format';
 import type { RelatorioPlantioData } from './DashboardTalhao';
 
@@ -33,9 +34,12 @@ export default function RelatorioTecnicoPdf({
     <section className="space-y-8 print:space-y-6 print:break-inside-avoid">
       {/* Header estilo multinacional */}
       <div className="border-b-2 border-slate-800 pb-4">
-        <h1 className="text-center text-2xl font-bold tracking-wider text-slate-800">
-          F O R T S M A R T &nbsp;&nbsp; A G R O
-        </h1>
+        <div className="flex flex-col items-center gap-3">
+          <FortSmartLogo size={64} />
+          <h1 className="text-center text-2xl font-bold tracking-wider text-slate-800">
+            F O R T S M A R T &nbsp;&nbsp; A G R O
+          </h1>
+        </div>
         <p className="mt-2 text-center text-sm font-medium uppercase tracking-widest text-slate-600">
           Relatório Agronômico – Safra {meta.safra ?? '2025'}
         </p>
@@ -53,9 +57,11 @@ export default function RelatorioTecnicoPdf({
         <h3 className="mb-2 text-sm font-semibold uppercase text-slate-600">
           Índice Agronômico do Talhão: {iat.valor ?? '—'}/100
         </h3>
-        <p className="text-slate-700">
-          Status: {iat.status ?? '—'}, porém com pontos de atenção
-        </p>
+        {iat.status != null && iat.status !== '' ? (
+          <p className="text-slate-700">
+            Status: {iat.status}. Pontos de atenção no talhão.
+          </p>
+        ) : null}
       </div>
 
       {/* Evolução de Estande */}
@@ -75,18 +81,21 @@ export default function RelatorioTecnicoPdf({
         </div>
       )}
 
-      {/* Distribuição Longitudinal */}
-      {plantabilidade.linha && plantabilidade.linha.length > 0 && (
+      {/* Distribuição Longitudinal: trena com linha real ou simulada a partir das % */}
+      {((plantabilidade.linha && plantabilidade.linha.length > 0) ||
+        plantabilidade.okPct != null || plantabilidade.duplasPct != null ||
+        plantabilidade.triplasPct != null ||         plantabilidade.falhasPct != null) && (
         <div>
           <h3 className="mb-3 text-sm font-semibold uppercase text-slate-600">
-            Distribuição Longitudinal do Plantio
+            Visualização da qualidade do plantio
           </h3>
           <LinhaPlantioVisualizer
-            linha={plantabilidade.linha}
+            linha={plantabilidade.linha || []}
             okPct={plantabilidade.okPct}
             duplasPct={plantabilidade.duplasPct}
             triplasPct={plantabilidade.triplasPct}
             falhasPct={plantabilidade.falhasPct}
+            espacamentosIndividuais={plantabilidade.espacamentosIndividuais}
           />
           <p className="mt-2 text-sm text-slate-600">
             OK: {plantabilidade.okPct ?? 0}% | Duplas: {plantabilidade.duplasPct ?? 0}% | Triplas: {plantabilidade.triplasPct ?? 0}% | Falhas: {plantabilidade.falhasPct ?? 0}%
@@ -94,17 +103,21 @@ export default function RelatorioTecnicoPdf({
         </div>
       )}
 
-      {/* Fenologia */}
-      <div>
-        <h3 className="mb-2 text-sm font-semibold uppercase text-slate-600">
-          Fenologia
-        </h3>
-        <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-700">
-          <span><strong>Atual:</strong> {evolucao.estadioAtual ?? '—'}</span>
-          <span><strong>Previsto:</strong> {evolucao.estadioPrevisto ?? '—'}</span>
-          <span><strong>Atraso Fenológico:</strong> {evolucao.atrasoFenologico ?? '—'} folha(s)</span>
+      {/* Fenologia - só exibe quando houver pelo menos um dado */}
+      {(evolucao.estadioAtual != null && evolucao.estadioAtual !== '') ||
+        (evolucao.estadioPrevisto != null && evolucao.estadioPrevisto !== '') ||
+        (evolucao.atrasoFenologico != null) ? (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold uppercase text-slate-600">
+            Fenologia
+          </h3>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-700">
+            <span><strong>Atual:</strong> {evolucao.estadioAtual ?? '—'}</span>
+            <span><strong>Previsto:</strong> {evolucao.estadioPrevisto ?? '—'}</span>
+            <span><strong>Atraso Fenológico:</strong> {evolucao.atrasoFenologico != null ? `${evolucao.atrasoFenologico} folha(s)` : '—'}</span>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {/* Fitossanidade */}
       <FitossanidadeResumo

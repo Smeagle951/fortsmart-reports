@@ -8,14 +8,6 @@ import ReportHeader from '@/components/ReportHeader';
 import TalhaoBloco from '@/components/TalhaoBloco';
 import { calcularMetricasTalhao, corClassificacao } from '@/lib/calculations';
 
-export default function HomePage() {
-  return (
-    <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>Carregando…</div>}>
-      <HomeContent />
-    </Suspense>
-  );
-}
-
 function HomeContent() {
   const searchParams = useSearchParams();
   const tokenFromUrl = searchParams.get('token');
@@ -171,5 +163,13 @@ function HomeContent() {
         </footer>
       </div>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8FAFC', color: '#64748B' }}>Carregando…</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

@@ -122,16 +122,17 @@ export default function MapaInterativo({ pontos, poligono, talhaoId }: MapaInter
               </div>
             `).join('');
 
-                const popup = L.popup({ maxWidth: 260, className: '' }).setContent(`
-          <div style="font-family:Inter,sans-serif; min-width:200px;">
+                const popup = L.popup({ maxWidth: 280, className: 'mapa-popup-card' }).setContent(`
+          <div style="font-family:Inter,sans-serif; min-width:220px;">
+            <div style="font-size:10px;color:#94A3B8;font-weight:600;margin-bottom:4px;letter-spacing:.04em">DETALHES DO PONTO</div>
             <div style="
               background:linear-gradient(135deg,#1B5E20,#2E7D32);
-              color:white; padding:8px 12px; border-radius:6px 6px 0 0;
-              margin:-1px -1px 8px;
-              font-weight:700; font-size:13px;
+              color:white; padding:10px 12px; border-radius:8px 8px 0 0;
+              margin:-1px -1px 0;
+              font-weight:700; font-size:14px;
             ">📍 Ponto ${ponto.identificador}</div>
-            <div style="font-size:11px;color:#94A3B8;margin-bottom:8px">
-              ${ponto.lat.toFixed(4)}, ${ponto.lng.toFixed(4)}
+            <div style="font-size:11px;color:#64748B;margin:8px 0;padding:6px 8px;background:#F8FAFC;border-radius:6px">
+              ${ponto.lat.toFixed(5)}, ${ponto.lng.toFixed(5)}
             </div>
             ${infContent}
           </div>
@@ -193,9 +194,10 @@ export default function MapaInterativo({ pontos, poligono, talhaoId }: MapaInter
 
     return (
         <div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 12 }}>
-                🗺️ Mapa do Talhão
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>
+                Polígono do talhão · Pontos georreferenciados
             </h3>
+            <p className="no-print" style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Clique no alfinete para ver detalhes do ponto.</p>
             <div
                 ref={mapRef}
                 style={{ height: 360, borderRadius: 12, overflow: 'hidden', border: '1px solid #E2E8F0' }}

@@ -1,179 +1,112 @@
 {
   "tipoRelatorio": "plantio",
   "meta": {
-    "id": "2026-02-24-talhao15",
-    "dataGeracao": "2026-02-24",
-    "tecnico": "Eng. Paulo Ferreira",
-    "tecnicoCrea": "PR-12345",
-    "safra": "2025/26",
+    "id": "",
+    "dataGeracao": "",
+    "tecnico": "",
+    "tecnicoCrea": "",
+    "safra": "",
     "versao": 1,
-    "status": "Final"
+    "status": "Preliminar"
   },
   "propriedade": {
-    "fazenda": "Boa Esperança",
-    "municipio": "Cascavel",
-    "estado": "PR",
-    "proprietario": "João Silva"
+    "fazenda": "",
+    "municipio": "",
+    "estado": "",
+    "proprietario": ""
   },
   "talhao": {
-    "id": "talhao-uuid-15",
-    "nome": "TH-15",
-    "numero": 15,
-    "cultura": "Soja",
-    "area": 32.4,
-    "dataPlantio": "2025-10-15"
+    "id": "",
+    "nome": "",
+    "numero": null,
+    "cultura": "",
+    "area": null,
+    "dataPlantio": ""
   },
   "contextoSafra": {
-    "materialVariedade": "TMG 2183 IPRO",
-    "empresa": "TMG",
-    "espacamentoCm": 45,
-    "populacaoAlvoPlHa": 280000,
-    "dae": 45,
-    "dap": 52
+    "materialVariedade": "",
+    "empresa": "",
+    "espacamentoCm": null,
+    "populacaoAlvoPlHa": null,
+    "dae": null,
+    "dap": null,
+    "dataPlantio": ""
   },
   "indiceAgronomicoTalhao": {
-    "valor": 82,
+    "valor": null,
     "maximo": 100,
     "status": "Saudável",
-    "itens": [
-      { "label": "Fenologia", "valor": "Normal" },
-      { "label": "Estande", "valor": "Leve redução (–8%)" },
-      { "label": "Distribuição de plantio", "valor": "Moderada" },
-      { "label": "Sanidade", "valor": "Sem alertas" }
-    ]
+    "itens": []
   },
   "evolucaoCultura": {
-    "estadioAtual": "V4",
-    "estadioPrevisto": "V5",
-    "somaTermica": 325,
-    "atrasoFenologico": -1
+    "estadioAtual": "",
+    "estadioPrevisto": "",
+    "somaTermica": null,
+    "atrasoFenologico": null,
+    "dae": null,
+    "dap": null
   },
   "plantabilidade": {
-    "espacamentoIdealCm": 8.3,
-    "espacamentoRealCm": 9.4,
-    "cvPercentual": 18.2,
-    "duplasPct": 12,
-    "triplasPct": 4,
-    "falhasPct": 21,
-    "okPct": 63,
-    "indicePlantabilidade": 76,
-    "linha": [
-      { "tipo": "ok", "posicao": 0 },
-      { "tipo": "ok", "posicao": 1 },
-      { "tipo": "dupla", "posicao": 2 },
-      { "tipo": "ok", "posicao": 3 },
-      { "tipo": "falha", "posicao": 4 },
-      { "tipo": "ok", "posicao": 5 },
-      { "tipo": "tripla", "posicao": 6 },
-      { "tipo": "ok", "posicao": 7 },
-      { "tipo": "ok", "posicao": 8 },
-      { "tipo": "falha", "posicao": 9 },
-      { "tipo": "ok", "posicao": 10 },
-      { "tipo": "dupla", "posicao": 11 },
-      { "tipo": "ok", "posicao": 12 }
-    ]
+    "espacamentoIdealCm": null,
+    "espacamentoRealCm": null,
+    "cvPercentual": null,
+    "duplasPct": null,
+    "triplasPct": null,
+    "falhasPct": null,
+    "okPct": null,
+    "indicePlantabilidade": null,
+    "linha": [],
+    "espacamentosIndividuais": []
   },
   "estande": {
-    "registros": [
-      { "data": "2025-11-12", "plantasPorMetro": 9.8, "plantasHa": 204000 },
-      { "data": "2025-11-20", "plantasPorMetro": 9.1, "plantasHa": 188000 },
-      { "data": "2025-11-27", "plantasPorMetro": 9.0, "plantasHa": 187500 }
-    ],
-    "perdaTotalPct": -11.2,
-    "perdaSemanalPct": -3.7
+    "registros": [],
+    "perdaTotalPct": null,
+    "perdaSemanalPct": null
   },
   "fitossanidade": {
-    "lagarta": "Baixa",
-    "percevejo": "Moderada",
-    "ferrugem": "Baixa",
-    "ipe": 0.22,
-    "ipeStatus": "Estável"
+    "lagarta": "",
+    "percevejo": "",
+    "ferrugem": "",
+    "ipe": null,
+    "ipeStatus": ""
   },
   "diagnosticoIntegrado": {
-    "resumo": [
-      "Atraso fenológico leve (–1 folha)",
-      "Perda de estande moderada (–11%)",
-      "Plantabilidade com irregularidade",
-      "Pressão de percevejo moderada"
-    ],
-    "spt": 78,
-    "hipoteses": [
-      "Déficit hídrico entre 10–18 DAE",
-      "Compactação superficial nas linhas",
-      "Irregularidade de profundidade de semente"
-    ],
-    "recomendacoes": [
-      "Aumentar frequência de monitoramento nos pontos críticos",
-      "Revisar regulagens para próxima safra",
-      "Realizar controle de percevejo em janela ideal (V5–R1)",
-      "Recalcular expectativa de produtividade"
-    ]
+    "resumo": [],
+    "spt": null,
+    "hipoteses": [],
+    "recomendacoes": []
   },
   "fenologia": {
-    "estadio": "V4",
-    "ultimaAvaliacaoDias": 3,
-    "dataUltimaAvaliacao": "2026-02-21",
-    "historico": [
-      { "estagio": "V2", "data": "2026-01-08", "observacoes": "Bom estande" },
-      { "estagio": "V4", "data": "2026-02-21", "observacoes": "Uniforme" }
-    ]
+    "estadio": "",
+    "estagio": "",
+    "ultimaAvaliacaoDias": null,
+    "dataUltimaAvaliacao": "",
+    "dae": null,
+    "dap": null,
+    "historico": []
   },
   "populacao": {
-    "plantasHa": 265000,
-    "estandeEfetivoPlHa": 258000,
-    "eficienciaPct": 94.2,
-    "plantasPorMetro": 11.8,
-    "situacao": "OK"
+    "plantasHa": null,
+    "estandeEfetivoPlHa": null,
+    "eficienciaPct": null,
+    "plantasPorMetro": null,
+    "situacao": ""
   },
-  "aplicacoes": [
-    { "tipo": "Fungicida", "data": "2026-02-21", "produto": "Exemplo Max", "dose": "0.5", "unidade": "L/ha", "status": "Realizado" }
-  ],
-  "pragas": [
-    { "tipo": "praga", "alvo": "Percevejo", "incidencia": "Moderada", "severidade": "Média", "situacao": "Monitorar" }
-  ],
-  "condicoes": {
-    "temperatura": 28.5,
-    "umidade": 72,
-    "vento": "Leve",
-    "soloUmidade": "Úmido"
-  },
-  "mapa": {
-    "viewBox": "0 0 400 300",
-    "path": "M 80 50 L 320 55 L 310 250 L 90 245 Z",
-    "pontos": []
-  },
-  "imagens": [
-    {
-      "url": "https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=400",
-      "descricao": "Ponto 1 - Estádio V4, estande uniforme",
-      "categoria": "fenologia",
-      "data": "2026-02-21"
-    },
-    {
-      "url": "https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?w=400",
-      "descricao": "Linha de plantio - irregularidade em trecho central",
-      "categoria": "plantio",
-      "data": "2026-02-21"
-    }
-  ],
-  "diagnostico": {
-    "problemaPrincipal": "Lavoura em desenvolvimento com leve atraso e irregularidade de plantio.",
-    "causaProvavel": "Possível déficit hídrico e compactação superficial.",
-    "nivelRisco": "Baixo",
-    "urgenciaAcao": "Rotina"
-  },
+  "aplicacoes": [],
+  "pragas": [],
+  "condicoes": {},
+  "mapa": {},
+  "imagens": [],
+  "diagnostico": {},
   "planoAcao": {
-    "objetivoManejo": "Manter sanidade e monitorar pontos críticos.",
-    "acoes": [
-      { "prioridade": "1", "acao": "Monitorar percevejo na janela V5–R1", "prazo": "14 dias" },
-      { "prioridade": "2", "acao": "Revisar regulagens para próxima safra", "prazo": "Pós-colheita" }
-    ]
+    "objetivoManejo": "",
+    "acoes": []
   },
   "assinaturaTecnica": {
-    "nome": "Eng. Paulo Ferreira",
-    "crea": "PR-12345",
-    "dataAssinatura": "2026-02-24",
-    "cidade": "Cascavel/PR"
+    "nome": "",
+    "crea": "",
+    "dataAssinatura": "",
+    "cidade": ""
   },
-  "conclusao": "Talhão TH-15 em V4 com estande dentro do esperado e plantabilidade moderada. Recomenda-se monitoramento de percevejo e revisão de regulagens na próxima safra."
+  "conclusao": ""
 }

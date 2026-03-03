@@ -24,6 +24,7 @@ export default function DiagnosticoIntegrado({ data }: DiagnosticoIntegradoProps
   const spt = diag.spt;
   const evolucao = data.evolucaoCultura || {};
   const plantabilidade = data.plantabilidade || {};
+  const contextoSafra = data.contextoSafra || {};
   const estande = data.estande || {};
   const fitossanidade = data.fitossanidade || {};
 
@@ -80,13 +81,17 @@ export default function DiagnosticoIntegrado({ data }: DiagnosticoIntegradoProps
             <div className="rounded-lg bg-slate-50 p-4">
               <h4 className="mb-2 font-medium text-slate-700">Fenologia</h4>
               <p className="text-sm text-slate-600">
-                Estágio Atual: {evolucao.estadioAtual ?? '—'}
-                <br />
-                Estágio Esperado: {evolucao.estadioPrevisto ?? '—'}
-                <br />
-                Atraso: {evolucao.atrasoFenologico != null
-                  ? `${evolucao.atrasoFenologico} folha(s)`
-                  : '—'}
+                {(evolucao.estadioAtual != null && evolucao.estadioAtual !== '') ||
+                 (evolucao.estadioPrevisto != null && evolucao.estadioPrevisto !== '') ||
+                 (evolucao.atrasoFenologico != null) ? (
+                  <>
+                    {(evolucao.estadioAtual != null && evolucao.estadioAtual !== '') && <><strong>Estágio Atual:</strong> {evolucao.estadioAtual}<br /></>}
+                    {(evolucao.estadioPrevisto != null && evolucao.estadioPrevisto !== '') && <><strong>Estágio Esperado:</strong> {evolucao.estadioPrevisto}<br /></>}
+                    {(evolucao.atrasoFenologico != null) && <><strong>Atraso:</strong> {evolucao.atrasoFenologico} folha(s)</>}
+                  </>
+                ) : (
+                  <>Estágio Atual: — — Estágio Esperado: — — Atraso: —</>
+                )}
               </p>
             </div>
 
@@ -94,30 +99,37 @@ export default function DiagnosticoIntegrado({ data }: DiagnosticoIntegradoProps
               <h4 className="mb-2 font-medium text-slate-700">Estande</h4>
               <p className="text-sm text-slate-600">
                 {estande.registros?.length
-                  ? `Estande Atual: ${estande.registros[0].plantasPorMetro} plantas/m`
-                  : '—'}
+                  ? `Estande Atual: ${Number(estande.registros[estande.registros.length - 1]?.plantasPorMetro ?? 0).toFixed(2)} plantas/m`
+                  : 'Estande Atual: —'}
                 <br />
-                Perda Total: {estande.perdaTotalPct != null ? `${estande.perdaTotalPct}%` : '—'}
+                Perda Total: {estande.perdaTotalPct != null ? `${Number(estande.perdaTotalPct).toFixed(1)}%` : '—'}
               </p>
             </div>
 
             <div className="rounded-lg bg-slate-50 p-4">
               <h4 className="mb-2 font-medium text-slate-700">Plantabilidade</h4>
               <p className="text-sm text-slate-600">
-                Espaçamento ideal: {plantabilidade.espacamentoIdealCm ?? '—'} cm
+                Espaçamento ideal: {plantabilidade.espacamentoIdealCm != null || contextoSafra?.espacamentoCm != null ? `${plantabilidade.espacamentoIdealCm ?? contextoSafra?.espacamentoCm} cm` : '—'}
                 <br />
-                Espaçamento real: {plantabilidade.espacamentoRealCm ?? '—'} cm
+                Espaçamento real: {plantabilidade.espacamentoRealCm != null || contextoSafra?.espacamentoCm != null ? `${plantabilidade.espacamentoRealCm ?? contextoSafra?.espacamentoCm} cm` : '—'}
                 <br />
-                Falhas críticas &gt; 20 cm: {plantabilidade.falhasPct ?? '—'}%
+                Falhas críticas &gt; 20 cm: {plantabilidade.falhasPct != null ? `${Number(plantabilidade.falhasPct).toFixed(1)}%` : '—'}
               </p>
             </div>
 
             <div className="rounded-lg bg-slate-50 p-4">
               <h4 className="mb-2 font-medium text-slate-700">Fitossanidade</h4>
               <p className="text-sm text-slate-600">
-                Pressão atual: {fitossanidade.lagarta ?? '—'} a {fitossanidade.percevejo ?? '—'}
-                <br />
-                IPE: {fitossanidade.ipe ?? '—'}
+                {(fitossanidade.lagarta || fitossanidade.percevejo || fitossanidade.ferrugem || fitossanidade.ipe != null) ? (
+                  <>
+                    {fitossanidade.lagarta && <><strong>Lagarta:</strong> {fitossanidade.lagarta}<br /></>}
+                    {fitossanidade.percevejo && <><strong>Percevejo:</strong> {fitossanidade.percevejo}<br /></>}
+                    {fitossanidade.ferrugem && <><strong>Ferrugem:</strong> {fitossanidade.ferrugem}<br /></>}
+                    {fitossanidade.ipe != null && <><strong>IPE:</strong> {Number(fitossanidade.ipe).toFixed(2)}{fitossanidade.ipeStatus ? ` (${fitossanidade.ipeStatus})` : ''}</>}
+                  </>
+                ) : (
+                  <>Pressão atual: — — IPE: —</>
+                )}
               </p>
             </div>
           </div>

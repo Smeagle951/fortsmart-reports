@@ -1,0 +1,1277 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://fortsmart.agro/schemas/report-v2-enterprise",
+    "title": "FortSmart Enterprise Report — Schema V2",
+    "description": "Modelo unificado e modular para relatórios FortSmart. Compatível com plantio, visita técnica e colheita. Todos os campos derivam das telas reais do aplicativo.",
+    "version": "2.0.0",
+    "type": "object",
+    "required": [
+        "core",
+        "propriedade",
+        "talhao"
+    ],
+    "properties": {
+        "core": {
+            "type": "object",
+            "description": "Bloco obrigatório de identidade e metadados do relatório",
+            "required": [
+                "reportId",
+                "reportType",
+                "version",
+                "status",
+                "createdAt",
+                "generatedBy"
+            ],
+            "properties": {
+                "reportId": {
+                    "type": "string",
+                    "description": "UUID único do relatório"
+                },
+                "reportType": {
+                    "type": "string",
+                    "enum": [
+                        "plantio",
+                        "visita_tecnica",
+                        "colheita"
+                    ]
+                },
+                "version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Número de versão do documento (incrementa a cada edição)"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "published",
+                        "archived"
+                    ]
+                },
+                "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "publishedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "generatedBy": {
+                    "type": "object",
+                    "required": [
+                        "userId",
+                        "nome",
+                        "role"
+                    ],
+                    "properties": {
+                        "userId": {
+                            "type": "string"
+                        },
+                        "nome": {
+                            "type": "string"
+                        },
+                        "role": {
+                            "type": "string",
+                            "enum": [
+                                "agronomo",
+                                "consultor",
+                                "admin",
+                                "tecnico"
+                            ]
+                        },
+                        "crea": {
+                            "type": "string",
+                            "description": "Registro CREA/CRM do profissional"
+                        }
+                    }
+                },
+                "system": {
+                    "type": "object",
+                    "properties": {
+                        "appVersion": {
+                            "type": "string",
+                            "description": "Versão do app FortSmart que gerou o relatório"
+                        },
+                        "backendVersion": {
+                            "type": "string"
+                        },
+                        "schemaVersion": {
+                            "type": "integer",
+                            "const": 2
+                        }
+                    }
+                }
+            }
+        },
+        "propriedade": {
+            "type": "object",
+            "description": "Dados da fazenda/propriedade - vêm do cabeçalho do card nova safra",
+            "required": [
+                "fazenda",
+                "municipio",
+                "estado"
+            ],
+            "properties": {
+                "fazendaId": {
+                    "type": "string"
+                },
+                "fazenda": {
+                    "type": "string"
+                },
+                "municipio": {
+                    "type": "string"
+                },
+                "estado": {
+                    "type": "string",
+                    "maxLength": 2
+                },
+                "proprietario": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "number",
+                    "description": "Centroide da propriedade"
+                },
+                "longitude": {
+                    "type": "number"
+                }
+            }
+        },
+        "talhao": {
+            "type": "object",
+            "description": "Dados do talhão - vêm do card de criação de safra no app",
+            "required": [
+                "id",
+                "nome",
+                "cultura"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "numero": {
+                    "type": [
+                        "number",
+                        "string",
+                        "null"
+                    ]
+                },
+                "cultura": {
+                    "type": "string",
+                    "description": "Nome da cultura (Soja, Milho, etc)"
+                },
+                "culturaId": {
+                    "type": "string"
+                },
+                "areaHa": {
+                    "type": "number",
+                    "description": "Área em hectares"
+                },
+                "dataPlantio": {
+                    "type": "string",
+                    "format": "date"
+                },
+                "safra": {
+                    "type": "string",
+                    "description": "Ex: 2025/26"
+                }
+            }
+        },
+        "contextoSafra": {
+            "type": "object",
+            "description": "Informações agronômicas da safra - cabeçalho do card nova safra",
+            "properties": {
+                "hibrido": {
+                    "type": "string",
+                    "description": "Nome do híbrido/variedade (do campo 'Material/Variedade')"
+                },
+                "empresa": {
+                    "type": "string",
+                    "description": "Empresa sementeira"
+                },
+                "lote": {
+                    "type": "string"
+                },
+                "germinacaoPct": {
+                    "type": "number",
+                    "description": "% germinação teórica da semente (campo da tela de estande)"
+                },
+                "tratamentoSementes": {
+                    "type": "string",
+                    "description": "Tratamento aplicado nas sementes"
+                },
+                "espacamentoCm": {
+                    "type": "number",
+                    "description": "Espaçamento entre linhas projetado (cm)"
+                },
+                "populacaoAlvoPlHa": {
+                    "type": "number",
+                    "description": "População alvo plantas/ha (campo padrão por cultura)"
+                },
+                "dae": {
+                    "type": "integer",
+                    "description": "Dias Após Emergência"
+                },
+                "dap": {
+                    "type": "integer",
+                    "description": "Dias Após Plantio"
+                }
+            }
+        },
+        "modulos": {
+            "type": "object",
+            "description": "Módulos dinâmicos. Presença depende do tipo de relatório.",
+            "properties": {
+                "plantio": {
+                    "type": "object",
+                    "description": "Módulo de Plantio — dados das telas de calibragem e estande do app",
+                    "properties": {
+                        "equipamento": {
+                            "type": "object",
+                            "description": "Dados da tela de Calibragem da Plantadeira",
+                            "properties": {
+                                "modelo": {
+                                    "type": "string"
+                                },
+                                "linhas": {
+                                    "type": "integer"
+                                },
+                                "velocidadeKmh": {
+                                    "type": "number",
+                                    "description": "Velocidade média de plantio (km/h)"
+                                },
+                                "pressaoPneuBar": {
+                                    "type": "number"
+                                },
+                                "profundidadeCm": {
+                                    "type": "number",
+                                    "description": "Profundidade de deposição da semente (cm)"
+                                }
+                            }
+                        },
+                        "plantabilidade": {
+                            "type": "object",
+                            "description": "Dados da tela de CV% da plantadeira (planting_cv module)",
+                            "properties": {
+                                "espacamentoIdealCm": {
+                                    "type": "number"
+                                },
+                                "espacamentoRealCm": {
+                                    "type": "number",
+                                    "description": "Espaçamento médio real medido em campo"
+                                },
+                                "cvPercentual": {
+                                    "type": "number",
+                                    "description": "Coeficiente de Variação % — calculado pelo app (Desvio Padrão Amostral / Média × 100)"
+                                },
+                                "cvClassificacao": {
+                                    "type": "string",
+                                    "enum": [
+                                        "excelente",
+                                        "bom",
+                                        "ruim"
+                                    ],
+                                    "description": "Classificação CV: excelente(<15%), bom(15-30%), ruim(>30%)"
+                                },
+                                "falhasPct": {
+                                    "type": "number",
+                                    "description": "% de falhas na linha"
+                                },
+                                "duplasPct": {
+                                    "type": "number",
+                                    "description": "% de duplas na linha"
+                                },
+                                "triplasPct": {
+                                    "type": "number"
+                                },
+                                "okPct": {
+                                    "type": "number"
+                                },
+                                "scorePlantabilidade": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100,
+                                    "description": "Score 0-100 calculado pelo app"
+                                },
+                                "espacamentosIndividuais": {
+                                    "type": "array",
+                                    "description": "Lista de medições individuais de espaçamento (cm) — dado bruto da tela",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "cm": {
+                                                "type": "number"
+                                            },
+                                            "tipo": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "ok",
+                                                    "dupla",
+                                                    "tripla",
+                                                    "falha"
+                                                ]
+                                            }
+                                        }
+                                    }
+                                },
+                                "linha": {
+                                    "type": "array",
+                                    "description": "Pontos da linha de plantio para visualização gráfica rolável",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "tipo": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "ok",
+                                                    "dupla",
+                                                    "tripla",
+                                                    "falha"
+                                                ]
+                                            },
+                                            "posicao": {
+                                                "type": "number"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "estandeEmergencia": {
+                            "type": "object",
+                            "description": "Dados da tela de Estande de Plantas (PlantingStandRegistrationScreen)",
+                            "properties": {
+                                "dataAvaliacao": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "comprimentoLinhaAvaliado": {
+                                    "type": "number",
+                                    "description": "Comprimento da linha avaliado em metros"
+                                },
+                                "numeroLinhasAvaliadas": {
+                                    "type": "integer",
+                                    "description": "Número de linhas contadas"
+                                },
+                                "espacamentoEntreLinhas": {
+                                    "type": "number",
+                                    "description": "Espaçamento entre linhas em metros"
+                                },
+                                "plantasContadas": {
+                                    "type": "integer",
+                                    "description": "Total de plantas emergidas contadas pelo técnico"
+                                },
+                                "plantasPorMetro": {
+                                    "type": "number"
+                                },
+                                "populacaoRealHa": {
+                                    "type": "number",
+                                    "description": "População real plantas/ha — calculada automaticamente"
+                                },
+                                "populacaoAlvoHa": {
+                                    "type": "number"
+                                },
+                                "percentualAtingidoAlvo": {
+                                    "type": "number",
+                                    "description": "% da população alvo atingida"
+                                },
+                                "desvioEmergencia": {
+                                    "type": "number",
+                                    "description": "Diferença entre previsto e realizado (plantas/ha)"
+                                },
+                                "germinacaoTeoricaPct": {
+                                    "type": "number"
+                                },
+                                "classificacao": {
+                                    "type": "string",
+                                    "enum": [
+                                        "excelente",
+                                        "bom",
+                                        "regular",
+                                        "ruim",
+                                        "nao_avaliado"
+                                    ],
+                                    "description": "excelente(≥90%), bom(75-89%), regular(60-74%), ruim(<60%)"
+                                },
+                                "scoreEstande": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100
+                                },
+                                "observacoes": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "visitaTecnica": {
+                    "type": "object",
+                    "description": "Módulo de Visita Técnica — dados das telas do Consultor Agronômico",
+                    "properties": {
+                        "evolucaoFenologica": {
+                            "type": "object",
+                            "description": "Dados do submódulo Evolução Fenológica (PhenologicalRecordModel completo)",
+                            "properties": {
+                                "dataRegistro": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "dae": {
+                                    "type": "integer",
+                                    "description": "Dias Após Emergência"
+                                },
+                                "estagioFenologico": {
+                                    "type": "string",
+                                    "description": "Estágio informado pelo técnico (verdade agronômica) ou sugerido pela IA"
+                                },
+                                "estagioOrigem": {
+                                    "type": "string",
+                                    "enum": [
+                                        "user_provided",
+                                        "ai_suggested",
+                                        "ai_confirmed",
+                                        "manual_correction"
+                                    ],
+                                    "description": "Origem da classificação do estágio"
+                                },
+                                "estagioConfianca": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1,
+                                    "description": "Confiança: 1.0 se user_provided"
+                                },
+                                "aiSuggestedStage": {
+                                    "type": "string",
+                                    "description": "Sugestão da IA (apenas se técnico não informou)"
+                                },
+                                "descricaoEstagio": {
+                                    "type": "string"
+                                },
+                                "medicoesCrescimento": {
+                                    "type": "object",
+                                    "description": "Medições vegetativas coletadas em campo",
+                                    "properties": {
+                                        "alturaCm": {
+                                            "type": "number"
+                                        },
+                                        "numeroFolhas": {
+                                            "type": "integer"
+                                        },
+                                        "numeroFolhasTrifolioladas": {
+                                            "type": "integer",
+                                            "description": "Soja/Feijão"
+                                        },
+                                        "diametroColmoMm": {
+                                            "type": "number",
+                                            "description": "Milho/Sorgo — diâmetro do colmo"
+                                        },
+                                        "numeroNos": {
+                                            "type": "integer",
+                                            "description": "Soja/Feijão"
+                                        },
+                                        "espacamentoEntreNosCm": {
+                                            "type": "number",
+                                            "description": "Média calculada automaticamente"
+                                        },
+                                        "espacamentosIndividuais": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "description": "Lista de medições individuais (cm)"
+                                        },
+                                        "espacamentoDesvioPadrao": {
+                                            "type": "number"
+                                        },
+                                        "espacamentoCVPercent": {
+                                            "type": "number"
+                                        },
+                                        "numeroAfilhos": {
+                                            "type": "integer",
+                                            "description": "Trigo/Aveia/Arroz"
+                                        },
+                                        "comprimentoPaniculaCm": {
+                                            "type": "number",
+                                            "description": "Arroz/Sorgo"
+                                        },
+                                        "insercaoEspigaCm": {
+                                            "type": "number",
+                                            "description": "Milho"
+                                        },
+                                        "comprimentoEspigaCm": {
+                                            "type": "number",
+                                            "description": "Milho"
+                                        },
+                                        "numeroFileirasGraos": {
+                                            "type": "integer",
+                                            "description": "Milho"
+                                        },
+                                        "numeroRamosVegetativos": {
+                                            "type": "integer",
+                                            "description": "Algodão"
+                                        },
+                                        "numeroRamosReprodutivos": {
+                                            "type": "integer",
+                                            "description": "Algodão"
+                                        },
+                                        "alturaPrimeiroRamoFrutiferoCm": {
+                                            "type": "number",
+                                            "description": "Algodão"
+                                        },
+                                        "numeroBotoesFlorais": {
+                                            "type": "integer",
+                                            "description": "Algodão"
+                                        },
+                                        "numeroMacasCapulhos": {
+                                            "type": "integer",
+                                            "description": "Algodão"
+                                        }
+                                    }
+                                },
+                                "medicoesProdutivas": {
+                                    "type": "object",
+                                    "description": "Medições de desenvolvimento reprodutivo",
+                                    "properties": {
+                                        "vagensPlanta": {
+                                            "type": "number",
+                                            "description": "Leguminosas — vagens por planta"
+                                        },
+                                        "comprimentoVagensCm": {
+                                            "type": "number"
+                                        },
+                                        "graosVagem": {
+                                            "type": "number"
+                                        },
+                                        "graosVagemIndividuais": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "number"
+                                            }
+                                        },
+                                        "graosVagemMedia": {
+                                            "type": "number"
+                                        },
+                                        "graosVagemDesvioPadrao": {
+                                            "type": "number"
+                                        },
+                                        "graosVagemCVPercent": {
+                                            "type": "number"
+                                        },
+                                        "diametroVagensCmMedia": {
+                                            "type": "number"
+                                        },
+                                        "diametroCapulhoMmMedia": {
+                                            "type": "number",
+                                            "description": "Algodão"
+                                        },
+                                        "pesoCapulhoGMedia": {
+                                            "type": "number",
+                                            "description": "Algodão"
+                                        },
+                                        "espigasPlanta": {
+                                            "type": "number",
+                                            "description": "Milho — espigas por planta"
+                                        },
+                                        "pmgGramas": {
+                                            "type": "number",
+                                            "description": "Peso de Mil Grãos (g) — R7/R8"
+                                        }
+                                    }
+                                },
+                                "estandeEDensidade": {
+                                    "type": "object",
+                                    "description": "Estande e densidade durante visita técnica",
+                                    "properties": {
+                                        "estandePlantasHa": {
+                                            "type": "number"
+                                        },
+                                        "percentualFalhas": {
+                                            "type": "number"
+                                        },
+                                        "percentualSanidade": {
+                                            "type": "number"
+                                        }
+                                    }
+                                },
+                                "condicoesCampo": {
+                                    "type": "object",
+                                    "description": "Condições ambientais no momento da avaliação",
+                                    "properties": {
+                                        "temperaturaMediaC": {
+                                            "type": "number"
+                                        },
+                                        "umidadeRelativaPct": {
+                                            "type": "number"
+                                        },
+                                        "sintomasObservados": {
+                                            "type": "string"
+                                        },
+                                        "presencaPragas": {
+                                            "type": "boolean"
+                                        },
+                                        "presencaDoencas": {
+                                            "type": "boolean"
+                                        }
+                                    }
+                                },
+                                "gps": {
+                                    "type": "object",
+                                    "description": "Ponto GPS onde a avaliação fenológica foi realizada",
+                                    "properties": {
+                                        "latitude": {
+                                            "type": "number"
+                                        },
+                                        "longitude": {
+                                            "type": "number"
+                                        }
+                                    }
+                                },
+                                "responsavel": {
+                                    "type": "string"
+                                },
+                                "observacoes": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "fitossanidade": {
+                            "type": "object",
+                            "description": "Dados de pragas, doenças e daninhas",
+                            "properties": {
+                                "pragas": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "alvo": {
+                                                "type": "string"
+                                            },
+                                            "culturaId": {
+                                                "type": "string"
+                                            },
+                                            "incidencia": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "Ausente",
+                                                    "Pontual",
+                                                    "Moderada",
+                                                    "Alta"
+                                                ]
+                                            },
+                                            "severidade": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "baixa",
+                                                    "media",
+                                                    "alta",
+                                                    "critica"
+                                                ]
+                                            },
+                                            "nivelAcao": {
+                                                "type": "string"
+                                            },
+                                            "nivelContagem": {
+                                                "type": "string",
+                                                "description": "Ex: '2 lagartas/m²'"
+                                            },
+                                            "situacao": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "OK",
+                                                    "Monitorar",
+                                                    "Controlar",
+                                                    "Urgente"
+                                                ]
+                                            },
+                                            "lat": {
+                                                "type": "number"
+                                            },
+                                            "lng": {
+                                                "type": "number"
+                                            },
+                                            "observacoes": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                },
+                                "doencas": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "alvo": {
+                                                "type": "string"
+                                            },
+                                            "incidencia": {
+                                                "type": "string"
+                                            },
+                                            "severidade": {
+                                                "type": "string"
+                                            },
+                                            "situacao": {
+                                                "type": "string"
+                                            },
+                                            "observacoes": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                },
+                                "daninhas": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "especie": {
+                                                "type": "string"
+                                            },
+                                            "infestacao": {
+                                                "type": "string"
+                                            },
+                                            "situacao": {
+                                                "type": "string"
+                                            },
+                                            "observacoes": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                },
+                                "scoreSanitario": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100,
+                                    "description": "Score sanitário calculado (IPE + pressão pragas/doenças)"
+                                }
+                            }
+                        },
+                        "aplicacoesRealizadas": {
+                            "type": "array",
+                            "description": "Aplicações registradas nas prescrições do app",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "tipo": {
+                                        "type": "string",
+                                        "description": "Fungicida, Inseticida, Herbicida, etc."
+                                    },
+                                    "data": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "produto": {
+                                        "type": "string"
+                                    },
+                                    "dose": {
+                                        "type": "string"
+                                    },
+                                    "unidade": {
+                                        "type": "string"
+                                    },
+                                    "classeToxico": {
+                                        "type": "string"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Pendente",
+                                            "Executada",
+                                            "Cancelada"
+                                        ]
+                                    },
+                                    "prescricaoId": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        },
+                        "diagnostico": {
+                            "type": "object",
+                            "description": "Diagnóstico consolidado da visita",
+                            "properties": {
+                                "problemaPrincipal": {
+                                    "type": "string"
+                                },
+                                "causaProvavel": {
+                                    "type": "string"
+                                },
+                                "nivelRisco": {
+                                    "type": "string",
+                                    "enum": [
+                                        "baixo",
+                                        "medio",
+                                        "alto"
+                                    ]
+                                },
+                                "urgenciaAcao": {
+                                    "type": "string",
+                                    "enum": [
+                                        "baixa",
+                                        "media",
+                                        "alta",
+                                        "imediata"
+                                    ]
+                                }
+                            }
+                        },
+                        "planoAcao": {
+                            "type": "object",
+                            "properties": {
+                                "objetivoManejo": {
+                                    "type": "string"
+                                },
+                                "prioridadeGeral": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100,
+                                    "description": "Score de prioridade geral do plano"
+                                },
+                                "acoes": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "prioridade": {
+                                                "type": "string"
+                                            },
+                                            "acao": {
+                                                "type": "string"
+                                            },
+                                            "prazo": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "colheita": {
+                    "type": "object",
+                    "description": "Módulo de Colheita (futuro — reservado)",
+                    "properties": {
+                        "dataColheita": {
+                            "type": "string",
+                            "format": "date"
+                        },
+                        "produtividadeSacHa": {
+                            "type": "number"
+                        },
+                        "umidadePct": {
+                            "type": "number"
+                        },
+                        "impurezasPct": {
+                            "type": "number"
+                        },
+                        "observacoes": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "indicadores": {
+            "type": "object",
+            "description": "Camada de índices agronômicos consolidados — permite dashboard e ranking de talhões",
+            "properties": {
+                "indiceAgronomicoTalhao": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "IAT — índice geral do talhão"
+                },
+                "indiceImplantacao": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "IQI — Índice de Qualidade de Implantação (plantio)"
+                },
+                "indiceSanitario": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Score sanitário (pragas/doenças/daninhas)"
+                },
+                "indiceOperacional": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Performance operacional da fazenda"
+                },
+                "riscoAtual": {
+                    "type": "string",
+                    "enum": [
+                        "baixo",
+                        "medio",
+                        "alto"
+                    ]
+                },
+                "tendencia": {
+                    "type": "string",
+                    "enum": [
+                        "estavel",
+                        "melhora",
+                        "piora"
+                    ]
+                },
+                "scoreGeral": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Score consolidado de todos os índices"
+                },
+                "itemsIAT": {
+                    "type": "array",
+                    "description": "Breakdown do IAT por componente",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "label": {
+                                "type": "string"
+                            },
+                            "valor": {
+                                "type": "string"
+                            },
+                            "peso": {
+                                "type": "number"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "analytics": {
+            "type": "object",
+            "description": "Camada de analytics — preparação para BI e Machine Learning",
+            "properties": {
+                "comparativoSafraAnterior": {
+                    "type": "object",
+                    "properties": {
+                        "variacaoPopulacaoPct": {
+                            "type": "number"
+                        },
+                        "variacaoIncidenciaPragasPct": {
+                            "type": "number"
+                        },
+                        "variacaoCVPct": {
+                            "type": "number"
+                        },
+                        "safraReferenciaId": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "tendencia7Dias": {
+                    "type": "object",
+                    "properties": {
+                        "risco": {
+                            "type": "number"
+                        },
+                        "crescimentoPragas": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "previsaoCurtoPrazo": {
+                    "type": "object",
+                    "properties": {
+                        "probabilidadeIntervencaoPct": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                        },
+                        "confiancaModelo": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "modeloVersao": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "mapa": {
+            "type": "object",
+            "description": "Georreferenciamento — geodata separado da visualização",
+            "properties": {
+                "geodata": {
+                    "type": "object",
+                    "properties": {
+                        "polygon": {
+                            "type": "array",
+                            "description": "Polígono do talhão [lat, lng]",
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                },
+                                "minItems": 2,
+                                "maxItems": 2
+                            }
+                        },
+                        "centroid": {
+                            "type": "object",
+                            "properties": {
+                                "lat": {
+                                    "type": "number"
+                                },
+                                "lng": {
+                                    "type": "number"
+                                }
+                            }
+                        },
+                        "areaCentroide": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "marcadores": {
+                    "type": "array",
+                    "description": "Pontos de monitoramento no campo (pragas, fenologia, coleta)",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "tipo": {
+                                "type": "string",
+                                "enum": [
+                                    "praga",
+                                    "doenca",
+                                    "daninha",
+                                    "fenologia",
+                                    "estande",
+                                    "coleta"
+                                ]
+                            },
+                            "titulo": {
+                                "type": "string"
+                            },
+                            "descricao": {
+                                "type": "string"
+                            },
+                            "severidade": {
+                                "type": "string",
+                                "enum": [
+                                    "baixa",
+                                    "media",
+                                    "alta"
+                                ]
+                            },
+                            "lat": {
+                                "type": "number"
+                            },
+                            "lng": {
+                                "type": "number"
+                            },
+                            "data": {
+                                "type": "string",
+                                "format": "date"
+                            }
+                        }
+                    }
+                },
+                "heatmap": {
+                    "type": "array",
+                    "description": "Pontos para heatmap de risco/infestação",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "lat": {
+                                "type": "number"
+                            },
+                            "lng": {
+                                "type": "number"
+                            },
+                            "intensidade": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "anexos": {
+            "type": "object",
+            "description": "Mídia e documentos — imagens devem suportar zoom/preview",
+            "properties": {
+                "imagens": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "url"
+                        ],
+                        "properties": {
+                            "url": {
+                                "type": "string",
+                                "description": "URL completa no Storage (Supabase/Firebase)"
+                            },
+                            "thumbnailUrl": {
+                                "type": "string",
+                                "description": "URL do thumbnail para preview rápido"
+                            },
+                            "legenda": {
+                                "type": "string",
+                                "description": "Legenda exibida abaixo da imagem no relatório"
+                            },
+                            "categoria": {
+                                "type": "string",
+                                "enum": [
+                                    "fenologia",
+                                    "praga",
+                                    "doenca",
+                                    "daninha",
+                                    "estande",
+                                    "equipamento",
+                                    "geral"
+                                ]
+                            },
+                            "data": {
+                                "type": "string",
+                                "format": "date"
+                            },
+                            "lat": {
+                                "type": "number",
+                                "description": "GPS onde a foto foi tirada"
+                            },
+                            "lng": {
+                                "type": "number"
+                            },
+                            "suportaZoom": {
+                                "type": "boolean",
+                                "default": true,
+                                "description": "Front-end deve habilitar lightbox/zoom"
+                            },
+                            "ordem": {
+                                "type": "integer",
+                                "description": "Ordem de exibição"
+                            }
+                        }
+                    }
+                },
+                "documentos": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "tipo": {
+                                "type": "string",
+                                "enum": [
+                                    "pdf",
+                                    "receituario",
+                                    "laudo",
+                                    "planilha"
+                                ]
+                            },
+                            "titulo": {
+                                "type": "string"
+                            },
+                            "url": {
+                                "type": "string"
+                            },
+                            "data": {
+                                "type": "string",
+                                "format": "date"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "assinatura": {
+            "type": "object",
+            "description": "Assinatura técnica do responsável pelo relatório",
+            "properties": {
+                "nome": {
+                    "type": "string"
+                },
+                "crea": {
+                    "type": "string"
+                },
+                "dataAssinatura": {
+                    "type": "string",
+                    "format": "date"
+                },
+                "cidade": {
+                    "type": "string"
+                },
+                "conclusao": {
+                    "type": "string",
+                    "description": "Texto conclusivo do técnico"
+                }
+            }
+        },
+        "auditoria": {
+            "type": "object",
+            "description": "Rastreabilidade completa do documento",
+            "properties": {
+                "historicoVersoes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "versao": {
+                                "type": "integer"
+                            },
+                            "data": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "autor": {
+                                "type": "string"
+                            },
+                            "resumo": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "log": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "acao": {
+                                "type": "string",
+                                "enum": [
+                                    "create",
+                                    "update",
+                                    "publish",
+                                    "archive",
+                                    "view"
+                                ]
+                            },
+                            "userId": {
+                                "type": "string"
+                            },
+                            "data": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "ip": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "hashIntegridade": {
+                    "type": "string",
+                    "description": "SHA-256 do corpo do documento para verificação de integridade"
+                }
+            }
+        }
+    }
+}

@@ -79,7 +79,10 @@ export default function EvaluationTable({ rows, onExportCsv }: EvaluationTablePr
     <section className="saas-section">
       <div className="mx-auto max-w-7xl">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-          <h2 className="saas-section-title">Avaliações Técnicas</h2>
+          <div>
+            <h2 className="saas-section-title">Avaliações Técnicas</h2>
+            <p className="text-xs text-slate-500 mt-1">Registros de avaliação com data do registro, DAE, CV%, classificação, estande e IAT.</p>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <input
               type="date"
@@ -101,13 +104,13 @@ export default function EvaluationTable({ rows, onExportCsv }: EvaluationTablePr
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="saas-table w-full min-w-[800px]">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm print:break-inside-avoid">
+          <table className="saas-table w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="saas-th w-8"></th>
                 <th className="saas-th cursor-pointer" onClick={() => handleSort('data')}>
-                  Data <SortIcon col="data" />
+                  Data do registro <SortIcon col="data" />
                 </th>
                 <th className="saas-th cursor-pointer" onClick={() => handleSort('dae')}>
                   DAE <SortIcon col="dae" />

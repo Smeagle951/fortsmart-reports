@@ -3,6 +3,8 @@
 interface LinhaPonto {
   tipo: 'ok' | 'dupla' | 'tripla' | 'falha';
   posicao?: number;
+  cm?: number;
+  distancia?: number;
 }
 
 interface LinhaPlantioVisualizerProps {
@@ -13,6 +15,8 @@ interface LinhaPlantioVisualizerProps {
   falhasPct?: number;
   indicePlantabilidade?: number;
   embedded?: boolean;
+  /** Espaçamento em cm por semente (ex.: [{ cm: 31, tipo: 'ok' }, ...]) */
+  espacamentosIndividuais?: Array<{ cm?: number; tipo: string; distancia?: number }>;
 }
 
 const tipoStyles: Record<string, string> = {
@@ -31,7 +35,6 @@ const tipoLabels: Record<string, string> = {
 
 type TipoPonto = 'ok' | 'dupla' | 'tripla' | 'falha';
 
-/** Representa um ponto na trena: OK=1 bolinha, Dupla=2 juntas, Tripla=3 juntas, Falha=lacuna */
 function TrenaGrupo({
   ponto,
   index,
@@ -47,19 +50,20 @@ function TrenaGrupo({
 }) {
   const cls = tipoStyles[ponto.tipo] || 'bg-slate-300';
   const label = tipoLabels[ponto.tipo] || ponto.tipo;
-  const title = `${label} (posição ${ponto.posicao ?? index + 1})`;
+  const cmLabel = ponto.cm != null ? ` a ${ponto.cm}cm` : ` (posição ${ponto.posicao ?? index + 1})`;
+  const title = `${label}${cmLabel}`;
 
   if (ponto.tipo === 'falha') {
     return (
       <span
         className="plantio-trena-falha"
         title={title}
-        aria-label={`Falha: lacuna na posição ${index + 1}`}
+        aria-label={`Falha${cmLabel}`}
       />
     );
   }
 
-  const n = ponto.tipo === 'dupla' ? 2 : ponto.tipo === 'tripla' ? 3 : 1;
+  const n = ponto.tipo === 'tripla' ? 3 : ponto.tipo === 'dupla' ? 2 : 1;
   return (
     <span className={`plantio-trena-grupo plantio-trena-grupo--${ponto.tipo}`} title={title}>
       {Array.from({ length: n }, (_, j) => (
@@ -69,7 +73,6 @@ function TrenaGrupo({
   );
 }
 
-/** Amostra a linha para exibição em escala (máx N pontos) */
 function sampleLinha(linha: LinhaPonto[], max: number): LinhaPonto[] {
   if (linha.length <= max) return linha;
   const step = linha.length / max;
@@ -80,7 +83,6 @@ function sampleLinha(linha: LinhaPonto[], max: number): LinhaPonto[] {
   return out;
 }
 
-/** Gera pontos a partir das porcentagens quando não há linha real */
 function buildLinhaFromPct(
   okPct?: number,
   duplasPct?: number,
@@ -112,11 +114,13 @@ export default function LinhaPlantioVisualizer({
   falhasPct,
   indicePlantabilidade,
   embedded = false,
+  espacamentosIndividuais,
 }: LinhaPlantioVisualizerProps) {
   const hasLinha = linha.length > 0;
   const hasResumo = okPct != null || duplasPct != null || triplasPct != null || falhasPct != null;
+  const pontosParaTrena = hasLinha ? linha.slice(0, 80) : (hasResumo ? buildLinhaFromPct(okPct, duplasPct, triplasPct, falhasPct) : []);
 
-  if (!hasLinha && !hasResumo) return null;
+  if (pontosParaTrena.length === 0 && !hasResumo) return null;
 
   const content = (
     <>
@@ -126,24 +130,28 @@ export default function LinhaPlantioVisualizer({
         </h4>
       )}
 
-      {hasLinha && (
+      {pontosParaTrena.length > 0 && (
         <figure className="plantio-figure plantio-figure--linha">
+          <h4 className="text-sm font-semibold text-slate-700 mb-1">Visualização da qualidade do plantio</h4>
+          <p className="text-xs text-slate-500 mb-2">
+            Cada ponto representa uma semente na linha; bolinhas verdes = OK, amarelas = duplas, roxas = triplas, lacuna = falha.
+          </p>
           <div
             className="plantio-trena"
             role="img"
-            aria-label={`Medição da trena: ${linha.length} espaçamentos. Rolagem horizontal habilitada.`}
+            aria-label={`Linha de plantio: ${pontosParaTrena.length} pontos. Rolagem horizontal.`}
           >
             <div className="plantio-trena-marcas">
-              {linha.slice(0, 80).map((p, i) => (
+              {pontosParaTrena.map((p, i) => (
                 <TrenaGrupo key={i} ponto={p} index={i} tipoStyles={tipoStyles} tipoLabels={tipoLabels} mini={false} />
               ))}
             </div>
-            {linha.length > 80 && (
+            {hasLinha && linha.length > 80 && (
               <span className="plantio-trena-more">+{linha.length - 80} pontos</span>
             )}
           </div>
           <figcaption className="plantio-figcaption">
-            Espaçamento real: bolinhas juntas = duplas/triplas; lacuna vermelha = falha. Rolagem horizontal habilitada.
+            Bolinhas = sementes (verde OK, amarelo dupla, roxo tripla, lacuna falha). Rolagem horizontal.
           </figcaption>
         </figure>
       )}
@@ -157,7 +165,7 @@ export default function LinhaPlantioVisualizer({
             <div
               className="plantio-trena plantio-trena--mini"
               role="img"
-              aria-label={`Medição da trena em escala: ${linha.length || 0} espaçamentos. OK ${okPct ?? 0}%, Duplas ${duplasPct ?? 0}%, Triplas ${triplasPct ?? 0}%, Falhas ${falhasPct ?? 0}%`}
+              aria-label={`Medição da trena em escala: ${linha.length || 0} espaçamentos. OK ${Number(okPct ?? 0).toFixed(1)}%, Duplas ${Number(duplasPct ?? 0).toFixed(1)}%, Triplas ${Number(triplasPct ?? 0).toFixed(1)}%, Falhas ${Number(falhasPct ?? 0).toFixed(1)}%`}
             >
               <div className="plantio-trena-marcas">
                 {(hasLinha ? sampleLinha(linha, 60) : buildLinhaFromPct(okPct, duplasPct, triplasPct, falhasPct)).map((p, i) => (
@@ -172,19 +180,19 @@ export default function LinhaPlantioVisualizer({
           <dl className="plantio-legend">
             <div className="plantio-legend-item">
               <dt><span className="plantio-legend-dot plantio-legend-dot--ok" aria-hidden /> OK</dt>
-              <dd>{okPct ?? 0}%</dd>
+              <dd>{Number(okPct ?? 0).toFixed(1)}%</dd>
             </div>
             <div className="plantio-legend-item">
               <dt><span className="plantio-legend-dot plantio-legend-dot--dupla" aria-hidden /> Duplas</dt>
-              <dd>{duplasPct ?? 0}%</dd>
+              <dd>{Number(duplasPct ?? 0).toFixed(1)}%</dd>
             </div>
             <div className="plantio-legend-item">
               <dt><span className="plantio-legend-dot plantio-legend-dot--tripla" aria-hidden /> Triplas</dt>
-              <dd>{triplasPct ?? 0}%</dd>
+              <dd>{Number(triplasPct ?? 0).toFixed(1)}%</dd>
             </div>
             <div className="plantio-legend-item">
               <dt><span className="plantio-legend-dot plantio-legend-dot--falha" aria-hidden /> Falhas</dt>
-              <dd>{falhasPct ?? 0}%</dd>
+              <dd>{Number(falhasPct ?? 0).toFixed(1)}%</dd>
             </div>
           </dl>
           {indicePlantabilidade != null && !embedded && (
@@ -194,6 +202,32 @@ export default function LinhaPlantioVisualizer({
             </div>
           )}
         </section>
+      )}
+
+      {/* Lista de espaçamentos individuais (cada semente): mostra com linha real ou array de espacamentos */}
+      {(hasLinha || (espacamentosIndividuais && espacamentosIndividuais.length > 0)) && (
+        <div className="mt-4 border-t border-slate-200 pt-4">
+          <h4 className="text-sm font-semibold text-slate-700 mb-2">Espaçamentos individuais calculados</h4>
+          <ul className="space-y-1.5 text-sm text-slate-600 max-h-48 overflow-y-auto">
+            {(espacamentosIndividuais && espacamentosIndividuais.length > 0
+              ? espacamentosIndividuais.map((e, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${tipoStyles[e.tipo] || 'bg-slate-300'}`} aria-hidden />
+                    Semente {i + 1}:{e.cm != null ? ` ${e.cm} cm → ` : ' '}{tipoLabels[e.tipo] || e.tipo}
+                  </li>
+                ))
+              : linha.slice(0, 60).map((p, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${tipoStyles[p.tipo] || 'bg-slate-300'}`} aria-hidden />
+                    Semente {i + 1}: {tipoLabels[p.tipo] || p.tipo}
+                  </li>
+                ))
+            )}
+          </ul>
+          {hasLinha && linha.length > 60 && (
+            <p className="text-xs text-slate-500 mt-1">+{linha.length - 60} sementes</p>
+          )}
+        </div>
       )}
     </>
   );

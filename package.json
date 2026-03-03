@@ -1,39 +1,43 @@
 {
-  "name": "fortsmart_report",
-  "version": "0.1.0",
+  "name": "fortsmart-reports",
+  "version": "1.0.0",
+  "description": "Relatórios técnicos agrícolas FortSmart — JSON como fonte de verdade, renderização HTML na Vercel",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.97.0",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/html2pdf.js": "^0.10.0",
+    "@supabase/supabase-js": "^2.39.0",
     "@types/leaflet": "^1.9.21",
-    "@types/leaflet.heat": "^0.2.5",
-    "better-sqlite3": "^12.6.2",
     "chart.js": "^4.5.1",
     "dotenv": "^17.3.1",
     "html2pdf.js": "^0.14.0",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
     "lucide-react": "^0.575.0",
-    "next": "16.1.6",
-    "react": "19.2.3",
+    "next": "14.2.35",
+    "react": "^18.2.0",
     "react-chartjs-2": "^5.3.1",
     "react-countup": "^6.5.3",
-    "react-dom": "19.2.3",
+    "react-dom": "^18.2.0",
     "react-leaflet": "^5.0.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/react": "19.2.14",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "14.2.35",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^12.6.2"
   }
 }

@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
 import RelatorioContent from '@/components/RelatorioContent';
@@ -7,6 +6,10 @@ import RelatorioMonitoramentoContent from '@/components/RelatorioMonitoramentoCo
 import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import PrintBar from '@/components/PrintBar';
+
+// Disable Vercel's SSR cache so the latest Supabase data is always served
+export const dynamic = 'force-dynamic';
+
 
 type Awaitable<T> = T | Promise<T>;
 type Props = { params: Awaitable<{ token: string }>; searchParams?: Awaitable<{ [key: string]: string | string[] | undefined }> };
@@ -124,7 +127,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
 
     return (
       <>
-        <PrintBar />
+        {!isVisitaTecnica && <PrintBar />}
         <article className={`relatorio ${isPlantio ? 'relatorio--plantio' : ''} ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isVisitaTecnica ? 'relatorio--visita-tecnica' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''}`}>
           {isPlantio ? (
             <RelatorioPlantioContent
