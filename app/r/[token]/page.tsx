@@ -7,6 +7,7 @@ import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitario
 import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import PrintBar from '@/components/PrintBar';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Disable Vercel's SSR cache so the latest Supabase data is always served
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
   const sp = props.searchParams ? await props.searchParams : {};
 
   const debug = sp?.debug === '1' || sp?.debug === 'true';
+  const debugPayload = sp?.debug === '2' || sp?.debug === 'payload';
   console.log('[fortsmart-reports] /r/[token] token recebido:', token);
   if (debug) {
     return <div style={{ padding: 20, fontFamily: 'sans-serif' }}><h1>Token (roteamento OK)</h1><pre>{token}</pre></div>;
@@ -92,6 +94,39 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
 
     const rawPayload = row.dados ?? (row as RelatorioRow & { json_data?: unknown; dados_json?: unknown }).json_data ?? (row as RelatorioRow & { dados_json?: unknown }).dados_json;
     const relatorio = parsePayload(rawPayload);
+    if (debugPayload) {
+      const tipo = relatorio?.tipo;
+      const tipoRelatorio = relatorio?.tipoRelatorio;
+      const hasTalhoes = Array.isArray(relatorio?.talhoes) && (relatorio?.talhoes?.length ?? 0) > 0;
+      return (
+        <main style={{ padding: 20, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
+          <h1 style={{ fontSize: 18, marginBottom: 12 }}>Debug payload</h1>
+          <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 8, fontSize: 12 }}>
+            <div><strong>token</strong></div><div>{token}</div>
+            <div><strong>row.id</strong></div><div>{String(row.id ?? '')}</div>
+            <div><strong>row.is_public</strong></div><div>{String((row as any).is_public)}</div>
+            <div><strong>row.share_expires_at</strong></div><div>{String((row as any).share_expires_at ?? '')}</div>
+            <div><strong>rawPayload typeof</strong></div><div>{typeof rawPayload}</div>
+            <div><strong>payload ok</strong></div><div>{String(!!relatorio)}</div>
+            <div><strong>tipo</strong></div><div>{String(tipo ?? '')}</div>
+            <div><strong>tipoRelatorio</strong></div><div>{String(tipoRelatorio ?? '')}</div>
+            <div><strong>hasTalhoes</strong></div><div>{String(hasTalhoes)}</div>
+            <div><strong>topKeys</strong></div><div>{relatorio ? Object.keys(relatorio).slice(0, 25).join(', ') : '—'}</div>
+          </div>
+          <h2 style={{ fontSize: 14, marginTop: 16 }}>rawPayload (primeiros 2000 chars)</h2>
+          <pre style={{ whiteSpace: 'pre-wrap', background: '#0b1020', color: '#d1d5db', padding: 12, borderRadius: 8, fontSize: 11 }}>
+            {(() => {
+              try {
+                const s = typeof rawPayload === 'string' ? rawPayload : JSON.stringify(rawPayload);
+                return (s ?? '').slice(0, 2000);
+              } catch {
+                return String(rawPayload ?? '').slice(0, 2000);
+              }
+            })()}
+          </pre>
+        </main>
+      );
+    }
     if (!relatorio) {
       console.warn('[fortsmart-reports] /r/[token] notFound: payload inválido', typeof rawPayload);
       return (
@@ -143,11 +178,13 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
               relatorioUuid={row.id}
             />
           ) : isMonitoramento ? (
-            <RelatorioFitossanitarioContent
-              relatorio={relatorio as import('@/components/RelatorioFitossanitarioContent').PayloadFitossanitario}
-              reportId={row.titulo || row.id}
-              relatorioUuid={row.id}
-            />
+            <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de monitoramento">
+              <RelatorioFitossanitarioContent
+                relatorio={relatorio as import('@/components/RelatorioFitossanitarioContent').PayloadFitossanitario}
+                reportId={row.titulo || row.id}
+                relatorioUuid={row.id}
+              />
+            </ErrorBoundary>
           ) : isSideBySide ? (
             <SideBySideReportContent
               data={relatorio as SideBySideReportData}
