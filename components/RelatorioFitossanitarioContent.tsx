@@ -14,27 +14,21 @@ import {
 } from '@/lib/types/monitoring';
 import { calcularMetricasTalhao } from '@/lib/calculations';
 import { formatPercent2, formatDecimal2, formatDate } from '@/utils/format';
-import ReportHeader from './ReportHeader';
+import ModalImagem from './ModalImagem';
+import RelatorioLayoutEnterprise from './RelatorioLayoutEnterprise';
 
 const MapaInterativo = dynamic(() => import('./MapaInterativo'), { ssr: false });
 
-const cardStyle = {
-  background: '#fff',
-  borderRadius: 12,
-  border: '1px solid #E2E8F0',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)',
-};
-
-const sectionTitleStyle = {
-  padding: '14px 20px',
-  background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)',
-  borderBottom: '1px solid #E2E8F0',
-  fontSize: 11,
-  fontWeight: 700,
-  color: '#475569',
-  letterSpacing: '0.05em',
-  textTransform: 'uppercase' as const,
-};
+/** Normaliza nome de produto para deduplicação (lowercase, trim, remove acentos). */
+function normalizarProduto(s: string): string {
+  if (!s || s === '—') return '';
+  return String(s)
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/\s+/g, ' ');
+}
 
 const TIPO_LABEL: Record<TipoOrganismo, string> = {
   praga: 'Praga',
@@ -126,13 +120,14 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
       return r as Recomendacao;
     }
     const x = r as Record<string, unknown>;
+    const acaoVal = (typeof x.manejo === 'string' ? x.manejo.trim() : '') || (typeof x.acao === 'string' ? x.acao : '');
     return {
       nivel: (x.nivel as Recomendacao['nivel']) ?? 'MONITORAR',
       organismo: (x.organismo != null && String(x.organismo).trim()) ? String(x.organismo).trim() : '—',
       tipo: (x.tipo as Recomendacao['tipo']) ?? 'praga',
       produto: (x.produto != null && String(x.produto).trim()) ? String(x.produto).trim() : '',
       dose: (x.dose != null && String(x.dose).trim()) ? String(x.dose).trim() : '',
-      acao: typeof x.acao === 'string' ? x.acao : '—',
+      acao: acaoVal || '—',
       pontos: Array.isArray(x.pontos) ? x.pontos : [],
       severidade: typeof x.severidade === 'number' ? x.severidade : 0,
     };
@@ -220,7 +215,14 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       ?? ''
     ).trim() || 'Fazenda';
     const safra = String(relatorio.safra ?? meta?.safra ?? '').trim() || '—';
-    const dataRaw = relatorio.data ?? meta?.dataGeracao ?? '';
+    const dataRaw =
+      relatorio.data
+      ?? meta?.dataGeracao
+      ?? (meta as any)?.dataVisita
+      ?? (relatorio as any).data_emissao
+      ?? (relatorio as any).data_visita
+      ?? (relatorio as any).dataVisita
+      ?? '';
     const data = typeof dataRaw === 'string' ? dataRaw : (dataRaw != null ? String(dataRaw) : '');
     const tecnico = String(
       relatorio.tecnico
@@ -239,7 +241,12 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     const crea = String(
       relatorio.crea ?? relatorio.tecnico_crea ?? meta?.tecnicoCrea ?? meta?.crea ?? prop?.crea ?? ''
     ).trim() || undefined;
-    const talhoesRaw = Array.isArray(relatorio.talhoes) ? relatorio.talhoes : [];
+    const talhoesRaw =
+      Array.isArray(relatorio.talhoes) && relatorio.talhoes.length > 0
+        ? relatorio.talhoes
+        : relatorio.talhao != null && typeof relatorio.talhao === 'object'
+          ? [relatorio.talhao]
+          : [];
     const talhoes = talhoesRaw.map((t: unknown) => normalizeTalhao(t != null && typeof t === 'object' ? t as Record<string, unknown> : {}));
     return { fazenda, safra, data, tecnico, crea: crea || undefined, talhoes };
   }, [relatorio]);
@@ -293,12 +300,45 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
   };
 
   const propRaw = relatorio.propriedade as Record<string, unknown> | undefined;
-  const municipio = (propRaw?.municipio ?? (propRaw as any)?.cidade ?? (propRaw as any)?.municipio_nome ?? '') as string;
-  const estado = (propRaw?.estado ?? (propRaw as any)?.uf ?? (propRaw as any)?.estado_sigla ?? '') as string;
+  const primeiroTalhaoRaw = (Array.isArray(relatorio.talhoes) && relatorio.talhoes.length > 0 ? relatorio.talhoes[0] : relatorio.talhao) as Record<string, unknown> | undefined;
+  const municipio = (
+    propRaw?.municipio ?? (propRaw as any)?.cidade ?? (propRaw as any)?.municipio_nome
+    ?? (relatorio as any).municipio ?? (relatorio as any).cidade ?? (relatorio as any).municipio_nome
+    ?? primeiroTalhaoRaw?.municipio ?? (primeiroTalhaoRaw as any)?.cidade ?? (primeiroTalhaoRaw as any)?.municipio_nome
+  ) as string;
+  const estado = (
+    propRaw?.estado ?? (propRaw as any)?.uf ?? (propRaw as any)?.estado_sigla
+    ?? (relatorio as any).estado ?? (relatorio as any).uf ?? (relatorio as any).estado_sigla
+    ?? primeiroTalhaoRaw?.estado ?? (primeiroTalhaoRaw as any)?.uf ?? (primeiroTalhaoRaw as any)?.estado_sigla
+  ) as string;
 
   const metricasTalhao = primeiroTalhao ? calcularMetricasTalhao(primeiroTalhao) : null;
   const topPragas = metricasTalhao?.top5Infestacoes ?? [];
   const recomendacoesTalhao = primeiroTalhao?.recomendacoes ?? [];
+
+  /** Condições climáticas: talhão ou fallback do relatório (condicoes_climaticas / condicoes da visita). */
+  const condicoesRelatorio = (() => {
+    const cc = (relatorio as any).condicoes_climaticas;
+    if (cc && typeof cc === 'object' && (cc.temperatura != null || cc.umidade != null || cc.chuva != null)) {
+      return { temperatura: Number(cc.temperatura ?? 0), umidade: Number(cc.umidade ?? 0), chuva: (cc.chuva as string) ?? 'Sem Chuva' };
+    }
+    const cond = (relatorio as any).condicoes;
+    if (cond && typeof cond === 'object' && (cond.temperatura != null || cond.umidade != null)) {
+      return { temperatura: Number(cond.temperatura ?? 0), umidade: Number(cond.umidade ?? 0), chuva: (cond.chuva as string) ?? 'Sem Chuva' };
+    }
+    return null;
+  })();
+  const condicoesExibir = primeiroTalhao?.condicoes_climaticas ?? condicoesRelatorio;
+
+  /** Método de amostragem: do payload (visita / metricas / raiz). */
+  const metodoAmostragem = String(
+    (relatorio as any).metodo_amostragem
+    ?? (relatorio as any).metodo
+    ?? metricasGlobais?.metodo
+    ?? (relatorio as any).visita?.metodo
+    ?? (relatorio as any).padrao_amostragem
+    ?? ''
+  ).trim() || '—';
 
   type PragaComRec = {
     nome: string;
@@ -321,7 +361,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       const org = organismosPayload.find(o => String(o.nome ?? '').toLowerCase() === inf.nome.toLowerCase());
       const qtdMedia = org?.quantidadeMedia != null ? safeNum(org.quantidadeMedia) : null;
       const primeiraImagem = todasInfestacoes.find(i => i.nome === inf.nome && i.imagem)?.imagem;
-      const manejo = (typeof rec?.acao === 'string' ? rec.acao.trim() : '') || (inf.percentual >= 25 ? 'Monitorar e retornar em 3–7 dias.' : 'Acompanhamento semanal.');
+      const manejoStr = (rec as unknown as Record<string, unknown>)?.manejo ?? rec?.acao;
+      const manejo = (typeof manejoStr === 'string' ? manejoStr.trim() : '') || (inf.percentual >= 25 ? 'Monitorar e retornar em 3–7 dias.' : 'Acompanhamento semanal.');
       return {
         nome: inf.nome,
         tipo: inf.tipo,
@@ -338,8 +379,42 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     });
   }, [topPragas, recomendacoesTalhao, primeiroTalhao, organismosPayload]);
 
+  /** Resumo único de recomendações: máx. 4 produtos distintos (produto+dose), com organismos alvo agregados. */
+  type ResumoRec = { produto: string; dose: string; organismos: string[]; manejo: string };
+  const resumoRecomendacoes = useMemo((): ResumoRec[] => {
+    const seen = new Map<string, ResumoRec>();
+    const MAX = 4;
+    for (const p of pragasComRecomendacao) {
+      if (seen.size >= MAX) break;
+      const prodNorm = normalizarProduto(p.produto);
+      const doseNorm = String(p.dose ?? '').trim().toLowerCase();
+      const key = `${prodNorm}|${doseNorm}`;
+      if (!key || key === '|') continue;
+      const existing = seen.get(key);
+      if (existing) {
+        if (!existing.organismos.includes(p.nome)) existing.organismos.push(p.nome);
+        if (p.manejo && p.manejo !== '—' && !existing.manejo) existing.manejo = p.manejo;
+      } else {
+        seen.set(key, {
+          produto: p.produto,
+          dose: p.dose,
+          organismos: [p.nome],
+          manejo: p.manejo || '—',
+        });
+      }
+    }
+    return Array.from(seen.values()).slice(0, MAX);
+  }, [pragasComRecomendacao]);
+
   const [galeriaModal, setGaleriaModal] = useState<{ url: string; descricao?: string } | null>(null);
   const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string }>;
+
+  /** Próxima visita: meta ou metricas (formato ISO ou DD/MM/YYYY). */
+  const proximaVisitaRaw =
+    (metricasGlobais?.proximaVisita ?? metricasGlobais?.proxima_visita ?? (relatorio.meta as Record<string, unknown>)?.proximaVisita ?? (relatorio.meta as Record<string, unknown>)?.proxima_visita) as string | undefined;
+  const proximaVisita = proximaVisitaRaw
+    ? (formatDate(proximaVisitaRaw) !== '—' ? formatDate(proximaVisitaRaw) : String(proximaVisitaRaw))
+    : '—';
 
   if (!primeiroTalhao) {
     return (
@@ -349,249 +424,216 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     );
   }
 
-  const areaTotal = normalized.talhoes.reduce((s, t) => s + (t.area_ha ?? 0), 0);
-  const circumference = 2 * Math.PI * 44;
+  const circumference = 2 * Math.PI * 50;
   const strokeDashoffset = circumference - (riscoNum / 100) * circumference;
+  const riskBadgeClass = riscoNum < 25 ? 'baixo' : riscoNum < 50 ? 'medio' : riscoNum < 75 ? 'alto' : 'critico';
+  const gaugeFillClass = riskBadgeClass;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #F1F5F9 0%, #E2E8F0 100%)', paddingBottom: 60 }}>
-      <div id="relatorio-fitossanitario-content" className="relatorio-fitossanitario-pdf" style={{ maxWidth: 920, margin: '0 auto', padding: '24px 20px 0' }}>
-        <ReportHeader
-          relatorio={normalized}
-          onExportPDF={handleExportPDF}
-          hideExcel
-          origemDados={relatorioUuid ? 'app' : undefined}
-        />
-
-        {/* Título e breadcrumb */}
-        <div className="pdf-keep-together" style={{ ...cardStyle, padding: '20px 24px', marginBottom: 20 }}>
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 6 }}>
-            {normalized.fazenda} › {primeiroTalhao.nome} › Relatório Técnico
-          </div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1E293B', margin: 0, letterSpacing: '-0.02em' }}>
-            Relatório de Monitoramento Fitossanitário
-          </h1>
-          <p style={{ fontSize: 13, color: '#64748B', marginTop: 8, marginBottom: 0 }}>
-            Emitido em {normalized.data} · {normalized.tecnico}{normalized.crea ? ` · ${normalized.crea}` : ''}
+    <RelatorioLayoutEnterprise
+      fazenda={normalized.fazenda}
+      talhaoNome={primeiroTalhao.nome}
+      tecnico={normalized.tecnico}
+      crea={normalized.crea}
+      reportId={reportId}
+      onExportPDF={handleExportPDF}
+    >
+      {/* #resumo — Report Header Card (base: relatorio.html) */}
+      <div id="resumo" className="report-header-card pdf-keep-together">
+        <div className="report-header-info">
+          <h1>📋 Relatório de Monitoramento Fitossanitário</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: 4 }}>
+            Emitido em {normalized.data}{normalized.tecnico ? ` · ${normalized.tecnico}` : ''}{normalized.crea ? ` · ${normalized.crea}` : ''}
           </p>
+          <div className="report-meta-tags">
+            <span className="meta-tag">🌾 {primeiroTalhao.cultura} — Safra {normalized.safra}</span>
+            <span className="meta-tag">📍 {municipio && estado ? `${String(municipio)} · ${String(estado)}` : (municipio || estado || '—')}</span>
+            <span className="meta-tag">📐 {primeiroTalhao.area_ha > 0 ? `${formatDecimal2(primeiroTalhao.area_ha)} ha` : '—'} · {primeiroTalhao.nome}</span>
+            <span className="meta-tag">🌱 {String(primeiroTalhao.estagio || (fenologiaGlobal?.estadio ?? '—'))} — {String((primeiroTalhao.dae ?? fenologiaGlobal?.dae) ?? '')} DAE</span>
+            {primeiroTalhao.variedade && <span className="meta-tag">Híbrido: {primeiroTalhao.variedade}</span>}
+          </div>
         </div>
-
-        {/* Hero: cultura, safra, local, área, estádio, DAE */}
-        <div style={{ ...cardStyle, padding: 16, marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#1E293B' }}>
-            {primeiroTalhao.cultura} — Safra {normalized.safra}
-          </span>
-          <span style={{ fontSize: 13, color: '#64748B' }}>
-            {municipio && estado ? `${String(municipio)} · ${String(estado)}` : (municipio ? String(municipio) : estado ? String(estado) : '—')}
-          </span>
-          <span style={{ fontSize: 13, color: '#64748B' }}>
-            {primeiroTalhao.area_ha > 0 ? `${formatDecimal2(primeiroTalhao.area_ha)} ha` : '—'} · {primeiroTalhao.nome}
-          </span>
-          <span style={{ fontSize: 13, color: '#64748B' }}>
-            {(primeiroTalhao.estagio || (fenologiaGlobal?.estadio ?? '')) && (primeiroTalhao.dae != null || fenologiaGlobal?.dae != null)
-              ? `${String(primeiroTalhao.estagio || (fenologiaGlobal?.estadio ?? ''))} — ${String((primeiroTalhao.dae ?? fenologiaGlobal?.dae) ?? '')} DAE`
-              : String(primeiroTalhao.estagio || (fenologiaGlobal?.estadio ?? '—'))}
-          </span>
-          {primeiroTalhao.variedade && (
-            <span style={{ fontSize: 12, color: '#94A3B8' }}>Híbrido: {primeiroTalhao.variedade}</span>
-          )}
+        <div className="report-header-right">
+          <div className={`risk-badge ${riskBadgeClass}`}>
+            <span>{riscoNum >= 50 ? '⚠️' : riscoNum >= 25 ? '⚠️' : '✓'}</span>
+            <div>
+              <div className="risk-score">{riscoNum}</div>
+              <div style={{ fontSize: '0.7rem', fontWeight: 500 }}>Risco {riscoLabel}</div>
+            </div>
+          </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Próxima visita: {proximaVisita}</span>
         </div>
+      </div>
 
-        {/* Gauge de risco + próxima visita */}
-        <div className="pdf-keep-together" style={{ ...cardStyle, overflow: 'hidden', marginBottom: 20 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 24, alignItems: 'center', padding: 24, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ position: 'relative', width: 100, height: 100 }}>
-                <svg width={100} height={100} style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx={50} cy={50} r={44} fill="none" stroke="#E2E8F0" strokeWidth={8} />
-                  <circle
-                    cx={50}
-                    cy={50}
-                    r={44}
-                    fill="none"
-                    stroke={riscoNum < 25 ? '#2E7D32' : riscoNum < 50 ? '#F59E0B' : riscoNum < 75 ? '#E65100' : '#C62828'}
-                    strokeWidth={8}
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    style={{ transition: 'stroke-dashoffset 0.4s ease' }}
-                  />
-                </svg>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#1E293B' }}>
-                  {riscoNum}
-                </div>
+      {/* #propriedade — Grid 2: Propriedade + Mapa (base: relatorio.html) */}
+      <div id="propriedade" className="grid-2 pdf-keep-together">
+        <div className="card">
+          <div className="card-title"><span className="card-title-icon">🏡</span> Propriedade</div>
+          <div className="info-row"><span className="info-label">Fazenda</span><span className="info-value">{normalized.fazenda}</span></div>
+          <div className="info-row"><span className="info-label">Município</span><span className="info-value">{municipio && estado ? `${String(municipio)} — ${String(estado)}` : String(municipio || estado || '—')}</span></div>
+          <div className="info-row"><span className="info-label">Talhão</span><span className="info-value">{primeiroTalhao.nome}{primeiroTalhao.area_ha > 0 ? ` (${formatDecimal2(primeiroTalhao.area_ha)} ha)` : ''}</span></div>
+        </div>
+        <div className="card">
+          <div className="card-title"><span className="card-title-icon">📍</span> Polígono GPS · Pontos georreferenciados</div>
+          <div className="map-card-inner">
+            <MapaInterativo pontos={primeiroTalhao.pontos} poligono={primeiroTalhao.poligono_geojson} talhaoId={primeiroTalhao.id} hideHeader />
+          </div>
+        </div>
+      </div>
+
+      {/* #monitoramento — Ciclo + Visita + Clima (base: relatorio.html) */}
+      <div id="monitoramento" className="pdf-keep-together">
+        <div className="section-heading">🔬 Visita de Monitoramento</div>
+        <div className="grid-4" style={{ marginBottom: '1.25rem' }}>
+          <div className="stat-card">
+            <div className="stat-label">Método</div>
+            <div className="stat-value" style={{ fontSize: '1.1rem', marginTop: 6, lineHeight: 1.3 }}>{metodoAmostragem}</div>
+            <div className="stat-unit">Padrão técnico</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Pontos amostrados</div>
+            <div className="stat-value">{String(metricasTalhao?.totalPontos ?? metricasGlobais?.totalPontos ?? primeiroTalhao?.pontos?.length ?? '—')}</div>
+            <div className="stat-unit">pontos de coleta</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Temperatura</div>
+            <div className="stat-value">{condicoesExibir?.temperatura != null ? `${condicoesExibir.temperatura}°C` : '—'}</div>
+            <div className="stat-unit">no momento da visita</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Umidade relativa</div>
+            <div className="stat-value">{condicoesExibir?.umidade != null ? `${condicoesExibir.umidade}%` : '—'}</div>
+            <div className="stat-unit">umidade do ar</div>
+          </div>
+        </div>
+        <div className="grid-2" style={{ marginBottom: '1.25rem' }}>
+          <div className="card">
+            <div className="card-title"><span className="card-title-icon">🌱</span> Ciclo da Cultura</div>
+            <div className="info-row"><span className="info-label">Safra</span><span className="info-value">{normalized.safra}</span></div>
+            <div className="info-row"><span className="info-label">Cultura</span><span className="info-value">{primeiroTalhao.cultura}</span></div>
+            <div className="info-row"><span className="info-label">Híbrido</span><span className="info-value">{primeiroTalhao.variedade ?? '—'}</span></div>
+            {(() => {
+              const contextoSafra = (relatorio as any).contextoSafra ?? (relatorio as any).contexto_safra;
+              const fenologia = (relatorio as any).fenologia ?? {};
+              const talhaoRaw = (Array.isArray(relatorio.talhoes) && (relatorio.talhoes as any[])[0]) || {};
+              const dataSemeaduraRaw = contextoSafra?.dataPlantio ?? contextoSafra?.data_plantio ?? talhaoRaw.dataPlantio ?? talhaoRaw.data_plantio;
+              const dataEmergenciaRaw = fenologia.dataEmergencia ?? fenologia.data_emergencia;
+              const daeCiclo = contextoSafra?.dae ?? fenologia.dae ?? primeiroTalhao.dae;
+              const estadioCiclo = fenologia.estadio ?? fenologia.estagio ?? primeiroTalhao.estagio;
+              return (
+                <>
+                  <div className="info-row"><span className="info-label">Data de semeadura</span><span className="info-value">{dataSemeaduraRaw ? (formatDate(String(dataSemeaduraRaw)) || String(dataSemeaduraRaw)) : '—'}</span></div>
+                  <div className="info-row"><span className="info-label">Data de emergência</span><span className="info-value">{dataEmergenciaRaw ? (formatDate(String(dataEmergenciaRaw)) || String(dataEmergenciaRaw)) : '—'}</span></div>
+                  <div className="info-row"><span className="info-label">DAE</span><span className="info-value">{daeCiclo != null ? `${daeCiclo} dias` : '—'}</span></div>
+                  <div className="info-row"><span className="info-label">Estádio fenológico</span><span className="info-value" style={{ color: 'var(--primary)', fontWeight: 700 }}>{estadioCiclo || '—'}</span></div>
+                </>
+              );
+            })()}
+          </div>
+          <div className="card">
+            <div className="card-title">💧 Condições Climáticas Recentes</div>
+            <div className="grid-3" style={{ margin: 0, gap: '1rem' }}>
+              <div style={{ textAlign: 'center', background: 'var(--bg)', borderRadius: 10, padding: '1rem' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--primary)' }}>{condicoesExibir?.chuva ?? '—'}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Chuva nos últimos 7 dias</div>
               </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#1E293B' }}>Risco {riscoLabel}</div>
-                <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>Próxima visita: —</div>
+              <div style={{ textAlign: 'center', background: 'var(--bg)', borderRadius: 10, padding: '1rem' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--warning)' }}>{condicoesExibir?.umidade != null ? `${condicoesExibir.umidade}%` : '—'}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Umidade do ar</div>
+              </div>
+              <div style={{ textAlign: 'center', background: 'var(--bg)', borderRadius: 10, padding: '1rem' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)' }}>{condicoesExibir?.temperatura != null ? `${condicoesExibir.temperatura}°C` : '—'}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Temperatura máx.</div>
               </div>
             </div>
-            <div style={{ minWidth: 0 }} />
-            <div style={{ fontSize: 12, color: '#64748B' }}>
-              {reportId && <span style={{ fontWeight: 600, color: '#475569' }}>{reportId}</span>}
-            </div>
           </div>
         </div>
+      </div>
 
-        <div className="pdf-keep-together" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-          {/* Propriedade */}
-          <div style={{ ...cardStyle, overflow: 'hidden' }}>
-            <div style={sectionTitleStyle}>Propriedade</div>
-            <div style={{ padding: 20, display: 'grid', gap: 12 }}>
-              <Row2 label="Fazenda" value={normalized.fazenda} />
-              <Row2 label="Município" value={municipio && estado ? `${String(municipio)} — ${String(estado)}` : String(municipio || estado || '—')} />
-              <Row2 label="Talhão" value={`${primeiroTalhao.nome}${primeiroTalhao.area_ha > 0 ? ` (${formatDecimal2(primeiroTalhao.area_ha)} ha)` : ''}`} />
-            </div>
-          </div>
-
-          {/* Mapa: polígono real do talhão + pontos georreferenciados (clique no alfinete = card com detalhes) */}
-          <div style={{ ...cardStyle, overflow: 'hidden' }}>
-            <div style={sectionTitleStyle}>Polígono real do talhão · Pontos georreferenciados</div>
-            <div style={{ height: 260 }}>
-              <MapaInterativo pontos={primeiroTalhao.pontos} poligono={primeiroTalhao.poligono_geojson} talhaoId={primeiroTalhao.id} hideHeader />
-            </div>
+      {observacoes && (
+        <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+          <div style={{ marginTop: '1rem', padding: '0.9rem', background: 'var(--bg)', borderRadius: 8, borderLeft: '3px solid var(--primary)', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+            📝 <strong>Observações gerais:</strong> {observacoes}
           </div>
         </div>
+      )}
 
-        {/* Ciclo da cultura + Visita de monitoramento + Clima */}
-        <div className="pdf-keep-together" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 20 }}>
-          <div style={{ ...cardStyle, overflow: 'hidden' }}>
-            <div style={sectionTitleStyle}>Ciclo da Cultura</div>
-            <div style={{ padding: 20, display: 'grid', gap: 10 }}>
-              <Row2 label="Safra" value={normalized.safra} />
-              <Row2 label="Cultura" value={primeiroTalhao.cultura} />
-              <Row2 label="Híbrido" value={primeiroTalhao.variedade ?? '—'} />
-              {(() => {
-                const contextoSafra = (relatorio as any).contextoSafra ?? (relatorio as any).contexto_safra;
-                const fenologia = (relatorio as any).fenologia ?? {};
-                const talhaoRaw = (Array.isArray(relatorio.talhoes) && (relatorio.talhoes as any[])[0]) || {};
-                const dataSemeaduraRaw =
-                  contextoSafra?.dataPlantio ??
-                  contextoSafra?.data_plantio ??
-                  talhaoRaw.dataPlantio ??
-                  talhaoRaw.data_plantio;
-                const dataEmergenciaRaw =
-                  fenologia.dataEmergencia ??
-                  fenologia.data_emergencia;
-                const daeCiclo =
-                  contextoSafra?.dae ??
-                  fenologia.dae ??
-                  primeiroTalhao.dae;
-                const estadioCiclo =
-                  fenologia.estadio ??
-                  fenologia.estagio ??
-                  primeiroTalhao.estagio;
-
-                return (
-                  <>
-                    <Row2
-                      label="Data de semeadura"
-                      value={dataSemeaduraRaw ? (formatDate(String(dataSemeaduraRaw)) || String(dataSemeaduraRaw)) : '—'}
-                    />
-                    <Row2
-                      label="Data de emergência"
-                      value={dataEmergenciaRaw ? (formatDate(String(dataEmergenciaRaw)) || String(dataEmergenciaRaw)) : '—'}
-                    />
-                    <Row2
-                      label="DAE"
-                      value={daeCiclo != null ? `${daeCiclo} dias` : '—'}
-                    />
-                    <Row2
-                      label="Estádio fenológico"
-                      value={estadioCiclo || '—'}
-                    />
-                  </>
-                );
-              })()}
+        {/* Plano de Aplicação */}
+        {resumoRecomendacoes.length > 0 && (
+          <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+            <div className="card-title">Plano de Aplicação</div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Produto</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Dose</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Organismos alvo</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Manejo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumoRecomendacoes.map((r, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid var(--bg)' }}>
+                      <td style={{ padding: '12px', fontWeight: 600, color: 'var(--text-main)' }}>{r.produto || '—'}</td>
+                      <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{r.dose || '—'}</td>
+                      <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{r.organismos.join(', ') || '—'}</td>
+                      <td style={{ padding: '12px', color: 'var(--text-muted)', maxWidth: 280 }}>{r.manejo || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-          <div style={{ ...cardStyle, overflow: 'hidden' }}>
-            <div style={sectionTitleStyle}>Visita de Monitoramento</div>
-            <div style={{ padding: 20, display: 'grid', gap: 10 }}>
-              <Row2 label="Método" value="Zigue-Zague" />
-              <Row2 label="Pontos amostrados" value={String(metricasTalhao?.totalPontos ?? metricasGlobais?.totalPontos ?? '—')} />
-              <Row2 label="Temperatura" value={primeiroTalhao.condicoes_climaticas?.temperatura != null ? `${primeiroTalhao.condicoes_climaticas.temperatura}°C` : '—'} />
-              <Row2 label="Umidade relativa" value={primeiroTalhao.condicoes_climaticas?.umidade != null ? `${primeiroTalhao.condicoes_climaticas.umidade}%` : '—'} />
-            </div>
-          </div>
-          <div style={{ ...cardStyle, overflow: 'hidden' }}>
-            <div style={sectionTitleStyle}>Condições Climáticas Recentes</div>
-            <div style={{ padding: 20, display: 'grid', gap: 10 }}>
-              <Row2 label="Chuva (7 dias)" value={primeiroTalhao.condicoes_climaticas?.chuva ?? '—'} />
-              <Row2 label="Umidade do ar" value={primeiroTalhao.condicoes_climaticas?.umidade != null ? `${primeiroTalhao.condicoes_climaticas.umidade}%` : '—'} />
-              <Row2 label="Temperatura máx." value={primeiroTalhao.condicoes_climaticas?.temperatura != null ? `${primeiroTalhao.condicoes_climaticas.temperatura}°C` : '—'} />
-            </div>
-          </div>
-        </div>
-
-        {/* Observações */}
-        {observacoes && (
-          <div className="pdf-keep-together" style={{ ...cardStyle, padding: 20, marginBottom: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 10 }}>Observações gerais</div>
-            <p style={{ fontSize: 14, color: '#334155', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>{observacoes}</p>
           </div>
         )}
 
-        {/* Análise de pragas - cards com imagem por ocorrência, recomendação (produto/dose/manejo) */}
-        <div className="pdf-keep-together" style={{ ...cardStyle, overflow: 'hidden', marginBottom: 20 }}>
-          <div style={sectionTitleStyle}>Análise de Pragas</div>
+        {/* #pragas — Análise de Pragas */}
+        <div id="pragas" className="pdf-keep-together">
+          <div className="section-heading">🐛 Análise de Pragas</div>
           <div style={{ padding: 20 }}>
             {pragasComRecomendacao.length === 0 ? (
-              <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Nenhuma praga ou doença registrada nesta visita.</p>
+              <p className="card" style={{ padding: '1.5rem', color: 'var(--text-muted)', margin: 0 }}>Nenhuma praga ou doença registrada nesta visita.</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="grid-2">
                 {pragasComRecomendacao.map((p, idx) => {
                   const sev = p.severidadeMedia;
-                  const cor = severidadeColor(sev);
-                  const labelSev = severidadeLabel(sev);
+                  const badgeClass = sev < 10 ? 'baixo' : sev < 25 ? 'moderado' : sev < 40 ? 'alto' : 'critico';
                   return (
-                    <div key={idx} className="pdf-keep-together" style={{ border: '1px solid #E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
-                      <div style={{ padding: '14px 18px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                    <div key={idx} className="pest-card pdf-keep-together">
+                      <div className="pest-header">
                         <div>
-                          <div style={{ fontSize: 16, fontWeight: 700, color: '#1E293B' }}>{p.nome}</div>
-                          <div style={{ fontSize: 12, color: '#64748B' }}>{TIPO_LABEL[p.tipo]} · Distribuição nos pontos amostrados</div>
+                          <div className="pest-name">{p.nome}</div>
+                          <div className="pest-cat">{TIPO_LABEL[p.tipo]} · Distribuição nos pontos amostrados</div>
                         </div>
-                        <span style={{ padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, background: `${cor}18`, color: cor }}>{labelSev}</span>
+                        <span className={`severity-badge ${badgeClass}`}>{sev < 10 ? '✓' : '⚠️'} {severidadeLabel(sev)}</span>
                       </div>
-                      <div style={{ padding: 18, display: 'grid', gridTemplateColumns: p.imagem ? '100px 1fr' : '1fr', gap: 18, alignItems: 'start' }}>
-                        {p.imagem && (
-                          <div style={{ flexShrink: 0, position: 'relative', width: 100, height: 80 }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={p.imagem} alt={p.nome} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8, border: '1px solid #E2E8F0', display: 'block' }} />
-                            <button
-                              type="button"
-                              className="no-print"
-                              onClick={() => setGaleriaModal({ url: p.imagem!, descricao: `${p.nome} — ${TIPO_LABEL[p.tipo]}` })}
-                              style={{ position: 'absolute', inset: 0, padding: 0, border: 'none', cursor: 'pointer', background: 'transparent', borderRadius: 8 }}
-                              aria-label={`Ampliar imagem ${p.nome}`}
-                            />
-                            <div className="no-print" style={{ fontSize: 10, color: '#94A3B8', marginTop: 4, textAlign: 'center' }}>Clique para zoom</div>
+                      {p.imagem && (
+                        <div className="no-print" style={{ marginBottom: '1rem', position: 'relative' }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={p.imagem} alt={p.nome} style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />
+                          <button type="button" onClick={() => setGaleriaModal({ url: p.imagem!, descricao: `${p.nome} — ${TIPO_LABEL[p.tipo]}` })} style={{ position: 'absolute', inset: 0, background: 'transparent', border: 'none', cursor: 'pointer' }} aria-label="Ampliar" />
+                        </div>
+                      )}
+                      <div className="pest-metrics">
+                        <div className="pest-metric">
+                          <div className="pest-metric-val">{p.quantidadeMedia != null ? formatDecimal2(p.quantidadeMedia) : '—'}</div>
+                          <div className="pest-metric-lbl">méd./ponto</div>
+                        </div>
+                        <div className="pest-metric">
+                          <div className="pest-metric-val">{p.percentual}%</div>
+                          <div className="pest-metric-lbl">plantas afetadas</div>
+                        </div>
+                        {p.observacao && (
+                          <div className="pest-metric" style={{ gridColumn: '1 / -1', textAlign: 'left' }}>
+                            <div className="pest-metric-val" style={{ fontSize: '1rem', lineHeight: 1.4 }}>{p.observacao}</div>
+                            <div className="pest-metric-lbl">dano observado</div>
                           </div>
                         )}
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 12, marginBottom: p.observacao ? 12 : 0 }}>
-                            <div>
-                              <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, marginBottom: 2 }}>méd./ponto</div>
-                              <div style={{ fontSize: 16, fontWeight: 700, color: '#1E293B' }}>{p.quantidadeMedia != null ? formatDecimal2(p.quantidadeMedia) : '—'}</div>
-                            </div>
-                            <div>
-                              <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, marginBottom: 2 }}>plantas afetadas</div>
-                              <div style={{ fontSize: 16, fontWeight: 700, color: '#1E293B' }}>{p.percentual}%</div>
-                            </div>
-                          </div>
-                          {p.observacao && (
-                            <div style={{ marginBottom: 12 }}>
-                              <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, marginBottom: 2 }}>dano observado</div>
-                              <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{p.observacao}</div>
-                            </div>
-                          )}
-                          <div style={{ padding: '10px 14px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8 }}>
-                            <div style={{ fontSize: 10, color: '#166534', fontWeight: 700, marginBottom: 6, letterSpacing: '0.03em' }}>Recomendação (1 produto por ocorrência)</div>
-                            <div style={{ fontSize: 12, color: '#14532d', lineHeight: 1.5 }}>
-                              <span style={{ fontWeight: 600 }}>Produto:</span> {String(p.produto)} · <span style={{ fontWeight: 600 }}>Dose:</span> {String(p.dose)}
-                            </div>
-                            <div style={{ fontSize: 12, color: '#166534', marginTop: 4 }}><span style={{ fontWeight: 600 }}>Manejo:</span> {p.manejo}</div>
-                          </div>
+                      </div>
+                      <div className="action-bar" style={{ borderLeftColor: badgeClass === 'baixo' ? 'var(--success)' : 'var(--warning)' }}>
+                        <div>
+                          <div className="action-type">Recomendação: {String(p.produto)} · Dose: {String(p.dose)}</div>
+                          <div className="action-deadline">{p.manejo}</div>
                         </div>
                       </div>
                     </div>
@@ -602,80 +644,70 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
           </div>
         </div>
 
-        {/* Avaliação de risco e decisão */}
-        <div className="pdf-keep-together" style={{ ...cardStyle, overflow: 'hidden', marginBottom: 20 }}>
-          <div style={sectionTitleStyle}>Avaliação de Risco e Suporte à Decisão</div>
-          <div style={{ padding: 24, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>Score de Risco Global</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: '#1E293B' }}>{riscoNum}</div>
-              <div style={{ fontSize: 14, color: '#475569', marginTop: 4 }}>Risco {riscoLabel} — Prioridade: {riscoNum >= 50 ? 'Monitorar' : 'Acompanhar'}</div>
+        {/* #risco — Avaliação de Risco e Suporte à Decisão */}
+        <div id="risco" className="pdf-keep-together">
+          <div className="section-heading">📊 Avaliação de Risco e Suporte à Decisão</div>
+          <div className="grid-2">
+            <div className="card">
+              <div className="card-title"><span className="card-title-icon">⚠️</span> Score de Risco Global</div>
+              <div className="risk-gauge-wrap">
+                <div className="gauge-ring">
+                  <svg viewBox="0 0 120 120">
+                    <circle className="gauge-track" cx="60" cy="60" r="50" />
+                    <circle className={`gauge-fill ${gaugeFillClass}`} cx="60" cy="60" r="50" strokeDasharray={314} strokeDashoffset={strokeDashoffset} />
+                  </svg>
+                  <div className="gauge-label">{riscoNum}</div>
+                </div>
+                <div className="gauge-sub">Risco <strong>{riscoLabel}</strong> — Prioridade: {riscoNum >= 50 ? 'Monitorar' : 'Acompanhar'}</div>
+              </div>
+              <div className="info-row" style={{ marginTop: '1rem' }}>
+                <span className="info-label">Decisão recomendada</span>
+                <span className="info-value">{riscoNum >= 50 ? '🔍 Monitorar' : riscoNum >= 25 ? 'Acompanhar' : 'Controle adequado'}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">Próxima visita técnica</span>
+                <span className="info-value" style={{ color: 'var(--warning)', fontWeight: 600 }}>{proximaVisita}</span>
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 6 }}>Decisão recomendada</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: '#1B5E20' }}>{riscoNum >= 50 ? 'Monitorar' : riscoNum >= 25 ? 'Acompanhar' : 'Controle adequado'}</div>
-              <div style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>Próxima visita técnica: —</div>
-            </div>
+            {alertas.length > 0 ? (
+              <div className="card">
+                <div className="card-title"><span className="card-title-icon">🧠</span> Inteligência de Dados</div>
+                {alertas.map((a, i) => (
+                  <div key={i} className="insight-item">
+                    <span className="insight-icon">💡</span>
+                    <span className="insight-text">{a}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
 
-        {/* Inteligência de dados (alertas) */}
-        {alertas.length > 0 && (
-          <div className="pdf-keep-together" style={{ ...cardStyle, overflow: 'hidden', marginBottom: 20 }}>
-            <div style={sectionTitleStyle}>Inteligência de Dados</div>
-            <ul style={{ margin: 0, padding: '16px 24px 24px', paddingLeft: 20, fontSize: 14, color: '#334155', lineHeight: 1.8 }}>
-              {alertas.map((a, i) => (
-                <li key={i}>{a}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <div id="auditoria" style={{ marginBottom: '1.25rem' }} />
 
-        {/* Galeria */}
+        {/* Registros fotográficos */}
         {imagens.length > 0 && (
-          <div className="pdf-keep-together" style={{ ...cardStyle, padding: 24, marginBottom: 20 }}>
-            <div style={{ ...sectionTitleStyle, margin: '-24px -24px 20px -24px', padding: '14px 24px', borderRadius: '12px 12px 0 0' }}>Registros fotográficos</div>
+          <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+            <div className="card-title">Registros fotográficos</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
               {imagens.filter(img => img.url).map((img, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setGaleriaModal({ url: img.url!, descricao: img.descricao })}
-                  style={{ padding: 0, border: '1px solid #E2E8F0', borderRadius: 10, overflow: 'hidden', cursor: 'pointer', background: 'transparent' }}
-                >
+                <button key={i} type="button" onClick={() => setGaleriaModal({ url: img.url!, descricao: img.descricao })} className="no-print" style={{ padding: 0, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', cursor: 'pointer', background: 'transparent' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={img.url} alt={img.descricao ?? `Foto ${i + 1}`} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
                 </button>
               ))}
             </div>
-            {galeriaModal && (
-              <div
-                onClick={() => setGaleriaModal(null)}
-                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, cursor: 'pointer' }}
-              >
-                <div onClick={e => e.stopPropagation()} style={{ maxWidth: '95vw', maxHeight: '95vh' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={galeriaModal.url} alt={galeriaModal.descricao ?? 'Foto'} style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain', borderRadius: 8 }} />
-                  {galeriaModal.descricao && <div style={{ color: '#fff', marginTop: 12, textAlign: 'center' }}>{galeriaModal.descricao}</div>}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
-        <footer style={{ textAlign: 'center', padding: '32px 24px', borderTop: '1px solid #E2E8F0', fontSize: 12, color: '#64748B', background: '#fff', borderRadius: 12, marginTop: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <strong style={{ color: '#475569' }}>FortSmart Agro</strong> · Relatório de Monitoramento Fitossanitário · {normalized.data} · {normalized.tecnico}
-        </footer>
-      </div>
-    </div>
-  );
-}
-
-function Row2({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-      <span style={{ fontSize: 12, color: '#64748B' }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', textAlign: 'right' }}>{value || '—'}</span>
-    </div>
+        {/* Modal de zoom (galeria + imagens das pragas) */}
+        {galeriaModal && (
+          <ModalImagem
+            src={galeriaModal.url}
+            descricao={galeriaModal.descricao}
+            onClose={() => setGaleriaModal(null)}
+          />
+        )}
+    </RelatorioLayoutEnterprise>
   );
 }

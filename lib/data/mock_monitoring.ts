@@ -6,6 +6,10 @@ export const mockRelatorio: RelatorioMonitoramento = {
     data: '17/09/2025',
     tecnico: 'João Silva',
     crea: 'CREA-SP 12345/D',
+    consultoria: {
+        nome: 'AgroConsult Enterprise',
+        logoUrl: 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png'
+    },
     talhoes: [
         {
             id: 'T01',

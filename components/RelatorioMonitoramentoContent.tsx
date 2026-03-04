@@ -167,6 +167,7 @@ export type PayloadMonitoramento = Record<string, unknown> & {
   observacoes?: string | null;
   alertas?: string[] | null;
   imagens?: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
+  consultoria?: { nome?: string; logo?: string };
 };
 
 interface RelatorioMonitoramentoContentProps {
@@ -179,7 +180,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
   const normalized = useMemo((): RelatorioMonitoramento => {
     const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? relatorio.propriedade as Record<string, unknown> : undefined;
     const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? relatorio.meta as Record<string, unknown> : undefined;
-  const fazenda = String(
+    const fazenda = String(
       relatorio.fazenda
       ?? relatorio.nome_fazenda
       ?? relatorio.fazenda_nome
@@ -220,7 +221,16 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
     ).trim() || undefined;
     const talhoesRaw = Array.isArray(relatorio.talhoes) ? relatorio.talhoes : [];
     const talhoes = talhoesRaw.map((t: unknown) => normalizeTalhao(t != null && typeof t === 'object' ? t as Record<string, unknown> : {}));
-    return { fazenda, safra, data, tecnico, crea: crea || undefined, talhoes };
+
+    let consultoria: { nome: string; logoUrl?: string } | undefined = undefined;
+    if (relatorio.consultoria && relatorio.consultoria.nome) {
+      consultoria = {
+        nome: String(relatorio.consultoria.nome).trim(),
+        logoUrl: relatorio.consultoria.logo ? String(relatorio.consultoria.logo).trim() : undefined,
+      };
+    }
+
+    return { fazenda, safra, data, tecnico, crea: crea || undefined, talhoes, consultoria };
   }, [relatorio]);
 
   const handleExportPDF = async () => {
