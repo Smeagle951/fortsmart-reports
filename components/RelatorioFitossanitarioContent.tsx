@@ -13,7 +13,7 @@ import {
   TipoOrganismo,
 } from '@/lib/types/monitoring';
 import { calcularMetricasTalhao } from '@/lib/calculations';
-import { formatPercent2, formatDecimal2 } from '@/utils/format';
+import { formatPercent2, formatDecimal2, formatDate } from '@/utils/format';
 import ReportHeader from './ReportHeader';
 
 const MapaInterativo = dynamic(() => import('./MapaInterativo'), { ssr: false });
@@ -209,13 +209,32 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? relatorio.propriedade as Record<string, unknown> : undefined;
     const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? relatorio.meta as Record<string, unknown> : undefined;
     const fazenda = String(
-      relatorio.fazenda ?? relatorio.nome_fazenda ?? prop?.fazenda ?? prop?.nome ?? meta?.fazenda ?? ''
+      relatorio.fazenda
+      ?? (relatorio as any).nome_fazenda
+      ?? (relatorio as any).fazenda_nome
+      ?? prop?.fazenda
+      ?? prop?.nome
+      ?? (relatorio as any).nomeFazenda
+      ?? (relatorio as any).fazenda_nome
+      ?? meta?.fazenda
+      ?? ''
     ).trim() || 'Fazenda';
     const safra = String(relatorio.safra ?? meta?.safra ?? '').trim() || '—';
     const dataRaw = relatorio.data ?? meta?.dataGeracao ?? '';
     const data = typeof dataRaw === 'string' ? dataRaw : (dataRaw != null ? String(dataRaw) : '');
     const tecnico = String(
-      relatorio.tecnico ?? relatorio.agronomo ?? meta?.tecnico ?? meta?.agronomo ?? 'FortSmart Agro'
+      relatorio.tecnico
+      ?? (relatorio as any).agronomo
+      ?? (relatorio as any).nome_tecnico
+      ?? (relatorio as any).nome_agronomo
+      ?? (relatorio as any).tecnicoNome
+      ?? prop?.tecnico
+      ?? (prop as any)?.agronomo
+      ?? (prop as any)?.nome_tecnico
+      ?? meta?.tecnico
+      ?? (meta as any)?.agronomo
+      ?? (meta as any)?.nome_tecnico
+      ?? 'FortSmart Agro'
     ).trim() || 'FortSmart Agro';
     const crea = String(
       relatorio.crea ?? relatorio.tecnico_crea ?? meta?.tecnicoCrea ?? meta?.crea ?? prop?.crea ?? ''
@@ -273,8 +292,9 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     }
   };
 
-  const municipio = (relatorio.propriedade as Record<string, unknown> | undefined)?.municipio ?? (relatorio.propriedade as Record<string, unknown> | undefined)?.municipio ?? '';
-  const estado = (relatorio.propriedade as Record<string, unknown> | undefined)?.estado ?? '';
+  const propRaw = relatorio.propriedade as Record<string, unknown> | undefined;
+  const municipio = (propRaw?.municipio ?? (propRaw as any)?.cidade ?? (propRaw as any)?.municipio_nome ?? '') as string;
+  const estado = (propRaw?.estado ?? (propRaw as any)?.uf ?? (propRaw as any)?.estado_sigla ?? '') as string;
 
   const metricasTalhao = primeiroTalhao ? calcularMetricasTalhao(primeiroTalhao) : null;
   const topPragas = metricasTalhao?.top5Infestacoes ?? [];
@@ -420,11 +440,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
             <div style={{ padding: 20, display: 'grid', gap: 12 }}>
               <Row2 label="Fazenda" value={normalized.fazenda} />
               <Row2 label="Município" value={municipio && estado ? `${String(municipio)} — ${String(estado)}` : String(municipio || estado || '—')} />
-              <Row2 label="Área total" value={areaTotal > 0 ? `${formatDecimal2(areaTotal)} ha` : '—'} />
               <Row2 label="Talhão" value={`${primeiroTalhao.nome}${primeiroTalhao.area_ha > 0 ? ` (${formatDecimal2(primeiroTalhao.area_ha)} ha)` : ''}`} />
-              <Row2 label="Solo" value="—" />
-              <Row2 label="Irrigação" value="—" />
-              <Row2 label="Cultura anterior" value="—" />
             </div>
           </div>
 
@@ -432,7 +448,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
           <div style={{ ...cardStyle, overflow: 'hidden' }}>
             <div style={sectionTitleStyle}>Polígono real do talhão · Pontos georreferenciados</div>
             <div style={{ height: 260 }}>
-              <MapaInterativo pontos={primeiroTalhao.pontos} poligono={primeiroTalhao.poligono_geojson} talhaoId={primeiroTalhao.id} />
+              <MapaInterativo pontos={primeiroTalhao.pontos} poligono={primeiroTalhao.poligono_geojson} talhaoId={primeiroTalhao.id} hideHeader />
             </div>
           </div>
         </div>
@@ -445,10 +461,48 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
               <Row2 label="Safra" value={normalized.safra} />
               <Row2 label="Cultura" value={primeiroTalhao.cultura} />
               <Row2 label="Híbrido" value={primeiroTalhao.variedade ?? '—'} />
-              <Row2 label="Data de semeadura" value="—" />
-              <Row2 label="Data de emergência" value="—" />
-              <Row2 label="DAE" value={primeiroTalhao.dae != null ? `${primeiroTalhao.dae} dias` : '—'} />
-              <Row2 label="Estádio fenológico" value={primeiroTalhao.estagio ?? '—'} />
+              {(() => {
+                const contextoSafra = (relatorio as any).contextoSafra ?? (relatorio as any).contexto_safra;
+                const fenologia = (relatorio as any).fenologia ?? {};
+                const talhaoRaw = (Array.isArray(relatorio.talhoes) && (relatorio.talhoes as any[])[0]) || {};
+                const dataSemeaduraRaw =
+                  contextoSafra?.dataPlantio ??
+                  contextoSafra?.data_plantio ??
+                  talhaoRaw.dataPlantio ??
+                  talhaoRaw.data_plantio;
+                const dataEmergenciaRaw =
+                  fenologia.dataEmergencia ??
+                  fenologia.data_emergencia;
+                const daeCiclo =
+                  contextoSafra?.dae ??
+                  fenologia.dae ??
+                  primeiroTalhao.dae;
+                const estadioCiclo =
+                  fenologia.estadio ??
+                  fenologia.estagio ??
+                  primeiroTalhao.estagio;
+
+                return (
+                  <>
+                    <Row2
+                      label="Data de semeadura"
+                      value={dataSemeaduraRaw ? (formatDate(String(dataSemeaduraRaw)) || String(dataSemeaduraRaw)) : '—'}
+                    />
+                    <Row2
+                      label="Data de emergência"
+                      value={dataEmergenciaRaw ? (formatDate(String(dataEmergenciaRaw)) || String(dataEmergenciaRaw)) : '—'}
+                    />
+                    <Row2
+                      label="DAE"
+                      value={daeCiclo != null ? `${daeCiclo} dias` : '—'}
+                    />
+                    <Row2
+                      label="Estádio fenológico"
+                      value={estadioCiclo || '—'}
+                    />
+                  </>
+                );
+              })()}
             </div>
           </div>
           <div style={{ ...cardStyle, overflow: 'hidden' }}>

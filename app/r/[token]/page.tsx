@@ -1,5 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
+import { normalizeRelatorioPlantio } from '@/lib/normalize-relatorio-plantio';
+import { normalizeRelatorioVisitaTecnica } from '@/lib/normalize-relatorio-visita-tecnica';
 import RelatorioContent from '@/components/RelatorioContent';
 import RelatorioPlantioContent from '@/components/plantio/RelatorioPlantioContent';
 import RelatorioMonitoramentoContent from '@/components/RelatorioMonitoramentoContent';
@@ -151,15 +153,19 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       );
     }
 
-    const tipo = relatorio.tipo as string | undefined;
-    const tipoRelatorio = relatorio.tipoRelatorio as string | undefined;
+    // Detecta tipo via V1 (campo raiz) e V2 (core.reportType)
+    const core = relatorio.core as Record<string, unknown> | undefined;
+    const reportTypeV2 = typeof core?.reportType === 'string' ? core.reportType : undefined;
+    const tipo = (relatorio.tipo as string | undefined) ?? reportTypeV2;
+    const tipoRelatorio = (relatorio.tipoRelatorio as string | undefined) ?? reportTypeV2;
+
     const isSideBySide = tipo === 'avaliacao_lado_a_lado';
     const isPlantio = tipoRelatorio === 'plantio';
     const isVisitaTecnica = tipo === 'visita_tecnica';
     const hasTalhoes = Array.isArray(relatorio.talhoes) && (relatorio.talhoes as unknown[]).length > 0;
-    const isMonitoramento = tipo === 'monitoramento' && hasTalhoes;
+    const isMonitoramento = (tipo === 'monitoramento') && hasTalhoes;
 
-    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, hasTalhoes, topKeys: Object.keys(relatorio).slice(0, 12) });
+    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, topKeys: Object.keys(relatorio).slice(0, 12) });
 
     return (
       <>
@@ -167,13 +173,13 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
         <article className={`relatorio ${isPlantio ? 'relatorio--plantio' : ''} ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isVisitaTecnica ? 'relatorio--visita-tecnica' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''}`} style={isMonitoramento ? { minHeight: '100vh', background: '#F1F5F9' } : undefined}>
           {isPlantio ? (
             <RelatorioPlantioContent
-              relatorio={relatorio}
+              relatorio={normalizeRelatorioPlantio(relatorio) as Parameters<typeof RelatorioPlantioContent>[0]['relatorio']}
               reportId={row.titulo || row.id}
               relatorioUuid={row.id}
             />
           ) : isVisitaTecnica ? (
             <RelatorioVisitaTecnicaContent
-              relatorio={relatorio as import('@/components/RelatorioVisitaTecnicaContent').PayloadVisitaTecnica}
+              relatorio={normalizeRelatorioVisitaTecnica(relatorio) as import('@/components/RelatorioVisitaTecnicaContent').PayloadVisitaTecnica}
               reportId={row.titulo || row.id}
               relatorioUuid={row.id}
             />

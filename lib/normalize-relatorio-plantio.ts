@@ -33,13 +33,64 @@ function getArr<T>(v: unknown, mapItem: (x: unknown) => T | null): T[] {
 }
 
 export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
-  const talhao = (raw.talhao ?? raw.talhão) as UnknownRecord | undefined;
-  const contextoSafra = (raw.contextoSafra ?? raw.contexto_safra) as UnknownRecord | undefined;
-  const evolucaoCultura = (raw.evolucaoCultura ?? raw.evolucao_cultura) as UnknownRecord | undefined;
-  const fenologia = (raw.fenologia) as UnknownRecord | undefined;
-  const estande = (raw.estande) as UnknownRecord | undefined;
-  const plantabilidade = (raw.plantabilidade) as UnknownRecord | undefined;
-  const populacao = (raw.populacao) as UnknownRecord | undefined;
+  // ─── V2 schema bridge ─────────────────────────────────────────
+  // V2 uses: raw.core, raw.modulos.plantio.*, raw.indicadores, raw.assinatura
+  const core = (raw.core ?? {}) as UnknownRecord;
+  const modulosPlantio = ((raw.modulos as UnknownRecord)?.plantio ?? {}) as UnknownRecord;
+  const indicadores = (raw.indicadores ?? {}) as UnknownRecord;
+  const assinaturaV2 = (raw.assinatura ?? {}) as UnknownRecord;
+
+  // Flatten V2 → V1 compatible fields (only when V1 root fields are missing)
+  const isV2 = Object.keys(core).length > 0 || Object.keys(modulosPlantio).length > 0;
+
+  const rawMerged: UnknownRecord = isV2 ? {
+    // Preserve all V2 fields as-is for passthrough
+    ...raw,
+    // Map V2 meta → V1 meta
+    meta: raw.meta ?? {
+      id: getStr(core.reportId),
+      dataGeracao: getStr(core.createdAt ?? core.publishedAt),
+      tecnico: getStr((core.generatedBy as UnknownRecord)?.nome),
+      tecnicoCrea: getStr((core.generatedBy as UnknownRecord)?.crea),
+      safra: getStr((raw.talhao as UnknownRecord)?.safra ?? (raw.contextoSafra as UnknownRecord)?.safra),
+      versao: (core.version as number) ?? 2,
+      status: getStr(core.status) ?? 'published',
+    },
+    // Map V2 assinatura → V1 assinaturaTecnica
+    assinaturaTecnica: raw.assinaturaTecnica ?? {
+      nome: getStr(assinaturaV2.nome),
+      crea: getStr(assinaturaV2.crea),
+      dataAssinatura: getStr(assinaturaV2.dataAssinatura ?? assinaturaV2.data),
+      cidade: getStr(assinaturaV2.cidade),
+      conclusao: getStr(assinaturaV2.conclusao),
+    },
+    // Map V2 indicadores → V1 indiceAgronomicoTalhao
+    indiceAgronomicoTalhao: raw.indiceAgronomicoTalhao ?? {
+      valor: indicadores.indiceAgronomicoTalhao ?? indicadores.scoreGeral,
+      maximo: 100,
+      status: indicadores.riscoAtual === 'baixo' ? 'Saudável' : indicadores.riscoAtual === 'medio' ? 'Atenção' : 'Crítico',
+      itens: Array.isArray(indicadores.itemsIAT) ? indicadores.itemsIAT : [],
+    },
+    // Map V2 modulos.plantio.plantabilidade → V1 plantabilidade
+    plantabilidade: raw.plantabilidade ?? modulosPlantio.plantabilidade,
+    // Map V2 modulos.plantio.estandeEmergencia → V1 estande registro
+    estande: raw.estande ?? (modulosPlantio.estandeEmergencia ? {
+      registros: [{ ...(modulosPlantio.estandeEmergencia as UnknownRecord) }],
+      perdaTotalPct: null,
+      perdaSemanalPct: null,
+    } : undefined),
+    // Map V2 modulos.plantio.equipamento → V1 equipamento
+    equipamento: raw.equipamento ?? modulosPlantio.equipamento,
+  } : raw;
+
+  // ─── V1 path reads (unchanged) ────────────────────────────────
+  const talhao = (rawMerged.talhao ?? rawMerged.talhão) as UnknownRecord | undefined;
+  const contextoSafra = (rawMerged.contextoSafra ?? rawMerged.contexto_safra) as UnknownRecord | undefined;
+  const evolucaoCultura = (rawMerged.evolucaoCultura ?? rawMerged.evolucao_cultura) as UnknownRecord | undefined;
+  const fenologia = (rawMerged.fenologia) as UnknownRecord | undefined;
+  const estande = (rawMerged.estande) as UnknownRecord | undefined;
+  const plantabilidade = (rawMerged.plantabilidade) as UnknownRecord | undefined;
+  const populacao = (rawMerged.populacao) as UnknownRecord | undefined;
 
   const talhaoNorm: UnknownRecord = {
     ...(typeof talhao === 'object' && talhao !== null ? talhao : {}),
@@ -135,28 +186,28 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
   const estandeNorm: UnknownRecord =
     typeof estande === 'object' && estande !== null
       ? {
-          ...estande,
-          registros: Array.isArray(estande.registros)
-            ? (estande.registros as UnknownRecord[]).map((r) => ({
-                ...r,
-                data: getStr(r.data ?? (r as UnknownRecord).data_avaliacao) ?? r.data,
-                plantasPorMetro: getNum(r.plantasPorMetro ?? (r as UnknownRecord).plantas_por_metro),
-                plantasHa: getNum(r.plantasHa ?? (r as UnknownRecord).plantas_ha),
-                dae: getNum(r.dae ?? (r as UnknownRecord).dias_apos_emergencia),
-                dap: getNum(r.dap ?? (r as UnknownRecord).dias_apos_plantio),
-              }))
-            : estande.registros,
-        }
+        ...estande,
+        registros: Array.isArray(estande.registros)
+          ? (estande.registros as UnknownRecord[]).map((r) => ({
+            ...r,
+            data: getStr(r.data ?? (r as UnknownRecord).data_avaliacao) ?? r.data,
+            plantasPorMetro: getNum(r.plantasPorMetro ?? (r as UnknownRecord).plantas_por_metro),
+            plantasHa: getNum(r.plantasHa ?? (r as UnknownRecord).plantas_ha),
+            dae: getNum(r.dae ?? (r as UnknownRecord).dias_apos_emergencia),
+            dap: getNum(r.dap ?? (r as UnknownRecord).dias_apos_plantio),
+          }))
+          : estande.registros,
+      }
       : {};
 
   return {
-    ...raw,
+    ...rawMerged,
     talhao: { ...talhaoNorm, dataPlantio: dataPlantioStr ?? talhaoNorm.dataPlantio },
     contextoSafra: contextoSafraNorm,
     evolucaoCultura: evolucaoCulturaNorm,
     fenologia: fenologiaNorm,
     plantabilidade: plantabilidadeNorm,
-    estande: Object.keys(estandeNorm).length > 0 ? estandeNorm : raw.estande,
-    populacao: populacao ?? raw.populacao,
+    estande: Object.keys(estandeNorm).length > 0 ? estandeNorm : rawMerged.estande,
+    populacao: populacao ?? rawMerged.populacao,
   };
 }
