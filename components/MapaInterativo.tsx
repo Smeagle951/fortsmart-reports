@@ -8,6 +8,8 @@ interface MapaInterativoProps {
     pontos: PontoMonitoramento[];
     poligono: { type: string; geometry: { type: string; coordinates: number[][][] }; properties?: Record<string, unknown> };
     talhaoId: string;
+    /** Quando true, não exibe o título/legenda padrão (para uso embutido em outros cards). */
+    hideHeader?: boolean;
 }
 
 function severidadeColor(sev: number): string {
@@ -17,7 +19,7 @@ function severidadeColor(sev: number): string {
     return '#C62828';
 }
 
-export default function MapaInterativo({ pontos, poligono, talhaoId }: MapaInterativoProps) {
+export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader }: MapaInterativoProps) {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<unknown>(null);
 
@@ -194,10 +196,16 @@ export default function MapaInterativo({ pontos, poligono, talhaoId }: MapaInter
 
     return (
         <div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>
-                Polígono do talhão · Pontos georreferenciados
-            </h3>
-            <p className="no-print" style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Clique no alfinete para ver detalhes do ponto.</p>
+            {!hideHeader && (
+                <>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>
+                        Polígono do talhão · Pontos georreferenciados
+                    </h3>
+                    <p className="no-print" style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>
+                        Clique no alfinete para ver detalhes do ponto.
+                    </p>
+                </>
+            )}
             <div
                 ref={mapRef}
                 style={{ height: 360, borderRadius: 12, overflow: 'hidden', border: '1px solid #E2E8F0' }}
