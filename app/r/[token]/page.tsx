@@ -7,9 +7,11 @@ import RelatorioPlantioContent from '@/components/plantio/RelatorioPlantioConten
 import RelatorioMonitoramentoContent from '@/components/RelatorioMonitoramentoContent';
 import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitarioContent';
 import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaContent';
+import RelatorioResearchProContent from '@/components/research/RelatorioResearchProContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import PrintBar from '@/components/PrintBar';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import type { ResearchProReportPayload } from '@/types/research-report';
 
 // Disable Vercel's SSR cache so the latest Supabase data is always served
 export const dynamic = 'force-dynamic';
@@ -164,8 +166,12 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const isVisitaTecnica = tipo === 'visita_tecnica';
     const hasTalhoes = Array.isArray(relatorio.talhoes) && (relatorio.talhoes as unknown[]).length > 0;
     const isMonitoramento = (tipo === 'monitoramento') && hasTalhoes;
+    const isResearchPro =
+      tipo === 'RESEARCH_PRO' ||
+      reportTypeV2 === 'RESEARCH_PRO' ||
+      (core?.report_type as string) === 'RESEARCH_PRO';
 
-    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, topKeys: Object.keys(relatorio).slice(0, 12) });
+    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, isResearchPro, topKeys: Object.keys(relatorio).slice(0, 12) });
 
     return (
       <>
@@ -189,6 +195,13 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
                 relatorio={relatorio as import('@/components/RelatorioFitossanitarioContent').PayloadFitossanitario}
                 reportId={row.titulo || row.id}
                 relatorioUuid={row.id}
+              />
+            </ErrorBoundary>
+          ) : isResearchPro ? (
+            <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório Research Pro">
+              <RelatorioResearchProContent
+                relatorio={relatorio as ResearchProReportPayload}
+                reportId={row.titulo || row.id}
               />
             </ErrorBoundary>
           ) : isSideBySide ? (
