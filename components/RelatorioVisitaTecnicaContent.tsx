@@ -5,8 +5,6 @@ import dynamic from 'next/dynamic';
 import FortSmartLogo from '@/components/FortSmartLogo';
 import ModalImagem from '@/components/ModalImagem';
 import Mapa from '@/components/Mapa';
-import DashboardExecutiveVisita from './visita/DashboardExecutiveVisita';
-import AnalyticsPredictiveVisita from './visita/AnalyticsPredictiveVisita';
 
 const MapaTalhaoDynamic = dynamic(() => import('@/components/MapaTalhaoDynamic'), { ssr: false });
 
@@ -55,26 +53,8 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
   pragas?: Record<string, unknown>[];
   condicoes?: Record<string, unknown>;
   fenologia?: Record<string, unknown>;
-  mapa?: Record<string, unknown> & {
-    heatmap?: Array<{ lat: number; lng: number; intensidade: number }>;
-  };
+  mapa?: Record<string, unknown>;
   imagens?: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
-  consultoria?: { nome?: string; logoUrl?: string; logo?: string };
-  indicadores?: {
-    indiceAgronomicoTalhao?: number;
-    indiceImplantacao?: number;
-    indiceSanitario?: number;
-    indiceOperacional?: number;
-    riscoAtual?: string;
-    tendencia?: string;
-    scoreGeral?: number;
-    itemsIAT?: Array<{ label: string; valor: string | number; peso: number }>;
-  };
-  analytics?: {
-    comparativoSafraAnterior?: { variacaoPopulacaoPct?: number; variacaoIncidenciaPragasPct?: number; variacaoCVPct?: number; safraReferenciaId?: string };
-    tendencia7Dias?: { risco?: number; crescimentoPragas?: number };
-    previsaoCurtoPrazo?: { probabilidadeIntervencaoPct?: number; confiancaModelo?: number; modeloVersao?: string };
-  };
   assinaturaTecnica?: Record<string, unknown>;
 };
 
@@ -179,9 +159,6 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const pragas = (relatorio.pragas ?? []) as Record<string, unknown>[];
   const condicoes = (relatorio.condicoes ?? {}) as Record<string, unknown>;
   const fenologia = (relatorio.fenologia ?? {}) as Record<string, unknown>;
-  const indicadores = relatorio.indicadores;
-  const analytics = relatorio.analytics;
-  const consultoria = relatorio.consultoria;
   const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
   const imagensFenologia = imagens.filter((img) => (img.categoria ?? '').toLowerCase() === 'fenologia');
   const mapa = (relatorio.mapa ?? {}) as Record<string, unknown> & {
@@ -189,7 +166,6 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
     path?: string;
     polygon?: number[][] | string;
     pontos?: Array<Record<string, unknown> & { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string; latitude?: number; longitude?: number; lat?: number; lng?: number }>;
-    heatmap?: Array<{ lat: number; lng: number; intensidade: number }>;
   };
 
   const polygonForMap = useMemo(() => {
@@ -313,16 +289,9 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           <div style={{ height: 4, background: 'linear-gradient(90deg, #166534 0%, #22c55e 100%)' }} />
           <div style={{ padding: 28, display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: 32 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              {consultoria && consultoria.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={consultoria.logoUrl} alt={consultoria.nome} style={{ height: 48, objectFit: 'contain' }} />
-              ) : (
-                <FortSmartLogo size={56} />
-              )}
+              <FortSmartLogo size={56} />
               <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#14532d', letterSpacing: '-0.03em' }}>
-                  {consultoria?.nome || 'FortSmart Agro'}
-                </div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#14532d', letterSpacing: '-0.03em' }}>FortSmart Agro</div>
                 <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>
                   Relatório Agronômico · Visita Técnica
                 </div>
@@ -339,10 +308,6 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
             </div>
           </div>
         </header>
-
-        {/* Dashboard 360 e Previsão IA */}
-        {indicadores && <DashboardExecutiveVisita indicadores={indicadores} />}
-        {analytics && <AnalyticsPredictiveVisita analytics={analytics} />}
 
         {/* 1. Identificação: Talhão e cultura */}
         <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
@@ -472,7 +437,6 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                 <MapaTalhaoDynamic
                   polygon={polygonForMap && polygonForMap.length >= 3 ? polygonForMap : undefined}
                   pontos={pontosForMap}
-                  heatmap={mapa.heatmap}
                   hideSectionTitle
                 />
               ) : (

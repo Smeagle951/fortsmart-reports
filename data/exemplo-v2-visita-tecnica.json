@@ -20,10 +20,6 @@
             "schemaVersion": 2
         }
     },
-    "consultoria": {
-        "nome": "AgroConsult Enterprise",
-        "logoUrl": "https://cdn-icons-png.flaticon.com/512/3233/3233483.png"
-    },
     "propriedade": {
         "fazendaId": "faz-boa-esperanca-001",
         "fazenda": "Fazenda Boa Esperança",

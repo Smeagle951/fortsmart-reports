@@ -31,17 +31,11 @@ type ContextoSafra = {
   empresa?: string;
 };
 
-type Consultoria = {
-  nome?: string;
-  logoUrl?: string;
-};
-
 interface HeaderInstitucionalPlantioProps {
   meta: Meta;
   propriedade: Propriedade;
   talhao: Talhao;
   contextoSafra?: ContextoSafra;
-  consultoria?: Consultoria;
   reportId?: string;
 }
 
@@ -51,7 +45,6 @@ export default function HeaderInstitucionalPlantio({
   propriedade,
   talhao,
   contextoSafra = {},
-  consultoria,
   reportId,
 }: HeaderInstitucionalPlantioProps) {
   const cliente = propriedade.proprietario;
@@ -61,15 +54,11 @@ export default function HeaderInstitucionalPlantio({
   return (
     <header className="plantio-header-institucional">
       <div className="plantio-header-institucional__logo">
-        <div className="plantio-header-institucional__logo-icon" style={{ overflow: 'hidden' }}>
-          {consultoria?.logoUrl ? (
-            <img src={consultoria.logoUrl} alt={consultoria.nome || 'Logo da Consultoria'} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-          ) : (
-            <FortSmartLogo size={48} />
-          )}
+        <div className="plantio-header-institucional__logo-icon">
+          <FortSmartLogo size={48} />
         </div>
         <div>
-          <div className="plantio-header-institucional__empresa">{consultoria?.nome || 'FortSmart Agro'}</div>
+          <div className="plantio-header-institucional__empresa">FortSmart Agro</div>
           <div className="plantio-header-institucional__tipo">Relatório Agronômico de Plantio</div>
         </div>
       </div>

@@ -25,7 +25,7 @@ export const mockResearchProData: ResearchProReportPayload = {
         blocos: 4,
         programas: 6,
         cv_percentual: 6.9,
-        melhor_programa: "Bayer Produtor 1",
+        melhor_programa: "Programa Premium 1",
         produtividade_max: 4.68
     },
     ambiente: {
@@ -47,8 +47,8 @@ export const mockResearchProData: ResearchProReportPayload = {
     programas_manejo: [
         {
             id: "P1",
-            empresa: "Bayer",
-            nome: "Bayer Produtor 1",
+            empresa: "AgroTech Alpha",
+            nome: "Programa Premium 1",
             categoria: "empresa",
             aplicacoes: [
                 {
@@ -68,8 +68,8 @@ export const mockResearchProData: ResearchProReportPayload = {
         },
         {
             id: "P2",
-            empresa: "Syngenta",
-            nome: "Syngenta Padrão",
+            empresa: "AgroTech Beta",
+            nome: "Programa Padrão",
             categoria: "empresa",
             aplicacoes: [
                 {
@@ -101,11 +101,11 @@ export const mockResearchProData: ResearchProReportPayload = {
             unidade: "t/ha",
             dae: 135,
             dados: [
-                { parcela: "B1P1", programa: "Bayer Produtor 1", valor: 4.72 },
-                { parcela: "B1P2", programa: "Syngenta Padrão", valor: 4.50 },
+                { parcela: "B1P1", programa: "Programa Premium 1", valor: 4.72 },
+                { parcela: "B1P2", programa: "Programa Padrão", valor: 4.50 },
                 { parcela: "B1P3", programa: "Testemunha (Sem Fungicida)", valor: 2.10 },
-                { parcela: "B2P1", programa: "Bayer Produtor 1", valor: 4.60 },
-                { parcela: "B2P2", programa: "Syngenta Padrão", valor: 4.55 },
+                { parcela: "B2P1", programa: "Programa Premium 1", valor: 4.60 },
+                { parcela: "B2P2", programa: "Programa Padrão", valor: 4.55 },
                 { parcela: "B2P3", programa: "Testemunha (Sem Fungicida)", valor: 2.05 }
             ]
         }
@@ -122,8 +122,8 @@ export const mockResearchProData: ResearchProReportPayload = {
                 },
                 cv_percentual: 6.9,
                 tukey: [
-                    { programa: "Bayer Produtor 1", media: 4.68, grupo: "A" },
-                    { programa: "Syngenta Padrão", media: 4.52, grupo: "AB" },
+                    { programa: "Programa Premium 1", media: 4.68, grupo: "A" },
+                    { programa: "Programa Padrão", media: 4.52, grupo: "AB" },
                     { programa: "Testemunha (Sem Fungicida)", media: 2.07, grupo: "C" }
                 ],
                 dms: 0.28
@@ -135,16 +135,16 @@ export const mockResearchProData: ResearchProReportPayload = {
             {
                 bloco: 1,
                 parcelas: [
-                    { id: "B1P1", programa: "Bayer Produtor 1", linha: 1, coluna: 1 },
-                    { id: "B1P2", programa: "Syngenta Padrão", linha: 1, coluna: 2 },
+                    { id: "B1P1", programa: "Programa Premium 1", linha: 1, coluna: 1 },
+                    { id: "B1P2", programa: "Programa Padrão", linha: 1, coluna: 2 },
                     { id: "B1P3", programa: "Testemunha (Sem Fungicida)", linha: 1, coluna: 3 }
                 ]
             },
             {
                 bloco: 2,
                 parcelas: [
-                    { id: "B2P1", programa: "Bayer Produtor 1", linha: 2, coluna: 1 },
-                    { id: "B2P2", programa: "Syngenta Padrão", linha: 2, coluna: 2 },
+                    { id: "B2P1", programa: "Programa Premium 1", linha: 2, coluna: 1 },
+                    { id: "B2P2", programa: "Programa Padrão", linha: 2, coluna: 2 },
                     { id: "B2P3", programa: "Testemunha (Sem Fungicida)", linha: 2, coluna: 3 }
                 ]
             }
@@ -160,7 +160,7 @@ export const mockResearchProData: ResearchProReportPayload = {
         }
     ],
     conclusao: {
-        texto: "O programa Bayer Produtor 1 apresentou superioridade estatística na produtividade quando comparado à testemunha, e ligeiro ganho numérico sobre o padrão Syngenta, com alta proteção contra fungos foliares e ferrugem asiática.",
+        texto: "O programa Programa Premium 1 apresentou superioridade estatística na produtividade quando comparado à testemunha, e ligeiro ganho numérico sobre o padrão Programa Padrão, com alta proteção contra fungos foliares e ferrugem asiática.",
         recomendacao: "Indicado para regiões com alta pressão de ferrugem asiática."
     },
     assinatura: {

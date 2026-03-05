@@ -16,19 +16,17 @@ type Meta = {
 type Propriedade = { fazenda?: string; proprietario?: string; municipio?: string; estado?: string };
 type Talhao = { nome?: string; cultura?: string; area?: number; dataPlantio?: string };
 type ContextoSafra = { materialVariedade?: string; empresa?: string };
-type Consultoria = { nome?: string; logoUrl?: string };
 
 interface HeaderProps {
   meta: Meta;
   propriedade: Propriedade;
   talhao: Talhao;
   contextoSafra?: ContextoSafra;
-  consultoria?: Consultoria;
   reportId?: string;
   variant?: 'default' | 'plantio';
 }
 
-export default function HeaderRelatorio({ meta, propriedade, talhao, contextoSafra, consultoria, reportId, variant = 'default' }: HeaderProps) {
+export default function HeaderRelatorio({ meta, propriedade, talhao, contextoSafra, reportId, variant = 'default' }: HeaderProps) {
   if (variant === 'plantio') {
     return (
       <HeaderInstitucionalPlantio
@@ -36,7 +34,6 @@ export default function HeaderRelatorio({ meta, propriedade, talhao, contextoSaf
         propriedade={propriedade}
         talhao={talhao}
         contextoSafra={contextoSafra}
-        consultoria={consultoria}
         reportId={reportId}
       />
     );

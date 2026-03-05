@@ -209,9 +209,5 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
     plantabilidade: plantabilidadeNorm,
     estande: Object.keys(estandeNorm).length > 0 ? estandeNorm : rawMerged.estande,
     populacao: populacao ?? rawMerged.populacao,
-    indicadores: rawMerged.indicadores,
-    analytics: rawMerged.analytics,
-    consultoria: rawMerged.consultoria,
-    mapa: rawMerged.mapa,
   };
 }

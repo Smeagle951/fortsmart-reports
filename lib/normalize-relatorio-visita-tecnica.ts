@@ -137,10 +137,5 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
             status: indicadores.riscoAtual === 'baixo' ? 'Saudável' : 'Atenção',
             itens: Array.isArray(indicadores.itemsIAT) ? indicadores.itemsIAT : [],
         } : undefined),
-
-        // ── Indicadores, Analytics e Consultoria completos (V2 bypass) ──
-        indicadores: raw.indicadores ?? (Object.keys(indicadores).length > 0 ? indicadores : undefined),
-        analytics: raw.analytics ?? undefined,
-        consultoria: raw.consultoria ?? undefined,
     };
 }

@@ -5,8 +5,6 @@ import EstandeChart from './EstandeChart';
 import LinhaPlantioVisualizer from './LinhaPlantioVisualizer';
 import PerdasProjecaoCard from './PerdasProjecaoCard';
 import GaleriaImagens from './GaleriaImagens';
-import AnalyticsPredictivePlantio from './AnalyticsPredictivePlantio';
-import MapaTalhaoDynamic from '../MapaTalhaoDynamic';
 
 function parseHipoteses(causaProvavel?: string, problemaPrincipal?: string, hipoteses?: string[]): string[] {
   if (causaProvavel || problemaPrincipal) {
@@ -79,10 +77,6 @@ export interface RelatorioPlantioData {
   };
   imagens?: Array<{ url?: string; path?: string; descricao?: string; data?: string; categoria?: string }>;
   assinaturaTecnica?: { nome?: string; crea?: string; dataAssinatura?: string; cidade?: string };
-  indicadores?: Record<string, unknown> | any;
-  analytics?: Record<string, unknown> | any;
-  consultoria?: Record<string, unknown> | any;
-  mapa?: { heatmap?: any[] } | any;
 }
 
 interface DashboardTalhaoProps {
@@ -110,8 +104,6 @@ export default function DashboardTalhao({ data, relatorioId }: DashboardTalhaoPr
 
   return (
     <section className="space-y-6 print:break-inside-avoid">
-      {data.analytics && <AnalyticsPredictivePlantio analytics={data.analytics} />}
-
       {/* Layout 2 colunas */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         {/* Coluna esquerda */}
@@ -220,26 +212,6 @@ export default function DashboardTalhao({ data, relatorioId }: DashboardTalhaoPr
           </div>
         </div>
       </div>
-
-      {/* Mapa do Talhão + Heatmap */}
-      {data.mapa?.geodata?.polygon && (
-        <section className="print:break-inside-avoid">
-          <h3 className="plantio-card-title mb-4 text-base">Mapa de Plantabilidade e Falhas</h3>
-          <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
-            <MapaTalhaoDynamic
-              polygon={data.mapa.geodata.polygon}
-              heatmap={data.mapa.heatmap}
-              pontos={data.mapa.marcadores?.map((m: any) => ({
-                latitude: m.lat,
-                longitude: m.lng,
-                titulo: m.titulo,
-                descricao: m.descricao,
-                data: m.data
-              }))}
-            />
-          </div>
-        </section>
-      )}
 
       {/* Galeria de imagens - largura total */}
       {data.imagens && data.imagens.length > 0 && (

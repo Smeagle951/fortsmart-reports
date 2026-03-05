@@ -230,7 +230,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
       };
     }
 
-    const out: RelatorioMonitoramento = {
+    const out = {
       fazenda,
       safra,
       data,
@@ -239,7 +239,7 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
       talhoes,
       consultoria,
     };
-    return out;
+    return out as RelatorioMonitoramento;
   }, [relatorio]);
 
   const handleExportPDF = async () => {

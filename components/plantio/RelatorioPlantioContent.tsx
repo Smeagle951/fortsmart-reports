@@ -44,7 +44,6 @@ export default function RelatorioPlantioContent({
         propriedade={prop}
         talhao={talhao}
         contextoSafra={contextoSafra}
-        consultoria={data.consultoria}
         reportId={reportId}
         variant="plantio"
       />
