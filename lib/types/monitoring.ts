@@ -60,6 +60,7 @@ export interface RelatorioMonitoramento {
     tecnico: string;
     crea?: string;
     talhoes: Talhao[];
+    /** Dados da consultoria (nome e logo) para o cabeçalho do relatório */
     consultoria?: { nome: string; logoUrl?: string };
 }
 
