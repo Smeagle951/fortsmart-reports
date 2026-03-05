@@ -60,6 +60,7 @@ export interface RelatorioMonitoramento {
     tecnico: string;
     crea?: string;
     talhoes: Talhao[];
+    consultoria?: { nome: string; logoUrl?: string };
 }
 
 // Tipos de saída de cálculos
