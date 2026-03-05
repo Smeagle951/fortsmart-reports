@@ -501,9 +501,9 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                     const classe = String(a.classe ?? '—');
                     const badgeClasse =
                       classe.toLowerCase().includes('herbicida') ? { bg: '#DCFCE7', color: '#166534' } :
-                      classe.toLowerCase().includes('inseticida') ? { bg: '#FEF3C7', color: '#B45309' } :
-                      classe.toLowerCase().includes('fungicida') ? { bg: '#DBEAFE', color: '#1D4ED8' } :
-                      { bg: '#F1F5F9', color: '#475569' };
+                        classe.toLowerCase().includes('inseticida') ? { bg: '#FEF3C7', color: '#B45309' } :
+                          classe.toLowerCase().includes('fungicida') ? { bg: '#DBEAFE', color: '#1D4ED8' } :
+                            { bg: '#F1F5F9', color: '#475569' };
                     return (
                       <tr key={i} style={{ borderBottom: '1px solid #E2E8F0' }}>
                         <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', color: '#334155' }}>{String(a.data ?? '—')}</td>

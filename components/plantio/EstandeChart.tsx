@@ -126,7 +126,7 @@ export default function EstandeChart({
         Evolução do Estande{talhaoNome ? ` – ${talhaoNome}` : ''}
       </h3>
       <figure className="plantio-figure plantio-figure--chart">
-        <div className="plantio-chart-wrap" aria-hidden>
+        <div className="plantio-chart-wrap" style={{ minHeight: 140 }} aria-hidden>
           <canvas ref={chartRef} />
         </div>
         {showStats && (

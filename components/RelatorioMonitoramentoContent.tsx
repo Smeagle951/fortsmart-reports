@@ -230,7 +230,16 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
       };
     }
 
-    return { fazenda, safra, data, tecnico, crea: crea || undefined, talhoes, consultoria };
+    const out = {
+      fazenda,
+      safra,
+      data,
+      tecnico,
+      crea: crea || undefined,
+      talhoes,
+      consultoria,
+    };
+    return out as RelatorioMonitoramento;
   }, [relatorio]);
 
   const handleExportPDF = async () => {

@@ -151,18 +151,25 @@ export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader 
 
             if (heatData.length > 0) {
                 // Import dinâmico do plugin leaflet.heat para não quebrar no SSR
+                // O plugin req L global no frontend
+                if (typeof window !== 'undefined') {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (window as any).L = L;
+                }
+
                 import('leaflet.heat').then(() => {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (L as any).heatLayer(heatData, {
-                        radius: 65,     // raio de influencia do ponto
-                        blur: 45,       // desfoque (suavidade da borda)
-                        maxZoom: 16,    // zoom máximo onde a intensidade é preservada
-                        max: 1.0,       // escala max de intensidade
+                        radius: 80,     // Aumentado o raio de influencia do ponto (manchas maiores)
+                        blur: 50,       // Desfoque suavizando as transições
+                        maxZoom: 15,    // Zoom máximo onde a intensidade é preservada
+                        max: 1.0,       // Escala max de intensidade
                         gradient: {
                             0.2: '#2E7D32', // Baixo (Verde)
-                            0.5: '#F9A825', // Médio (Amarelo)
+                            0.4: '#F9A825', // Médio (Amarelo)
                             0.7: '#E65100', // Alto (Laranja)
-                            1.0: '#C62828'  // Crítico (Vermelho)
+                            0.9: '#C62828', // Crítico (Vermelho Escuro)
+                            1.0: '#B71C1C'  // Muito Crítico
                         }
                     }).addTo(map);
                 }).catch(e => console.error('Falha ao carregar heatmap', e));

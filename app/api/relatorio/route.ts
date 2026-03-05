@@ -4,14 +4,15 @@ import { mockRelatorio } from '@/lib/data/mock_monitoring';
 import { RelatorioMonitoramento, Talhao, PontoMonitoramento, Infestacao, TipoOrganismo } from '@/lib/types/monitoring';
 import { gerarRecomendacoes } from '@/lib/recommendations';
 
-// better-sqlite3 só está disponível em ambiente local (Node.js real).
-// Na Vercel (serverless) ele não existe — sempre cai em mock.
-let BetterSqlite3: ((path: string, opts: object) => unknown) | null = null;
-try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    BetterSqlite3 = require('better-sqlite3');
-} catch {
-    // Ambiente sem o módulo nativo (Vercel, CI, etc.) — usa mock
+// better-sqlite3 só está disponível em ambiente local. Na Vercel não carregamos (evita erro de build).
+function loadBetterSqlite3(): ((path: string, opts: object) => unknown) | null {
+    if (process.env.VERCEL === '1') return null;
+    try {
+        const modName = 'better-' + 'sqlite3';
+        return require(modName) as (path: string, opts: object) => unknown;
+    } catch {
+        return null;
+    }
 }
 
 
@@ -134,6 +135,7 @@ function buildPolygonFromPoints(pontos: PointRow[], radiusKm = 0.25): Talhao['po
 
 // ─── Leitura do banco real ────────────────────────────────────────────────────
 function readFromDatabase(dbPath: string): RelatorioMonitoramento {
+    const BetterSqlite3 = loadBetterSqlite3();
     if (!BetterSqlite3) return mockRelatorio;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = (BetterSqlite3 as any)(dbPath, { readonly: true, fileMustExist: true });

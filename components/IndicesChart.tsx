@@ -109,7 +109,7 @@ export default function IndicesChart({ metricas }: IndicesChartProps) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 24, alignItems: 'start' }}>
                 {/* Rosca */}
                 <div className="card animate-fadeInUp delay-100">
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'relative', minWidth: 160, minHeight: 160 }}>
                         <canvas ref={donutRef} />
                         {/* Centro da rosca */}
                         <div style={{
@@ -149,7 +149,9 @@ export default function IndicesChart({ metricas }: IndicesChartProps) {
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 12 }}>
                         Top {metricas.top5Infestacoes.length} Infestações
                     </div>
-                    <canvas ref={barRef} />
+                    <div style={{ minWidth: 0, minHeight: 200 }}>
+                        <canvas ref={barRef} />
+                    </div>
                 </div>
             </div>
         </div>

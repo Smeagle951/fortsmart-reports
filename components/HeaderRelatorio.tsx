@@ -15,7 +15,7 @@ type Meta = {
 
 type Propriedade = { fazenda?: string; proprietario?: string; municipio?: string; estado?: string };
 type Talhao = { nome?: string; cultura?: string; area?: number; dataPlantio?: string };
-type ContextoSafra = { materialVariedade?: string; empresa?: string }; 
+type ContextoSafra = { materialVariedade?: string; empresa?: string };
 
 interface HeaderProps {
   meta: Meta;
