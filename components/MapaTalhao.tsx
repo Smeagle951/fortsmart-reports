@@ -4,6 +4,7 @@ import React, { useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, Polygon, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import HeatmapLayer from './HeatmapLayer';
 
 // Corrige ícone do marcador quebrado no Next.js (webpack não resolve imagens do Leaflet)
 if (typeof window !== 'undefined') {
@@ -39,9 +40,10 @@ interface Props {
   zoom?: number;
   /** Quando true, não renderiza o título da seção (para uso embutido no relatório) */
   hideSectionTitle?: boolean;
+  heatmap?: Array<{ lat: number; lng: number; intensidade: number }>;
 }
 
-export default function MapaTalhao({ polygon: polygonProp, pontos = [], centro = [-15.6, -54.3], zoom = 15, hideSectionTitle }: Props) {
+export default function MapaTalhao({ polygon: polygonProp, pontos = [], centro = [-15.6, -54.3], zoom = 15, hideSectionTitle, heatmap }: Props) {
   const markers = pontos.filter((p) => Math.abs(p.latitude) <= 90 && Math.abs(p.longitude) <= 180).map((p) => ({ lat: p.latitude, lng: p.longitude, meta: p }));
 
   const polygonCoords = useMemo((): [number, number][] | undefined => {
@@ -80,6 +82,7 @@ export default function MapaTalhao({ polygon: polygonProp, pontos = [], centro =
             attribution={MAPTILER_KEY ? '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' : '&copy; OpenStreetMap contributors'}
             url={mapTilerUrl}
           />
+          {heatmap && heatmap.length > 0 && <HeatmapLayer pontos={heatmap} />}
           {polygonCoords && <Polygon positions={polygonCoords} pathOptions={{ color: '#2e7d32', weight: 3, fillColor: '#e8f5e9', fillOpacity: 0.4 }} />}
           {markers.map((m) => (
             <Marker key={m.meta.id ?? `${m.lat}-${m.lng}`} position={[m.lat, m.lng]}>

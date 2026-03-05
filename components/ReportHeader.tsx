@@ -33,9 +33,16 @@ export default function ReportHeader({ relatorio, onExportPDF, onExportExcel, hi
                     alignItems: 'center',
                     gap: 16,
                 }}>
-                    <FortSmartLogo size={52} />
+                    {relatorio.consultoria && relatorio.consultoria.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={relatorio.consultoria.logoUrl} alt={relatorio.consultoria.nome} style={{ height: 48, objectFit: 'contain' }} />
+                    ) : (
+                        <FortSmartLogo size={52} />
+                    )}
                     <div>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: '#1B5E20', letterSpacing: '-0.02em' }}>FortSmart Agro</div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#1B5E20', letterSpacing: '-0.02em' }}>
+                            {relatorio.consultoria?.nome || 'FortSmart Agro'}
+                        </div>
                         <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 2 }}>
                             Relatório de Monitoramento
                         </div>
@@ -46,10 +53,10 @@ export default function ReportHeader({ relatorio, onExportPDF, onExportExcel, hi
                     <MetaItem label="Safra" value={relatorio.safra} />
                     <MetaItem label="Data" value={relatorio.data ?? ''} />
                     {origemDados === 'app' && (
-                      <div>
-                        <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Origem</div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1B5E20' }}>Dados do aplicativo</div>
-                      </div>
+                        <div>
+                            <div style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Origem</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#1B5E20' }}>Dados do aplicativo</div>
+                        </div>
                     )}
                     <MetaItem label="Técnico" value={`${relatorio.tecnico}${relatorio.crea ? ` · ${relatorio.crea}` : ''}`} />
                 </div>

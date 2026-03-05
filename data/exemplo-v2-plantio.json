@@ -265,7 +265,23 @@
                 "data": "2025-10-30"
             }
         ],
-        "heatmap": []
+        "heatmap": [
+            {
+                "lat": -24.9565,
+                "lng": -53.4475,
+                "intensidade": 0.8
+            },
+            {
+                "lat": -24.9570,
+                "lng": -53.4480,
+                "intensidade": 0.9
+            },
+            {
+                "lat": -24.9575,
+                "lng": -53.4485,
+                "intensidade": 0.6
+            }
+        ]
     },
     "anexos": {
         "imagens": [
@@ -300,6 +316,10 @@
         "dataAssinatura": "2025-11-05",
         "cidade": "Cascavel/PR",
         "conclusao": "Plantio do Talhão 16 realizado em condições adequadas. Estande de 88,9% indica implantação de boa qualidade. Recomenda-se acompanhamento fenológico a partir dos 25 DAE."
+    },
+    "consultoria": {
+        "nome": "AgroTech Consultoria de Precisão",
+        "logoUrl": "https://placehold.co/400x120/0f172a/ffffff?text=AgroTech+Consultoria"
     },
     "auditoria": {
         "historicoVersoes": [

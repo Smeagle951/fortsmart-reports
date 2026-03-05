@@ -11,6 +11,7 @@ import TabelaDetalhada from './TabelaDetalhada';
 import GaleriaOcorrencias from './GaleriaOcorrencias';
 import IndicesPorPonto from './IndicesPorPonto';
 import CondicoesClimaticasCard from './CondicoesClimaticas';
+import MatrizRiscoFenologico from './MatrizRiscoFenologico';
 
 const MapaInterativo = dynamic(() => import('./MapaInterativo'), { ssr: false });
 
@@ -56,9 +57,9 @@ export default function TalhaoBloco({ talhao, index, total, data }: TalhaoBlocoP
                         <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>Talhão {index}/{total}</div>
                         <div style={{ fontSize: 18, fontWeight: 700, color: '#1E293B', lineHeight: 1.2 }}>{talhao.nome}</div>
                         <div style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>
-                          {[talhao.cultura || '—', talhao.variedade, talhao.estagio]
-                            .filter(v => v && String(v).toLowerCase() !== 'sem dados')
-                            .join(' · ') || (talhao.cultura || '—')}
+                            {[talhao.cultura || '—', talhao.variedade, talhao.estagio]
+                                .filter(v => v && String(v).toLowerCase() !== 'sem dados')
+                                .join(' · ') || (talhao.cultura || '—')}
                         </div>
                     </div>
                     <div style={{
@@ -110,6 +111,11 @@ export default function TalhaoBloco({ talhao, index, total, data }: TalhaoBlocoP
             <div style={{ display: 'grid', gridTemplateColumns: talhao.condicoes_climaticas ? '1fr 1fr' : '1fr', gap: 20, marginBottom: 20 }}>
                 <PrincipaisInfestacoes metricas={metricas} />
                 {talhao.condicoes_climaticas && <CondicoesClimaticasCard condicoes={talhao.condicoes_climaticas} />}
+            </div>
+
+            {/* Matriz de Risco Fenologico (Evolution Curve) */}
+            <div style={{ ...cardStyle, padding: '0 24px 24px 24px', marginBottom: 20 }}>
+                <MatrizRiscoFenologico talhao={talhao} />
             </div>
 
             {/* Dados complementares: sempre exibida quando houver qualquer dado de plantio/monitoramento */}

@@ -39,68 +39,69 @@ export default function RelatorioPlantioContent({
 
   return (
     <div className="relatorio-plantio">
-        <HeaderRelatorio
-          meta={meta}
-          propriedade={prop}
-          talhao={talhao}
-          contextoSafra={contextoSafra}
-          reportId={reportId}
-          variant="plantio"
-        />
-        <div className="plantio-title-block mb-6 print:hidden">
-          <h1>Relatório Agronômico</h1>
-          <p className="plantio-breadcrumb">
-            Talhão: {talhao.nome || '—'} › {prop.fazenda || '—'} › {talhao.cultura || '—'} › Safra {meta.safra || '—'}
-          </p>
+      <HeaderRelatorio
+        meta={meta}
+        propriedade={prop}
+        talhao={talhao}
+        contextoSafra={contextoSafra}
+        consultoria={data.consultoria}
+        reportId={reportId}
+        variant="plantio"
+      />
+      <div className="plantio-title-block mb-6 print:hidden">
+        <h1>Relatório Agronômico</h1>
+        <p className="plantio-breadcrumb">
+          Talhão: {talhao.nome || '—'} › {prop.fazenda || '—'} › {talhao.cultura || '—'} › Safra {meta.safra || '—'}
+        </p>
+      </div>
+
+      {/* Navegação por abas */}
+      <nav className="plantio-tabs mb-6 flex flex-wrap items-center justify-between gap-4 print:hidden">
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={activeTab === tab.id ? 'active' : ''}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
+      </nav>
 
-        {/* Navegação por abas */}
-        <nav className="plantio-tabs mb-6 flex flex-wrap items-center justify-between gap-4 print:hidden">
-          <div className="flex flex-wrap gap-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={activeTab === tab.id ? 'active' : ''}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </nav>
+      {/* Conteúdo da aba ativa (oculto na impressão) */}
+      <div className="relatorio-plantio-content print:hidden">
+        {activeTab === 'dashboard' && <DashboardTalhao data={data} relatorioId={relatorioUuid || reportId} />}
+        {activeTab === 'plantabilidade' && <PlantabilidadeEstande data={data} />}
+        {activeTab === 'diagnostico' && <DiagnosticoIntegrado data={data} />}
 
-        {/* Conteúdo da aba ativa (oculto na impressão) */}
-        <div className="relatorio-plantio-content print:hidden">
-          {activeTab === 'dashboard' && <DashboardTalhao data={data} relatorioId={relatorioUuid || reportId} />}
-          {activeTab === 'plantabilidade' && <PlantabilidadeEstande data={data} />}
-          {activeTab === 'diagnostico' && <DiagnosticoIntegrado data={data} />}
-          
-          {activeTab === 'pdf' && (
-            <RelatorioTecnicoPdf
-              data={data}
-              meta={meta}
-              assinaturaTecnica={assinaturaTecnica}
-              relatorioId={relatorioUuid || reportId}
-            />
-          )}
-        </div>
-
-        {/* Versão impressão: todas as seções */}
-        <div className="hidden print:block">
-          <DashboardTalhao data={data} relatorioId={relatorioUuid || reportId} />
-          <div className="my-8 border-t-2 border-slate-300" />
-          <PlantabilidadeEstande data={data} />
-          <div className="my-8 border-t-2 border-slate-300" />
-          <DiagnosticoIntegrado data={data} />
-          <div className="my-8 border-t-2 border-slate-300" />
+        {activeTab === 'pdf' && (
           <RelatorioTecnicoPdf
             data={data}
             meta={meta}
             assinaturaTecnica={assinaturaTecnica}
             relatorioId={relatorioUuid || reportId}
           />
-        </div>
+        )}
+      </div>
+
+      {/* Versão impressão: todas as seções */}
+      <div className="hidden print:block">
+        <DashboardTalhao data={data} relatorioId={relatorioUuid || reportId} />
+        <div className="my-8 border-t-2 border-slate-300" />
+        <PlantabilidadeEstande data={data} />
+        <div className="my-8 border-t-2 border-slate-300" />
+        <DiagnosticoIntegrado data={data} />
+        <div className="my-8 border-t-2 border-slate-300" />
+        <RelatorioTecnicoPdf
+          data={data}
+          meta={meta}
+          assinaturaTecnica={assinaturaTecnica}
+          relatorioId={relatorioUuid || reportId}
+        />
+      </div>
     </div>
   );
 }
