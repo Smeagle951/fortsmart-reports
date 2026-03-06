@@ -177,7 +177,36 @@ export type PayloadFitossanitario = Record<string, unknown> & {
   alertas?: string[] | null;
   organismos?: Array<Record<string, unknown>>;
   imagens?: Array<{ url?: string; descricao?: string }>;
+  /** Dados do módulo Plantio integrados ao monitoramento (estande, CV%, evolução fenológica) */
+  dados_plantio?: DadosPlantioMonitoramento | null;
 };
+
+/** Bloco de dados de plantio enviado pelo app para enriquecer o relatório de monitoramento */
+export interface DadosPlantioMonitoramento {
+  cultura?: string;
+  data_plantio?: string;
+  populacao_desejada?: number;
+  populacao_real?: number;
+  espacamento_entre_linhas_m?: number;
+  espacamento_medio_cm?: number;
+  plantas_por_metro?: number;
+  cv_percent?: number;
+  cv_classificacao?: string;
+  desvio_padrao_cm?: number;
+  indice_falhas_percent?: number;
+  indice_duplas_percent?: number;
+  metros_amostrados?: number;
+  plantas_contadas?: number;
+  eficiencia_estande_percent?: number;
+  dae?: number;
+  dap?: number;
+  estagio_atual?: string;
+  evolucao_fenologica?: Array<{ data?: string; dae?: number; dap?: number; estagio?: string; altura_cm?: number }>;
+  linha_plantabilidade?: Array<{ espacamento_cm: number; tipo: 'ok' | 'dupla' | 'tripla' | 'falha' }>;
+  estande_detalhes?: Record<string, unknown>;
+  cv_detalhes?: Record<string, unknown>;
+  fenologia_detalhes?: Record<string, unknown>;
+}
 
 interface RelatorioFitossanitarioContentProps {
   relatorio: PayloadFitossanitario;
@@ -480,6 +509,122 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
           </div>
         </div>
       </div>
+
+      {/* #dados-plantio — Dados do módulo Plantio (estande, CV%, evolução fenológica) */}
+      {relatorio.dados_plantio && (() => {
+        const dp = relatorio.dados_plantio as import('@/components/RelatorioFitossanitarioContent').DadosPlantioMonitoramento;
+        const hasAny = dp.cultura || dp.populacao_desejada != null || dp.populacao_real != null || dp.cv_percent != null || dp.estagio_atual || (dp.evolucao_fenologica?.length ?? 0) > 0 || (dp.linha_plantabilidade?.length ?? 0) > 0;
+        if (!hasAny) return null;
+        const fmt = (n: number | undefined) => n != null ? formatDecimal2(n) : '—';
+        const fmtInt = (n: number | undefined) => n != null ? String(Math.round(n)) : '—';
+        return (
+          <div id="dados-plantio" className="pdf-keep-together" style={{ marginTop: '1.5rem' }}>
+            <div className="section-heading">🌾 Dados do Plantio</div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              Dados do módulo Plantio (estande de plantas, CV%, evolução fenológica) referentes ao talhão.
+            </p>
+            <div className="grid-2" style={{ marginBottom: '1rem' }}>
+              <div className="card">
+                <div className="card-title"><span className="card-title-icon">📋</span> Informações principais</div>
+                <div className="info-row"><span className="info-label">Cultura</span><span className="info-value">{dp.cultura ?? '—'}</span></div>
+                <div className="info-row"><span className="info-label">Data de plantio</span><span className="info-value">{dp.data_plantio ? formatDate(dp.data_plantio) : '—'}</span></div>
+                <div className="info-row"><span className="info-label">População desejada</span><span className="info-value">{dp.populacao_desejada != null ? `${fmtInt(dp.populacao_desejada)} plantas/ha` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">População real</span><span className="info-value">{dp.populacao_real != null ? `${fmt(dp.populacao_real)} plantas/ha` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Espaçamento entre linhas</span><span className="info-value">{dp.espacamento_entre_linhas_m != null ? `${fmt(dp.espacamento_entre_linhas_m)} m` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Espaçamento médio entre plantas</span><span className="info-value">{dp.espacamento_medio_cm != null ? `${fmt(dp.espacamento_medio_cm)} cm` : '—'}</span></div>
+              </div>
+              <div className="card">
+                <div className="card-title"><span className="card-title-icon">📊</span> Qualidade do plantio</div>
+                <div className="info-row"><span className="info-label">CV de plantio</span><span className="info-value" style={dp.cv_classificacao ? { fontWeight: 700 } : undefined}>{dp.cv_percent != null ? `${fmt(dp.cv_percent)}%` : '—'}{dp.cv_classificacao ? ` (${dp.cv_classificacao})` : ''}</span></div>
+                <div className="info-row"><span className="info-label">Índice de falhas</span><span className="info-value">{dp.indice_falhas_percent != null ? `${fmt(dp.indice_falhas_percent)}%` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Índice de duplas</span><span className="info-value">{dp.indice_duplas_percent != null ? `${fmt(dp.indice_duplas_percent)}%` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Eficiência do estande</span><span className="info-value">{dp.eficiencia_estande_percent != null ? `${fmt(dp.eficiencia_estande_percent)}%` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Plantas contadas / metros amostrados</span><span className="info-value">{dp.plantas_contadas != null && dp.metros_amostrados != null ? `${fmtInt(dp.plantas_contadas)} plantas em ${fmt(dp.metros_amostrados)} m` : (dp.plantas_contadas != null ? fmtInt(dp.plantas_contadas) : (dp.metros_amostrados != null ? `${fmt(dp.metros_amostrados)} m` : '—'))}</span></div>
+              </div>
+            </div>
+            {/* Linha de plantabilidade (visualização espacamentos) */}
+            {Array.isArray(dp.linha_plantabilidade) && dp.linha_plantabilidade.length > 0 && (
+              <div className="card" style={{ marginBottom: '1rem' }}>
+                <div className="card-title"><span className="card-title-icon">📐</span> Visualização da qualidade do plantio — espaçamento entre sementes</div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                  Cada ponto representa o espaçamento real (cm) entre sementes. Verde: OK · Amarelo: dupla · Roxo: tripla · Vermelho: falha.
+                </p>
+                <div style={{ overflowX: 'auto', padding: '8px 0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 'max-content', flexWrap: 'wrap' }}>
+                    {dp.linha_plantabilidade.slice(0, 60).map((p, i) => {
+                      const cor = p.tipo === 'ok' ? '#22c55e' : p.tipo === 'dupla' ? '#eab308' : p.tipo === 'tripla' ? '#a855f7' : '#ef4444';
+                      return (
+                        <span key={i} title={`${p.espacamento_cm.toFixed(1)} cm — ${p.tipo}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                          <span style={{ width: 6, height: 12, borderRadius: 2, backgroundColor: cor }} />
+                          <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{p.espacamento_cm.toFixed(1)}</span>
+                        </span>
+                      );
+                    })}
+                    {dp.linha_plantabilidade.length > 60 && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>+{dp.linha_plantabilidade.length - 60} pontos</span>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#22c55e', marginRight: 4 }} /> OK</span>
+                  <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#eab308', marginRight: 4 }} /> Duplas</span>
+                  <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#a855f7', marginRight: 4 }} /> Triplas</span>
+                  <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#ef4444', marginRight: 4 }} /> Falhas</span>
+                </div>
+              </div>
+            )}
+            {/* Evolução fenológica (tabela) */}
+            {Array.isArray(dp.evolucao_fenologica) && dp.evolucao_fenologica.length > 0 && (
+              <div className="card" style={{ marginBottom: '1rem' }}>
+                <div className="card-title"><span className="card-title-icon">🌱</span> Evolução fenológica</div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Data</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAE</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAP</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Estágio</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Altura (cm)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dp.evolucao_fenologica.map((ev, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '8px 12px' }}>{ev.data ? formatDate(ev.data) : '—'}</td>
+                          <td style={{ padding: '8px 12px' }}>{ev.dae ?? '—'}</td>
+                          <td style={{ padding: '8px 12px' }}>{ev.dap ?? ev.dae ?? '—'}</td>
+                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>{ev.estagio ?? '—'}</td>
+                          <td style={{ padding: '8px 12px' }}>{ev.altura_cm != null ? formatDecimal2(ev.altura_cm) : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            {/* Resumo estágio atual quando não há tabela */}
+            {dp.estagio_atual && (!Array.isArray(dp.evolucao_fenologica) || dp.evolucao_fenologica.length === 0) && (
+              <div className="card" style={{ marginBottom: '1rem' }}>
+                <div className="card-title"><span className="card-title-icon">🌱</span> Estágio atual</div>
+                <div className="info-row"><span className="info-label">Estágio</span><span className="info-value" style={{ color: 'var(--primary)', fontWeight: 700 }}>{dp.estagio_atual}</span></div>
+                <div className="info-row"><span className="info-label">DAE / DAP</span><span className="info-value">{dp.dae != null ? `${dp.dae} dias` : '—'}</span></div>
+              </div>
+            )}
+            {/* Relação Plantio × Infestação (insight) */}
+            {((dp.cv_percent != null && dp.cv_percent > 25) || (dp.indice_falhas_percent != null && dp.indice_falhas_percent > 5)) && (primeiroTalhao?.pontos?.length ?? 0) > 0 && (
+              <div className="card" style={{ background: 'var(--surface-muted)', borderColor: 'var(--primary-muted)' }}>
+                <div className="card-title"><span className="card-title-icon">🔗</span> Relação Plantio × Monitoramento</div>
+                <p style={{ fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
+                  {(dp.cv_percent != null && dp.cv_percent > 25) && (dp.indice_falhas_percent != null && dp.indice_falhas_percent > 5)
+                    ? 'Alta variabilidade de plantio (CV% e falhas) pode favorecer reboleiras e plantas daninhas. Recomenda-se monitorar com maior frequência áreas com falhas e duplas.'
+                    : (dp.cv_percent != null && dp.cv_percent > 25)
+                      ? 'CV% de plantio elevado indica desuniformidade. Considere correlacionar pontos de maior infestação com áreas de maior variabilidade de estande.'
+                      : 'Áreas com falhas de estande podem apresentar maior pressão de plantas daninhas. O monitoramento fitossanitário complementa a análise do plantio.'}
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* #monitoramento — Ciclo + Visita + Clima (base: relatorio.html) */}
       <div id="monitoramento" className="pdf-keep-together">

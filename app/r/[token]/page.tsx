@@ -1,15 +1,12 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
-import { normalizeRelatorioPlantio } from '@/lib/normalize-relatorio-plantio';
-import { normalizeRelatorioVisitaTecnica } from '@/lib/normalize-relatorio-visita-tecnica';
 import RelatorioContent from '@/components/RelatorioContent';
-import RelatorioPlantioContent from '@/components/plantio/RelatorioPlantioContent';
-import RelatorioMonitoramentoContent from '@/components/RelatorioMonitoramentoContent';
 import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitarioContent';
-import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaContent';
+import RelatorioResearchProContent from '@/components/research/RelatorioResearchProContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import PrintBar from '@/components/PrintBar';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import type { ResearchProReportPayload } from '@/types/research-report';
 
 // Disable Vercel's SSR cache so the latest Supabase data is always served
 export const dynamic = 'force-dynamic';
@@ -162,33 +159,44 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const isSideBySide = tipo === 'avaliacao_lado_a_lado';
     const isPlantio = tipoRelatorio === 'plantio';
     const isVisitaTecnica = tipo === 'visita_tecnica';
+    const isRelatorioRemovido = isPlantio || isVisitaTecnica;
     const hasTalhoes = Array.isArray(relatorio.talhoes) && (relatorio.talhoes as unknown[]).length > 0;
     const isMonitoramento = (tipo === 'monitoramento') && hasTalhoes;
+    const isResearchPro =
+      tipo === 'RESEARCH_PRO' ||
+      reportTypeV2 === 'RESEARCH_PRO' ||
+      (core?.report_type as string) === 'RESEARCH_PRO';
 
-    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, topKeys: Object.keys(relatorio).slice(0, 12) });
+    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, isResearchPro, topKeys: Object.keys(relatorio).slice(0, 12) });
+
+    if (isRelatorioRemovido) {
+      return (
+        <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+          <div style={{ textAlign: 'center', maxWidth: 560 }}>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório não disponível</h1>
+            <p style={{ color: '#6b7280' }}>Este tipo de relatório (plantio / visita técnica) não está mais disponível nesta versão.</p>
+          </div>
+        </main>
+      );
+    }
 
     return (
       <>
-        {!isVisitaTecnica && <PrintBar />}
-        <article className={`relatorio ${isPlantio ? 'relatorio--plantio' : ''} ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isVisitaTecnica ? 'relatorio--visita-tecnica' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''}`} style={isMonitoramento ? { minHeight: '100vh', background: '#F1F5F9' } : undefined}>
-          {isPlantio ? (
-            <RelatorioPlantioContent
-              relatorio={normalizeRelatorioPlantio(relatorio) as Parameters<typeof RelatorioPlantioContent>[0]['relatorio']}
-              reportId={row.titulo || row.id}
-              relatorioUuid={row.id}
-            />
-          ) : isVisitaTecnica ? (
-            <RelatorioVisitaTecnicaContent
-              relatorio={normalizeRelatorioVisitaTecnica(relatorio) as import('@/components/RelatorioVisitaTecnicaContent').PayloadVisitaTecnica}
-              reportId={row.titulo || row.id}
-              relatorioUuid={row.id}
-            />
-          ) : isMonitoramento ? (
+        <PrintBar />
+        <article className={`relatorio ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''}`} style={isMonitoramento ? { minHeight: '100vh', background: '#F1F5F9' } : undefined}>
+          {isMonitoramento ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de monitoramento">
               <RelatorioFitossanitarioContent
                 relatorio={relatorio as import('@/components/RelatorioFitossanitarioContent').PayloadFitossanitario}
                 reportId={row.titulo || row.id}
                 relatorioUuid={row.id}
+              />
+            </ErrorBoundary>
+          ) : isResearchPro ? (
+            <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório Research Pro">
+              <RelatorioResearchProContent
+                relatorio={relatorio as ResearchProReportPayload}
+                reportId={row.titulo || row.id}
               />
             </ErrorBoundary>
           ) : isSideBySide ? (
