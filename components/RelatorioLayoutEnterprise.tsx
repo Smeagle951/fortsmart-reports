@@ -60,8 +60,17 @@ export default function RelatorioLayoutEnterprise({
             <a className="nav-item active" href="#resumo">
               <span className="nav-icon">📋</span> Visão Geral
             </a>
+            <a className="nav-item" href="#resumo-executivo">
+              <span className="nav-icon">📌</span> Resumo Executivo
+            </a>
+            <a className="nav-item" href="#iqf">
+              <span className="nav-icon">📊</span> Score Agronômico (IQF)
+            </a>
             <a className="nav-item" href="#propriedade">
-              <span className="nav-icon">🌾</span> Propriedade
+              <span className="nav-icon">🌾</span> Propriedade / Mapa
+            </a>
+            <a className="nav-item" href="#dados-plantio">
+              <span className="nav-icon">🌱</span> Dados do Plantio
             </a>
             <a className="nav-item" href="#monitoramento">
               <span className="nav-icon">🔬</span> Monitoramento
@@ -71,6 +80,9 @@ export default function RelatorioLayoutEnterprise({
             </a>
             <a className="nav-item" href="#risco">
               <span className="nav-icon">📊</span> Avaliação de Risco
+            </a>
+            <a className="nav-item" href="#observacoes-tecnico">
+              <span className="nav-icon">📝</span> Observações do técnico
             </a>
             <a className="nav-item" href="#auditoria">
               <span className="nav-icon">🔒</span> Auditoria
