@@ -7,6 +7,7 @@ import TabelaComparativaKPIs from '@/components/lado_a_lado/TabelaComparativaKPI
 
 export type SideBySideReportData = {
   tipo: string;
+  schemaVersion?: string;
   meta?: {
     reportId?: string;
     createdAt?: string;
@@ -24,6 +25,7 @@ export type SideBySideReportData = {
     fieldName?: string;
     areaHa?: number;
     objective?: string;
+    empresa?: string;
   };
   sideA?: SideData;
   sideB?: SideData;
@@ -36,7 +38,21 @@ export type SideBySideReportData = {
     ensaioName?: string;
     dataPlantio?: string;
     dae?: number;
+    dap?: number;
+    estadio?: string;
+    espacamento?: number;
+    populacaoAlvo?: number;
     pointCount?: number;
+  };
+  points?: Array<{ name?: string; indexNo?: number; status?: string }>;
+  phenology?: {
+    sideA?: { estadio?: string; vigor?: string; uniformidade?: string; observacao?: string };
+    sideB?: { estadio?: string; vigor?: string; uniformidade?: string; observacao?: string };
+  };
+  diagnostics?: {
+    standLoss?: number;
+    standImpactScHa?: number;
+    recommendations?: string[];
   };
   ocorrencias?: Array<{
     tipo?: string;
@@ -106,6 +122,9 @@ export default function SideBySideReportContent({ data, reportId }: SideBySideRe
   const photosB = sideB.photos || [];
   const recommendations = conclusion.recommendations || [];
   const coleta = data.coleta;
+  const points = data.points || [];
+  const phenology = data.phenology;
+  const diagnostics = data.diagnostics;
   const ocorrencias = data.ocorrencias || [];
   const aplicacoes = data.aplicacoes || [];
   const resumo = data.resumo;
@@ -125,8 +144,8 @@ export default function SideBySideReportContent({ data, reportId }: SideBySideRe
         reportId={reportId || meta.reportId}
       />
 
-      {/* Coleta: ensaio, data plantio, DAE, pontos */}
-      {coleta && (coleta.ensaioName || coleta.dae != null || coleta.pointCount != null || coleta.dataPlantio) && (
+      {/* Coleta: ensaio, data plantio, DAE, DAP, estádio, espaçamento, população alvo, pontos */}
+      {coleta && (coleta.ensaioName || coleta.dae != null || coleta.pointCount != null || coleta.dataPlantio || coleta.estadio != null || coleta.espacamento != null || coleta.populacaoAlvo != null || coleta.dap != null) && (
         <section className="sbs-section">
           <h2 className="sbs-section-title">Dados da coleta</h2>
           <div className="sbs-info-grid">
@@ -148,6 +167,30 @@ export default function SideBySideReportContent({ data, reportId }: SideBySideRe
                 <span className="sbs-info-value">{coleta.dae} dias</span>
               </div>
             )}
+            {coleta.dap != null && (
+              <div className="sbs-info-row">
+                <span className="sbs-info-label">DAP</span>
+                <span className="sbs-info-value">{coleta.dap} dias</span>
+              </div>
+            )}
+            {coleta.estadio && (
+              <div className="sbs-info-row">
+                <span className="sbs-info-label">Estádio</span>
+                <span className="sbs-info-value">{coleta.estadio}</span>
+              </div>
+            )}
+            {coleta.espacamento != null && (
+              <div className="sbs-info-row">
+                <span className="sbs-info-label">Espaçamento (cm)</span>
+                <span className="sbs-info-value">{formatNumber(coleta.espacamento, { decimals: 1 })}</span>
+              </div>
+            )}
+            {coleta.populacaoAlvo != null && (
+              <div className="sbs-info-row">
+                <span className="sbs-info-label">População alvo (pl/ha)</span>
+                <span className="sbs-info-value">{formatNumber(coleta.populacaoAlvo, { decimals: 0 })}</span>
+              </div>
+            )}
             {coleta.pointCount != null && (
               <div className="sbs-info-row">
                 <span className="sbs-info-label">Pontos de coleta</span>
@@ -155,6 +198,140 @@ export default function SideBySideReportContent({ data, reportId }: SideBySideRe
               </div>
             )}
           </div>
+        </section>
+      )}
+
+      {/* Empresa (fazenda) */}
+      {farm.empresa && (
+        <section className="sbs-section">
+          <h2 className="sbs-section-title">Empresa</h2>
+          <p className="sbs-text-block">{farm.empresa}</p>
+        </section>
+      )}
+
+      {/* Pontos de avaliação */}
+      {points.length > 0 && (
+        <section className="sbs-section">
+          <h2 className="sbs-section-title">Pontos de avaliação</h2>
+          <div className="sbs-table-wrap">
+            <table className="sbs-table">
+              <thead>
+                <tr>
+                  <th>Ponto</th>
+                  <th>Nome</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {points.map((p, i) => (
+                  <tr key={i}>
+                    <td>{p.indexNo ?? i + 1}</td>
+                    <td>{p.name || '—'}</td>
+                    <td>{p.status || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* Fenologia por lado */}
+      {phenology && (phenology.sideA || phenology.sideB) && (
+        <section className="sbs-section">
+          <h2 className="sbs-section-title">Fenologia</h2>
+          <div className="sbs-two-columns">
+            {phenology.sideA && (
+              <div className="sbs-column sbs-column-a">
+                <div className="sbs-column-badge">{sideAName}</div>
+                <div className="sbs-info-grid">
+                  {phenology.sideA.estadio && (
+                    <div className="sbs-info-row">
+                      <span className="sbs-info-label">Estádio</span>
+                      <span className="sbs-info-value">{phenology.sideA.estadio}</span>
+                    </div>
+                  )}
+                  {phenology.sideA.vigor && (
+                    <div className="sbs-info-row">
+                      <span className="sbs-info-label">Vigor</span>
+                      <span className="sbs-info-value">{phenology.sideA.vigor}</span>
+                    </div>
+                  )}
+                  {phenology.sideA.uniformidade && (
+                    <div className="sbs-info-row">
+                      <span className="sbs-info-label">Uniformidade</span>
+                      <span className="sbs-info-value">{phenology.sideA.uniformidade}</span>
+                    </div>
+                  )}
+                  {phenology.sideA.observacao && (
+                    <div className="sbs-info-row sbs-info-row-full">
+                      <span className="sbs-info-label">Observação</span>
+                      <span className="sbs-info-value">{phenology.sideA.observacao}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {phenology.sideB && (
+              <div className="sbs-column sbs-column-b">
+                <div className="sbs-column-badge">{sideBName}</div>
+                <div className="sbs-info-grid">
+                  {phenology.sideB.estadio && (
+                    <div className="sbs-info-row">
+                      <span className="sbs-info-label">Estádio</span>
+                      <span className="sbs-info-value">{phenology.sideB.estadio}</span>
+                    </div>
+                  )}
+                  {phenology.sideB.vigor && (
+                    <div className="sbs-info-row">
+                      <span className="sbs-info-label">Vigor</span>
+                      <span className="sbs-info-value">{phenology.sideB.vigor}</span>
+                    </div>
+                  )}
+                  {phenology.sideB.uniformidade && (
+                    <div className="sbs-info-row">
+                      <span className="sbs-info-label">Uniformidade</span>
+                      <span className="sbs-info-value">{phenology.sideB.uniformidade}</span>
+                    </div>
+                  )}
+                  {phenology.sideB.observacao && (
+                    <div className="sbs-info-row sbs-info-row-full">
+                      <span className="sbs-info-label">Observação</span>
+                      <span className="sbs-info-value">{phenology.sideB.observacao}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Diagnóstico automático */}
+      {diagnostics && diagnostics.recommendations && diagnostics.recommendations.length > 0 && (
+        <section className="sbs-section">
+          <h2 className="sbs-section-title">Diagnóstico</h2>
+          {(diagnostics.standLoss != null || diagnostics.standImpactScHa != null) && (
+            <div className="sbs-info-grid" style={{ marginBottom: 12 }}>
+              {diagnostics.standLoss != null && (
+                <div className="sbs-info-row">
+                  <span className="sbs-info-label">Perda de estande (pl/ha)</span>
+                  <span className="sbs-info-value">{formatNumber(diagnostics.standLoss, { decimals: 0 })}</span>
+                </div>
+              )}
+              {diagnostics.standImpactScHa != null && (
+                <div className="sbs-info-row">
+                  <span className="sbs-info-label">Impacto (sc/ha)</span>
+                  <span className="sbs-info-value">{formatNumber(diagnostics.standImpactScHa, { decimals: 2 })}</span>
+                </div>
+              )}
+            </div>
+          )}
+          <ul className="sbs-list">
+            {diagnostics.recommendations.map((rec, i) => (
+              <li key={i}>{rec}</li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -401,7 +578,7 @@ export default function SideBySideReportContent({ data, reportId }: SideBySideRe
       </section>
 
       {/* Assinatura */}
-      {conclusion.signature && (conclusion.signature.name || conclusion.signature.crea) && (
+      {conclusion.signature && (conclusion.signature.name || conclusion.signature.crea || conclusion.signature.city) && (
         <section className="sbs-section sbs-signature-section">
           <h2 className="sbs-section-title">Responsável técnico</h2>
           <div className="sbs-signature-box">

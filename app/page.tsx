@@ -93,8 +93,6 @@ function HomeContent() {
 
         <div className="no-print" style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           <a href="/monitoramento/preview" style={{ fontSize: 12, color: '#1B5E20', textDecoration: 'underline', fontWeight: 500 }}>Preview Monitoramento</a>
-          <a href="/visita/preview" style={{ fontSize: 12, color: '#1B5E20', textDecoration: 'underline', fontWeight: 500 }}>Preview Visita Técnica</a>
-          <a href="/plantio/preview" style={{ fontSize: 12, color: '#1B5E20', textDecoration: 'underline', fontWeight: 500 }}>Preview Plantio</a>
         </div>
 
         {source === 'loading' && (

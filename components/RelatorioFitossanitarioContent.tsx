@@ -177,7 +177,36 @@ export type PayloadFitossanitario = Record<string, unknown> & {
   alertas?: string[] | null;
   organismos?: Array<Record<string, unknown>>;
   imagens?: Array<{ url?: string; descricao?: string }>;
+  /** Dados do módulo Plantio integrados ao monitoramento (estande, CV%, evolução fenológica) */
+  dados_plantio?: DadosPlantioMonitoramento | null;
 };
+
+/** Bloco de dados de plantio enviado pelo app para enriquecer o relatório de monitoramento */
+export interface DadosPlantioMonitoramento {
+  cultura?: string;
+  data_plantio?: string;
+  populacao_desejada?: number;
+  populacao_real?: number;
+  espacamento_entre_linhas_m?: number;
+  espacamento_medio_cm?: number;
+  plantas_por_metro?: number;
+  cv_percent?: number;
+  cv_classificacao?: string;
+  desvio_padrao_cm?: number;
+  indice_falhas_percent?: number;
+  indice_duplas_percent?: number;
+  metros_amostrados?: number;
+  plantas_contadas?: number;
+  eficiencia_estande_percent?: number;
+  dae?: number;
+  dap?: number;
+  estagio_atual?: string;
+  evolucao_fenologica?: Array<{ data?: string; dae?: number; dap?: number; estagio?: string; altura_cm?: number }>;
+  linha_plantabilidade?: Array<{ espacamento_cm: number; tipo: 'ok' | 'dupla' | 'tripla' | 'falha' }>;
+  estande_detalhes?: Record<string, unknown>;
+  cv_detalhes?: Record<string, unknown>;
+  fenologia_detalhes?: Record<string, unknown>;
+}
 
 interface RelatorioFitossanitarioContentProps {
   relatorio: PayloadFitossanitario;
@@ -416,6 +445,38 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     ? (formatDate(proximaVisitaRaw) !== '—' ? formatDate(proximaVisitaRaw) : String(proximaVisitaRaw))
     : '—';
 
+  /** Índice FortSmart de Qualidade (IQF): 0–100 por dimensão + média. Calculado a partir de dados_plantio, risco e métricas. */
+  const iqf = useMemo(() => {
+    const dp = relatorio.dados_plantio as DadosPlantioMonitoramento | undefined;
+    const plantabilidade = dp?.cv_percent != null
+      ? Math.round(Math.max(0, 100 - Math.min(dp.cv_percent * 5, 100)))
+      : null;
+    const estande = dp?.eficiencia_estande_percent != null
+      ? Math.round(dp.eficiencia_estande_percent)
+      : (dp?.populacao_desejada != null && dp?.populacao_real != null && dp.populacao_desejada > 0
+        ? Math.round((dp.populacao_real / dp.populacao_desejada) * 100)
+        : null);
+    const sanidade = riscoNum != null ? Math.round(100 - riscoNum) : null;
+    const falhasPct = (dp?.indice_falhas_percent ?? 0) + (dp?.indice_duplas_percent ?? 0);
+    const uniformidade = dp ? Math.round(Math.max(0, 100 - falhasPct * 4)) : null;
+    const valores = [plantabilidade, estande, sanidade, uniformidade].filter((v): v is number => v != null && Number.isFinite(v));
+    const media = valores.length > 0 ? Math.round(valores.reduce((a, b) => a + b, 0) / valores.length) : null;
+    const classificacao = media == null ? null : media >= 90 ? 'EXCELENTE' : media >= 75 ? 'BOM' : media >= 50 ? 'REGULAR' : 'CRÍTICO';
+    return { plantabilidade, estande, sanidade, uniformidade, media, classificacao };
+  }, [relatorio.dados_plantio, riscoNum]);
+
+  /** Potencial produtivo estimado (faixa sc/ha) para o resumo executivo — fórmula aproximada a partir de população e eficiência. */
+  const potencialProdutivo = useMemo(() => {
+    const dp = relatorio.dados_plantio as DadosPlantioMonitoramento | undefined;
+    if (dp?.populacao_real == null || dp.populacao_real < 10000) return null;
+    const base = Math.min(85, 45 + (dp.populacao_real / 10000) * 0.35);
+    const ef = (dp.eficiencia_estande_percent ?? 95) / 100;
+    const cv = (dp.cv_percent ?? 15) / 100;
+    const min = Math.round(base * ef * (1 - cv * 0.5));
+    const max = Math.round(base * ef * (1 + 0.05));
+    return { min: Math.max(30, min), max: Math.min(100, max) };
+  }, [relatorio.dados_plantio]);
+
   if (!primeiroTalhao) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>
@@ -465,6 +526,86 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         </div>
       </div>
 
+      {/* #resumo-executivo — Resumo Executivo Inteligente (cartão premium) */}
+      <div id="resumo-executivo" className="card pdf-keep-together" style={{ marginTop: '1.25rem', borderLeft: '4px solid var(--primary)' }}>
+        <div className="card-title"><span className="card-title-icon">📌</span> Resumo Executivo</div>
+        <p style={{ fontSize: '0.9rem', lineHeight: 1.65, color: 'var(--text-main)', margin: 0 }}>
+          Relatório de monitoramento fitossanitário do talhão <strong>{primeiroTalhao.nome}</strong>, cultura <strong>{primeiroTalhao.cultura}</strong>{primeiroTalhao.variedade ? ` (${primeiroTalhao.variedade})` : ''}, safra {normalized.safra}.
+          {primeiroTalhao.area_ha > 0 && ` Área: ${formatDecimal2(primeiroTalhao.area_ha)} ha.`}
+          {primeiroTalhao.estagio && ` Estádio fenológico atual: ${primeiroTalhao.estagio}${primeiroTalhao.dae != null ? ` (${primeiroTalhao.dae} DAE)` : ''}.`}
+          {' '}Qualidade de plantio e estande constam na seção Dados do Plantio.
+          {' '}Risco agronômico atual: <strong>{riscoLabel}</strong> (score {riscoNum}).
+          {proximaVisita !== '—' && ` Próxima visita técnica recomendada: ${proximaVisita}.`}
+          {topPragas.length > 0 && ` Foram identificadas ${topPragas.length} praga(s)/doença(s) nos pontos amostrados; recomendações e plano de aplicação constam nas seções abaixo.`}
+          {potencialProdutivo && (
+            <>
+              {' '}
+              <strong>Potencial produtivo estimado:</strong> {potencialProdutivo.min} – {potencialProdutivo.max} sc/ha.
+            </>
+          )}
+        </p>
+      </div>
+
+      {/* #iqf — Índice FortSmart de Qualidade Agronômica */}
+      {iqf.media != null && (
+        <div id="iqf" className="card pdf-keep-together" style={{ marginTop: '1rem' }}>
+          <div className="card-title"><span className="card-title-icon">📊</span> Índice FortSmart de Qualidade Agronômica (IQF)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+            {iqf.plantabilidade != null && (
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>Plantabilidade</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: 1, height: 10, background: 'var(--bg)', borderRadius: 5, overflow: 'hidden' }}>
+                    <div style={{ width: `${iqf.plantabilidade}%`, height: '100%', background: 'var(--primary)', borderRadius: 5 }} />
+                  </div>
+                  <span style={{ fontWeight: 700, minWidth: 28 }}>{iqf.plantabilidade}</span>
+                </div>
+              </div>
+            )}
+            {iqf.estande != null && (
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>Estande</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: 1, height: 10, background: 'var(--bg)', borderRadius: 5, overflow: 'hidden' }}>
+                    <div style={{ width: `${iqf.estande}%`, height: '100%', background: 'var(--success)', borderRadius: 5 }} />
+                  </div>
+                  <span style={{ fontWeight: 700, minWidth: 28 }}>{iqf.estande}</span>
+                </div>
+              </div>
+            )}
+            {iqf.sanidade != null && (
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>Sanidade</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: 1, height: 10, background: 'var(--bg)', borderRadius: 5, overflow: 'hidden' }}>
+                    <div style={{ width: `${iqf.sanidade}%`, height: '100%', background: iqf.sanidade >= 70 ? 'var(--success)' : 'var(--warning)', borderRadius: 5 }} />
+                  </div>
+                  <span style={{ fontWeight: 700, minWidth: 28 }}>{iqf.sanidade}</span>
+                </div>
+              </div>
+            )}
+            {iqf.uniformidade != null && (
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>Uniformidade</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: 1, height: 10, background: 'var(--bg)', borderRadius: 5, overflow: 'hidden' }}>
+                    <div style={{ width: `${iqf.uniformidade}%`, height: '100%', background: 'var(--primary)', borderRadius: 5 }} />
+                  </div>
+                  <span style={{ fontWeight: 700, minWidth: 28 }}>{iqf.uniformidade}</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <div style={{ padding: '12px 16px', background: 'var(--bg)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Nota geral</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: iqf.media >= 75 ? 'var(--success)' : iqf.media >= 50 ? 'var(--warning)' : 'var(--danger)' }}>{iqf.media} / 100</div>
+            </div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>Classificação: {iqf.classificacao}</div>
+          </div>
+        </div>
+      )}
+
       {/* #propriedade — Grid 2: Propriedade + Mapa (base: relatorio.html) */}
       <div id="propriedade" className="grid-2 pdf-keep-together">
         <div className="card">
@@ -480,6 +621,284 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
           </div>
         </div>
       </div>
+
+      {/* #dados-plantio — Dados do módulo Plantio (estande, CV%, evolução fenológica) */}
+      {relatorio.dados_plantio && (() => {
+        const dp = relatorio.dados_plantio as import('@/components/RelatorioFitossanitarioContent').DadosPlantioMonitoramento;
+        const hasAny = dp.cultura || dp.populacao_desejada != null || dp.populacao_real != null || dp.cv_percent != null || dp.estagio_atual || (dp.evolucao_fenologica?.length ?? 0) > 0 || (dp.linha_plantabilidade?.length ?? 0) > 0;
+        if (!hasAny) return null;
+        const fmt = (n: number | undefined) => n != null ? formatDecimal2(n) : '—';
+        const fmtInt = (n: number | undefined) => n != null ? String(Math.round(n)) : '—';
+        return (
+          <div id="dados-plantio" className="pdf-keep-together" style={{ marginTop: '1.5rem' }}>
+            <div className="section-heading">🌾 Dados do Plantio</div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              Dados do módulo Plantio (estande de plantas, CV%, evolução fenológica) referentes ao talhão.
+            </p>
+            {/* 1️⃣ Classificação automática plantabilidade (referência — não substitui parecer do técnico) */}
+            {dp.cv_percent != null && (
+              <div className="card" style={{ marginBottom: '1rem', borderLeft: '4px solid var(--primary)' }}>
+                <div className="card-title"><span className="card-title-icon">✅</span> Classificação automática — Qualidade do plantio (referência)</div>
+                {(() => {
+                  const cv = dp.cv_percent;
+                  const qualidade = cv < 10 ? 'EXCELENTE' : cv < 15 ? 'BOM' : cv < 25 ? 'REGULAR' : 'CRÍTICO';
+                  const faixaIdeal = '< 10%';
+                  const interpretacao = cv < 10
+                    ? 'A distribuição de sementes apresenta excelente uniformidade, indicando boa regulagem da plantadeira e adequada deposição de sementes.'
+                    : cv < 15
+                      ? 'A uniformidade do plantio está dentro do esperado. Pequenos ajustes podem melhorar ainda mais o desempenho.'
+                      : cv < 25
+                        ? 'Há desuniformidade moderada. Recomenda-se verificar regulagem do dosador e condições de solo.'
+                        : 'Alta desuniformidade. Revisar regulagem, profundidade e velocidade de plantio.';
+                  const impacto = cv < 10
+                    ? 'Impacto produtivo estimado: +1,8 a +3,5 sc/ha comparado a plantios com CV% > 15%.'
+                    : cv < 15
+                      ? 'Impacto produtivo: dentro da faixa esperada para o padrão técnico.'
+                      : cv < 25
+                        ? 'Impacto produtivo estimado: potencial de perda de 0,5 a 2 sc/ha em relação a plantio uniforme.'
+                        : 'Impacto produtivo estimado: perda de 2 a 5 sc/ha. Priorizar correções na próxima operação.';
+                  return (
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                        <div><span className="info-label">Qualidade do plantio</span><div style={{ fontSize: '1.1rem', fontWeight: 700, color: cv < 10 ? 'var(--success)' : cv < 25 ? 'var(--warning)' : 'var(--danger)' }}>{qualidade}</div></div>
+                        <div><span className="info-label">CV%</span><div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{fmt(cv)}%</div></div>
+                        <div><span className="info-label">Faixa ideal</span><div style={{ fontSize: '0.95rem' }}>{faixaIdeal}</div></div>
+                      </div>
+                      <p style={{ fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '0.5rem' }}><strong>Referência (classificação automática):</strong> {interpretacao}</p>
+                      <p style={{ fontSize: '0.85rem', lineHeight: 1.5, color: 'var(--text-muted)', margin: 0 }}>{impacto}</p>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+            <div className="grid-2" style={{ marginBottom: '1rem' }}>
+              <div className="card">
+                <div className="card-title"><span className="card-title-icon">📋</span> Informações principais</div>
+                <div className="info-row"><span className="info-label">Cultura</span><span className="info-value">{dp.cultura ?? '—'}</span></div>
+                <div className="info-row"><span className="info-label">Data de plantio</span><span className="info-value">{dp.data_plantio ? formatDate(dp.data_plantio) : '—'}</span></div>
+                <div className="info-row"><span className="info-label">População desejada</span><span className="info-value">{dp.populacao_desejada != null ? `${fmtInt(dp.populacao_desejada)} plantas/ha` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">População real</span><span className="info-value">{dp.populacao_real != null ? `${fmt(dp.populacao_real)} plantas/ha` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Espaçamento entre linhas</span><span className="info-value">{dp.espacamento_entre_linhas_m != null ? `${fmt(dp.espacamento_entre_linhas_m)} m` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Espaçamento médio entre plantas</span><span className="info-value">{dp.espacamento_medio_cm != null ? `${fmt(dp.espacamento_medio_cm)} cm` : '—'}</span></div>
+              </div>
+              <div className="card">
+                <div className="card-title"><span className="card-title-icon">📊</span> Qualidade do plantio</div>
+                <div className="info-row"><span className="info-label">CV de plantio</span><span className="info-value" style={dp.cv_classificacao ? { fontWeight: 700 } : undefined}>{dp.cv_percent != null ? `${fmt(dp.cv_percent)}%` : '—'}{dp.cv_classificacao ? ` (${dp.cv_classificacao})` : ''}</span></div>
+                <div className="info-row"><span className="info-label">Índice de falhas</span><span className="info-value">{dp.indice_falhas_percent != null ? `${fmt(dp.indice_falhas_percent)}%` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Índice de duplas</span><span className="info-value">{dp.indice_duplas_percent != null ? `${fmt(dp.indice_duplas_percent)}%` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Eficiência do estande</span><span className="info-value">{dp.eficiencia_estande_percent != null ? `${fmt(dp.eficiencia_estande_percent)}%` : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Plantas contadas / metros amostrados</span><span className="info-value">{dp.plantas_contadas != null && dp.metros_amostrados != null ? `${fmtInt(dp.plantas_contadas)} plantas em ${fmt(dp.metros_amostrados)} m` : (dp.plantas_contadas != null ? fmtInt(dp.plantas_contadas) : (dp.metros_amostrados != null ? `${fmt(dp.metros_amostrados)} m` : '—'))}</span></div>
+              </div>
+            </div>
+            {/* 3️⃣ Diagnóstico do estande — números + recomendações padrão (referência) */}
+            {dp.populacao_desejada != null && dp.populacao_real != null && (
+              <div className="card" style={{ marginBottom: '1rem', borderLeft: '4px solid var(--warning)' }}>
+                <div className="card-title"><span className="card-title-icon">📉</span> Diagnóstico do estande (referência)</div>
+                {(() => {
+                  const alvo = dp.populacao_desejada;
+                  const real = dp.populacao_real;
+                  const perda = Math.max(0, alvo - real);
+                  const perdaPct = alvo > 0 ? (perda / alvo) * 100 : 0;
+                  const impactoScHa = perda > 0 ? (perda / 1000) * 0.4 : 0;
+                  const recomendacoes = perda > 5000
+                    ? ['Revisar pressão da roda compactadora', 'Conferir profundidade de plantio', 'Avaliar regulagem do dosador']
+                    : perda > 2000
+                      ? ['Conferir regulagem do dosador', 'Verificar condições de palhada']
+                      : ['Manter monitoramento do estande'];
+                  return (
+                    <>
+                      <div className="info-row"><span className="info-label">População alvo</span><span className="info-value">{fmtInt(alvo)} plantas/ha</span></div>
+                      <div className="info-row"><span className="info-label">População real</span><span className="info-value">{fmt(real)} plantas/ha</span></div>
+                      <div className="info-row"><span className="info-label">Perda estimada</span><span className="info-value" style={{ color: perda > 0 ? 'var(--warning)' : undefined }}>{fmtInt(perda)} plantas/ha</span></div>
+                      {perda > 0 && (
+                        <>
+                          <div className="info-row"><span className="info-label">Impacto produtivo estimado</span><span className="info-value" style={{ color: 'var(--danger)' }}>-{formatDecimal2(impactoScHa)} sc/ha</span></div>
+                          <p style={{ fontSize: '0.85rem', marginTop: '0.75rem', marginBottom: '0.5rem', fontWeight: 600 }}>Recomenda-se:</p>
+                          <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.85rem', lineHeight: 1.7 }}>
+                            {recomendacoes.map((r, i) => <li key={i}>✔ {r}</li>)}
+                          </ul>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+            {/* 2️⃣ Linha de plantabilidade — gráfico técnico + métricas */}
+            {Array.isArray(dp.linha_plantabilidade) && dp.linha_plantabilidade.length > 0 && (
+              <div className="card" style={{ marginBottom: '1rem' }}>
+                <div className="card-title"><span className="card-title-icon">📐</span> Distribuição de espaçamento entre plantas</div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                  Cada segmento representa o espaçamento real (cm) entre sementes. 🟢 OK · 🟡 Dupla · 🟣 Tripla · 🔴 Falha.
+                </p>
+                {(() => {
+                  const lin = dp.linha_plantabilidade;
+                  const total = lin.length;
+                  const ok = lin.filter(p => p.tipo === 'ok').length;
+                  const duplas = lin.filter(p => p.tipo === 'dupla').length;
+                  const triplas = lin.filter(p => p.tipo === 'tripla').length;
+                  const falhas = lin.filter(p => p.tipo === 'falha').length;
+                  const pct = (n: number) => total > 0 ? formatDecimal2((n / total) * 100) : '0';
+                  const maxCm = Math.max(...lin.map(p => p.espacamento_cm), 1);
+                  return (
+                    <>
+                      <div style={{ overflowX: 'auto', padding: '8px 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, minWidth: 'max-content', height: 28 }}>
+                          {lin.slice(0, 50).map((p, i) => {
+                            const cor = p.tipo === 'ok' ? '#22c55e' : p.tipo === 'dupla' ? '#eab308' : p.tipo === 'tripla' ? '#a855f7' : '#ef4444';
+                            const widthPct = Math.max(8, (p.espacamento_cm / maxCm) * 25);
+                            return (
+                              <span key={i} title={`${p.espacamento_cm.toFixed(1)} cm — ${p.tipo}`} style={{ display: 'inline-block', minWidth: 4, width: `${widthPct}px`, backgroundColor: cor, borderRadius: 2, marginRight: 1 }} />
+                            );
+                          })}
+                          {lin.length > 50 && <span style={{ alignSelf: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 8 }}>+{lin.length - 50} pontos</span>}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '0.75rem', fontSize: '0.8rem' }}>
+                        <span><strong>Total avaliado:</strong> {total} sementes</span>
+                        <span style={{ color: '#22c55e' }}>OK: {ok} ({pct(ok)}%)</span>
+                        <span style={{ color: '#eab308' }}>Duplas: {duplas} ({pct(duplas)}%)</span>
+                        <span style={{ color: '#a855f7' }}>Triplas: {triplas} ({pct(triplas)}%)</span>
+                        <span style={{ color: '#ef4444' }}>Falhas: {falhas} ({pct(falhas)}%)</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#22c55e', marginRight: 4 }} /> OK</span>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#eab308', marginRight: 4 }} /> Duplas</span>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#a855f7', marginRight: 4 }} /> Triplas</span>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#ef4444', marginRight: 4 }} /> Falhas</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+            {/* Evolução fenológica (tabela) */}
+            {Array.isArray(dp.evolucao_fenologica) && dp.evolucao_fenologica.length > 0 && (
+              <>
+                {/* 5️⃣ Linha do tempo da lavoura */}
+                <div className="card" style={{ marginBottom: '1rem' }}>
+                  <div className="card-title"><span className="card-title-icon">📅</span> Linha do tempo da lavoura</div>
+                  <div style={{ overflowX: 'auto', padding: '12px 0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, minWidth: 'max-content' }}>
+                      {dp.data_plantio && (
+                        <>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap' }}>Plantio</span>
+                          <span style={{ margin: '0 8px', color: 'var(--text-muted)' }}>───</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formatDate(dp.data_plantio)}</span>
+                          <span style={{ margin: '0 12px', color: 'var(--text-muted)' }}>───</span>
+                        </>
+                      )}
+                      {dp.evolucao_fenologica.map((ev, i) => (
+                        <React.Fragment key={i}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{ev.estagio ?? `Estágio ${i + 1}`}</span>
+                          <span style={{ margin: '0 6px', color: 'var(--text-muted)' }}>───</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{ev.data ? formatDate(ev.data) : (ev.dae != null ? `${ev.dae} DAE` : '—')}</span>
+                          {i < dp.evolucao_fenologica!.length - 1 && <span style={{ margin: '0 12px', color: 'var(--text-muted)' }}>───</span>}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="card" style={{ marginBottom: '1rem' }}>
+                <div className="card-title"><span className="card-title-icon">🌱</span> Evolução fenológica</div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Data</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAE</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAP</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Estágio</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Altura (cm)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dp.evolucao_fenologica.map((ev, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '8px 12px' }}>{ev.data ? formatDate(ev.data) : '—'}</td>
+                          <td style={{ padding: '8px 12px' }}>{ev.dae ?? '—'}</td>
+                          <td style={{ padding: '8px 12px' }}>{ev.dap ?? ev.dae ?? '—'}</td>
+                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>{ev.estagio ?? '—'}</td>
+                          <td style={{ padding: '8px 12px' }}>{ev.altura_cm != null ? formatDecimal2(ev.altura_cm) : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              </>
+            )}
+            {/* Resumo estágio atual quando não há tabela */}
+            {dp.estagio_atual && (!Array.isArray(dp.evolucao_fenologica) || dp.evolucao_fenologica.length === 0) && (
+              <div className="card" style={{ marginBottom: '1rem' }}>
+                <div className="card-title"><span className="card-title-icon">🌱</span> Estágio atual</div>
+                <div className="info-row"><span className="info-label">Estágio</span><span className="info-value" style={{ color: 'var(--primary)', fontWeight: 700 }}>{dp.estagio_atual}</span></div>
+                <div className="info-row"><span className="info-label">DAE / DAP</span><span className="info-value">{dp.dae != null ? `${dp.dae} dias` : '—'}</span></div>
+              </div>
+            )}
+            {/* Relação Plantio × Infestação (insight) */}
+            {((dp.cv_percent != null && dp.cv_percent > 25) || (dp.indice_falhas_percent != null && dp.indice_falhas_percent > 5)) && (primeiroTalhao?.pontos?.length ?? 0) > 0 && (
+              <div className="card" style={{ background: 'var(--surface-muted)', borderColor: 'var(--primary-muted)' }}>
+                <div className="card-title"><span className="card-title-icon">🔗</span> Relação Plantio × Monitoramento</div>
+                <p style={{ fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
+                  {(dp.cv_percent != null && dp.cv_percent > 25) && (dp.indice_falhas_percent != null && dp.indice_falhas_percent > 5)
+                    ? 'Alta variabilidade de plantio (CV% e falhas) pode favorecer reboleiras e plantas daninhas. Recomenda-se monitorar com maior frequência áreas com falhas e duplas.'
+                    : (dp.cv_percent != null && dp.cv_percent > 25)
+                      ? 'CV% de plantio elevado indica desuniformidade. Considere correlacionar pontos de maior infestação com áreas de maior variabilidade de estande.'
+                      : 'Áreas com falhas de estande podem apresentar maior pressão de plantas daninhas. O monitoramento fitossanitário complementa a análise do plantio.'}
+                </p>
+              </div>
+            )}
+            {/* Diagnóstico do Agrônomo: apenas conteúdo do responsável técnico — sem texto fictício do sistema */}
+            {/* Removido: parágrafo gerado automaticamente. Observações e parecer vêm somente de observacoes/diagnostico_tecnico do payload. */}
+            {/* Simulação de produtividade: valor da qualidade do plantio */}
+            {dp.cv_percent != null && dp.cv_percent < 20 && potencialProdutivo && (
+              <div className="card" style={{ marginTop: '1rem', borderLeft: '4px solid var(--success)' }}>
+                <div className="card-title"><span className="card-title-icon">📈</span> Simulação de produtividade</div>
+                <p style={{ fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>
+                  Com CV de {fmt(dp.cv_percent)}%, o potencial produtivo estimado está na faixa de {potencialProdutivo.min} – {potencialProdutivo.max} sc/ha.
+                  Se o CV fosse 20%, a produtividade estimada cairia para aproximadamente {Math.round((potencialProdutivo.min + potencialProdutivo.max) / 2 * 0.88)} – {Math.round((potencialProdutivo.min + potencialProdutivo.max) / 2 * 0.92)} sc/ha, evidenciando o valor da qualidade do plantio.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* 8️⃣ Ranking de desempenho da lavoura (múltiplos talhões) */}
+      {normalized.talhoes.length > 1 && (
+        <div id="ranking-talhoes" className="card pdf-keep-together" style={{ marginTop: '1.5rem' }}>
+          <div className="section-heading">📊 Ranking de desempenho da lavoura</div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                  <th style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Talhão</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right' }}>Área (ha)</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right' }}>Produtividade estimada</th>
+                </tr>
+              </thead>
+              <tbody>
+                {normalized.talhoes
+                  .map(t => ({ talhao: t, metricas: calcularMetricasTalhao(t) }))
+                  .sort((a, b) => (b.talhao.area_ha ?? 0) - (a.talhao.area_ha ?? 0))
+                  .map(({ talhao }) => {
+                    const raw = Array.isArray(relatorio.talhoes) ? (relatorio.talhoes as Record<string, unknown>[]).find((t: Record<string, unknown>) => String(t?.id ?? '') === talhao.id) : undefined;
+                    const prodEst = raw?.produtividade_estimada ?? (raw as any)?.produtividade_estimada_sc_ha;
+                    return (
+                      <tr key={talhao.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>{talhao.nome}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{talhao.area_ha > 0 ? formatDecimal2(talhao.area_ha) : '—'}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{typeof prodEst === 'number' ? `${formatDecimal2(prodEst)} sc/ha` : (typeof prodEst === 'string' ? prodEst : '—')}</td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem', marginBottom: 0 }}>Quando disponível, a produtividade estimada é enviada pelo app.</p>
+        </div>
+      )}
 
       {/* #monitoramento — Ciclo + Visita + Clima (base: relatorio.html) */}
       <div id="monitoramento" className="pdf-keep-together">
@@ -550,13 +969,19 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         </div>
       </div>
 
-      {observacoes && (
-        <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
-          <div style={{ marginTop: '1rem', padding: '0.9rem', background: 'var(--bg)', borderRadius: 8, borderLeft: '3px solid var(--primary)', fontSize: '0.85rem', color: 'var(--text-main)' }}>
-            📝 <strong>Observações gerais:</strong> {observacoes}
+      {/* Observações e anotações do responsável técnico — apenas conteúdo do payload (nunca texto fictício do sistema) */}
+      <div id="observacoes-tecnico" className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+        <div className="card-title"><span className="card-title-icon">📝</span> Observações e anotações do responsável técnico</div>
+        {observacoes && observacoes.trim() ? (
+          <div style={{ padding: '0.9rem', background: 'var(--bg)', borderRadius: 8, borderLeft: '3px solid var(--primary)', fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+            {observacoes}
           </div>
-        </div>
-      )}
+        ) : (
+          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', margin: 0 }}>
+            Nenhuma observação registrada pelo responsável técnico.
+          </p>
+        )}
+      </div>
 
         {/* Plano de Aplicação */}
         {resumoRecomendacoes.length > 0 && (
@@ -683,7 +1108,30 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
           </div>
         </div>
 
-        <div id="auditoria" style={{ marginBottom: '1.25rem' }} />
+        <div id="auditoria" className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+          <div className="card-title"><span className="card-title-icon">🔒</span> Auditoria técnica</div>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+            Relatório gerado por FortSmart Monitoramento Agrícola. Dados da avaliação e inspeção abaixo.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.88rem' }}>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Responsável técnico</div>
+              <div>{normalized.tecnico}{normalized.crea ? ` · ${normalized.crea}` : ''}</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Data da avaliação</div>
+              <div>{normalized.data || '—'}</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Coordenadas da inspeção</div>
+              <div>{(primeiroTalhao?.pontos?.length ?? 0) > 0 ? `${primeiroTalhao!.pontos.length} pontos georreferenciados registrados` : '—'}</div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Registros fotográficos</div>
+              <div>{imagens.length > 0 ? `${imagens.length} foto(s) anexada(s)` : 'Nenhuma foto anexada'}</div>
+            </div>
+          </div>
+        </div>
 
         {/* Registros fotográficos */}
         {imagens.length > 0 && (
