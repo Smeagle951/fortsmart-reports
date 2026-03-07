@@ -43,7 +43,7 @@ export default function OcorrenciasPragasVT({ pragas }: OcorrenciasPragasVTProps
                                     </td>
                                     <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', fontWeight: 700, color: isCritical ? '#991B1B' : '#334155' }}>
                                         {String(p.nome ?? p.alvo ?? '—')}
-                                        {p.observacoes && <div style={{ fontSize: 11, color: '#64748B', marginTop: 4, fontWeight: 500 }}>{String(p.observacoes)}</div>}
+                                        {Boolean(p.observacoes) && <div style={{ fontSize: 11, color: '#64748B', marginTop: 4, fontWeight: 500 }}>{String(p.observacoes)}</div>}
                                     </td>
                                     <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', fontWeight: 600, color: '#334155' }}>{String(p.incidencia ?? '—')}</td>
                                     <td style={{ padding: 14, borderBottom: '1px solid #E2E8F0', fontWeight: 700, color: isCritical ? '#DC2626' : '#64748B' }}>{String(p.severidade ?? '—')}</td>
