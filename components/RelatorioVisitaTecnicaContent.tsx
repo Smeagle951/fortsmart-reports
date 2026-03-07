@@ -66,6 +66,7 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
   mapa?: Record<string, unknown>;
   imagens?: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
   assinaturaTecnica?: Record<string, unknown>;
+  consultoria?: { nome?: string };
 };
 
 const cardStyle: React.CSSProperties = {
