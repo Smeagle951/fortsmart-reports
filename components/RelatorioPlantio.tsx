@@ -86,6 +86,7 @@ export default function RelatorioPlantio({ relatorio, reportId }: { relatorio: P
                     title="Contexto da Safra"
                     items={[
                         ['Data de plantio', String(talhao.dataPlantio ?? '—')],
+                        ['Data de emergência', String(fenologia.dataEmergencia ?? fenologia.data_emergencia ?? '—')],
                         ['Material / Variedade', String(contextoSafra.materialVariedade ?? '—')],
                         ['DAE (Dias Após Emergência)', contextoSafra.dae != null ? `${contextoSafra.dae} dias` : '—'],
                         ['DAP (Dias Após Plantio)', contextoSafra.dap != null ? `${contextoSafra.dap} dias` : '—'],

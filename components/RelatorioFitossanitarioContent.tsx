@@ -184,7 +184,9 @@ export type PayloadFitossanitario = Record<string, unknown> & {
 /** Bloco de dados de plantio enviado pelo app para enriquecer o relatório de monitoramento */
 export interface DadosPlantioMonitoramento {
   cultura?: string;
+  hibrido?: string;
   data_plantio?: string;
+  data_emergencia?: string;
   populacao_desejada?: number;
   populacao_real?: number;
   espacamento_entre_linhas_m?: number;
@@ -675,7 +677,11 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
               <div className="card">
                 <div className="card-title"><span className="card-title-icon">📋</span> Informações principais</div>
                 <div className="info-row"><span className="info-label">Cultura</span><span className="info-value">{dp.cultura ?? '—'}</span></div>
+                <div className="info-row"><span className="info-label">Híbrido/Variedade</span><span className="info-value">{dp.hibrido ?? '—'}</span></div>
                 <div className="info-row"><span className="info-label">Data de plantio</span><span className="info-value">{dp.data_plantio ? formatDate(dp.data_plantio) : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Data de emergência</span><span className="info-value">{dp.data_emergencia ? formatDate(dp.data_emergencia) : '—'}</span></div>
+                <div className="info-row"><span className="info-label">Ciclo (DAE/DAP)</span><span className="info-value">{dp.dae != null ? `${dp.dae} dias` : (dp.dap != null ? `${dp.dap} dias` : '—')}</span></div>
+                <div className="info-row"><span className="info-label">Estádio fenológico</span><span className="info-value" style={dp.estagio_atual ? { fontWeight: 700, color: 'var(--primary)' } : undefined}>{dp.estagio_atual ?? '—'}</span></div>
                 <div className="info-row"><span className="info-label">População desejada</span><span className="info-value">{dp.populacao_desejada != null ? `${fmtInt(dp.populacao_desejada)} plantas/ha` : '—'}</span></div>
                 <div className="info-row"><span className="info-label">População real</span><span className="info-value">{dp.populacao_real != null ? `${fmt(dp.populacao_real)} plantas/ha` : '—'}</span></div>
                 <div className="info-row"><span className="info-label">Espaçamento entre linhas</span><span className="info-value">{dp.espacamento_entre_linhas_m != null ? `${fmt(dp.espacamento_entre_linhas_m)} m` : '—'}</span></div>
@@ -800,32 +806,32 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                   </div>
                 </div>
                 <div className="card" style={{ marginBottom: '1rem' }}>
-                <div className="card-title"><span className="card-title-icon">🌱</span> Evolução fenológica</div>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
-                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Data</th>
-                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAE</th>
-                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAP</th>
-                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Estágio</th>
-                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Altura (cm)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dp.evolucao_fenologica.map((ev, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={{ padding: '8px 12px' }}>{ev.data ? formatDate(ev.data) : '—'}</td>
-                          <td style={{ padding: '8px 12px' }}>{ev.dae ?? '—'}</td>
-                          <td style={{ padding: '8px 12px' }}>{ev.dap ?? ev.dae ?? '—'}</td>
-                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>{ev.estagio ?? '—'}</td>
-                          <td style={{ padding: '8px 12px' }}>{ev.altura_cm != null ? formatDecimal2(ev.altura_cm) : '—'}</td>
+                  <div className="card-title"><span className="card-title-icon">🌱</span> Evolução fenológica</div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Data</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAE</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAP</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Estágio</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Altura (cm)</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {dp.evolucao_fenologica.map((ev, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '8px 12px' }}>{ev.data ? formatDate(ev.data) : '—'}</td>
+                            <td style={{ padding: '8px 12px' }}>{ev.dae ?? '—'}</td>
+                            <td style={{ padding: '8px 12px' }}>{ev.dap ?? ev.dae ?? '—'}</td>
+                            <td style={{ padding: '8px 12px', fontWeight: 600 }}>{ev.estagio ?? '—'}</td>
+                            <td style={{ padding: '8px 12px' }}>{ev.altura_cm != null ? formatDecimal2(ev.altura_cm) : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
               </>
             )}
             {/* Resumo estágio atual quando não há tabela */}
@@ -983,179 +989,179 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         )}
       </div>
 
-        {/* Plano de Aplicação */}
-        {resumoRecomendacoes.length > 0 && (
-          <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
-            <div className="card-title">Plano de Aplicação</div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Produto</th>
-                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Dose</th>
-                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Organismos alvo</th>
-                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Manejo</th>
+      {/* Plano de Aplicação */}
+      {resumoRecomendacoes.length > 0 && (
+        <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+          <div className="card-title">Plano de Aplicação</div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Produto</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Dose</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Organismos alvo</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Manejo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resumoRecomendacoes.map((r, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--bg)' }}>
+                    <td style={{ padding: '12px', fontWeight: 600, color: 'var(--text-main)' }}>{r.produto || '—'}</td>
+                    <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{r.dose || '—'}</td>
+                    <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{r.organismos.join(', ') || '—'}</td>
+                    <td style={{ padding: '12px', color: 'var(--text-muted)', maxWidth: 280 }}>{r.manejo || '—'}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {resumoRecomendacoes.map((r, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--bg)' }}>
-                      <td style={{ padding: '12px', fontWeight: 600, color: 'var(--text-main)' }}>{r.produto || '—'}</td>
-                      <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{r.dose || '—'}</td>
-                      <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{r.organismos.join(', ') || '—'}</td>
-                      <td style={{ padding: '12px', color: 'var(--text-muted)', maxWidth: 280 }}>{r.manejo || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* #pragas — Análise de Pragas */}
-        <div id="pragas" className="pdf-keep-together">
-          <div className="section-heading">🐛 Análise de Pragas</div>
-          <div style={{ padding: 20 }}>
-            {pragasComRecomendacao.length === 0 ? (
-              <p className="card" style={{ padding: '1.5rem', color: 'var(--text-muted)', margin: 0 }}>Nenhuma praga ou doença registrada nesta visita.</p>
-            ) : (
-              <div className="grid-2">
-                {pragasComRecomendacao.map((p, idx) => {
-                  const sev = p.severidadeMedia;
-                  const badgeClass = sev < 10 ? 'baixo' : sev < 25 ? 'moderado' : sev < 40 ? 'alto' : 'critico';
-                  return (
-                    <div key={idx} className="pest-card pdf-keep-together">
-                      <div className="pest-header">
-                        <div>
-                          <div className="pest-name">{p.nome}</div>
-                          <div className="pest-cat">{TIPO_LABEL[p.tipo]} · Distribuição nos pontos amostrados</div>
-                        </div>
-                        <span className={`severity-badge ${badgeClass}`}>{sev < 10 ? '✓' : '⚠️'} {severidadeLabel(sev)}</span>
+      {/* #pragas — Análise de Pragas */}
+      <div id="pragas" className="pdf-keep-together">
+        <div className="section-heading">🐛 Análise de Pragas</div>
+        <div style={{ padding: 20 }}>
+          {pragasComRecomendacao.length === 0 ? (
+            <p className="card" style={{ padding: '1.5rem', color: 'var(--text-muted)', margin: 0 }}>Nenhuma praga ou doença registrada nesta visita.</p>
+          ) : (
+            <div className="grid-2">
+              {pragasComRecomendacao.map((p, idx) => {
+                const sev = p.severidadeMedia;
+                const badgeClass = sev < 10 ? 'baixo' : sev < 25 ? 'moderado' : sev < 40 ? 'alto' : 'critico';
+                return (
+                  <div key={idx} className="pest-card pdf-keep-together">
+                    <div className="pest-header">
+                      <div>
+                        <div className="pest-name">{p.nome}</div>
+                        <div className="pest-cat">{TIPO_LABEL[p.tipo]} · Distribuição nos pontos amostrados</div>
                       </div>
-                      {p.imagem && (
-                        <div className="no-print" style={{ marginBottom: '1rem', position: 'relative' }}>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={p.imagem} alt={p.nome} style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />
-                          <button type="button" onClick={() => setGaleriaModal({ url: p.imagem!, descricao: `${p.nome} — ${TIPO_LABEL[p.tipo]}` })} style={{ position: 'absolute', inset: 0, background: 'transparent', border: 'none', cursor: 'pointer' }} aria-label="Ampliar" />
+                      <span className={`severity-badge ${badgeClass}`}>{sev < 10 ? '✓' : '⚠️'} {severidadeLabel(sev)}</span>
+                    </div>
+                    {p.imagem && (
+                      <div className="no-print" style={{ marginBottom: '1rem', position: 'relative' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={p.imagem} alt={p.nome} style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />
+                        <button type="button" onClick={() => setGaleriaModal({ url: p.imagem!, descricao: `${p.nome} — ${TIPO_LABEL[p.tipo]}` })} style={{ position: 'absolute', inset: 0, background: 'transparent', border: 'none', cursor: 'pointer' }} aria-label="Ampliar" />
+                      </div>
+                    )}
+                    <div className="pest-metrics">
+                      <div className="pest-metric">
+                        <div className="pest-metric-val">{p.quantidadeMedia != null ? formatDecimal2(p.quantidadeMedia) : '—'}</div>
+                        <div className="pest-metric-lbl">méd./ponto</div>
+                      </div>
+                      <div className="pest-metric">
+                        <div className="pest-metric-val">{p.percentual}%</div>
+                        <div className="pest-metric-lbl">plantas afetadas</div>
+                      </div>
+                      {p.observacao && (
+                        <div className="pest-metric" style={{ gridColumn: '1 / -1', textAlign: 'left' }}>
+                          <div className="pest-metric-val" style={{ fontSize: '1rem', lineHeight: 1.4 }}>{p.observacao}</div>
+                          <div className="pest-metric-lbl">dano observado</div>
                         </div>
                       )}
-                      <div className="pest-metrics">
-                        <div className="pest-metric">
-                          <div className="pest-metric-val">{p.quantidadeMedia != null ? formatDecimal2(p.quantidadeMedia) : '—'}</div>
-                          <div className="pest-metric-lbl">méd./ponto</div>
-                        </div>
-                        <div className="pest-metric">
-                          <div className="pest-metric-val">{p.percentual}%</div>
-                          <div className="pest-metric-lbl">plantas afetadas</div>
-                        </div>
-                        {p.observacao && (
-                          <div className="pest-metric" style={{ gridColumn: '1 / -1', textAlign: 'left' }}>
-                            <div className="pest-metric-val" style={{ fontSize: '1rem', lineHeight: 1.4 }}>{p.observacao}</div>
-                            <div className="pest-metric-lbl">dano observado</div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="action-bar" style={{ borderLeftColor: badgeClass === 'baixo' ? 'var(--success)' : 'var(--warning)' }}>
-                        <div>
-                          <div className="action-type">Recomendação: {String(p.produto)} · Dose: {String(p.dose)}</div>
-                          <div className="action-deadline">{p.manejo}</div>
-                        </div>
+                    </div>
+                    <div className="action-bar" style={{ borderLeftColor: badgeClass === 'baixo' ? 'var(--success)' : 'var(--warning)' }}>
+                      <div>
+                        <div className="action-type">Recomendação: {String(p.produto)} · Dose: {String(p.dose)}</div>
+                        <div className="action-deadline">{p.manejo}</div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* #risco — Avaliação de Risco e Suporte à Decisão */}
-        <div id="risco" className="pdf-keep-together">
-          <div className="section-heading">📊 Avaliação de Risco e Suporte à Decisão</div>
-          <div className="grid-2">
-            <div className="card">
-              <div className="card-title"><span className="card-title-icon">⚠️</span> Score de Risco Global</div>
-              <div className="risk-gauge-wrap">
-                <div className="gauge-ring">
-                  <svg viewBox="0 0 120 120">
-                    <circle className="gauge-track" cx="60" cy="60" r="50" />
-                    <circle className={`gauge-fill ${gaugeFillClass}`} cx="60" cy="60" r="50" strokeDasharray={314} strokeDashoffset={strokeDashoffset} />
-                  </svg>
-                  <div className="gauge-label">{riscoNum}</div>
-                </div>
-                <div className="gauge-sub">Risco <strong>{riscoLabel}</strong> — Prioridade: {riscoNum >= 50 ? 'Monitorar' : 'Acompanhar'}</div>
-              </div>
-              <div className="info-row" style={{ marginTop: '1rem' }}>
-                <span className="info-label">Decisão recomendada</span>
-                <span className="info-value">{riscoNum >= 50 ? '🔍 Monitorar' : riscoNum >= 25 ? 'Acompanhar' : 'Controle adequado'}</span>
-              </div>
-              <div className="info-row">
-                <span className="info-label">Próxima visita técnica</span>
-                <span className="info-value" style={{ color: 'var(--warning)', fontWeight: 600 }}>{proximaVisita}</span>
-              </div>
-            </div>
-            {alertas.length > 0 ? (
-              <div className="card">
-                <div className="card-title"><span className="card-title-icon">🧠</span> Inteligência de Dados</div>
-                {alertas.map((a, i) => (
-                  <div key={i} className="insight-item">
-                    <span className="insight-icon">💡</span>
-                    <span className="insight-text">{a}</span>
                   </div>
-                ))}
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* #risco — Avaliação de Risco e Suporte à Decisão */}
+      <div id="risco" className="pdf-keep-together">
+        <div className="section-heading">📊 Avaliação de Risco e Suporte à Decisão</div>
+        <div className="grid-2">
+          <div className="card">
+            <div className="card-title"><span className="card-title-icon">⚠️</span> Score de Risco Global</div>
+            <div className="risk-gauge-wrap">
+              <div className="gauge-ring">
+                <svg viewBox="0 0 120 120">
+                  <circle className="gauge-track" cx="60" cy="60" r="50" />
+                  <circle className={`gauge-fill ${gaugeFillClass}`} cx="60" cy="60" r="50" strokeDasharray={314} strokeDashoffset={strokeDashoffset} />
+                </svg>
+                <div className="gauge-label">{riscoNum}</div>
               </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div id="auditoria" className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
-          <div className="card-title"><span className="card-title-icon">🔒</span> Auditoria técnica</div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-            Relatório gerado por FortSmart Monitoramento Agrícola. Dados da avaliação e inspeção abaixo.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.88rem' }}>
-            <div>
-              <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Responsável técnico</div>
-              <div>{normalized.tecnico}{normalized.crea ? ` · ${normalized.crea}` : ''}</div>
+              <div className="gauge-sub">Risco <strong>{riscoLabel}</strong> — Prioridade: {riscoNum >= 50 ? 'Monitorar' : 'Acompanhar'}</div>
             </div>
-            <div>
-              <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Data da avaliação</div>
-              <div>{normalized.data || '—'}</div>
+            <div className="info-row" style={{ marginTop: '1rem' }}>
+              <span className="info-label">Decisão recomendada</span>
+              <span className="info-value">{riscoNum >= 50 ? '🔍 Monitorar' : riscoNum >= 25 ? 'Acompanhar' : 'Controle adequado'}</span>
             </div>
-            <div>
-              <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Coordenadas da inspeção</div>
-              <div>{(primeiroTalhao?.pontos?.length ?? 0) > 0 ? `${primeiroTalhao!.pontos.length} pontos georreferenciados registrados` : '—'}</div>
-            </div>
-            <div>
-              <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Registros fotográficos</div>
-              <div>{imagens.length > 0 ? `${imagens.length} foto(s) anexada(s)` : 'Nenhuma foto anexada'}</div>
+            <div className="info-row">
+              <span className="info-label">Próxima visita técnica</span>
+              <span className="info-value" style={{ color: 'var(--warning)', fontWeight: 600 }}>{proximaVisita}</span>
             </div>
           </div>
-        </div>
-
-        {/* Registros fotográficos */}
-        {imagens.length > 0 && (
-          <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
-            <div className="card-title">Registros fotográficos</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
-              {imagens.filter(img => img.url).map((img, i) => (
-                <button key={i} type="button" onClick={() => setGaleriaModal({ url: img.url!, descricao: img.descricao })} className="no-print" style={{ padding: 0, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', cursor: 'pointer', background: 'transparent' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt={img.descricao ?? `Foto ${i + 1}`} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
-                </button>
+          {alertas.length > 0 ? (
+            <div className="card">
+              <div className="card-title"><span className="card-title-icon">🧠</span> Inteligência de Dados</div>
+              {alertas.map((a, i) => (
+                <div key={i} className="insight-item">
+                  <span className="insight-icon">💡</span>
+                  <span className="insight-text">{a}</span>
+                </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : null}
+        </div>
+      </div>
 
-        {/* Modal de zoom (galeria + imagens das pragas) */}
-        {galeriaModal && (
-          <ModalImagem
-            src={galeriaModal.url}
-            descricao={galeriaModal.descricao}
-            onClose={() => setGaleriaModal(null)}
-          />
-        )}
+      <div id="auditoria" className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+        <div className="card-title"><span className="card-title-icon">🔒</span> Auditoria técnica</div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+          Relatório gerado por FortSmart Monitoramento Agrícola. Dados da avaliação e inspeção abaixo.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.88rem' }}>
+          <div>
+            <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Responsável técnico</div>
+            <div>{normalized.tecnico}{normalized.crea ? ` · ${normalized.crea}` : ''}</div>
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Data da avaliação</div>
+            <div>{normalized.data || '—'}</div>
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Coordenadas da inspeção</div>
+            <div>{(primeiroTalhao?.pontos?.length ?? 0) > 0 ? `${primeiroTalhao!.pontos.length} pontos georreferenciados registrados` : '—'}</div>
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Registros fotográficos</div>
+            <div>{imagens.length > 0 ? `${imagens.length} foto(s) anexada(s)` : 'Nenhuma foto anexada'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Registros fotográficos */}
+      {imagens.length > 0 && (
+        <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+          <div className="card-title">Registros fotográficos</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
+            {imagens.filter(img => img.url).map((img, i) => (
+              <button key={i} type="button" onClick={() => setGaleriaModal({ url: img.url!, descricao: img.descricao })} className="no-print" style={{ padding: 0, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', cursor: 'pointer', background: 'transparent' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.url} alt={img.descricao ?? `Foto ${i + 1}`} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de zoom (galeria + imagens das pragas) */}
+      {galeriaModal && (
+        <ModalImagem
+          src={galeriaModal.url}
+          descricao={galeriaModal.descricao}
+          onClose={() => setGaleriaModal(null)}
+        />
+      )}
     </RelatorioLayoutEnterprise>
   );
 }
