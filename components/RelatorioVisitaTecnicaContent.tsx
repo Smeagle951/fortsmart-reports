@@ -8,7 +8,7 @@ import Mapa from '@/components/Mapa';
 
 import HeaderVisitaTecnica from './visita_tecnica/sections/HeaderVisitaTecnica';
 import DashboardResumoVT from './visita_tecnica/sections/DashboardResumoVT';
-import IdentificacaoEContexto from './visita_tecnica/sections/IdentificacaoEContexto';
+import IdentificacaoEContexto, { sectionTitleStyle } from './visita_tecnica/sections/IdentificacaoEContexto';
 import FenologiaEEstandeVT from './visita_tecnica/sections/FenologiaEEstandeVT';
 import CondicoesCampoVT from './visita_tecnica/sections/CondicoesCampoVT';
 import OcorrenciasPragasVT from './visita_tecnica/sections/OcorrenciasPragasVT';
@@ -66,19 +66,22 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
   mapa?: Record<string, unknown>;
   imagens?: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
   assinaturaTecnica?: Record<string, unknown>;
+  consultoria?: { nome?: string };
 };
 
 const cardStyle: React.CSSProperties = {
   background: '#fff',
   borderRadius: 12,
   border: '1px solid #E2E8F0',
-  function MetaItem({ label, value }: { label: string; value: string }) {
-    return (
-      <div>
-        <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>{label}</div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>{value}</div>
-      </div>
-    );
+};
+
+function MetaItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>{value}</div>
+    </div>
+  );
 }
 
 function Row({ label, value }: { label: string; value: string }) {

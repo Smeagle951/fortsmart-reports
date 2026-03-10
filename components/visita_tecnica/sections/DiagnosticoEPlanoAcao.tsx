@@ -44,15 +44,15 @@ export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao }: Diagno
                             </div>
 
                             <div style={{ background: '#F8FAFC', borderRadius: 8, padding: 16, border: '1px solid #E2E8F0' }}>
-                                {(diagnostico.nivelRisco || diagnostico.urgenciaAcao) && (
+                                {Boolean(diagnostico.nivelRisco || diagnostico.urgenciaAcao) && (
                                     <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-                                        {diagnostico.nivelRisco && (
+                                        {Boolean(diagnostico.nivelRisco) && (
                                             <div>
                                                 <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>NÍVEL DE RISCO</div>
                                                 <div style={{ fontSize: 14, fontWeight: 700, color: riskColor }}>{String(diagnostico.nivelRisco)}</div>
                                             </div>
                                         )}
-                                        {diagnostico.urgenciaAcao && (
+                                        {Boolean(diagnostico.urgenciaAcao) && (
                                             <div>
                                                 <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>URGÊNCIA</div>
                                                 <div style={{ fontSize: 14, fontWeight: 700, color: '#334155' }}>{String(diagnostico.urgenciaAcao)}</div>

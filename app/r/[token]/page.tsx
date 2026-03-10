@@ -4,6 +4,7 @@ import RelatorioContent from '@/components/RelatorioContent';
 import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitarioContent';
 import RelatorioResearchProContent from '@/components/research/RelatorioResearchProContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
+import RelatorioPlantio from '@/components/RelatorioPlantio';
 import PrintBar from '@/components/PrintBar';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import type { ResearchProReportPayload } from '@/types/research-report';
@@ -157,9 +158,8 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const tipoRelatorio = (relatorio.tipoRelatorio as string | undefined) ?? reportTypeV2;
 
     const isSideBySide = tipo === 'avaliacao_lado_a_lado';
-    const isPlantio = tipoRelatorio === 'plantio';
+    const isPlantio = tipo === 'plantio' || tipoRelatorio === 'plantio';
     const isVisitaTecnica = tipo === 'visita_tecnica';
-    const isRelatorioRemovido = isPlantio || isVisitaTecnica;
     const hasTalhoes = Array.isArray(relatorio.talhoes) && (relatorio.talhoes as unknown[]).length > 0;
     const isMonitoramento = (tipo === 'monitoramento') && hasTalhoes;
     const isResearchPro =
@@ -168,17 +168,6 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       (core?.report_type as string) === 'RESEARCH_PRO';
 
     console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, isResearchPro, topKeys: Object.keys(relatorio).slice(0, 12) });
-
-    if (isRelatorioRemovido) {
-      return (
-        <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
-          <div style={{ textAlign: 'center', maxWidth: 560 }}>
-            <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório não disponível</h1>
-            <p style={{ color: '#6b7280' }}>Este tipo de relatório (plantio / visita técnica) não está mais disponível nesta versão.</p>
-          </div>
-        </main>
-      );
-    }
 
     return (
       <>
@@ -204,6 +193,13 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
               data={relatorio as SideBySideReportData}
               reportId={row.titulo || row.id}
             />
+          ) : isPlantio ? (
+            <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de plantio">
+              <RelatorioPlantio
+                relatorio={relatorio as any}
+                reportId={row.titulo || row.id}
+              />
+            </ErrorBoundary>
           ) : (
             <RelatorioContent
               relatorio={relatorio}
