@@ -19,7 +19,10 @@ import { calcularMetricasTalhao } from '@/lib/calculations';
 import { formatPercent2 } from '@/utils/format';
 
 interface MatrizRiscoFenologicoProps {
-    talhao: Talhao;
+    talhao?: Talhao;
+    culturaOverride?: string;
+    estagioAtualOverride?: string;
+    pressaoAtualOverride?: number;
 }
 
 // Simulando uma linha do tempo de monitoramentos baseada no Estágio Fenológico atual vs Histórico
@@ -30,15 +33,25 @@ type ChartData = {
     lde: number; // Limiar de Dano Econômico
 };
 
-export default function MatrizRiscoFenologico({ talhao }: MatrizRiscoFenologicoProps) {
-    const metricas = calcularMetricasTalhao(talhao);
-    const pressaoAtual = metricas.indiceOcorrencia * 100; // de 0 a 100
+export default function MatrizRiscoFenologico({
+    talhao,
+    culturaOverride,
+    estagioAtualOverride,
+    pressaoAtualOverride
+}: MatrizRiscoFenologicoProps) {
+    let pressaoAtual = 0;
+    if (pressaoAtualOverride != null) {
+        pressaoAtual = pressaoAtualOverride;
+    } else if (talhao) {
+        const metricas = calcularMetricasTalhao(talhao);
+        pressaoAtual = metricas.indiceOcorrencia * 100; // de 0 a 100
+    }
 
     // Vamos montar um histórico hipotético (timeline)
     // No mundo real, a API backend traria o histórico de visitas ('V2', 'V4', 'V6', 'R1', etc.)
     // Vamos deduzir alguns passos antes e depois do estágio atual.
 
-    const cultura = talhao.cultura?.toLowerCase() || 'soja';
+    const cultura = (culturaOverride || talhao?.cultura || 'soja').toLowerCase();
     let stages = ['V2', 'V4', 'V6', 'V8', 'R1', 'R3', 'R5'];
 
     if (cultura.includes('milho')) {
@@ -48,8 +61,9 @@ export default function MatrizRiscoFenologico({ talhao }: MatrizRiscoFenologicoP
     }
 
     // Identificar onde estamos
-    const currentStage = talhao.estagio?.split(' ')[0] || stages[4];
-    const stagingIndex = stages.findIndex(s => currentStage.includes(s));
+    let currentStage = estagioAtualOverride || talhao?.estagio?.split(' ')[0] || stages[4];
+    currentStage = currentStage.trim().split(' ')[0]; // pega só a primeira palavra ex "V4"
+    const stagingIndex = stages.findIndex(s => currentStage.includes(s) || s.includes(currentStage));
     const activeIndex = stagingIndex >= 0 ? stagingIndex : 4;
 
     // Gerar dados mockados convergindo para a pressaoAtual no activeIndex

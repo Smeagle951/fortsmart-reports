@@ -8,8 +8,8 @@ import { gerarRecomendacoes } from '@/lib/recommendations';
 function loadBetterSqlite3(): ((path: string, opts: object) => unknown) | null {
     if (process.env.VERCEL === '1') return null;
     try {
-        const modName = 'better-' + 'sqlite3';
-        return require(modName) as (path: string, opts: object) => unknown;
+        const req = eval('require');
+        return req('better-sqlite3') as ((path: string, opts: object) => unknown);
     } catch {
         return null;
     }

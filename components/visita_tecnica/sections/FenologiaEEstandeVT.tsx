@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { cardStyle, sectionTitleStyle } from './IdentificacaoEContexto';
 import ModalImagem from '@/components/ModalImagem';
+import MatrizRiscoFenologico from '@/components/MatrizRiscoFenologico';
 
 interface FenologiaEEstandeVTProps {
     fenologia: Record<string, unknown>;
@@ -104,6 +105,17 @@ export default function FenologiaEEstandeVT({
                             </li>
                         ))}
                     </ul>
+                </div>
+            )}
+
+            {/* Matriz Fenológica Evolutiva */}
+            {(fenologia.estadio ?? fenologia.estagio) != null && (
+                <div style={{ padding: '0 24px 24px', borderTop: '1px solid #E2E8F0', marginTop: 8, paddingTop: 16 }}>
+                    <MatrizRiscoFenologico
+                        culturaOverride={String(contextoSafra?.cultura ?? 'soja')}
+                        estagioAtualOverride={String(fenologia.estadio ?? fenologia.estagio)}
+                        pressaoAtualOverride={35} // Placeholder de 35% de pressão ou a calcular via props reais
+                    />
                 </div>
             )}
         </section>
