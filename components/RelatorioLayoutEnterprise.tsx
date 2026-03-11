@@ -126,7 +126,6 @@ export default function RelatorioLayoutEnterprise({
               >
                 🖨️ Exportar PDF
               </button>
-              <a href="/" className="btn-action primary">← Voltar</a>
             </div>
           </header>
 

@@ -179,6 +179,8 @@ export type PayloadFitossanitario = Record<string, unknown> & {
   imagens?: Array<{ url?: string; descricao?: string }>;
   /** Dados do módulo Plantio integrados ao monitoramento (estande, CV%, evolução fenológica) */
   dados_plantio?: DadosPlantioMonitoramento | null;
+  /** Módulo plantio bruto (plantabilidade, estande, fenologia) para derivar dados_plantio quando não enviado */
+  modulo_plantio?: Record<string, unknown>;
 };
 
 /** Bloco de dados de plantio enviado pelo app para enriquecer o relatório de monitoramento */
@@ -228,6 +230,95 @@ function severidadeColor(severidade: number): string {
   if (severidade < 25) return '#F59E0B';
   if (severidade < 40) return '#E65100';
   return '#C62828';
+}
+
+/** Deriva DadosPlantioMonitoramento a partir de modulo_plantio (plantabilidade, estande, fenologia). */
+function deriveDadosPlantioFromModuloPlantio(modulo: Record<string, unknown> | null | undefined): DadosPlantioMonitoramento | null {
+  if (!modulo || typeof modulo !== 'object') return null;
+  const pb = (modulo.plantabilidade ?? (modulo as any).plantabilidade) as Record<string, unknown> | undefined;
+  const est = (modulo.estande ?? (modulo as any).estande) as Record<string, unknown> | undefined;
+  const fen = (modulo.fenologia ?? (modulo as any).fenologia) as Record<string, unknown> | undefined;
+  const ctx = (modulo.contextoSafra ?? modulo.contexto_safra ?? modulo.contexto) as Record<string, unknown> | undefined;
+  const getNum = (v: unknown): number | undefined => (v != null && Number.isFinite(Number(v)) ? Number(v) : undefined);
+  const getStr = (v: unknown): string | undefined => (v != null && String(v).trim() ? String(v).trim() : undefined);
+  const getDate = (v: unknown): string | undefined => (v != null ? String(v) : undefined);
+  const cultura = getStr(ctx?.cultura ?? modulo.cultura ?? est?.cultura);
+  const hibrido = getStr(ctx?.hibrido ?? ctx?.variedade ?? ctx?.materialVariedade ?? modulo.hibrido ?? est?.hibrido);
+  const dataPlantio = getDate(ctx?.dataPlantio ?? ctx?.data_plantio ?? modulo.data_plantio ?? est?.data_plantio);
+  const dataEmergencia = getDate(fen?.dataEmergencia ?? fen?.data_emergencia ?? fen?.data ?? modulo.data_emergencia);
+  const populacaoDesejada = getNum(ctx?.populacaoAlvoPlHa ?? ctx?.populacao_desejada ?? est?.populacao_ideal ?? est?.populacao_desejada);
+  const populacaoReal = getNum(est?.populacao ?? est?.populacao_real ?? est?.plantasPorMetro);
+  const espacamentoMedio = getNum(pb?.espacamentoRealCm ?? pb?.espacamento_real_cm ?? ctx?.espacamentoCm ?? ctx?.espacamento_cm ?? est?.espacamento_medio_cm);
+  const cvPercent = getNum(pb?.cvPercentual ?? pb?.cv_percentual ?? pb?.coeficiente_variacao);
+  const cvClassificacao = getStr(pb?.classificacao ?? pb?.cv_classificacao);
+  const indiceFalhas = getNum(pb?.falhasPct ?? pb?.falhas_pct ?? pb?.indice_falhas);
+  const indiceDuplas = getNum(pb?.duplasPct ?? pb?.duplas_pct ?? pb?.indice_duplas);
+  const metrosAmostrados = getNum(est?.metrosAmostrados ?? est?.metros_amostrados ?? est?.comprimento_avaliado_m);
+  const plantasContadas = getNum(est?.plantasContadas ?? est?.plantas_contadas ?? est?.plantas_por_metro);
+  const eficienciaEstande = getNum(est?.eficienciaPct ?? est?.eficiencia_percentual ?? est?.eficiencia_estande_percent);
+  const dae = getNum(fen?.dae ?? ctx?.dae ?? modulo.dae);
+  const estagioAtual = getStr(fen?.estadio ?? fen?.estagio ?? fen?.estagioFenologico ?? modulo.estagio_atual);
+  const evolucaoRaw = (fen?.evolucao ?? fen?.registros ?? modulo.evolucao_fenologica) as Array<Record<string, unknown>> | undefined;
+  const evolucao_fenologica = Array.isArray(evolucaoRaw) && evolucaoRaw.length > 0
+    ? evolucaoRaw.map(ev => ({
+        data: getDate(ev.data ?? ev.data_registro),
+        dae: getNum(ev.dae),
+        dap: getNum(ev.dap ?? ev.dae),
+        estagio: getStr(ev.estagio ?? ev.estadio),
+        altura_cm: getNum(ev.altura_cm ?? ev.altura),
+      })).filter(ev => ev.data || ev.dae != null || ev.estagio)
+    : undefined;
+  const linhaRaw = (pb?.linha ?? pb?.espacamentosIndividuais ?? pb?.espacamentos_individuais) as unknown;
+  let linha_plantabilidade: DadosPlantioMonitoramento['linha_plantabilidade'];
+  if (Array.isArray(linhaRaw) && linhaRaw.length > 0) {
+    linha_plantabilidade = linhaRaw.map((item: unknown) => {
+      if (item != null && typeof item === 'object') {
+        const o = item as Record<string, unknown>;
+        const cm = getNum(o.espacamento_cm ?? o.espacamentoCm ?? o.cm);
+        const t = String(o.tipo ?? 'ok').toLowerCase();
+        const tipo = (['ok', 'dupla', 'tripla', 'falha'].includes(t) ? t : 'ok') as 'ok' | 'dupla' | 'tripla' | 'falha';
+        if (cm != null) return { espacamento_cm: cm, tipo };
+      }
+      return null;
+    }).filter((x): x is { espacamento_cm: number; tipo: 'ok' | 'dupla' | 'tripla' | 'falha' } => x != null);
+    if (linha_plantabilidade.length === 0) linha_plantabilidade = undefined;
+  } else if (typeof linhaRaw === 'string') {
+    const parts = linhaRaw.split(/[|,;\s]+/).map(p => getNum(p.trim())).filter((n): n is number => n != null && n > 0);
+    if (parts.length > 0) {
+      const media = parts.reduce((a, b) => a + b, 0) / parts.length;
+      linha_plantabilidade = parts.map(cm => {
+        let tipo: 'ok' | 'dupla' | 'tripla' | 'falha' = 'ok';
+        if (cm < media * 0.4) tipo = 'tripla';
+        else if (cm < media * 0.6) tipo = 'dupla';
+        else if (cm > media * 1.6) tipo = 'falha';
+        return { espacamento_cm: cm, tipo };
+      });
+    }
+  }
+  const hasAny = cultura || hibrido || dataPlantio || dataEmergencia || populacaoDesejada != null || populacaoReal != null ||
+    cvPercent != null || estagioAtual || (evolucao_fenologica?.length ?? 0) > 0 || (linha_plantabilidade?.length ?? 0) > 0;
+  if (!hasAny) return null;
+  return {
+    cultura: cultura ?? undefined,
+    hibrido: hibrido ?? undefined,
+    data_plantio: dataPlantio ?? undefined,
+    data_emergencia: dataEmergencia ?? undefined,
+    populacao_desejada: populacaoDesejada ?? undefined,
+    populacao_real: populacaoReal ?? undefined,
+    espacamento_medio_cm: espacamentoMedio ?? undefined,
+    cv_percent: cvPercent ?? undefined,
+    cv_classificacao: cvClassificacao ?? undefined,
+    indice_falhas_percent: indiceFalhas ?? undefined,
+    indice_duplas_percent: indiceDuplas ?? undefined,
+    metros_amostrados: metrosAmostrados ?? undefined,
+    plantas_contadas: plantasContadas ?? undefined,
+    eficiencia_estande_percent: eficienciaEstande ?? undefined,
+    dae: dae ?? undefined,
+    dap: dae ?? undefined,
+    estagio_atual: estagioAtual ?? undefined,
+    evolucao_fenologica: evolucao_fenologica ?? undefined,
+    linha_plantabilidade,
+  };
 }
 
 export default function RelatorioFitossanitarioContent({ relatorio, reportId, relatorioUuid }: RelatorioFitossanitarioContentProps) {
@@ -283,6 +374,15 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
   }, [relatorio]);
 
   const primeiroTalhao = normalized.talhoes[0];
+  /** Dados de plantio: payload ou derivados do módulo plantio (plantabilidade, estande, fenologia). */
+  const dadosPlantioExibir = useMemo((): DadosPlantioMonitoramento | null | undefined => {
+    const dp = relatorio.dados_plantio;
+    if (dp && typeof dp === 'object') {
+      const has = dp.cultura || dp.populacao_desejada != null || dp.populacao_real != null || dp.cv_percent != null || dp.estagio_atual || (dp.evolucao_fenologica?.length ?? 0) > 0 || (dp.linha_plantabilidade?.length ?? 0) > 0;
+      if (has) return dp as DadosPlantioMonitoramento;
+    }
+    return deriveDadosPlantioFromModuloPlantio((relatorio as any).modulo_plantio) ?? null;
+  }, [relatorio.dados_plantio, (relatorio as any).modulo_plantio]);
   const metricasGlobais = relatorio.metricas as Record<string, unknown> | undefined;
   const fenologiaGlobal = (relatorio.fenologia ?? (primeiroTalhao && { estadio: primeiroTalhao.estagio, dae: primeiroTalhao.dae })) as Record<string, unknown> | undefined;
   const observacoes = (relatorio.observacoes ?? '') as string;
@@ -438,6 +538,37 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
   }, [pragasComRecomendacao]);
 
   const [galeriaModal, setGaleriaModal] = useState<{ url: string; descricao?: string } | null>(null);
+  /** Filtro da tabela técnica de pragas por tipo (praga / doenca / daninha). */
+  const [filtroTipoPragas, setFiltroTipoPragas] = useState<TipoOrganismo | 'todos'>('todos');
+  /** Linhas da tabela técnica detalhada: ponto, tipo, infestação, terço, quantidade, severidade, data. */
+  const tabelaTecnicaRows = useMemo(() => {
+    const pontos = primeiroTalhao?.pontos ?? [];
+    const dataVisita = relatorio.data ?? (relatorio.meta as Record<string, unknown>)?.dataVisita ?? (relatorio.meta as Record<string, unknown>)?.data_visita;
+    const dataStr = dataVisita != null ? (formatDate(String(dataVisita)) !== '—' ? formatDate(String(dataVisita)) : String(dataVisita)) : '—';
+    const rawTalhao = Array.isArray(relatorio.talhoes) && relatorio.talhoes.length > 0 ? (relatorio.talhoes as Record<string, unknown>[])[0] : undefined;
+    const rawPontos = (rawTalhao && Array.isArray(rawTalhao.pontos)) ? (rawTalhao.pontos as Record<string, unknown>[]) : [];
+    return pontos.flatMap((p, pi) => (p.infestacoes ?? []).map((inf, ji) => {
+      const rawP = rawPontos[pi];
+      const rawInfs = rawP && typeof rawP === 'object' && Array.isArray((rawP as Record<string, unknown>).infestacoes) ? (rawP as Record<string, unknown>).infestacoes as Record<string, unknown>[] : [];
+      const rawInf = rawInfs[ji];
+      const dataCell = rawInf && typeof rawInf === 'object' && (rawInf.data ?? rawInf.data_avaliacao ?? rawInf.data_registro) != null
+        ? (rawInf.data ?? rawInf.data_avaliacao ?? rawInf.data_registro)
+        : dataStr;
+      return {
+        ponto: p.identificador,
+        tipo: inf.tipo,
+        infestacao: inf.nome,
+        terco: inf.terco,
+        quantidade: inf.quantidade,
+        severidade: inf.severidade,
+        data: dataCell != null ? (formatDate(String(dataCell)) !== '—' ? formatDate(String(dataCell)) : String(dataCell)) : dataStr,
+      };
+    }));
+  }, [primeiroTalhao?.pontos, relatorio.data, relatorio.meta, relatorio.talhoes]);
+  const tabelaTecnicaFiltrada = useMemo(() => {
+    if (filtroTipoPragas === 'todos') return tabelaTecnicaRows;
+    return tabelaTecnicaRows.filter(r => r.tipo === filtroTipoPragas);
+  }, [tabelaTecnicaRows, filtroTipoPragas]);
   const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string }>;
 
   /** Próxima visita: meta ou metricas (formato ISO ou DD/MM/YYYY). */
@@ -449,7 +580,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
 
   /** Índice FortSmart de Qualidade (IQF): 0–100 por dimensão + média. Calculado a partir de dados_plantio, risco e métricas. */
   const iqf = useMemo(() => {
-    const dp = relatorio.dados_plantio as DadosPlantioMonitoramento | undefined;
+    const dp = dadosPlantioExibir as DadosPlantioMonitoramento | undefined;
     const plantabilidade = dp?.cv_percent != null
       ? Math.round(Math.max(0, 100 - Math.min(dp.cv_percent * 5, 100)))
       : null;
@@ -465,11 +596,11 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     const media = valores.length > 0 ? Math.round(valores.reduce((a, b) => a + b, 0) / valores.length) : null;
     const classificacao = media == null ? null : media >= 90 ? 'EXCELENTE' : media >= 75 ? 'BOM' : media >= 50 ? 'REGULAR' : 'CRÍTICO';
     return { plantabilidade, estande, sanidade, uniformidade, media, classificacao };
-  }, [relatorio.dados_plantio, riscoNum]);
+  }, [dadosPlantioExibir, riscoNum]);
 
   /** Potencial produtivo estimado (faixa sc/ha) para o resumo executivo — fórmula aproximada a partir de população e eficiência. */
   const potencialProdutivo = useMemo(() => {
-    const dp = relatorio.dados_plantio as DadosPlantioMonitoramento | undefined;
+    const dp = dadosPlantioExibir as DadosPlantioMonitoramento | undefined;
     if (dp?.populacao_real == null || dp.populacao_real < 10000) return null;
     const base = Math.min(85, 45 + (dp.populacao_real / 10000) * 0.35);
     const ef = (dp.eficiencia_estande_percent ?? 95) / 100;
@@ -477,7 +608,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     const min = Math.round(base * ef * (1 - cv * 0.5));
     const max = Math.round(base * ef * (1 + 0.05));
     return { min: Math.max(30, min), max: Math.min(100, max) };
-  }, [relatorio.dados_plantio]);
+  }, [dadosPlantioExibir]);
 
   if (!primeiroTalhao) {
     return (
@@ -625,8 +756,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       </div>
 
       {/* #dados-plantio — Dados do módulo Plantio (estande, CV%, evolução fenológica) */}
-      {relatorio.dados_plantio && (() => {
-        const dp = relatorio.dados_plantio as import('@/components/RelatorioFitossanitarioContent').DadosPlantioMonitoramento;
+      {dadosPlantioExibir && (() => {
+        const dp = dadosPlantioExibir as import('@/components/RelatorioFitossanitarioContent').DadosPlantioMonitoramento;
         const hasAny = dp.cultura || dp.populacao_desejada != null || dp.populacao_real != null || dp.cv_percent != null || dp.estagio_atual || (dp.evolucao_fenologica?.length ?? 0) > 0 || (dp.linha_plantabilidade?.length ?? 0) > 0;
         if (!hasAny) return null;
         const fmt = (n: number | undefined) => n != null ? formatDecimal2(n) : '—';
@@ -682,8 +813,6 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                 <div className="info-row"><span className="info-label">Data de emergência</span><span className="info-value">{dp.data_emergencia ? formatDate(dp.data_emergencia) : '—'}</span></div>
                 <div className="info-row"><span className="info-label">Ciclo (DAE/DAP)</span><span className="info-value">{dp.dae != null ? `${dp.dae} dias` : (dp.dap != null ? `${dp.dap} dias` : '—')}</span></div>
                 <div className="info-row"><span className="info-label">Estádio fenológico</span><span className="info-value" style={dp.estagio_atual ? { fontWeight: 700, color: 'var(--primary)' } : undefined}>{dp.estagio_atual ?? '—'}</span></div>
-                <div className="info-row"><span className="info-label">População desejada</span><span className="info-value">{dp.populacao_desejada != null ? `${fmtInt(dp.populacao_desejada)} plantas/ha` : '—'}</span></div>
-                <div className="info-row"><span className="info-label">População real</span><span className="info-value">{dp.populacao_real != null ? `${fmt(dp.populacao_real)} plantas/ha` : '—'}</span></div>
                 <div className="info-row"><span className="info-label">Espaçamento entre linhas</span><span className="info-value">{dp.espacamento_entre_linhas_m != null ? `${fmt(dp.espacamento_entre_linhas_m)} m` : '—'}</span></div>
                 <div className="info-row"><span className="info-label">Espaçamento médio entre plantas</span><span className="info-value">{dp.espacamento_medio_cm != null ? `${fmt(dp.espacamento_medio_cm)} cm` : '—'}</span></div>
               </div>
@@ -920,31 +1049,21 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
             <div className="stat-value">{String(metricasTalhao?.totalPontos ?? metricasGlobais?.totalPontos ?? primeiroTalhao?.pontos?.length ?? '—')}</div>
             <div className="stat-unit">pontos de coleta</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-label">Temperatura</div>
-            <div className="stat-value">{condicoesExibir?.temperatura != null ? `${condicoesExibir.temperatura}°C` : '—'}</div>
-            <div className="stat-unit">no momento da visita</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Umidade relativa</div>
-            <div className="stat-value">{condicoesExibir?.umidade != null ? `${condicoesExibir.umidade}%` : '—'}</div>
-            <div className="stat-unit">umidade do ar</div>
-          </div>
         </div>
         <div className="grid-2" style={{ marginBottom: '1.25rem' }}>
           <div className="card">
             <div className="card-title"><span className="card-title-icon">🌱</span> Ciclo da Cultura</div>
             <div className="info-row"><span className="info-label">Safra</span><span className="info-value">{normalized.safra}</span></div>
-            <div className="info-row"><span className="info-label">Cultura</span><span className="info-value">{primeiroTalhao.cultura}</span></div>
-            <div className="info-row"><span className="info-label">Híbrido</span><span className="info-value">{primeiroTalhao.variedade ?? '—'}</span></div>
+            <div className="info-row"><span className="info-label">Cultura</span><span className="info-value">{dadosPlantioExibir?.cultura ?? primeiroTalhao.cultura}</span></div>
+            <div className="info-row"><span className="info-label">Híbrido</span><span className="info-value">{dadosPlantioExibir?.hibrido ?? primeiroTalhao.variedade ?? '—'}</span></div>
             {(() => {
               const contextoSafra = (relatorio as any).contextoSafra ?? (relatorio as any).contexto_safra;
               const fenologia = (relatorio as any).fenologia ?? {};
               const talhaoRaw = (Array.isArray(relatorio.talhoes) && (relatorio.talhoes as any[])[0]) || {};
-              const dataSemeaduraRaw = contextoSafra?.dataPlantio ?? contextoSafra?.data_plantio ?? talhaoRaw.dataPlantio ?? talhaoRaw.data_plantio;
-              const dataEmergenciaRaw = fenologia.dataEmergencia ?? fenologia.data_emergencia;
-              const daeCiclo = contextoSafra?.dae ?? fenologia.dae ?? primeiroTalhao.dae;
-              const estadioCiclo = fenologia.estadio ?? fenologia.estagio ?? primeiroTalhao.estagio;
+              const dataSemeaduraRaw = contextoSafra?.dataPlantio ?? contextoSafra?.data_plantio ?? talhaoRaw.dataPlantio ?? talhaoRaw.data_plantio ?? dadosPlantioExibir?.data_plantio;
+              const dataEmergenciaRaw = (fenologia as any).dataEmergencia ?? (fenologia as any).data_emergencia ?? dadosPlantioExibir?.data_emergencia;
+              const daeCiclo = contextoSafra?.dae ?? (fenologia as any).dae ?? primeiroTalhao.dae ?? dadosPlantioExibir?.dae;
+              const estadioCiclo = (fenologia as any).estadio ?? (fenologia as any).estagio ?? primeiroTalhao.estagio ?? dadosPlantioExibir?.estagio_atual;
               return (
                 <>
                   <div className="info-row"><span className="info-label">Data de semeadura</span><span className="info-value">{dataSemeaduraRaw ? (formatDate(String(dataSemeaduraRaw)) || String(dataSemeaduraRaw)) : '—'}</span></div>
@@ -954,23 +1073,6 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                 </>
               );
             })()}
-          </div>
-          <div className="card">
-            <div className="card-title">💧 Condições Climáticas Recentes</div>
-            <div className="grid-3" style={{ margin: 0, gap: '1rem' }}>
-              <div style={{ textAlign: 'center', background: 'var(--bg)', borderRadius: 10, padding: '1rem' }}>
-                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--primary)' }}>{condicoesExibir?.chuva ?? '—'}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Chuva nos últimos 7 dias</div>
-              </div>
-              <div style={{ textAlign: 'center', background: 'var(--bg)', borderRadius: 10, padding: '1rem' }}>
-                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--warning)' }}>{condicoesExibir?.umidade != null ? `${condicoesExibir.umidade}%` : '—'}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Umidade do ar</div>
-              </div>
-              <div style={{ textAlign: 'center', background: 'var(--bg)', borderRadius: 10, padding: '1rem' }}>
-                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)' }}>{condicoesExibir?.temperatura != null ? `${condicoesExibir.temperatura}°C` : '—'}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Temperatura máx.</div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1070,6 +1172,54 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                   </div>
                 );
               })}
+            </div>
+          )}
+          {/* Tabela Técnica Detalhada: Ponto, Tipo, Infestação, Terço, Quantidade, Severidade, Data — com filtro por tipo */}
+          {tabelaTecnicaRows.length > 0 && (
+            <div className="card pdf-keep-together" style={{ marginTop: '1.5rem' }}>
+              <div className="card-title">📋 Tabela Técnica Detalhada</div>
+              <div className="no-print" style={{ marginBottom: '1rem' }}>
+                <label htmlFor="filtro-tipo-pragas" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginRight: 8 }}>Filtrar por tipo:</label>
+                <select
+                  id="filtro-tipo-pragas"
+                  value={filtroTipoPragas}
+                  onChange={(e) => setFiltroTipoPragas((e.target.value as TipoOrganismo | 'todos'))}
+                  style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.9rem', background: 'var(--white)' }}
+                >
+                  <option value="todos">Todos</option>
+                  <option value="praga">Praga</option>
+                  <option value="doenca">Doença</option>
+                  <option value="daninha">Daninha</option>
+                </select>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                      <th style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Ponto</th>
+                      <th style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Tipo</th>
+                      <th style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Infestação</th>
+                      <th style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Terço</th>
+                      <th style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right' }}>Quantidade</th>
+                      <th style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)', textAlign: 'right' }}>Severidade</th>
+                      <th style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text-muted)' }}>Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tabelaTecnicaFiltrada.map((row, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 500 }}>{row.ponto}</td>
+                        <td style={{ padding: '10px 12px' }}>{TIPO_LABEL[row.tipo]}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>{row.infestacao}</td>
+                        <td style={{ padding: '10px 12px' }}>{row.terco}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{row.quantidade != null ? formatDecimal2(row.quantidade) : '—'}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{row.severidade != null ? `${row.severidade}%` : '—'}</td>
+                        <td style={{ padding: '10px 12px' }}>{row.data}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
