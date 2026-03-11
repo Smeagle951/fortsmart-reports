@@ -1993,4 +1993,9 @@ body {
     box-shadow: none;
     border: 1px solid #E2E8F0;
   }
+
+  /* Relatório Lado a Lado: esconder barra de ações e garantir fundo branco */
+  #relatorio-lado-a-lado-content {
+    background: white;
+  }
 }
