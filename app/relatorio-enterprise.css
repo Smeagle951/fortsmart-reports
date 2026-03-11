@@ -1,73 +1,46 @@
 /* =====================================================================
-   FortSmart — Relatório Web Enterprise
-   Estilo SaaS / Enterprise · Tipografia e espaçamento profissional
+   FortSmart — Relatório Web Enterprise (base: relatorio.css educacional)
+   Usado por RelatorioFitossanitarioContent com layout sidebar + main
 ===================================================================== */
 
-article.relatorio.relatorio--monitoramento {
-    width: 100%;
-    min-height: 100vh;
-    box-sizing: border-box;
-    position: relative;
-    top: 0;
-    left: 0;
-}
-
-/* Design tokens: escala de espaço (4px base) e tipografia */
+/* Variáveis já podem existir em globals.css; estas complementam/sobrescrevem para o relatório */
 .relatorio-enterprise,
 .relatorio-enterprise .layout-relatorio {
-    --primary: #166534;
-    --primary-light: #15803d;
-    --primary-bg: #ECFDF5;
+    --primary: #2E7D32;
+    --primary-light: #43A047;
+    --primary-bg: #E8F5E9;
     --white: #ffffff;
-    --bg: #F8FAFC;
+    --bg: #F4F6F8;
     --surface: #ffffff;
-    --border: #E2E8F0;
-    --border-subtle: #F1F5F9;
-    --text-main: #0F172A;
-    --text-secondary: #334155;
-    --text-muted: #64748B;
-    --text-light: #94A3B8;
-    --warning: #D97706;
+    --border: #E0E4E8;
+    --text-main: #1A202C;
+    --text-muted: #6B7280;
+    --text-light: #9CA3AF;
+    --warning: #F59E0B;
     --warning-bg: #FFFBEB;
-    --danger: #DC2626;
+    --danger: #EF4444;
     --danger-bg: #FEF2F2;
-    --success: #059669;
+    --success: #10B981;
     --success-bg: #ECFDF5;
     --sidebar-w: 260px;
-    --header-h: 56px;
-    --radius: 8px;
-    --radius-sm: 6px;
-    --content-max-w: 1120px;
-    --space-1: 4px;
-    --space-2: 8px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-5: 20px;
-    --space-6: 24px;
-    --space-8: 32px;
-    --space-10: 40px;
-    --space-12: 48px;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    --header-h: 64px;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .relatorio-enterprise {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Inter', sans-serif;
     background: var(--bg);
     color: var(--text-main);
-    font-size: 15px;
+    font-size: 0.9rem;
     line-height: 1.6;
-    letter-spacing: -0.01em;
     min-height: 100vh;
-    width: 100%;
-    box-sizing: border-box;
-    -webkit-font-smoothing: antialiased;
 }
 
 .relatorio-enterprise .layout-relatorio {
     display: flex;
     min-height: 100vh;
-    width: 100%;
 }
 
 /* ── Sidebar ───────────────────────────────────── */
@@ -117,18 +90,9 @@ article.relatorio.relatorio--monitoramento {
     border-bottom: 1px solid var(--border);
 }
 
-.relatorio-enterprise .sidebar-user-label {
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-light);
-    margin-bottom: 0.75rem;
-}
-
 .relatorio-enterprise .user-avatar {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: var(--primary);
     color: white;
@@ -142,7 +106,7 @@ article.relatorio.relatorio--monitoramento {
 
 .relatorio-enterprise .user-name {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--text-main);
 }
 
@@ -215,14 +179,13 @@ article.relatorio.relatorio--monitoramento {
 /* ── Main ──────────────────────────────────────── */
 .relatorio-enterprise .main-relatorio {
     margin-left: var(--sidebar-w);
-    flex: 1 1 auto;
-    min-width: 0;
+    flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    width: 100%;
-    background: var(--white);
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.04);
+    max-width: none;
+    width: calc(100vw - var(--sidebar-w));
+    box-sizing: border-box;
 }
 
 /* ── Top Header ────────────────────────────────── */
@@ -236,9 +199,8 @@ article.relatorio.relatorio--monitoramento {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 2.5rem 0 2rem;
-    gap: 1.25rem;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+    padding: 0 2rem;
+    gap: 1rem;
     flex-wrap: wrap;
 }
 
@@ -326,105 +288,35 @@ article.relatorio.relatorio--monitoramento {
     background: currentColor;
 }
 
-/* ── Page Content ──────────────────────────────── */
+/* ── Page Content (relatório ocupa toda a área útil) ──────────────────────────────── */
 .relatorio-enterprise .page-content {
+    padding: 2rem 2.5rem;
     flex: 1;
     width: 100%;
-    max-width: var(--content-max-w);
-    margin: 0 auto;
-    padding: var(--space-6) var(--space-6) var(--space-8);
+    max-width: none;
     box-sizing: border-box;
 }
 
-/* ── Cabeçalho em linha (não quadro) ───────────────── */
-.relatorio-enterprise .report-header-inline {
-    background: var(--white);
-    border-bottom: 1px solid var(--border-subtle);
-    padding: var(--space-4) 0 var(--space-3);
-    margin-bottom: var(--space-6);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-}
-
-.relatorio-enterprise .report-header-inline-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--space-2) var(--space-4);
-    font-size: 0.875rem;
-    color: var(--text-main);
-}
-
-.relatorio-enterprise .report-header-inline-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-main);
-    margin: 0;
-    letter-spacing: -0.02em;
-    line-height: 1.35;
-    flex-shrink: 0;
-}
-
-.relatorio-enterprise .report-header-inline-meta {
-    color: var(--text-muted);
-    font-weight: 500;
-    font-size: 0.8125rem;
-}
-
-.relatorio-enterprise .report-header-inline-sub {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    line-height: 1.5;
-}
-
-.relatorio-enterprise .report-header-inline-sub span {
-    flex: 1;
-}
-
-/* Resumo Executivo — bloco texto (não card) */
-.relatorio-enterprise .resumo-executivo-block {
-    margin-top: var(--space-4);
-    margin-bottom: var(--space-6);
-    padding: 0;
-}
-
-.relatorio-enterprise .resumo-executivo-heading {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-main);
-    margin: 0 0 var(--space-2);
-    letter-spacing: -0.01em;
-}
-
-.relatorio-enterprise .resumo-executivo-text {
-    font-size: 0.875rem;
-    line-height: 1.65;
-    color: var(--text-secondary);
-    margin: 0;
-}
-
-/* ── Report Header Card (legado) ────────────────────────── */
+/* ── Report Header Card ────────────────────────── */
 .relatorio-enterprise .report-header-card {
-    background: linear-gradient(135deg, var(--white) 0%, var(--primary-bg) 100%);
+    background: var(--white);
     border-radius: var(--radius);
     border: 1px solid var(--border);
-    padding: 2rem 2.5rem;
-    margin-bottom: 2rem;
+    padding: 1.75rem 2rem;
+    margin-bottom: 1.5rem;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 1.5rem;
+    gap: 1rem;
     box-shadow: var(--shadow-sm);
 }
 
 .relatorio-enterprise .report-header-info h1 {
-    font-size: 1.5rem;
-    font-weight: 800;
+    font-size: 1.3rem;
+    font-weight: 700;
     color: var(--text-main);
-    margin-bottom: 0.5rem;
-    letter-spacing: -0.03em;
-    line-height: 1.3;
+    margin-bottom: 0.4rem;
+    letter-spacing: -0.02em;
 }
 
 .relatorio-enterprise .report-meta-tags {
@@ -495,22 +387,22 @@ article.relatorio.relatorio--monitoramento {
 .relatorio-enterprise .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
 }
 
 .relatorio-enterprise .grid-3 {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
 }
 
 .relatorio-enterprise .grid-4 {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 1.25rem;
-    margin-bottom: 1.5rem;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
 }
 
 /* ── Cards ─────────────────────────────────────── */
@@ -518,17 +410,17 @@ article.relatorio.relatorio--monitoramento {
     background: var(--white);
     border-radius: var(--radius);
     border: 1px solid var(--border);
-    padding: 1.75rem 2rem;
+    padding: 1.5rem;
     box-shadow: var(--shadow-sm);
 }
 
 .relatorio-enterprise .card-title {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--text-muted);
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -541,9 +433,9 @@ article.relatorio.relatorio--monitoramento {
 .relatorio-enterprise .info-row {
     display: flex;
     justify-content: space-between;
-    padding: 0.55rem 0;
+    padding: 0.5rem 0;
     border-bottom: 1px solid var(--bg);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .relatorio-enterprise .info-row:last-child {
@@ -785,23 +677,15 @@ article.relatorio.relatorio--monitoramento {
 /* ── Section Title ─────────────────────────────── */
 .relatorio-enterprise .section-heading {
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-main);
-    margin-bottom: var(--space-4);
-    margin-top: var(--space-8);
-    padding-bottom: var(--space-3);
-    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    letter-spacing: -0.02em;
-    line-height: 1.35;
+    gap: 8px;
 }
-
-.relatorio-enterprise .section-heading:first-of-type {
-    margin-top: 0;
-}
-
 
 /* ── Geo / Map ─────────────────────────────────── */
 .relatorio-enterprise .geo-placeholder,
@@ -820,120 +704,19 @@ article.relatorio.relatorio--monitoramento {
 
 .relatorio-enterprise .map-card-inner {
     width: 100%;
-    min-height: 380px;
-    height: 380px;
+    min-height: 420px;
+    height: 420px;
     border-radius: 10px;
     overflow: hidden;
 }
 
-/* Legenda do mapa embaixo do mapa (não sobre o mapa) */
-.relatorio-enterprise .map-legend-outside {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem 1.25rem;
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--border);
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    align-items: center;
-}
-
-.relatorio-enterprise .map-legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.relatorio-enterprise .map-legend-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-/* Card propriedade compacto (perfil fazenda) */
-.relatorio-enterprise .card-propriedade-compact {
-    padding: 1.25rem 1.5rem;
-}
-
-.relatorio-enterprise .info-row-compact {
-    padding: 0.4rem 0;
-    font-size: 0.85rem;
-}
-
-.relatorio-enterprise .card-dados-plantio-compact .info-row {
-    padding: 0.4rem 0;
-    font-size: 0.88rem;
-}
-
-.relatorio-enterprise .card-dados-plantio-compact {
-    padding: 1.25rem 1.5rem;
-}
-
-.relatorio-enterprise .card-dados-plantio-compact .card-title {
-    margin-bottom: 0.75rem;
-}
-
-/* Cabeçalho técnico + KPI strip */
-.relatorio-enterprise .report-header-tecnico .info-label {
-    display: block;
-    font-size: 0.7rem;
-    margin-bottom: 2px;
-}
-.relatorio-enterprise .section-divider {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    margin: 1rem 0 0.5rem;
-    padding-bottom: 0.35rem;
-    border-bottom: 1px solid var(--border);
-}
-.relatorio-enterprise .kpi-strip {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-}
-.relatorio-enterprise .kpi-box {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 0.6rem 1rem;
-    min-width: 100px;
-    box-shadow: var(--shadow-sm);
-}
-.relatorio-enterprise .kpi-label {
-    display: block;
-    font-size: 0.68rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-.relatorio-enterprise .kpi-value {
-    display: block;
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: var(--text-main);
-    margin-top: 2px;
-}
-
 /* ── Page Footer ────────────────────────────────── */
 .relatorio-enterprise .page-footer {
-    padding: 1.25rem 2rem;
+    padding: 1.5rem 2rem;
     border-top: 1px solid var(--border);
     background: var(--white);
     font-size: 0.75rem;
     color: var(--text-muted);
-}
-
-.relatorio-enterprise .page-footer a:hover {
-    text-decoration: underline;
-}
-
-.relatorio-enterprise .diagnostico-agronomico-card .card-title {
-    margin-bottom: 0.5rem;
 }
 
 /* ── Responsive ────────────────────────────────── */
@@ -967,11 +750,7 @@ article.relatorio.relatorio--monitoramento {
         grid-template-columns: 1fr 1fr;
     }
     .relatorio-enterprise .page-content {
-        padding: 1.25rem 1.5rem;
-        max-width: 100%;
-    }
-    .relatorio-enterprise .top-header {
-        padding: 0 1.25rem;
+        padding: 1rem;
     }
 }
 
