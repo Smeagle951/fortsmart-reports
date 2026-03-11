@@ -638,56 +638,45 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       reportId={reportId}
       onExportPDF={handleExportPDF}
     >
-      {/* #resumo — Report Header Card (base: relatorio.html) */}
+      {/* #resumo — Cabeçalho em linha (não quadro) */}
       {(() => {
         const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? relatorio.meta as Record<string, unknown> : {};
         const dataEmissaoRaw = relatorio.data ?? meta.dataGeracao ?? (meta as any).dataVisita ?? (relatorio as any).data_emissao ?? (relatorio as any).data_visita ?? (relatorio as any).dataVisita ?? '';
         const dataEmissaoStr = dataEmissaoRaw != null ? String(dataEmissaoRaw) : '';
         const dataEmissaoFormatada = dataEmissaoStr.includes('T') ? formatDateTime(dataEmissaoStr) : (dataEmissaoStr ? (formatDate(dataEmissaoStr) !== '—' ? formatDate(dataEmissaoStr) : dataEmissaoStr) : normalized.data);
         const aprovadoPor = (relatorio as any).aprovado_por ?? (meta as any).aprovado_por ?? (meta as any).aprovadoPor ?? '';
-        const subtitulo = `Emitido em ${dataEmissaoFormatada}${aprovadoPor ? ` - Aprovado por ${String(aprovadoPor)}` : ''}${normalized.tecnico && normalized.tecnico !== 'FortSmart Agro' ? ` · ${normalized.tecnico}` : ''}${normalized.crea ? ` · ${normalized.crea}` : ''}`;
         return (
-      <div id="resumo" className="report-header-card pdf-keep-together">
-        <div className="report-header-info">
-          <h1>📋 Relatório de Monitoramento Fitossanitário</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: 4 }}>
-            {subtitulo}
-          </p>
-          <div className="report-meta-tags">
-            <span className="meta-tag">🌾 {primeiroTalhao.cultura} — Safra {normalized.safra}</span>
-            <span className="meta-tag">📍 {municipio && estado ? `${String(municipio)} · ${String(estado)}` : (municipio || estado || '—')}</span>
-            <span className="meta-tag">📐 {primeiroTalhao.area_ha > 0 ? `${formatDecimal2(primeiroTalhao.area_ha)} ha` : '—'} · {primeiroTalhao.nome}</span>
-            <span className="meta-tag">🌱 {String(primeiroTalhao.estagio || (fenologiaGlobal?.estadio ?? '—'))} — {String((primeiroTalhao.dae ?? fenologiaGlobal?.dae) ?? '')} DAE</span>
-            {primeiroTalhao.variedade && <span className="meta-tag">Híbrido: {primeiroTalhao.variedade}</span>}
-          </div>
+      <header id="resumo" className="report-header-inline pdf-keep-together">
+        <div className="report-header-inline-row">
+          <h1 className="report-header-inline-title">Relatório de Monitoramento Fitossanitário</h1>
+          <span className="report-header-inline-meta">
+            {primeiroTalhao.cultura} — Safra {normalized.safra}
+            {' · '}{municipio && estado ? `${String(municipio)}, ${String(estado)}` : (municipio || estado || '—')}
+            {' · '}{primeiroTalhao.area_ha > 0 ? `${formatDecimal2(primeiroTalhao.area_ha)} ha` : '—'} · {primeiroTalhao.nome}
+            {' · '}{String(primeiroTalhao.estagio || (fenologiaGlobal?.estadio ?? '—'))} {primeiroTalhao.dae != null || fenologiaGlobal?.dae != null ? ` · ${String(primeiroTalhao.dae ?? fenologiaGlobal?.dae)} DAE` : ''}
+          </span>
+        </div>
+        <div className="report-header-inline-row report-header-inline-sub">
+          <span>Emitido em {dataEmissaoFormatada}{aprovadoPor ? ` · Aprovado por ${String(aprovadoPor)}` : ''}{normalized.tecnico && normalized.tecnico !== 'FortSmart Agro' ? ` · ${normalized.tecnico}` : ''}{normalized.crea ? ` · ${normalized.crea}` : ''}</span>
           {iqf.media != null && (
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.75rem', marginBottom: 0, fontWeight: 500 }}>
-              <strong style={{ color: 'var(--text-main)' }}>Status da lavoura:</strong>
-              {' '}{iqf.plantabilidade != null ? `Plantio: ${iqf.plantabilidade >= 75 ? 'Excelente' : iqf.plantabilidade >= 50 ? 'Bom' : 'Atenção'}` : ''}
-              {iqf.estande != null ? ` · População: ${iqf.estande >= 75 ? 'Adequada' : iqf.estande >= 50 ? 'Regular' : 'Atenção'}` : ''}
-              {iqf.sanidade != null ? ` · Sanidade: ${iqf.sanidade >= 70 ? 'Boa' : 'Atenção'}` : ''}
-              {' · '}Risco: {riscoLabel}
-            </p>
+            <span>
+              Status: {iqf.plantabilidade != null ? (iqf.plantabilidade >= 75 ? 'Plantio Excelente' : iqf.plantabilidade >= 50 ? 'Bom' : 'Atenção') : ''}
+              {iqf.estande != null ? ` · Pop. ${iqf.estande >= 75 ? 'Adequada' : iqf.estande >= 50 ? 'Regular' : 'Atenção'}` : ''}
+              {iqf.sanidade != null ? ` · Sanidade ${iqf.sanidade >= 70 ? 'Boa' : 'Atenção'}` : ''}
+              {' · Risco '}{riscoLabel}
+              {' · Próx. visita '}{proximaVisita}
+            </span>
           )}
+          {iqf.media == null && <span>Próxima visita: {proximaVisita}</span>}
         </div>
-        <div className="report-header-right">
-          <div className={`risk-badge ${riskBadgeClass}`}>
-            <span>{riscoNum >= 50 ? '⚠️' : riscoNum >= 25 ? '⚠️' : '✓'}</span>
-            <div>
-              <div className="risk-score">{riscoNum}</div>
-              <div style={{ fontSize: '0.7rem', fontWeight: 500 }}>Risco {riscoLabel}</div>
-            </div>
-          </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Próxima visita: {proximaVisita}</span>
-        </div>
-      </div>
+      </header>
         );
       })()}
 
-      {/* #resumo-executivo — Resumo Executivo Inteligente (cartão premium) */}
-      <div id="resumo-executivo" className="card pdf-keep-together" style={{ marginTop: '1.25rem', borderLeft: '4px solid var(--primary)' }}>
-        <div className="card-title"><span className="card-title-icon">📌</span> Resumo Executivo</div>
-        <p style={{ fontSize: '0.9rem', lineHeight: 1.65, color: 'var(--text-main)', margin: 0 }}>
+      {/* #resumo-executivo — Resumo Executivo (bloco texto, não card) */}
+      <div id="resumo-executivo" className="resumo-executivo-block pdf-keep-together">
+        <h2 className="resumo-executivo-heading">Resumo Executivo</h2>
+        <p className="resumo-executivo-text">
           Relatório de monitoramento fitossanitário do talhão <strong>{primeiroTalhao.nome}</strong>, cultura <strong>{primeiroTalhao.cultura}</strong>{primeiroTalhao.variedade ? ` (${primeiroTalhao.variedade})` : ''}, safra {normalized.safra}.
           {primeiroTalhao.area_ha > 0 && ` Área: ${formatDecimal2(primeiroTalhao.area_ha)} ha.`}
           {primeiroTalhao.estagio && ` Estádio fenológico atual: ${primeiroTalhao.estagio}${primeiroTalhao.dae != null ? ` (${primeiroTalhao.dae} DAE)` : ''}.`}
