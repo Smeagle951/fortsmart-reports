@@ -219,7 +219,7 @@ function deriveDadosPlantioFromModuloPlantio(modulo: Record<string, unknown> | n
         altura_cm: getNum(ev.altura_cm ?? ev.altura),
       })).filter(ev => ev.data || ev.dae != null || ev.estagio)
     : undefined;
-  const linhaRaw = (pb?.linha ?? pb?.espacamentosIndividuais ?? pb?.espacamentos_individuais) as unknown;
+  const linhaRaw = (pb?.linha ?? pb?.espacamentosIndividuais ?? pb?.espacamentos_individuais ?? pb?.distancias_entre_sementes ?? pb?.espacamentos) as unknown;
   let linha_plantabilidade: DadosPlantioMonitoramento['linha_plantabilidade'] = undefined;
   if (Array.isArray(linhaRaw) && linhaRaw.length > 0) {
     linha_plantabilidade = linhaRaw.map((item: unknown) => {
@@ -544,7 +544,20 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
   }, [pragasComRecomendacao]);
 
   const [galeriaModal, setGaleriaModal] = useState<{ url: string; descricao?: string } | null>(null);
-  const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string }>;
+  /** Imagens: relatorio.imagens (url + descricao) ou fallback fotos/registros_fotograficos; aceita url absoluta ou data: URL */
+  const imagens = useMemo((): Array<{ url: string; descricao?: string }> => {
+    const from = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string }>;
+    if (from.length > 0) {
+      return from.filter((img) => img?.url != null && String(img.url).trim() !== '').map((img) => ({ url: String(img.url!).trim(), descricao: img.descricao }));
+    }
+    const fotos = (relatorio as any).fotos ?? (relatorio as any).registros_fotograficos;
+    if (Array.isArray(fotos) && fotos.length > 0) {
+      return fotos
+        .filter((f: unknown) => f != null && typeof f === 'object' && ((f as any).url ?? (f as any).src))
+        .map((f: any) => ({ url: String(f.url ?? f.src ?? '').trim(), descricao: f.descricao ?? f.legenda ?? f.caption }));
+    }
+    return [];
+  }, [relatorio.imagens, (relatorio as any).fotos, (relatorio as any).registros_fotograficos]);
 
   /** Próxima visita: meta ou metricas (formato ISO ou DD/MM/YYYY). */
   const proximaVisitaRaw =
@@ -726,9 +739,9 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         </div>
       )}
 
-      {/* #propriedade — Grid 2: Propriedade + Mapa (base: relatorio.html) */}
+      {/* #propriedade — Grid 2: Propriedade + Mapa (dados do perfil fazenda) */}
       <div id="propriedade" className="grid-2 pdf-keep-together">
-        <div className="card">
+        <div className="card card-propriedade-compact">
           <div className="card-title"><span className="card-title-icon">🏡</span> Propriedade</div>
           <div className="info-row"><span className="info-label">Fazenda</span><span className="info-value">{normalized.fazenda}</span></div>
           <div className="info-row"><span className="info-label">Município</span><span className="info-value">{municipio && estado ? `${String(municipio)} — ${String(estado)}` : String(municipio || estado || '—')}</span></div>
@@ -1144,32 +1157,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
             <div className="stat-unit">pontos de coleta</div>
           </div>
         </div>
-        <div className="grid-2" style={{ marginBottom: '1.25rem' }}>
-          <div className="card">
-            <div className="card-title"><span className="card-title-icon">🌱</span> Ciclo da Cultura</div>
-            <div className="info-row"><span className="info-label">Safra</span><span className="info-value">{normalized.safra}</span></div>
-            <div className="info-row"><span className="info-label">Cultura</span><span className="info-value">{dadosPlantioExibir?.cultura ?? primeiroTalhao.cultura}</span></div>
-            <div className="info-row"><span className="info-label">Híbrido</span><span className="info-value">{dadosPlantioExibir?.hibrido ?? primeiroTalhao.variedade ?? '—'}</span></div>
-            {(() => {
-              const dp = dadosPlantioExibir;
-              const contextoSafra = (relatorio as any).contextoSafra ?? (relatorio as any).contexto_safra;
-              const fenologia = (relatorio as any).fenologia ?? {};
-              const talhaoRaw = (Array.isArray(relatorio.talhoes) && (relatorio.talhoes as any[])[0]) || {};
-              const dataSemeaduraRaw = dp?.data_plantio ?? contextoSafra?.dataPlantio ?? contextoSafra?.data_plantio ?? talhaoRaw.dataPlantio ?? talhaoRaw.data_plantio;
-              const dataEmergenciaRaw = dp?.data_emergencia ?? fenologia.dataEmergencia ?? fenologia.data_emergencia;
-              const daeCiclo = dp?.dae ?? contextoSafra?.dae ?? fenologia.dae ?? primeiroTalhao.dae;
-              const estadioCiclo = dp?.estagio_atual ?? fenologia.estadio ?? fenologia.estagio ?? primeiroTalhao.estagio;
-              return (
-                <>
-                  <div className="info-row"><span className="info-label">Data de semeadura</span><span className="info-value">{dataSemeaduraRaw ? (formatDate(String(dataSemeaduraRaw)) || String(dataSemeaduraRaw)) : '—'}</span></div>
-                  <div className="info-row"><span className="info-label">Data de emergência</span><span className="info-value">{dataEmergenciaRaw ? (formatDate(String(dataEmergenciaRaw)) || String(dataEmergenciaRaw)) : '—'}</span></div>
-                  <div className="info-row"><span className="info-label">DAE</span><span className="info-value">{daeCiclo != null ? `${daeCiclo} dias` : '—'}</span></div>
-                  <div className="info-row"><span className="info-label">Estádio fenológico</span><span className="info-value" style={{ color: 'var(--primary)', fontWeight: 700 }}>{estadioCiclo || '—'}</span></div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
+        {/* Card "Ciclo da Cultura" removido — informações já exibidas em Dados do Plantio e no bloco #dados-plantio */}
       </div>
 
       {/* Observações e anotações do responsável técnico — apenas conteúdo do payload (nunca texto fictício do sistema) */}
@@ -1336,15 +1324,32 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         </div>
       </div>
 
-      {/* Registros fotográficos */}
+      {/* Registros fotográficos — url pode ser URL absoluta ou data:image (base64) */}
       {imagens.length > 0 && (
         <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
           <div className="card-title">Registros fotográficos</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
-            {imagens.filter(img => img.url).map((img, i) => (
-              <button key={i} type="button" onClick={() => setGaleriaModal({ url: img.url!, descricao: img.descricao })} className="no-print" style={{ padding: 0, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', cursor: 'pointer', background: 'transparent' }}>
+            {imagens.map((img, i) => (
+              <button key={i} type="button" onClick={() => setGaleriaModal({ url: img.url, descricao: img.descricao })} className="no-print" style={{ padding: 0, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', cursor: 'pointer', background: 'transparent' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.url} alt={img.descricao ?? `Foto ${i + 1}`} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
+                <img
+                  src={img.url}
+                  alt={img.descricao ?? `Foto ${i + 1}`}
+                  style={{ width: '100%', height: 140, objectFit: 'cover' }}
+                  crossOrigin={img.url.startsWith('data:') ? undefined : 'anonymous'}
+                  onError={(e) => {
+                    const el = e.currentTarget;
+                    el.style.display = 'none';
+                    const wrap = el.closest('button');
+                    if (wrap) {
+                      const fallback = document.createElement('div');
+                      fallback.className = 'relatorio-imagem-falha';
+                      fallback.style.cssText = 'width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text-muted);font-size:0.8rem;';
+                      fallback.textContent = 'Imagem não disponível';
+                      wrap.appendChild(fallback);
+                    }
+                  }}
+                />
               </button>
             ))}
           </div>

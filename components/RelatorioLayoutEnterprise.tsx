@@ -49,10 +49,10 @@ export default function RelatorioLayoutEnterprise({
             </div>
           </div>
           <div className="sidebar-user">
-            <div className="user-avatar">{iniciais(tecnico)}</div>
-            <div className="user-name">{tecnico}</div>
+            <div className="user-avatar">{iniciais(fazenda)}</div>
+            <div className="user-name">{fazenda}</div>
             <div className="user-role">
-              {crea ? `Engenheiro Agrônomo · ${crea}` : 'Relatório Técnico'}
+              {tecnico && tecnico.trim() ? (crea ? `${tecnico.trim()} · CREA ${crea}` : tecnico.trim()) : (crea ? `Eng. Agrônomo · CREA ${crea}` : 'Relatório Técnico')}
             </div>
           </div>
           <nav className="sidebar-nav">

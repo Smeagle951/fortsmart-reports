@@ -492,6 +492,17 @@
     border-bottom: none;
 }
 
+/* Card Propriedade mais compacto (menos espaço em branco) */
+.relatorio-enterprise #propriedade .card-propriedade-compact {
+    padding: 1rem 1.2rem;
+}
+.relatorio-enterprise #propriedade .card-propriedade-compact .card-title {
+    margin-bottom: 0.6rem;
+}
+.relatorio-enterprise #propriedade .card-propriedade-compact .info-row {
+    padding: 0.35rem 0;
+}
+
 .relatorio-enterprise .info-label {
     color: var(--text-muted);
     font-weight: 500;
