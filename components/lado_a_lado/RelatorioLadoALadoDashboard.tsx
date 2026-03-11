@@ -227,7 +227,16 @@ export default function RelatorioLadoALadoDashboard({ data, reportId }: Relatori
                     <div className="flex gap-1 h-2 rounded overflow-hidden bg-slate-100">
                       <div
                         className="bg-emerald-500 h-full rounded-l"
-                        style={{ width: item.a != null && item.b != null && item.a + item.b > 0 ? `${(item.a! / (item.a! + item.b!)) * 100}%` : '50%' }}
+                        style={{
+                          width:
+                            item.a != null && item.b != null
+                              ? (() => {
+                                  const numA = Number(item.a);
+                                  const numB = Number(item.b);
+                                  return numA + numB > 0 ? `${(numA / (numA + numB)) * 100}%` : '50%';
+                                })()
+                              : '50%',
+                        }}
                       />
                       <div className="bg-blue-500 h-full rounded-r flex-1" />
                     </div>
