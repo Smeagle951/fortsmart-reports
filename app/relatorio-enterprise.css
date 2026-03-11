@@ -1,41 +1,56 @@
 /* =====================================================================
-   FortSmart — Relatório Web Enterprise (base: relatorio.css educacional)
-   Usado por RelatorioFitossanitarioContent com layout sidebar + main
+   FortSmart — Relatório Web Enterprise (elegante)
+   Plantio / Monitoramento — layout sidebar + main
 ===================================================================== */
 
-/* Variáveis já podem existir em globals.css; estas complementam/sobrescrevem para o relatório */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+/* Container do relatório de monitoramento: ocupa toda a largura da tela */
+.relatorio.relatorio--monitoramento {
+    max-width: none;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+/* Variáveis — paleta elegante e consistente */
 .relatorio-enterprise,
 .relatorio-enterprise .layout-relatorio {
-    --primary: #2E7D32;
-    --primary-light: #43A047;
-    --primary-bg: #E8F5E9;
+    --primary: #166534;
+    --primary-light: #22c55e;
+    --primary-bg: #f0fdf4;
     --white: #ffffff;
-    --bg: #F4F6F8;
+    --bg: #f8fafc;
     --surface: #ffffff;
-    --border: #E0E4E8;
-    --text-main: #1A202C;
-    --text-muted: #6B7280;
-    --text-light: #9CA3AF;
-    --warning: #F59E0B;
-    --warning-bg: #FFFBEB;
-    --danger: #EF4444;
-    --danger-bg: #FEF2F2;
-    --success: #10B981;
-    --success-bg: #ECFDF5;
+    --border: #e2e8f0;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --text-light: #94a3b8;
+    --warning: #d97706;
+    --warning-bg: #fffbeb;
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+    --success: #059669;
+    --success-bg: #ecfdf5;
     --sidebar-w: 260px;
     --header-h: 64px;
-    --radius: 12px;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.05);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 }
 
 .relatorio-enterprise {
-    font-family: 'Inter', sans-serif;
-    background: var(--bg);
+    font-family: var(--font-sans);
+    background: linear-gradient(180deg, #f1f5f9 0%, var(--bg) 12%);
     color: var(--text-main);
-    font-size: 0.9rem;
-    line-height: 1.6;
+    font-size: 0.9375rem;
+    line-height: 1.65;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
 }
 
 .relatorio-enterprise .layout-relatorio {
@@ -46,7 +61,7 @@
 /* ── Sidebar ───────────────────────────────────── */
 .relatorio-enterprise .sidebar-relatorio {
     width: var(--sidebar-w);
-    background: var(--white);
+    background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -56,63 +71,67 @@
     bottom: 0;
     z-index: 100;
     overflow-y: auto;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.03);
 }
 
 .relatorio-enterprise .sidebar-logo {
-    padding: 1.25rem 1.5rem;
+    padding: 1.5rem 1.5rem;
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .relatorio-enterprise .sidebar-logo img {
-    height: 36px;
+    height: 38px;
     width: auto;
 }
 
 .relatorio-enterprise .sidebar-logo-text {
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.05rem;
     color: var(--primary);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
 }
 
 .relatorio-enterprise .sidebar-logo-sub {
     font-size: 0.7rem;
     color: var(--text-muted);
     display: block;
-    margin-top: -2px;
+    margin-top: 2px;
+    letter-spacing: 0.02em;
 }
 
 .relatorio-enterprise .sidebar-user {
-    padding: 1.25rem 1.5rem;
+    padding: 1.35rem 1.5rem;
     border-bottom: 1px solid var(--border);
 }
 
 .relatorio-enterprise .user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--primary);
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 1rem;
-    margin-bottom: 0.6rem;
+    font-size: 0.9rem;
+    margin-bottom: 0.65rem;
+    box-shadow: 0 2px 8px rgba(22, 101, 52, 0.25);
 }
 
 .relatorio-enterprise .user-name {
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: var(--text-main);
 }
 
 .relatorio-enterprise .user-role {
     font-size: 0.75rem;
     color: var(--text-muted);
+    margin-top: 2px;
 }
 
 .relatorio-enterprise .sidebar-nav {
@@ -123,24 +142,25 @@
 .relatorio-enterprise .nav-section-label {
     font-size: 0.65rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text-light);
-    padding: 0.5rem 1.5rem 0.25rem;
+    padding: 0.5rem 1.5rem 0.35rem;
 }
 
 .relatorio-enterprise .nav-item {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 0.6rem 1.5rem;
-    font-size: 0.85rem;
+    padding: 0.65rem 1.5rem;
+    margin: 0 0.5rem;
+    font-size: 0.875rem;
     color: var(--text-muted);
     text-decoration: none;
-    border-radius: 0;
-    transition: all 0.15s ease;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
     cursor: pointer;
-    border-left: 3px solid transparent;
+    border-left: none;
 }
 
 .relatorio-enterprise .nav-item:hover {
@@ -151,14 +171,15 @@
 .relatorio-enterprise .nav-item.active {
     color: var(--primary);
     background: var(--primary-bg);
-    border-left-color: var(--primary);
     font-weight: 600;
+    box-shadow: 0 1px 2px rgba(22, 101, 52, 0.06);
 }
 
 .relatorio-enterprise .nav-icon {
-    font-size: 1.1rem;
-    min-width: 20px;
+    font-size: 1.05rem;
+    min-width: 22px;
     text-align: center;
+    opacity: 0.9;
 }
 
 .relatorio-enterprise .sidebar-footer {
@@ -193,7 +214,8 @@
     position: sticky;
     top: 0;
     z-index: 50;
-    background: var(--white);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--border);
     min-height: var(--header-h);
     display: flex;
@@ -202,6 +224,7 @@
     padding: 0 2rem;
     gap: 1rem;
     flex-wrap: wrap;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
 }
 
 .relatorio-enterprise .header-left {
@@ -211,7 +234,7 @@
 }
 
 .relatorio-enterprise .breadcrumb {
-    font-size: 0.8rem;
+    font-size: 0.8125rem;
     color: var(--text-muted);
     display: flex;
     align-items: center;
@@ -220,11 +243,12 @@
 
 .relatorio-enterprise .breadcrumb-sep {
     color: var(--text-light);
+    font-weight: 300;
 }
 
 .relatorio-enterprise .breadcrumb-current {
     color: var(--text-main);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .relatorio-enterprise .header-right {
@@ -236,9 +260,9 @@
 .relatorio-enterprise .btn-action {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 7px 16px;
-    border-radius: 8px;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: var(--radius-sm);
     font-size: 0.82rem;
     font-weight: 500;
     cursor: pointer;
@@ -248,12 +272,15 @@
 }
 
 .relatorio-enterprise .btn-action.primary {
-    background: var(--primary);
+    background: linear-gradient(135deg, var(--primary) 0%, #15803d 100%);
     color: white;
+    border: none;
+    box-shadow: 0 2px 8px rgba(22, 101, 52, 0.2);
 }
 
 .relatorio-enterprise .btn-action.primary:hover {
-    background: var(--primary-light);
+    background: linear-gradient(135deg, #14532d 0%, var(--primary) 100%);
+    box-shadow: 0 4px 12px rgba(22, 101, 52, 0.3);
 }
 
 .relatorio-enterprise .btn-action.outline {
@@ -264,6 +291,7 @@
 
 .relatorio-enterprise .btn-action.outline:hover {
     background: var(--bg);
+    border-color: var(--text-light);
 }
 
 .relatorio-enterprise .status-badge {
@@ -279,6 +307,11 @@
 .relatorio-enterprise .status-badge.finalizado {
     background: var(--success-bg);
     color: var(--success);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid rgba(5, 150, 105, 0.25);
 }
 
 .relatorio-enterprise .status-badge .dot {
@@ -288,9 +321,9 @@
     background: currentColor;
 }
 
-/* ── Page Content (relatório ocupa toda a área útil) ──────────────────────────────── */
+/* ── Page Content ──────────────────────────────── */
 .relatorio-enterprise .page-content {
-    padding: 2rem 2.5rem;
+    padding: 2.25rem 2.5rem 3rem;
     flex: 1;
     width: 100%;
     max-width: none;
@@ -302,33 +335,46 @@
     background: var(--white);
     border-radius: var(--radius);
     border: 1px solid var(--border);
-    padding: 1.75rem 2rem;
-    margin-bottom: 1.5rem;
+    padding: 2rem 2.25rem;
+    margin-bottom: 1.75rem;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 1rem;
-    box-shadow: var(--shadow-sm);
+    gap: 1.25rem;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+}
+
+.relatorio-enterprise .report-header-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--primary) 0%, var(--primary-light) 100%);
+    border-radius: 4px 0 0 4px;
 }
 
 .relatorio-enterprise .report-header-info h1 {
-    font-size: 1.3rem;
+    font-size: 1.35rem;
     font-weight: 700;
     color: var(--text-main);
-    margin-bottom: 0.4rem;
-    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.025em;
 }
 
 .relatorio-enterprise .report-meta-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-top: 0.75rem;
+    margin-top: 0.85rem;
 }
 
 .relatorio-enterprise .meta-tag {
-    padding: 3px 10px;
-    border-radius: 20px;
+    padding: 5px 12px;
+    border-radius: 999px;
     font-size: 0.72rem;
     font-weight: 500;
     background: var(--bg);
@@ -347,40 +393,37 @@
 .relatorio-enterprise .risk-badge {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    border-radius: 10px;
+    gap: 10px;
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
     font-size: 0.85rem;
     font-weight: 700;
+    box-shadow: var(--shadow-sm);
 }
 
 .relatorio-enterprise .risk-badge.medio {
     background: var(--warning-bg);
     color: var(--warning);
-    border: 1px solid #fde68a;
+    border: 1px solid rgba(217, 119, 6, 0.2);
 }
 
 .relatorio-enterprise .risk-badge.baixo {
     background: var(--success-bg);
     color: var(--success);
-    border: 1px solid #6ee7b7;
+    border: 1px solid rgba(5, 150, 105, 0.2);
 }
 
-.relatorio-enterprise .risk-badge.alto {
-    background: var(--danger-bg);
-    color: var(--danger);
-    border: 1px solid #fca5a5;
-}
-
+.relatorio-enterprise .risk-badge.alto,
 .relatorio-enterprise .risk-badge.critico {
     background: var(--danger-bg);
     color: var(--danger);
-    border: 1px solid #fca5a5;
+    border: 1px solid rgba(220, 38, 38, 0.2);
 }
 
 .relatorio-enterprise .risk-score {
-    font-size: 2rem;
+    font-size: 1.9rem;
     font-weight: 800;
+    letter-spacing: -0.02em;
 }
 
 /* ── Grid Layouts ──────────────────────────────── */
@@ -410,32 +453,39 @@
     background: var(--white);
     border-radius: var(--radius);
     border: 1px solid var(--border);
-    padding: 1.5rem;
-    box-shadow: var(--shadow-sm);
+    padding: 1.6rem;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.relatorio-enterprise .card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .relatorio-enterprise .card-title {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-muted);
-    margin-bottom: 1rem;
+    margin-bottom: 1.1rem;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
 .relatorio-enterprise .card-title-icon {
-    font-size: 1rem;
+    font-size: 1.05rem;
+    opacity: 0.9;
 }
 
 .relatorio-enterprise .info-row {
     display: flex;
     justify-content: space-between;
-    padding: 0.5rem 0;
+    align-items: baseline;
+    padding: 0.55rem 0;
     border-bottom: 1px solid var(--bg);
-    font-size: 0.85rem;
+    font-size: 0.875rem;
 }
 
 .relatorio-enterprise .info-row:last-child {
@@ -444,10 +494,11 @@
 
 .relatorio-enterprise .info-label {
     color: var(--text-muted);
+    font-weight: 500;
 }
 
 .relatorio-enterprise .info-value {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-main);
     text-align: right;
 }
@@ -457,28 +508,30 @@
     background: var(--white);
     border-radius: var(--radius);
     border: 1px solid var(--border);
-    padding: 1.25rem;
-    box-shadow: var(--shadow-sm);
+    padding: 1.35rem;
+    box-shadow: var(--shadow-card);
 }
 
 .relatorio-enterprise .stat-label {
-    font-size: 0.73rem;
+    font-size: 0.72rem;
     color: var(--text-muted);
-    font-weight: 500;
-    margin-bottom: 0.4rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.02em;
 }
 
 .relatorio-enterprise .stat-value {
-    font-size: 1.75rem;
+    font-size: 1.7rem;
     font-weight: 800;
     color: var(--text-main);
-    line-height: 1;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
 }
 
 .relatorio-enterprise .stat-unit {
-    font-size: 0.75rem;
+    font-size: 0.74rem;
     color: var(--text-muted);
-    margin-top: 4px;
+    margin-top: 6px;
 }
 
 /* ── Pest Cards ────────────────────────────────── */
@@ -676,47 +729,58 @@
 
 /* ── Section Title ─────────────────────────────── */
 .relatorio-enterprise .section-heading {
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: var(--text-main);
-    margin-bottom: 1rem;
-    padding-bottom: 0.6rem;
-    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.15rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 2px solid var(--border);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    letter-spacing: -0.02em;
+}
+
+.relatorio-enterprise .section-heading::after {
+    content: '';
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, var(--border) 0%, transparent 100%);
+    margin-left: 0.5rem;
 }
 
 /* ── Geo / Map ─────────────────────────────────── */
 .relatorio-enterprise .geo-placeholder,
 .relatorio-enterprise .map-card {
-    background: linear-gradient(135deg, #E8F5E9 0%, #F1F8E9 100%);
-    border-radius: 10px;
+    background: linear-gradient(145deg, var(--primary-bg) 0%, #f0fdf4 100%);
+    border-radius: var(--radius);
     min-height: 160px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.85rem;
+    font-size: 0.875rem;
     color: var(--primary);
     font-weight: 500;
-    border: 1px dashed rgba(46, 125, 50, 0.4);
+    border: 1px dashed rgba(22, 101, 52, 0.3);
 }
 
 .relatorio-enterprise .map-card-inner {
     width: 100%;
     min-height: 420px;
     height: 420px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 /* ── Page Footer ────────────────────────────────── */
 .relatorio-enterprise .page-footer {
     padding: 1.5rem 2rem;
     border-top: 1px solid var(--border);
-    background: var(--white);
+    background: rgba(255, 255, 255, 0.8);
     font-size: 0.75rem;
     color: var(--text-muted);
+    letter-spacing: 0.02em;
 }
 
 /* ── Responsive ────────────────────────────────── */

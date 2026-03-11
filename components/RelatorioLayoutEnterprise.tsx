@@ -97,9 +97,6 @@ export default function RelatorioLayoutEnterprise({
               <span className="nav-icon">🖨️</span> Imprimir / PDF
             </button>
           </nav>
-          <div className="sidebar-footer">
-            <a href="/" className="no-print">← Voltar ao site</a>
-          </div>
         </aside>
 
         {/* Main (base: relatorio.html) */}
