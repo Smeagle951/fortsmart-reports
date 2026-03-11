@@ -10,6 +10,8 @@ interface MapaInterativoProps {
     talhaoId: string;
     /** Quando true, não exibe o título/legenda padrão (para uso embutido em outros cards). */
     hideHeader?: boolean;
+    /** 'outside' = não desenha a legenda dentro do mapa (para colocar embaixo e ampliar área útil); habilita zoom com scroll e pinch. */
+    legendPosition?: 'inside' | 'outside';
 }
 
 function severidadeColor(sev: number): string {
@@ -19,7 +21,7 @@ function severidadeColor(sev: number): string {
     return '#C62828';
 }
 
-export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader }: MapaInterativoProps) {
+export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader, legendPosition = 'inside' }: MapaInterativoProps) {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<unknown>(null);
 
@@ -44,7 +46,12 @@ export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader 
             const centerLat = coords.reduce((s, c) => s + c[1], 0) / coords.length;
             const centerLng = coords.reduce((s, c) => s + c[0], 0) / coords.length;
 
-            const map = L.map(mapRef.current!, { zoomControl: true, scrollWheelZoom: false });
+            const map = L.map(mapRef.current!, {
+                zoomControl: true,
+                scrollWheelZoom: legendPosition === 'outside',
+                touchZoom: true,
+                doubleClickZoom: true,
+            });
             mapInstance.current = map;
 
             // Tile layer (MapTiler Satellite - idêntico ao App Mobile)
@@ -175,12 +182,13 @@ export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader 
                 }).catch(e => console.error('Falha ao carregar heatmap', e));
             }
 
-            // Legenda
-            const legend = (L.control as unknown as ({ position }: { position: string }) => L.Control & { onAdd: (map: L.Map) => HTMLElement })({ position: 'bottomright' });
-            legend.onAdd = () => {
-                const div = L.DomUtil.create('div');
-                div.style.cssText = 'background:white;padding:10px 14px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.15);font-family:Inter,sans-serif;font-size:11px;line-height:1.8';
-                div.innerHTML = `
+            // Legenda só dentro do mapa quando legendPosition === 'inside'
+            if (legendPosition === 'inside') {
+                const legend = (L.control as unknown as ({ position }: { position: string }) => L.Control & { onAdd: (map: L.Map) => HTMLElement })({ position: 'bottomright' });
+                legend.onAdd = () => {
+                    const div = L.DomUtil.create('div');
+                    div.style.cssText = 'background:white;padding:10px 14px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.15);font-family:Inter,sans-serif;font-size:11px;line-height:1.8';
+                    div.innerHTML = `
           <div style="font-weight:700;margin-bottom:4px;color:#1A2332">Legenda</div>
           <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2E7D32;margin-right:5px"></span>Baixo (<10%)</div>
           <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F9A825;margin-right:5px"></span>Médio (10–25%)</div>
@@ -188,9 +196,10 @@ export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader 
           <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#C62828;margin-right:5px"></span>Crítico (>40%)</div>
           <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#94A3B8;margin-right:5px"></span>Sem ocorrência</div>
         `;
-                return div;
-            };
-            legend.addTo(map);
+                    return div;
+                };
+                legend.addTo(map);
+            }
         });
 
         return () => {
@@ -199,7 +208,7 @@ export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader 
                 mapInstance.current = null;
             }
         };
-    }, [pontos, poligono, talhaoId]);
+    }, [pontos, poligono, talhaoId, legendPosition]);
 
     return (
         <div>
