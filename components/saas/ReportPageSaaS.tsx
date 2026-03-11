@@ -10,6 +10,13 @@ import ApplicationsTable, { type AplicacaoRow } from './ApplicationsTable';
 import ImageGallerySaaS, { type ImagemItem } from './ImageGallerySaaS';
 import ComparisonSection, { type ComparativoItem } from './ComparisonSection';
 
+/** Retorna número válido ou null (evita NaN no UI). */
+function safeNum(v: unknown): number | null {
+  if (v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 export interface ReportPageSaaSData {
   meta?: { dataGeracao?: string; tecnico?: string; tecnicoCrea?: string; id?: string; versao?: number; status?: string; safra?: string };
   propriedade?: { fazenda?: string; proprietario?: string; municipio?: string; estado?: string };
@@ -79,10 +86,10 @@ function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
   const pop = d.populacao;
   const meta = d.meta?.dataGeracao || '';
 
-  const cv = plant?.cvPercentual ?? null;
-  const estandePlm = pop?.plantasPorMetro ?? est?.registros?.[0]?.plantasPorMetro ?? null;
-  const perda = est?.perdaTotalPct ?? null;
-  const iat = d.indiceAgronomicoTalhao?.valor ?? d.diagnosticoIntegrado?.spt ?? null;
+  const cv = safeNum(plant?.cvPercentual);
+  const estandePlm = safeNum(pop?.plantasPorMetro) ?? (est?.registros?.[0] != null ? safeNum((est.registros[0] as any).plantasPorMetro) : null);
+  const perda = est?.perdaTotalPct != null ? safeNum(est.perdaTotalPct) : (est?.registros?.[0] != null ? safeNum((est.registros[0] as any).perdaTotalPct) : null);
+  const iat = safeNum(d.indiceAgronomicoTalhao?.valor ?? d.diagnosticoIntegrado?.spt);
 
   let classificacao = 'Moderado';
   if (cv != null) {
@@ -110,7 +117,7 @@ function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
         ? {
           'Comprimento Amostrado': '5.0 m',
           'Espaçamento Médio': `${plant.espacamentoRealCm ?? '—'} cm`,
-          'CV%': `${plant.cvPercentual ?? '—'}%`,
+          'CV%': `${cv != null ? `${cv}%` : '—'}`,
           Falhas: `${plant.falhasPct ?? 0}%`,
           Duplas: plant.duplasPct ?? 0,
           Triplas: plant.triplasPct ?? 0,
@@ -119,8 +126,8 @@ function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
       estande: pop || est
         ? {
           'População Desejada': '62.000 pl/ha',
-          'População Real': `${pop?.plantasPorMetro ? Math.round(pop.plantasPorMetro * 10000) : '—'}`,
-          'Perda Total': `${est?.perdaTotalPct ?? 0}%`,
+          'População Real': estandePlm != null ? String(Math.round(estandePlm * 10000)) : '—',
+          'Perda Total': `${perda ?? 0}%`,
           'Impacto Produtividade': classificacao === 'Excelente' || classificacao === 'Bom' ? 'Baixo' : 'Moderado',
         }
         : undefined,
@@ -133,7 +140,6 @@ function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
         : undefined,
     },
   };
-
   return [row];
 }
 
@@ -143,7 +149,7 @@ function buildEstatisticas(d: ReportPageSaaSData): EstatisticaItem[] {
 
   const n = plant.linha?.length ?? 14;
   const media = plant.espacamentoRealCm ?? 0;
-  const cv = plant.cvPercentual ?? 0;
+  const cv = safeNum(plant.cvPercentual) ?? 0;
   const dp = (media * (cv / 100)).toFixed(1);
   const ic = (1.96 * parseFloat(dp) / Math.sqrt(n)).toFixed(2);
 
@@ -189,17 +195,17 @@ function buildComparativo(d: ReportPageSaaSData): ComparativoItem[] {
 
   const r1 = regs[0];
   const r2 = regs[regs.length - 1];
-  const cv1 = plant?.cvPercentual ?? 0;
+  const cv1 = safeNum(plant?.cvPercentual) ?? 0;
   const cv2 = 12;
-  const e1 = r1.plantasPorMetro ?? 0;
-  const e2 = r2.plantasPorMetro ?? 0;
-  const iat1 = d.indiceAgronomicoTalhao?.valor ?? 100;
+  const e1 = safeNum((r1 as any).plantasPorMetro) ?? 0;
+  const e2 = safeNum((r2 as any).plantasPorMetro) ?? 0;
+  const iat1 = safeNum(d.indiceAgronomicoTalhao?.valor) ?? 100;
   const iat2 = 92;
 
   return [
     { metrica: 'CV%', avaliacao1: `${cv1}%`, avaliacao2: `${cv2}%`, variacao: `${(cv1 - cv2).toFixed(1)}%` },
     { metrica: 'Estande', avaliacao1: e1.toFixed(1), avaliacao2: e2.toFixed(1), variacao: `+${(e1 - e2).toFixed(1)}` },
-    { metrica: 'IAT', avaliacao1: iat1, avaliacao2: iat2, variacao: `+${iat1 - iat2}` },
+    { metrica: 'IAT', avaliacao1: String(iat1), avaliacao2: String(iat2), variacao: `+${iat1 - iat2}` },
   ];
 }
 
@@ -215,19 +221,19 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
     {
       id: 'spt',
       indicador: 'SPT',
-      valor: data.diagnosticoIntegrado?.spt ?? data.indiceAgronomicoTalhao?.valor ?? 100,
+      valor: safeNum(data.diagnosticoIntegrado?.spt ?? data.indiceAgronomicoTalhao?.valor) ?? '—',
       classificacao: 'Excelente' as const,
       tendencia: 'up' as const,
       tooltip: 'Índice de Saúde da Planta',
       historico: data.estande?.registros?.map((r) => ({
         data: r.data ?? '',
-        valor: r.plantasPorMetro ?? '—',
+        valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
       })) ?? [],
     },
     {
       id: 'cv',
       indicador: 'CV%',
-      valor: data.plantabilidade?.cvPercentual != null ? `${data.plantabilidade.cvPercentual}%` : '—',
+      valor: data.plantabilidade?.cvPercentual != null && Number.isFinite(Number(data.plantabilidade.cvPercentual)) ? `${Number(data.plantabilidade.cvPercentual)}%` : '—',
       classificacao: ((data.plantabilidade?.cvPercentual ?? 0) <= 10 ? 'Excelente' : (data.plantabilidade?.cvPercentual ?? 0) <= 15 ? 'Bom' : 'Moderado') as 'Excelente' | 'Bom' | 'Moderado',
       tendencia: 'neutral' as const,
       tooltip: 'Coeficiente de Variação do espaçamento',
@@ -236,19 +242,19 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
     {
       id: 'estande',
       indicador: 'Estande',
-      valor: data.populacao?.plantasPorMetro ?? data.estande?.registros?.[0]?.plantasPorMetro ?? '—',
+      valor: safeNum(data.populacao?.plantasPorMetro ?? data.estande?.registros?.[0]?.plantasPorMetro) ?? '—',
       classificacao: ((data.populacao?.eficienciaPct ?? 0) >= 95 ? 'Excelente' : 'Bom') as 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico',
       tendencia: 'neutral' as const,
       tooltip: 'Plantas por metro',
       historico: data.estande?.registros?.map((r) => ({
         data: r.data ?? '',
-        valor: r.plantasPorMetro ?? '—',
+        valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
       })) ?? [],
     },
     {
       id: 'ipe',
       indicador: 'IPE',
-      valor: data.fitossanidade?.ipe ?? 0,
+      valor: safeNum(data.fitossanidade?.ipe) ?? '—',
       classificacao: ((data.fitossanidade?.ipe ?? 0) <= 0.5 ? 'Excelente' : 'Moderado') as 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico',
       tendencia: 'down' as const,
       tooltip: 'Índice de Pressão de Entomofauna',

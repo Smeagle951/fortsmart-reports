@@ -61,6 +61,8 @@ export default function EvaluationTable({ rows, onExportCsv }: EvaluationTablePr
     return sortedRows.filter((r) => r.data.includes(dateFilter));
   }, [sortedRows, dateFilter]);
 
+  const hasMultipleDates = rows.length >= 2 && rows.some((r) => r.data && String(r.data).trim() !== '' && String(r.data).trim() !== '—' && String(r.data).length >= 8);
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -84,13 +86,15 @@ export default function EvaluationTable({ rows, onExportCsv }: EvaluationTablePr
             <p className="text-xs text-slate-500 mt-1">Registros de avaliação com data do registro, DAE, CV%, classificação, estande e IAT.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              placeholder="Filtrar por data"
-            />
+            {hasMultipleDates && (
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                placeholder="Filtrar por data"
+              />
+            )}
             <button
               type="button"
               onClick={onExportCsv}

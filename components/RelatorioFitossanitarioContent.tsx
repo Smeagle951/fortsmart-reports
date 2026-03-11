@@ -634,10 +634,10 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         </div>
       </div>
 
-      {/* #resumo-executivo — Resumo Executivo Inteligente (cartão premium) */}
-      <div id="resumo-executivo" className="card pdf-keep-together" style={{ marginTop: '1.25rem', borderLeft: '4px solid var(--primary)' }}>
-        <div className="card-title"><span className="card-title-icon">📌</span> Resumo Executivo</div>
-        <p style={{ fontSize: '0.9rem', lineHeight: 1.65, color: 'var(--text-main)', margin: 0 }}>
+      {/* #resumo-executivo — Resumo Executivo (cartão premium + recomendações) */}
+      <div id="resumo-executivo" className="card resumo-executivo-card pdf-keep-together" style={{ marginTop: '1.25rem' }}>
+        <div className="card-title resumo-executivo-title"><span className="card-title-icon">📌</span> Resumo Executivo</div>
+        <p className="resumo-executivo-text">
           Relatório de monitoramento fitossanitário do talhão <strong>{primeiroTalhao.nome}</strong>, cultura <strong>{primeiroTalhao.cultura}</strong>{primeiroTalhao.variedade ? ` (${primeiroTalhao.variedade})` : ''}, safra {normalized.safra}.
           {primeiroTalhao.area_ha > 0 && ` Área: ${formatDecimal2(primeiroTalhao.area_ha)} ha.`}
           {primeiroTalhao.estagio && ` Estádio fenológico atual: ${primeiroTalhao.estagio}${primeiroTalhao.dae != null ? ` (${primeiroTalhao.dae} DAE)` : ''}.`}
@@ -652,6 +652,18 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
             </>
           )}
         </p>
+        {resumoRecomendacoes.length > 0 && (
+          <div className="resumo-executivo-recomendacoes">
+            <div className="resumo-executivo-recomendacoes-title">Principais recomendações</div>
+            <ul className="resumo-executivo-recomendacoes-list">
+              {resumoRecomendacoes.slice(0, 5).map((r, i) => (
+                <li key={i}>
+                  <strong>{r.produto || '—'}</strong> — {r.dose || '—'} · {r.organismos.join(', ')}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* #iqf — Índice FortSmart de Qualidade Agronômica */}
@@ -725,7 +737,20 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         <div className="card">
           <div className="card-title"><span className="card-title-icon">📍</span> Polígono GPS · Pontos georreferenciados</div>
           <div className="map-card-inner">
-            <MapaInterativo pontos={primeiroTalhao.pontos} poligono={primeiroTalhao.poligono_geojson} talhaoId={primeiroTalhao.id} hideHeader />
+            <MapaInterativo
+              pontos={primeiroTalhao.pontos}
+              poligono={primeiroTalhao.poligono_geojson}
+              talhaoId={primeiroTalhao.id}
+              hideHeader
+              onImageClick={(url, descricao) => setGaleriaModal({ url, descricao })}
+            />
+          </div>
+          <div className="map-legend-footer">
+            <span className="map-legend-item"><span className="map-legend-dot" style={{ background: '#2E7D32' }} /> Baixo (&lt;10%)</span>
+            <span className="map-legend-item"><span className="map-legend-dot" style={{ background: '#F9A825' }} /> Médio (10–25%)</span>
+            <span className="map-legend-item"><span className="map-legend-dot" style={{ background: '#E65100' }} /> Alto (25–40%)</span>
+            <span className="map-legend-item"><span className="map-legend-dot" style={{ background: '#C62828' }} /> Crítico (&gt;40%)</span>
+            <span className="map-legend-item"><span className="map-legend-dot" style={{ background: '#94A3B8' }} /> Sem ocorrência</span>
           </div>
         </div>
       </div>
@@ -1163,8 +1188,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
 
       {/* Plano de Aplicação */}
       {resumoRecomendacoes.length > 0 && (
-        <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
-          <div className="card-title">Plano de Aplicação</div>
+        <div className="card plano-aplicacao pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+          <div className="card-title plano-aplicacao-title">Plano de Aplicação</div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
@@ -1233,7 +1258,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                         </div>
                       )}
                     </div>
-                    <div className="action-bar" style={{ borderLeftColor: badgeClass === 'baixo' ? 'var(--success)' : 'var(--warning)' }}>
+                    <div className={`action-bar ${badgeClass === 'baixo' ? 'priority-low' : ''}`} style={badgeClass !== 'baixo' ? { borderLeftColor: 'var(--warning)' } : undefined}>
                       <div>
                         <div className="action-type">Recomendação: {String(p.produto)} · Dose: {String(p.dose)}</div>
                         <div className="action-deadline">{p.manejo}</div>
