@@ -54,8 +54,7 @@ export default function HeaderInstitucionalVisitaTecnica({
 
   return (
     <header className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden print:shadow-none">
-      {/* Faixa verde de identidade */}
-      <div className="h-1 bg-gradient-to-r from-emerald-700 to-emerald-500" />
+      <div className="h-1 bg-gradient-to-r from-emerald-700 to-emerald-500" aria-hidden />
       <div className="p-5 sm:p-6">
         {/* Linha 1: Logo + Título */}
         <div className="flex flex-wrap items-center gap-4 pb-4 border-b border-slate-100">

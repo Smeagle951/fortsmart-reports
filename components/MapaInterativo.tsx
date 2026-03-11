@@ -10,8 +10,8 @@ interface MapaInterativoProps {
     talhaoId: string;
     /** Quando true, não exibe o título/legenda padrão (para uso embutido em outros cards). */
     hideHeader?: boolean;
-    /** 'outside' = não desenha a legenda dentro do mapa (para colocar embaixo e ampliar área útil); habilita zoom com scroll e pinch. */
-    legendPosition?: 'inside' | 'outside';
+    /** Callback ao clicar em uma imagem do popup (abre preview com zoom/legenda). */
+    onImageClick?: (url: string, caption?: string) => void;
 }
 
 function severidadeColor(sev: number): string {
@@ -21,9 +21,11 @@ function severidadeColor(sev: number): string {
     return '#C62828';
 }
 
-export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader, legendPosition = 'inside' }: MapaInterativoProps) {
+export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader, onImageClick }: MapaInterativoProps) {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<unknown>(null);
+    const onImageClickRef = useRef(onImageClick);
+    onImageClickRef.current = onImageClick;
 
     useEffect(() => {
         if (typeof window === 'undefined' || mapInstance.current) return;
@@ -46,12 +48,7 @@ export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader,
             const centerLat = coords.reduce((s, c) => s + c[1], 0) / coords.length;
             const centerLng = coords.reduce((s, c) => s + c[0], 0) / coords.length;
 
-            const map = L.map(mapRef.current!, {
-                zoomControl: true,
-                scrollWheelZoom: legendPosition === 'outside',
-                touchZoom: true,
-                doubleClickZoom: true,
-            });
+            const map = L.map(mapRef.current!, { zoomControl: true, scrollWheelZoom: true });
             mapInstance.current = map;
 
             // Tile layer (MapTiler Satellite - idêntico ao App Mobile)
@@ -105,10 +102,16 @@ export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader,
                     iconAnchor: [14, 14],
                 });
 
-                // Popup conteúdo
+                // Popup conteúdo (área rolável; imagens clicáveis para preview)
                 const infContent = ponto.infestacoes.length === 0
                     ? '<em style="color:#64748B;font-size:12px">Sem ocorrências</em>'
-                    : ponto.infestacoes.map(inf => `
+                    : ponto.infestacoes.map(inf => {
+                        const tipoStr = inf.tipo === 'praga' ? 'Praga' : inf.tipo === 'doenca' ? 'Doença' : 'Daninha';
+                        const caption = `${inf.nome} · ${inf.severidade}% · ${tipoStr}`;
+                        const imgTag = inf.imagem
+                            ? `<img class="mapa-popup-img" src="${inf.imagem}" data-src="${inf.imagem}" data-caption="${caption.replace(/"/g, '&quot;')}" style="width:100%;height:60px;object-fit:cover;border-radius:6px;margin-top:5px;cursor:pointer" alt="${(inf.nome || '').replace(/"/g, '&quot;')}" title="Clique para ampliar" />`
+                            : '';
+                        return `
               <div style="
                 padding:6px 0; border-bottom:1px solid #F1F5F9;
                 font-family:Inter,sans-serif; font-size:12px;
@@ -127,9 +130,10 @@ export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader,
                   · Terço: ${inf.terco}
                   ${inf.quantidade != null ? `· Qtde: ${inf.quantidade}` : ''}
                 </div>
-                ${inf.imagem ? `<img src="${inf.imagem}" style="width:100%;height:60px;object-fit:cover;border-radius:6px;margin-top:5px" />` : ''}
+                ${imgTag}
               </div>
-            `).join('');
+            `;
+                    }).join('');
 
                 const popup = L.popup({ maxWidth: 280, className: 'mapa-popup-card' }).setContent(`
           <div style="font-family:Inter,sans-serif; min-width:220px;">
@@ -143,11 +147,27 @@ export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader,
             <div style="font-size:11px;color:#64748B;margin:8px 0;padding:6px 8px;background:#F8FAFC;border-radius:6px">
               ${ponto.lat.toFixed(5)}, ${ponto.lng.toFixed(5)}
             </div>
-            ${infContent}
+            <div class="mapa-popup-scroll" style="max-height:220px;overflow-y:auto;padding-right:4px">
+              ${infContent}
+            </div>
           </div>
         `);
 
                 L.marker([ponto.lat, ponto.lng], { icon }).bindPopup(popup).addTo(map);
+            });
+
+            // Clique em imagem do popup → abrir preview (zoom + legenda)
+            map.on('popupopen', () => {
+                const wrapper = document.querySelector('.mapa-popup-card .leaflet-popup-content-wrapper');
+                wrapper?.querySelectorAll('.mapa-popup-img').forEach((el) => {
+                    const img = el as HTMLImageElement;
+                    const once = () => {
+                        const url = img.getAttribute('data-src') || img.src;
+                        const caption = img.getAttribute('data-caption') || img.alt;
+                        onImageClickRef.current?.(url, caption || undefined);
+                    };
+                    img.addEventListener('click', once, { once: true });
+                });
             });
 
             // Adicionar mapa de calor (Heatmap)
@@ -182,24 +202,7 @@ export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader,
                 }).catch(e => console.error('Falha ao carregar heatmap', e));
             }
 
-            // Legenda só dentro do mapa quando legendPosition === 'inside'
-            if (legendPosition === 'inside') {
-                const legend = (L.control as unknown as ({ position }: { position: string }) => L.Control & { onAdd: (map: L.Map) => HTMLElement })({ position: 'bottomright' });
-                legend.onAdd = () => {
-                    const div = L.DomUtil.create('div');
-                    div.style.cssText = 'background:white;padding:10px 14px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.15);font-family:Inter,sans-serif;font-size:11px;line-height:1.8';
-                    div.innerHTML = `
-          <div style="font-weight:700;margin-bottom:4px;color:#1A2332">Legenda</div>
-          <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2E7D32;margin-right:5px"></span>Baixo (<10%)</div>
-          <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F9A825;margin-right:5px"></span>Médio (10–25%)</div>
-          <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#E65100;margin-right:5px"></span>Alto (25–40%)</div>
-          <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#C62828;margin-right:5px"></span>Crítico (>40%)</div>
-          <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#94A3B8;margin-right:5px"></span>Sem ocorrência</div>
-        `;
-                    return div;
-                };
-                legend.addTo(map);
-            }
+            // Legenda não é mais exibida no mapa; fica no rodapé do card (RelatorioFitossanitarioContent)
         });
 
         return () => {
@@ -208,7 +211,7 @@ export default function MapaInterativo({ pontos, poligono, talhaoId, hideHeader,
                 mapInstance.current = null;
             }
         };
-    }, [pontos, poligono, talhaoId, legendPosition]);
+    }, [pontos, poligono, talhaoId]);
 
     return (
         <div>

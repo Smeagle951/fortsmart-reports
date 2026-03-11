@@ -49,11 +49,10 @@ export default function RelatorioLayoutEnterprise({
             </div>
           </div>
           <div className="sidebar-user">
-            <div className="sidebar-user-label">Responsável técnico</div>
-            <div className="user-avatar">{tecnico && tecnico !== 'FortSmart Agro' ? iniciais(tecnico) : '—'}</div>
-            <div className="user-name">{tecnico && tecnico !== 'FortSmart Agro' ? tecnico : 'Não informado'}</div>
+            <div className="user-avatar">{iniciais(fazenda)}</div>
+            <div className="user-name">{fazenda}</div>
             <div className="user-role">
-              {crea ? `Engenheiro Agrônomo · ${crea}` : 'Relatório Técnico'}
+              {tecnico && tecnico.trim() ? (crea ? `${tecnico.trim()} · CREA ${crea}` : tecnico.trim()) : (crea ? `Eng. Agrônomo · CREA ${crea}` : 'Relatório Técnico')}
             </div>
           </div>
           <nav className="sidebar-nav">
@@ -98,9 +97,6 @@ export default function RelatorioLayoutEnterprise({
               <span className="nav-icon">🖨️</span> Imprimir / PDF
             </button>
           </nav>
-          <div className="sidebar-footer">
-            <a href="/" className="no-print">← Voltar ao site</a>
-          </div>
         </aside>
 
         {/* Main (base: relatorio.html) */}
@@ -134,18 +130,11 @@ export default function RelatorioLayoutEnterprise({
             {children}
           </div>
 
-          {/* Rodapé profissional */}
+          {/* Footer (estilo educacional) */}
           <footer className="page-footer">
-            <div style={{ marginBottom: 4 }}>
-              <strong style={{ color: 'var(--text-main)' }}>Relatório gerado por FortSmart</strong>
-              {' · '}
-              Plataforma de Inteligência Agronômica
-              {' · '}
-              <a href="https://www.fortsmart.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>www.fortsmart.com</a>
-            </div>
-            {tecnico && tecnico !== 'Não informado' && (
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Responsável técnico: {tecnico}{crea ? ` · ${crea}` : ''}</div>
-            )}
+            <strong style={{ color: 'var(--text-main)' }}>FortSmart Agro</strong>
+            {' · '}
+            Relatório de Monitoramento Fitossanitário
           </footer>
         </main>
       </div>

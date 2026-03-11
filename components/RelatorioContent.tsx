@@ -85,10 +85,15 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
       talhao: { nome: String(talhao.nome ?? ''), cultura: String(talhao.cultura ?? '') },
       contextoSafra: { dae: ctxDae != null ? Number(ctxDae) : undefined, dap: (contextoSafra as any)?.dap != null ? Number((contextoSafra as any).dap) : undefined, materialVariedade: (contextoSafra as any)?.materialVariedade != null ? String((contextoSafra as any).materialVariedade) : undefined, empresa: (contextoSafra as any)?.empresa != null ? String((contextoSafra as any).empresa) : undefined, espacamentoCm: (contextoSafra as any)?.espacamentoCm != null ? Number((contextoSafra as any).espacamentoCm) : undefined, populacaoAlvoPlHa: (contextoSafra as any)?.populacaoAlvoPlHa != null ? Number((contextoSafra as any).populacaoAlvoPlHa) : undefined },
       fenologia: { estadio: (fenologia as any)?.estadio ?? undefined },
-      populacao: (populacao && (populacao as any).plantasPorMetro != null) ? { plantasPorMetro: Number((populacao as any).plantasPorMetro) } : undefined,
+      populacao: (populacao && (populacao as any).plantasPorMetro != null) ? { plantasPorMetro: Number((populacao as any).plantasPorMetro), eficienciaPct: (populacao as any).eficienciaPct != null ? Number((populacao as any).eficienciaPct) : undefined } : undefined,
       estande: (relatorio as any).estande ?? undefined,
+      plantabilidade: (relatorio as any).plantabilidade ?? (relatorio as any).modulo_plantio?.plantabilidade ?? undefined,
       fitossanidade: (relatorio as any).fitossanidade ? { ipe: Number(((relatorio as any).fitossanidade as any).ipe ?? 0), ipeStatus: ((relatorio as any).fitossanidade as any).ipeStatus ?? undefined } : undefined,
-      diagnosticoIntegrado: { spt: Number((diagnostico as any).spt ?? (relatorio as any).indiceAgronomicoTalhao?.valor ?? undefined) },
+      diagnosticoIntegrado: (() => {
+        const sptRaw = (diagnostico as any).spt ?? (relatorio as any).indiceAgronomicoTalhao?.valor;
+        const spt = typeof sptRaw === 'number' && Number.isFinite(sptRaw) ? sptRaw : undefined;
+        return { spt };
+      })(),
       indiceAgronomicoTalhao: (relatorio as any).indiceAgronomicoTalhao ?? undefined,
       aplicacoes: aplicacoes.map((a: any) => ({
         tipo: a.tipo ?? a.classe ?? '',

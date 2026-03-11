@@ -54,48 +54,48 @@ export default function HeaderSection({
   const sc = statusConfig[status] || statusConfig.Saudável;
 
   return (
-    <header className="saas-header sticky top-0 z-40 border-b border-slate-200 bg-white/97 backdrop-blur-sm shadow-sm print:static print:bg-white">
+    <header className="saas-header sticky top-0 z-40 border-b border-slate-200 bg-white/98 backdrop-blur-md shadow-sm print:static print:bg-white">
+      <div className="h-0.5 bg-gradient-to-r from-emerald-600 to-emerald-500" aria-hidden />
       <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex items-start justify-between gap-4">
-          {/* Left: brand */}
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-[--plantio-card-bg] border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-              <FortSmartLogo size={40} className="shrink-0" />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+              <FortSmartLogo size={32} className="shrink-0" />
             </div>
-            <div>
-              <div className="text-sm font-semibold text-slate-700">FortSmart Agro</div>
-              <div className="text-xs text-slate-500">Relatório Técnico — Visita</div>
-            </div>
-          </div>
-
-          {/* Middle: meta */}
-          <div className="hidden md:flex md:flex-1 md:justify-center">
-            <div className="grid grid-cols-3 gap-x-8 text-sm text-slate-600">
-              <div>
-                <div className="text-xs text-slate-500">Fazenda</div>
-                <div className="font-medium text-slate-800">{fazenda}</div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-500">Talhão / Cultura</div>
-                <div className="font-medium text-slate-800">{talhao} • {cultura}</div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-500">Data / Técnico</div>
-                <div className="font-medium text-slate-800">{dataAvaliacao} • {responsavel}</div>
-              </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-800 tracking-tight truncate">FortSmart Agro</p>
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Relatório Técnico de Visita</p>
             </div>
           </div>
 
-          {/* Right: actions */}
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${sc.bg} ${sc.text}`}>
+          <div className="hidden md:flex flex-1 justify-center min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
+              <span className="text-slate-500 font-medium">Fazenda</span>
+              <span className="text-slate-800 font-semibold truncate max-w-[140px]" title={fazenda}>{fazenda}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-500 font-medium">Talhão</span>
+              <span className="text-slate-800 font-semibold truncate max-w-[120px]" title={talhao}>{talhao}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-500 font-medium">Cultura</span>
+              <span className="text-slate-800 font-semibold truncate max-w-[120px]" title={cultura}>{cultura}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-500 font-medium">Data</span>
+              <span className="text-slate-800 font-semibold">{dataAvaliacao}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-500 font-medium">Técnico</span>
+              <span className="text-slate-800 font-semibold truncate max-w-[100px]" title={responsavel}>{responsavel}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ${sc.bg} ${sc.text}`}>
               {sc.label}
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={onExportPdf}
-                className="saas-btn saas-btn-secondary inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
                 title="Exportar PDF"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,7 +106,7 @@ export default function HeaderSection({
               <button
                 type="button"
                 onClick={handleShare}
-                className="saas-btn saas-btn-primary inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-white"
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
                 title="Compartilhar"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
