@@ -17,6 +17,18 @@ function safeNum(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Formata valor para exibição em KPI: evita floats longos (ex.: 2.5999999999999996 → 2.6). */
+function formatKpiValor(
+  v: number | null | undefined,
+  opts?: { decimals?: number; suffix?: string }
+): string | number {
+  if (v == null || !Number.isFinite(Number(v))) return '—';
+  const n = Number(v);
+  const decimals = opts?.decimals ?? (n % 1 === 0 ? 0 : 1);
+  const s = decimals === 0 ? String(Math.round(n)) : n.toFixed(decimals);
+  return opts?.suffix ? `${s}${opts.suffix}` : s;
+}
+
 export interface ReportPageSaaSData {
   meta?: { dataGeracao?: string; tecnico?: string; tecnicoCrea?: string; id?: string; versao?: number; status?: string; safra?: string };
   propriedade?: { fazenda?: string; proprietario?: string; municipio?: string; estado?: string };
@@ -221,19 +233,21 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
     {
       id: 'spt',
       indicador: 'SPT',
-      valor: safeNum(data.diagnosticoIntegrado?.spt ?? data.indiceAgronomicoTalhao?.valor) ?? '—',
+      valor: formatKpiValor(safeNum(data.diagnosticoIntegrado?.spt ?? data.indiceAgronomicoTalhao?.valor), { decimals: 0 }),
       classificacao: 'Excelente' as const,
       tendencia: 'up' as const,
       tooltip: 'Índice de Saúde da Planta',
       historico: data.estande?.registros?.map((r) => ({
         data: r.data ?? '',
-        valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
+        valor: r.plantasPorMetro != null ? formatKpiValor(safeNum(r.plantasPorMetro), { decimals: 1 }) : '—',
       })) ?? [],
     },
     {
       id: 'cv',
       indicador: 'CV%',
-      valor: data.plantabilidade?.cvPercentual != null && Number.isFinite(Number(data.plantabilidade.cvPercentual)) ? `${Number(data.plantabilidade.cvPercentual)}%` : '—',
+      valor: data.plantabilidade?.cvPercentual != null && Number.isFinite(Number(data.plantabilidade.cvPercentual))
+        ? formatKpiValor(Number(data.plantabilidade.cvPercentual), { decimals: 1, suffix: '%' })
+        : '—',
       classificacao: ((data.plantabilidade?.cvPercentual ?? 0) <= 10 ? 'Excelente' : (data.plantabilidade?.cvPercentual ?? 0) <= 15 ? 'Bom' : 'Moderado') as 'Excelente' | 'Bom' | 'Moderado',
       tendencia: 'neutral' as const,
       tooltip: 'Coeficiente de Variação do espaçamento',
@@ -242,19 +256,19 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
     {
       id: 'estande',
       indicador: 'Estande',
-      valor: safeNum(data.populacao?.plantasPorMetro ?? data.estande?.registros?.[0]?.plantasPorMetro) ?? '—',
+      valor: formatKpiValor(safeNum(data.populacao?.plantasPorMetro ?? data.estande?.registros?.[0]?.plantasPorMetro), { decimals: 1 }),
       classificacao: ((data.populacao?.eficienciaPct ?? 0) >= 95 ? 'Excelente' : 'Bom') as 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico',
       tendencia: 'neutral' as const,
       tooltip: 'Plantas por metro',
       historico: data.estande?.registros?.map((r) => ({
         data: r.data ?? '',
-        valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
+        valor: r.plantasPorMetro != null ? formatKpiValor(safeNum(r.plantasPorMetro), { decimals: 1 }) : '—',
       })) ?? [],
     },
     {
       id: 'ipe',
       indicador: 'IPE',
-      valor: safeNum(data.fitossanidade?.ipe) ?? '—',
+      valor: formatKpiValor(safeNum(data.fitossanidade?.ipe), { decimals: 2 }),
       classificacao: ((data.fitossanidade?.ipe ?? 0) <= 0.5 ? 'Excelente' : 'Moderado') as 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico',
       tendencia: 'down' as const,
       tooltip: 'Índice de Pressão de Entomofauna',
