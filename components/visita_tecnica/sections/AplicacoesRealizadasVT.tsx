@@ -1,6 +1,5 @@
 import React from 'react';
 import { PayloadVisitaTecnica } from '@/components/RelatorioVisitaTecnicaContent';
-import { cardStyle, sectionTitleStyle } from './IdentificacaoEContexto';
 
 interface AplicacoesRealizadasVTProps {
     aplicacoes: NonNullable<PayloadVisitaTecnica['aplicacoes']>;
@@ -10,9 +9,9 @@ export default function AplicacoesRealizadasVT({ aplicacoes }: AplicacoesRealiza
     if (aplicacoes.length === 0) return null;
 
     return (
-        <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
-            <div style={sectionTitleStyle}>Aplicações e Operações Realizadas</div>
-            <div style={{ overflowX: 'auto' }}>
+        <section className="section-block relatorio-editorial">
+            <div className="section-block__title">Aplicações Realizadas</div>
+            <div className="section-block__body" style={{ overflowX: 'auto', padding: 20 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 640 }}>
                     <thead>
                         <tr style={{ background: '#F8FAFC' }}>

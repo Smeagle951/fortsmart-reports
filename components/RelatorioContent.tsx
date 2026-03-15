@@ -7,7 +7,7 @@ import Galeria from './Galeria';
 import TabelaDados, { InfoGrid, situacaoCssClass, situacaoLabel } from './TabelaDados';
 import TabelaAplicacoes from './TabelaAplicacoes';
 import { formatDate, formatArea, formatNumber, formatPercent } from '@/utils/format';
-import ReportPageSaaS, { type ReportPageSaaSData } from './saas/ReportPageSaaS';
+import RelatorioVisitaTecnicaContent from './RelatorioVisitaTecnicaContent';
 
 export type RelatorioJson = {
   meta?: Record<string, unknown>;
@@ -70,51 +70,7 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
     tipoStr === 'visita_tecnica' ||
     (tipoStr !== 'plantio' && tipoStr !== 'avaliacao_lado_a_lado' && tipoStr !== 'monitoramento' && (hasVisitaKeys || hasVisitaBlocks));
   if (isVisitaTecnica) {
-    const ctxDae = (contextoSafra as any)?.dae;
-    const saasData: ReportPageSaaSData = {
-      meta: {
-        dataGeracao: String(meta.dataGeracao ?? ''),
-        tecnico: String(meta.tecnico ?? ''),
-        tecnicoCrea: (meta as any).tecnicoCrea != null ? String((meta as any).tecnicoCrea) : undefined,
-        id: (meta as any).id != null ? String((meta as any).id) : undefined,
-        versao: (meta as any).versao != null ? Number((meta as any).versao) : undefined,
-        status: String((meta as any).status ?? 'Final'),
-        safra: (meta as any).safra != null ? String((meta as any).safra) : undefined,
-      },
-      propriedade: { fazenda: String(prop.fazenda ?? ''), proprietario: String(prop.proprietario ?? ''), municipio: (prop as any).municipio != null ? String((prop as any).municipio) : undefined, estado: (prop as any).estado != null ? String((prop as any).estado) : undefined },
-      talhao: { nome: String(talhao.nome ?? ''), cultura: String(talhao.cultura ?? '') },
-      contextoSafra: { dae: ctxDae != null ? Number(ctxDae) : undefined, dap: (contextoSafra as any)?.dap != null ? Number((contextoSafra as any).dap) : undefined, materialVariedade: (contextoSafra as any)?.materialVariedade != null ? String((contextoSafra as any).materialVariedade) : undefined, empresa: (contextoSafra as any)?.empresa != null ? String((contextoSafra as any).empresa) : undefined, espacamentoCm: (contextoSafra as any)?.espacamentoCm != null ? Number((contextoSafra as any).espacamentoCm) : undefined, populacaoAlvoPlHa: (contextoSafra as any)?.populacaoAlvoPlHa != null ? Number((contextoSafra as any).populacaoAlvoPlHa) : undefined },
-      fenologia: { estadio: (fenologia as any)?.estadio ?? undefined },
-      populacao: (populacao && (populacao as any).plantasPorMetro != null) ? { plantasPorMetro: Number((populacao as any).plantasPorMetro), eficienciaPct: (populacao as any).eficienciaPct != null ? Number((populacao as any).eficienciaPct) : undefined } : undefined,
-      estande: (relatorio as any).estande ?? undefined,
-      plantabilidade: (relatorio as any).plantabilidade ?? (relatorio as any).modulo_plantio?.plantabilidade ?? undefined,
-      fitossanidade: (relatorio as any).fitossanidade ? { ipe: Number(((relatorio as any).fitossanidade as any).ipe ?? 0), ipeStatus: ((relatorio as any).fitossanidade as any).ipeStatus ?? undefined } : undefined,
-      diagnosticoIntegrado: (() => {
-        const sptRaw = (diagnostico as any).spt ?? (relatorio as any).indiceAgronomicoTalhao?.valor;
-        const spt = typeof sptRaw === 'number' && Number.isFinite(sptRaw) ? sptRaw : undefined;
-        return { spt };
-      })(),
-      indiceAgronomicoTalhao: (relatorio as any).indiceAgronomicoTalhao ?? undefined,
-      aplicacoes: aplicacoes.map((a: any) => ({
-        tipo: a.tipo ?? a.classe ?? '',
-        data: a.data ?? '',
-        produto: a.produto ?? a.produtoNome ?? '',
-        dose: a.dose ?? '',
-        unidade: a.unidade ?? '',
-        classe: a.classe ?? '',
-        alvo: a.alvo ?? '',
-        talhao: a.talhao ?? '',
-        responsavel: a.responsavel ?? '',
-      })),
-      imagens: (imagens as any[]).map((im: any) => ({ url: im.url ?? im.path ?? '', descricao: im.descricao ?? im.caption ?? '', data: im.data ?? undefined, categoria: im.categoria ?? undefined })),
-      pragas: (pragas as any[]).map((p: any) => ({ tipo: p.tipo, nome: p.nome, alvo: p.alvo, incidencia: p.incidencia, severidade: p.severidade, situacao: p.situacao, observacoes: p.observacoes })),
-      desvios: Array.isArray((relatorio as any).desvios) ? ((relatorio as any).desvios as any[]).map((d: any) => ({ tipo: d.tipo, descricao: d.descricao, data: d.data, severidade: d.severidade, local: d.local, acaoRecomendada: d.acaoRecomendada })) : undefined,
-      diagnostico: diagnostico && typeof diagnostico === 'object' ? { problemaPrincipal: (diagnostico as any).problemaPrincipal, causaProvavel: (diagnostico as any).causaProvavel, nivelRisco: (diagnostico as any).nivelRisco, urgenciaAcao: (diagnostico as any).urgenciaAcao, recomendacoes: Array.isArray((diagnostico as any).recomendacoes) ? (diagnostico as any).recomendacoes : undefined } : undefined,
-      planoAcao: planoAcao && typeof planoAcao === 'object' ? { objetivoManejo: (planoAcao as any).objetivoManejo, acoes: Array.isArray((planoAcao as any).acoes) ? (planoAcao as any).acoes.map((a: any) => ({ prioridade: a.prioridade != null ? String(a.prioridade) : undefined, acao: a.acao, prazo: a.prazo })) : undefined } : undefined,
-      conclusao: typeof conclusao === 'string' ? conclusao : undefined,
-    };
-
-    return <ReportPageSaaS data={saasData} reportId={reportId} relatorioUuid={relatorioUuid} />;
+    return <RelatorioVisitaTecnicaContent relatorio={relatorio as any} reportId={reportId} relatorioUuid={relatorioUuid} />;
   }
 
   return (

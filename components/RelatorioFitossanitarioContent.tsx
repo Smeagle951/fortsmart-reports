@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import type { MapaLayersVisible, MapaInterativoRef } from './MapaInterativo';
 import {
   RelatorioMonitoramento,
   Talhao,
@@ -16,8 +17,20 @@ import { calcularMetricasTalhao } from '@/lib/calculations';
 import { formatPercent2, formatDecimal2, formatDate } from '@/utils/format';
 import ModalImagem from './ModalImagem';
 import RelatorioLayoutEnterprise from './RelatorioLayoutEnterprise';
+import BarraTecnicaRelatorio from './BarraTecnicaRelatorio';
+import RelatorioSection from './RelatorioSection';
 
 const MapaInterativo = dynamic(() => import('./MapaInterativo'), { ssr: false });
+
+const defaultMapaLayers: MapaLayersVisible = {
+  poligono: true,
+  pontos: true,
+  heatmap: true,
+  fotos: true,
+  falhas: true,
+  duplos: true,
+  observacoes: true,
+};
 
 /** Normaliza nome de produto para deduplicação (lowercase, trim, remove acentos). */
 function normalizarProduto(s: string): string {
@@ -544,6 +557,38 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
   }, [pragasComRecomendacao]);
 
   const [galeriaModal, setGaleriaModal] = useState<{ url: string; descricao?: string } | null>(null);
+  const [mapaLayers, setMapaLayers] = useState<MapaLayersVisible>({ ...defaultMapaLayers });
+  const mapaApiRef = useRef<MapaInterativoRef | null>(null);
+
+  const handleExportExcel = () => {
+    const dp = dadosPlantioExibir as DadosPlantioMonitoramento | undefined;
+    const rows: string[][] = [
+      ['Indicador', 'Resultado', 'Ideal'],
+      ['População', dp?.populacao_real != null ? String(Math.round(dp.populacao_real)) : '—', dp?.populacao_desejada != null ? String(Math.round(dp.populacao_desejada)) : '—'],
+      ['CV%', dp?.cv_percent != null ? `${formatDecimal2(dp.cv_percent)}%` : '—', '<25%'],
+      ['Falhas', dp?.indice_falhas_percent != null ? `${formatDecimal2(dp.indice_falhas_percent)}%` : '—', '<10%'],
+      ['Duplos', dp?.indice_duplas_percent != null ? `${formatDecimal2(dp.indice_duplas_percent)}%` : '—', '<15%'],
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `relatorio-${normalized.talhoes[0]?.nome ?? 'talhao'}-${normalized.safra ?? 'safra'}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const handleShare = () => {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({
+        title: `Relatório ${normalized.talhoes[0]?.nome ?? 'Talhão'} — FortSmart`,
+        text: `Relatório de Monitoramento Fitossanitário · ${normalized.fazenda} · ${normalized.safra}`,
+        url: typeof window !== 'undefined' ? window.location.href : '',
+      }).catch(() => {});
+    } else if (typeof window !== 'undefined') {
+      navigator.clipboard?.writeText(window.location.href).then(() => {});
+    }
+  };
   /** Imagens: relatorio.imagens (url + descricao) ou fallback fotos/registros_fotograficos; aceita url absoluta ou data: URL */
   const imagens = useMemo((): Array<{ url: string; descricao?: string }> => {
     const from = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string }>;
@@ -619,9 +664,23 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       crea={normalized.crea}
       reportId={reportId}
       onExportPDF={handleExportPDF}
+      onExportExcel={handleExportExcel}
+      onShare={handleShare}
     >
+      {/* Barra técnica horizontal: Fazenda | Talhão | Cultura | Cultivar | Área | DAE */}
+      <BarraTecnicaRelatorio
+        fazenda={normalized.fazenda}
+        talhao={primeiroTalhao.nome}
+        cultura={primeiroTalhao.cultura ?? '—'}
+        cultivar={primeiroTalhao.variedade}
+        areaHa={primeiroTalhao.area_ha > 0 ? primeiroTalhao.area_ha : undefined}
+        dae={primeiroTalhao.dae ?? (fenologiaGlobal?.dae != null ? Number(fenologiaGlobal.dae) : undefined)}
+        formatNum={formatDecimal2}
+      />
+
+      <RelatorioSection id="resumo" title="Visão Geral" icon="📋" defaultOpen={true}>
       {/* #resumo — Report Header Card (base: relatorio.html) */}
-      <div id="resumo" className="report-header-card pdf-keep-together">
+      <div className="report-header-card pdf-keep-together">
         <div className="report-header-info">
           <h1>📋 Relatório de Monitoramento Fitossanitário</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: 4 }}>
@@ -646,6 +705,61 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Próxima visita: {proximaVisita}</span>
         </div>
       </div>
+
+      {/* Tabela técnica compacta: Indicador | Resultado | Ideal */}
+      {dadosPlantioExibir && (() => {
+        const dp = dadosPlantioExibir as DadosPlantioMonitoramento;
+        const hasAny = dp.populacao_real != null || dp.populacao_desejada != null || dp.cv_percent != null || dp.indice_falhas_percent != null || dp.indice_duplas_percent != null;
+        if (!hasAny) return null;
+        const cellClass = (result: number | undefined, idealMax: number) => {
+          if (result == null) return '';
+          return result <= idealMax ? 'resultado-ok' : result <= idealMax * 1.5 ? 'resultado-alerta' : 'resultado-critico';
+        };
+        return (
+          <div className="card" style={{ marginTop: '1rem' }}>
+            <div className="card-title"><span className="card-title-icon">📊</span> Indicadores técnicos</div>
+            <table className="tabela-tecnica-compacta">
+              <thead>
+                <tr>
+                  <th>Indicador</th>
+                  <th>Resultado</th>
+                  <th>Ideal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(dp.populacao_real != null || dp.populacao_desejada != null) && (
+                  <tr>
+                    <td>População</td>
+                    <td>{dp.populacao_real != null ? String(Math.round(dp.populacao_real)) : '—'}</td>
+                    <td>{dp.populacao_desejada != null ? String(Math.round(dp.populacao_desejada)) : '—'}</td>
+                  </tr>
+                )}
+                {dp.cv_percent != null && (
+                  <tr>
+                    <td>CV</td>
+                    <td className={cellClass(dp.cv_percent, 25)}>{formatDecimal2(dp.cv_percent)}%</td>
+                    <td>&lt;25%</td>
+                  </tr>
+                )}
+                {dp.indice_falhas_percent != null && (
+                  <tr>
+                    <td>Falhas</td>
+                    <td className={cellClass(dp.indice_falhas_percent, 10)}>{formatDecimal2(dp.indice_falhas_percent)}%</td>
+                    <td>&lt;10%</td>
+                  </tr>
+                )}
+                {dp.indice_duplas_percent != null && (
+                  <tr>
+                    <td>Duplos</td>
+                    <td className={cellClass(dp.indice_duplas_percent, 15)}>{formatDecimal2(dp.indice_duplas_percent)}%</td>
+                    <td>&lt;15%</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
 
       {/* #resumo-executivo — Resumo Executivo (cartão premium + recomendações) */}
       <div id="resumo-executivo" className="card resumo-executivo-card pdf-keep-together" style={{ marginTop: '1.25rem' }}>
@@ -739,8 +853,11 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         </div>
       )}
 
-      {/* #propriedade — Grid 2: Propriedade + Mapa (dados do perfil fazenda) */}
-      <div id="propriedade" className="grid-2 pdf-keep-together">
+      </RelatorioSection>
+
+      {/* #propriedade — Mapa do Talhão (Propriedade + Mapa) */}
+      <RelatorioSection id="propriedade" title="Mapa do Talhão" icon="🗺️" defaultOpen={true}>
+      <div className="grid-2 pdf-keep-together">
         <div className="card card-propriedade-compact">
           <div className="card-title"><span className="card-title-icon">🏡</span> Propriedade</div>
           <div className="info-row"><span className="info-label">Fazenda</span><span className="info-value">{normalized.fazenda}</span></div>
@@ -749,6 +866,28 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         </div>
         <div className="card">
           <div className="card-title"><span className="card-title-icon">📍</span> Polígono GPS · Pontos georreferenciados</div>
+          {/* Camadas do mapa */}
+          <div className="mapa-camadas no-print" style={{ marginBottom: '0.75rem' }}>
+            <span className="mapa-camadas-label">Camadas:</span>
+            {[
+              { key: 'poligono' as const, label: 'Polígono do talhão' },
+              { key: 'pontos' as const, label: 'Pontos de monitoramento' },
+              { key: 'heatmap' as const, label: 'Heatmap' },
+              { key: 'fotos' as const, label: 'Fotos' },
+              { key: 'falhas' as const, label: 'Falhas (crítico)' },
+              { key: 'duplos' as const, label: 'Duplos (2+ ocorr.)' },
+              { key: 'observacoes' as const, label: 'Observações' },
+            ].map(({ key, label }) => (
+              <label key={key} className="mapa-camadas-check">
+                <input
+                  type="checkbox"
+                  checked={mapaLayers[key] !== false}
+                  onChange={(e) => setMapaLayers((prev) => ({ ...prev, [key]: e.target.checked }))}
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
           <div className="map-card-inner">
             <MapaInterativo
               pontos={primeiroTalhao.pontos}
@@ -756,6 +895,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
               talhaoId={primeiroTalhao.id}
               hideHeader
               onImageClick={(url, descricao) => setGaleriaModal({ url, descricao })}
+              layersVisible={mapaLayers}
+              onMapReady={(api) => { mapaApiRef.current = api; }}
             />
           </div>
           <div className="map-legend-footer">
@@ -765,10 +906,61 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
             <span className="map-legend-item"><span className="map-legend-dot" style={{ background: '#C62828' }} /> Crítico (&gt;40%)</span>
             <span className="map-legend-item"><span className="map-legend-dot" style={{ background: '#94A3B8' }} /> Sem ocorrência</span>
           </div>
+          {/* Ocorrências georreferenciadas — lista com Ver no mapa */}
+          {primeiroTalhao.pontos.length > 0 && (
+            <div className="mapa-ocorrencias-list no-print" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Ocorrências georreferenciadas</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: 200, overflowY: 'auto' }}>
+                {primeiroTalhao.pontos.map((ponto) => {
+                  const sev = ponto.infestacoes.length > 0
+                    ? ponto.infestacoes.reduce((s, i) => s + i.severidade, 0) / ponto.infestacoes.length
+                    : 0;
+                  const resumo = ponto.infestacoes.length === 0
+                    ? 'Sem ocorrências'
+                    : ponto.infestacoes.slice(0, 2).map((i) => `${i.nome} ${i.severidade}%`).join(' · ');
+                  const temImagem = ponto.infestacoes.some((i) => i.imagem);
+                  const primeiraImagem = ponto.infestacoes.find((i) => i.imagem)?.imagem;
+                  return (
+                    <div key={ponto.id} className="mapa-ocorrencia-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 10px', background: 'var(--bg)', borderRadius: 8, fontSize: '0.8rem' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <strong>{ponto.identificador}</strong>
+                        <span style={{ color: 'var(--text-muted)', marginLeft: 6 }}>{resumo}</span>
+                        {primeiroTalhao.dae != null && <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>· {primeiroTalhao.dae} DAE</span>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          className="btn-action outline"
+                          style={{ padding: '4px 10px', fontSize: '0.72rem' }}
+                          onClick={() => mapaApiRef.current?.flyTo(ponto.lat, ponto.lng)}
+                        >
+                          Ver no mapa
+                        </button>
+                        {temImagem && primeiraImagem && (
+                          <button
+                            type="button"
+                            className="btn-action outline"
+                            style={{ padding: '4px 10px', fontSize: '0.72rem' }}
+                            onClick={() => setGaleriaModal({ url: primeiraImagem, descricao: `${ponto.identificador} · ${resumo}` })}
+                          >
+                            Ver imagem
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* #dados-plantio — Dados do módulo Plantio (estande, CV%, evolução fenológica) */}
+      </RelatorioSection>
+
+      {/* #dados-plantio — Avaliação do Plantio */}
+      <RelatorioSection id="dados-plantio" title="Avaliação do Plantio" icon="🌱" defaultOpen={true}>
+      {/* Dados do módulo Plantio (estande, CV%, evolução fenológica) */}
       {dadosPlantioExibir && (() => {
         const dp = dadosPlantioExibir;
         const hasAny = dp.cultura || dp.populacao_desejada != null || dp.populacao_real != null || dp.cv_percent != null || dp.estagio_atual || (dp.evolucao_fenologica?.length ?? 0) > 0 || (dp.linha_plantabilidade?.length ?? 0) > 0;
@@ -776,7 +968,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         const fmt = (n: number | undefined) => n != null ? formatDecimal2(n) : '—';
         const fmtInt = (n: number | undefined) => n != null ? String(Math.round(n)) : '—';
         return (
-          <div id="dados-plantio" className="pdf-keep-together" style={{ marginTop: '1.5rem' }}>
+          <div className="pdf-keep-together" style={{ marginTop: 0 }}>
             <div className="section-heading">🌾 Dados do Plantio</div>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
               Dados do módulo Plantio (estande de plantas, CV%, evolução fenológica) referentes ao talhão.
@@ -887,6 +1079,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
               const comprimentoAvaliado = dp.metros_amostrados ?? (lin.length > 0 ? (lin.reduce((a, p) => a + p.espacamento_cm, 0) / 100) : undefined);
               const sliceShow = Math.min(lin.length, 25);
               const linShow = lin.slice(0, sliceShow);
+              const pxPerCm = 4;
               return (
                 <>
                   {/* Card 1 — CV%, Comprimento, Espaçamento ideal */}
@@ -907,7 +1100,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                       </div>
                     </div>
                   </div>
-                  {/* Card 2 — Visualização da linha: ●----31cm----● + legenda */}
+                  {/* Card 2 — Visualização da linha: ●----Xcm----● com largura proporcional ao espaçamento */}
                   <div className="card" style={{ marginBottom: '1rem' }}>
                     <div className="card-title"><span className="card-title-icon">📐</span> Visualização da qualidade do plantio</div>
                     <div style={{ overflowX: 'auto', padding: '12px 0' }}>
@@ -925,7 +1118,15 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                               ●
                             </span>
                             {i < linShow.length - 1 && (
-                              <span style={{ padding: '0 4px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                              <span
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                  minWidth: Math.max(20, p.espacamento_cm * pxPerCm),
+                                  padding: '0 4px',
+                                  color: 'var(--text-muted)',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
                                 ——{p.espacamento_cm.toFixed(0)}cm——
                               </span>
                             )}
@@ -933,14 +1134,18 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                         ))}
                         {lin.length > sliceShow && <span style={{ marginLeft: 8, fontSize: '0.8rem', color: 'var(--text-muted)' }}>+{lin.length - sliceShow} pontos</span>}
                       </div>
-                      {/* Linha de bolinhas coloridas (legenda visual) */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 10, flexWrap: 'wrap', minWidth: 'max-content' }}>
+                      {/* Linha de bolinhas com espaçamento proporcional ao espacamento (cm) */}
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, marginTop: 10, minWidth: 'max-content' }}>
                         {linShow.map((p, i) => (
-                          <span
-                            key={i}
-                            title={`${p.espacamento_cm.toFixed(1)} cm — ${tipoLabel(p.tipo)}`}
-                            style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', backgroundColor: corDot(p.tipo), flexShrink: 0 }}
-                          />
+                          <React.Fragment key={i}>
+                            <span
+                              title={`${p.espacamento_cm.toFixed(1)} cm — ${tipoLabel(p.tipo)}`}
+                              style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', backgroundColor: corDot(p.tipo), flexShrink: 0 }}
+                            />
+                            {i < linShow.length - 1 && (
+                              <span style={{ display: 'inline-block', minWidth: Math.max(4, p.espacamento_cm * (pxPerCm * 0.4)), flexShrink: 0 }} />
+                            )}
+                          </React.Fragment>
                         ))}
                         {lin.length > sliceShow && <span style={{ marginLeft: 6, fontSize: '0.75rem', color: 'var(--text-muted)' }}>…</span>}
                       </div>
@@ -952,29 +1157,50 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                         <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#ef4444', marginRight: 4, verticalAlign: 'middle' }} /> Falha</span>
                       </div>
                     </div>
-                    {/* Modo visual sulco: solo aberto | 🌱 🌱   🌱🌱 🌱 | */}
+                    {/* Sulco simulado: distância entre plantas proporcional ao espaçamento (cm) informado */}
                     <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>Sulco simulado (visão no campo)</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>Sulco simulado (espaçamento real entre plantas)</div>
                       <div style={{ fontFamily: 'monospace', fontSize: '1rem', lineHeight: 1.8, overflowX: 'auto', padding: '10px 12px', background: 'var(--surface-muted)', borderRadius: 8, border: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, minWidth: 'max-content' }}>
                           <span style={{ marginRight: 4 }}>|</span>
                           {linShow.map((p, i) => (
                             <React.Fragment key={i}>
                               {p.tipo === 'falha' ? (
-                                <span style={{ display: 'inline-block', minWidth: 20, color: 'var(--text-muted)' }}>⋯</span>
-                              ) : (
-                                <span style={{ whiteSpace: 'nowrap' }}>
-                                  {p.tipo === 'ok' && ' 🌱 '}
-                                  {p.tipo === 'dupla' && ' 🌱🌱 '}
-                                  {p.tipo === 'tripla' && ' 🌱🌱🌱 '}
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    minWidth: Math.max(12, p.espacamento_cm * pxPerCm),
+                                    color: 'var(--text-muted)',
+                                    textAlign: 'center',
+                                  }}
+                                  title={`Falha — ${p.espacamento_cm.toFixed(1)} cm até próxima`}
+                                >
+                                  ⋯
                                 </span>
+                              ) : (
+                                <>
+                                  <span style={{ whiteSpace: 'nowrap' }}>
+                                    {p.tipo === 'ok' && '🌱'}
+                                    {p.tipo === 'dupla' && '🌱🌱'}
+                                    {p.tipo === 'tripla' && '🌱🌱🌱'}
+                                  </span>
+                                  {i < linShow.length - 1 && (
+                                    <span
+                                      style={{
+                                        display: 'inline-block',
+                                        minWidth: Math.max(8, p.espacamento_cm * pxPerCm),
+                                        flexShrink: 0,
+                                      }}
+                                      aria-hidden
+                                    />
+                                  )}
+                                </>
                               )}
                             </React.Fragment>
                           ))}
                           <span style={{ marginLeft: 4 }}>|</span>
                         </div>
-                        <div style={{ marginTop: 2, borderTop: '1px solid var(--border)', height: 0 }} />
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>🌱 planta · espaço vazio = falha · duas juntas = dupla</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>🌱 planta · espaço vazio = falha · distância entre plantas proporcional ao espaçamento (cm)</div>
                       </div>
                     </div>
                     {/* Resumo contagem */}
@@ -1017,8 +1243,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
             {/* Evolução fenológica (tabela) */}
             {Array.isArray(dp.evolucao_fenologica) && dp.evolucao_fenologica.length > 0 && (
               <>
-                {/* 5️⃣ Linha do tempo da lavoura */}
-                <div className="card" style={{ marginBottom: '1rem' }}>
+                {/* 5️⃣ Linha do tempo da lavoura — âncora Evolução Fenológica */}
+                <div id="evolucao-fenologica" className="card" style={{ marginBottom: '1rem' }}>
                   <div className="card-title"><span className="card-title-icon">📅</span> Linha do tempo da lavoura</div>
                   <div style={{ overflowX: 'auto', padding: '12px 0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, minWidth: 'max-content' }}>
@@ -1093,19 +1319,12 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
             )}
             {/* Diagnóstico do Agrônomo: apenas conteúdo do responsável técnico — sem texto fictício do sistema */}
             {/* Removido: parágrafo gerado automaticamente. Observações e parecer vêm somente de observacoes/diagnostico_tecnico do payload. */}
-            {/* Simulação de produtividade: valor da qualidade do plantio */}
-            {dp.cv_percent != null && dp.cv_percent < 20 && potencialProdutivo && (
-              <div className="card" style={{ marginTop: '1rem', borderLeft: '4px solid var(--success)' }}>
-                <div className="card-title"><span className="card-title-icon">📈</span> Simulação de produtividade</div>
-                <p style={{ fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>
-                  Com CV de {fmt(dp.cv_percent)}%, o potencial produtivo estimado está na faixa de {potencialProdutivo.min} – {potencialProdutivo.max} sc/ha.
-                  Se o CV fosse 20%, a produtividade estimada cairia para aproximadamente {Math.round((potencialProdutivo.min + potencialProdutivo.max) / 2 * 0.88)} – {Math.round((potencialProdutivo.min + potencialProdutivo.max) / 2 * 0.92)} sc/ha, evidenciando o valor da qualidade do plantio.
-                </p>
-              </div>
-            )}
+            {/* Removido: card Simulação de produtividade (recomendação do usuário). */}
           </div>
         );
       })()}
+
+      </RelatorioSection>
 
       {/* 8️⃣ Ranking de desempenho da lavoura (múltiplos talhões) */}
       {normalized.talhoes.length > 1 && (
@@ -1161,8 +1380,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       </div>
 
       {/* Observações e anotações do responsável técnico — apenas conteúdo do payload (nunca texto fictício do sistema) */}
-      <div id="observacoes-tecnico" className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
-        <div className="card-title"><span className="card-title-icon">📝</span> Observações e anotações do responsável técnico</div>
+      <div id="diagnostico" className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+        <div className="card-title"><span className="card-title-icon">📝</span> Diagnóstico Agronômico — Observações do responsável técnico</div>
         {observacoes && observacoes.trim() ? (
           <div style={{ padding: '0.9rem', background: 'var(--bg)', borderRadius: 8, borderLeft: '3px solid var(--primary)', fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
             {observacoes}
@@ -1174,6 +1393,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         )}
       </div>
 
+      {/* Recomendações (Plano de Aplicação + Análise de Pragas) */}
+      <div id="recomendacoes">
       {/* Plano de Aplicação */}
       {resumoRecomendacoes.length > 0 && (
         <div className="card plano-aplicacao pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
@@ -1260,6 +1481,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         </div>
       </div>
 
+      </div>
+
       {/* #risco — Avaliação de Risco e Suporte à Decisão */}
       <div id="risco" className="pdf-keep-together">
         <div className="section-heading">📊 Avaliação de Risco e Suporte à Decisão</div>
@@ -1324,9 +1547,9 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         </div>
       </div>
 
-      {/* Registros fotográficos — url pode ser URL absoluta ou data:image (base64) */}
+      {/* Galeria de Imagens */}
       {imagens.length > 0 && (
-        <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+        <div id="galeria" className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
           <div className="card-title">Registros fotográficos</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
             {imagens.map((img, i) => (

@@ -16,6 +16,10 @@ interface RelatorioLayoutEnterpriseProps {
   reportId?: string;
   /** Callback ao clicar em Exportar PDF */
   onExportPDF: () => void;
+  /** Callback ao clicar em Exportar Excel (opcional) */
+  onExportExcel?: () => void;
+  /** Callback ao clicar em Compartilhar (opcional) */
+  onShare?: () => void;
   /** Conteúdo principal (page-content) */
   children: React.ReactNode;
 }
@@ -34,6 +38,8 @@ export default function RelatorioLayoutEnterprise({
   crea,
   reportId,
   onExportPDF,
+  onExportExcel,
+  onShare,
   children,
 }: RelatorioLayoutEnterpriseProps) {
   return (
@@ -60,41 +66,44 @@ export default function RelatorioLayoutEnterprise({
             <a className="nav-item active" href="#resumo">
               <span className="nav-icon">📋</span> Visão Geral
             </a>
-            <a className="nav-item" href="#resumo-executivo">
-              <span className="nav-icon">📌</span> Resumo Executivo
-            </a>
-            <a className="nav-item" href="#iqf">
-              <span className="nav-icon">📊</span> Score Agronômico (IQF)
-            </a>
             <a className="nav-item" href="#propriedade">
-              <span className="nav-icon">🌾</span> Propriedade / Mapa
+              <span className="nav-icon">🗺️</span> Mapa do Talhão
             </a>
             <a className="nav-item" href="#dados-plantio">
-              <span className="nav-icon">🌱</span> Dados do Plantio
+              <span className="nav-icon">🌱</span> Avaliação do Plantio
             </a>
-            <a className="nav-item" href="#monitoramento">
-              <span className="nav-icon">🔬</span> Monitoramento
+            <a className="nav-item" href="#evolucao-fenologica">
+              <span className="nav-icon">📅</span> Evolução Fenológica
             </a>
-            <a className="nav-item" href="#pragas">
-              <span className="nav-icon">🐛</span> Análise de Pragas
+            <a className="nav-item" href="#propriedade">
+              <span className="nav-icon">📍</span> Ocorrências
+            </a>
+            <a className="nav-item" href="#galeria">
+              <span className="nav-icon">🖼️</span> Galeria de Imagens
+            </a>
+            <a className="nav-item" href="#diagnostico">
+              <span className="nav-icon">📝</span> Diagnóstico Agronômico
+            </a>
+            <a className="nav-item" href="#recomendacoes">
+              <span className="nav-icon">✓</span> Recomendações
+            </a>
+            <a className="nav-item" href="#iqf">
+              <span className="nav-icon">📊</span> Score (IQF)
             </a>
             <a className="nav-item" href="#risco">
-              <span className="nav-icon">📊</span> Avaliação de Risco
-            </a>
-            <a className="nav-item" href="#observacoes-tecnico">
-              <span className="nav-icon">📝</span> Observações do técnico
+              <span className="nav-icon">⚠️</span> Avaliação de Risco
             </a>
             <a className="nav-item" href="#auditoria">
               <span className="nav-icon">🔒</span> Auditoria
             </a>
-            <div className="nav-section-label" style={{ marginTop: '1rem' }}>Relatório</div>
+            <div className="nav-section-label" style={{ marginTop: '1rem' }}>Exportar</div>
             <button
               type="button"
               className="nav-item"
               style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', font: 'inherit' }}
               onClick={onExportPDF}
             >
-              <span className="nav-icon">🖨️</span> Imprimir / PDF
+              <span className="nav-icon">🖨️</span> Exportar PDF
             </button>
           </nav>
         </aside>
@@ -114,15 +123,21 @@ export default function RelatorioLayoutEnterprise({
                 <span className="dot" /> Finalizado
               </span>
             </div>
-            <div className="header-right no-print">
+            <div className="header-right no-print" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               {reportId && <span className="meta-tag">{reportId}</span>}
-              <button
-                type="button"
-                onClick={onExportPDF}
-                className="btn-action outline"
-              >
+              <button type="button" onClick={onExportPDF} className="btn-action outline">
                 🖨️ Exportar PDF
               </button>
+              {onExportExcel != null && (
+                <button type="button" onClick={onExportExcel} className="btn-action outline">
+                  📊 Exportar Excel
+                </button>
+              )}
+              {onShare != null && (
+                <button type="button" onClick={onShare} className="btn-action outline">
+                  🔗 Compartilhar
+                </button>
+              )}
             </div>
           </header>
 

@@ -321,6 +321,170 @@
     background: currentColor;
 }
 
+/* ── Barra técnica (Fazenda | Talhão | Cultura | Cultivar | Área | DAE) ─── */
+.relatorio-enterprise .barra-tecnica-relatorio {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.25rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 1.5rem;
+    font-size: 0.8rem;
+}
+
+.relatorio-enterprise .barra-tecnica-inner {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+}
+
+.relatorio-enterprise .barra-tecnica-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.relatorio-enterprise .barra-tecnica-val {
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.relatorio-enterprise .barra-tecnica-sep {
+    color: var(--border);
+    font-weight: 300;
+    margin: 0 0.5rem;
+    user-select: none;
+}
+
+/* ── Seções colapsáveis (modular SaaS) ──────────────────────────────────── */
+.relatorio-enterprise .relatorio-section {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--white);
+    overflow: hidden;
+}
+
+.relatorio-enterprise .relatorio-section-header {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.25rem;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.relatorio-enterprise .relatorio-section--closed .relatorio-section-header {
+    border-bottom: none;
+}
+
+.relatorio-enterprise .relatorio-section-anchor {
+    color: var(--text-light);
+    text-decoration: none;
+    font-size: 0.75rem;
+    opacity: 0.6;
+}
+
+.relatorio-enterprise .relatorio-section-anchor:hover {
+    color: var(--primary);
+}
+
+.relatorio-enterprise .relatorio-section-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: var(--text-main);
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+}
+
+.relatorio-enterprise .relatorio-section-toggle:hover {
+    color: var(--primary);
+}
+
+.relatorio-enterprise .relatorio-section-toggle-icon {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.relatorio-enterprise .relatorio-section-icon {
+    margin-right: 0.25rem;
+}
+
+.relatorio-enterprise .relatorio-section-title-static {
+    display: flex;
+    align-items: center;
+}
+
+.relatorio-enterprise .relatorio-section-content {
+    padding: 1.25rem 1.5rem;
+}
+
+.relatorio-enterprise .relatorio-section-content[hidden] {
+    display: none;
+}
+
+.relatorio-enterprise .relatorio-section-content > .card:first-child,
+.relatorio-enterprise .relatorio-section-content > .section-heading:first-child {
+    margin-top: 0;
+}
+
+.relatorio-enterprise .relatorio-section-content > *:last-child {
+    margin-bottom: 0;
+}
+
+/* ── Tabela técnica compacta (Indicador | Resultado | Ideal) ────────────── */
+.relatorio-enterprise .tabela-tecnica-compacta {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.relatorio-enterprise .tabela-tecnica-compacta th,
+.relatorio-enterprise .tabela-tecnica-compacta td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.relatorio-enterprise .tabela-tecnica-compacta th {
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.relatorio-enterprise .tabela-tecnica-compacta td {
+    color: var(--text-main);
+}
+
+.relatorio-enterprise .tabela-tecnica-compacta .resultado-ok {
+    color: var(--success);
+    font-weight: 600;
+}
+
+.relatorio-enterprise .tabela-tecnica-compacta .resultado-alerta {
+    color: var(--warning);
+    font-weight: 600;
+}
+
+.relatorio-enterprise .tabela-tecnica-compacta .resultado-critico {
+    color: var(--danger);
+    font-weight: 600;
+}
+
 /* ── Page Content ──────────────────────────────── */
 .relatorio-enterprise .page-content {
     padding: 2.25rem 2.5rem 3rem;
@@ -890,6 +1054,38 @@
 }
 
 /* Legenda do mapa no rodapé do card (não sobre o mapa) */
+/* Painel Camadas do mapa (checkboxes) */
+.relatorio-enterprise .mapa-camadas {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    padding: 0.5rem 0;
+}
+
+.relatorio-enterprise .mapa-camadas-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-right: 0.25rem;
+}
+
+.relatorio-enterprise .mapa-camadas-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    color: var(--text-main);
+    cursor: pointer;
+    user-select: none;
+}
+
+.relatorio-enterprise .mapa-camadas-check input {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--primary);
+}
+
 .relatorio-enterprise .map-legend-footer {
     display: flex;
     flex-wrap: wrap;

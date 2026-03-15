@@ -29,6 +29,14 @@ const tendenciaIcon: Record<Tendencia, string> = {
   down: '↓',
 };
 
+/** Formata valor para exibição: evita floats longos (ex.: 2.5999999999999996 → 2.6). */
+function formatDisplayValor(v: string | number): string {
+  if (typeof v === 'string') return v;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '—';
+  return n % 1 === 0 ? String(Math.round(n)) : Number(n.toFixed(2)).toString();
+}
+
 interface KpiCardsSectionProps {
   cards: KpiCard[];
 }
@@ -55,7 +63,7 @@ export default function KpiCardsSection({ cards }: KpiCardsSectionProps) {
                 {card.indicador}
               </span>
               <div className="mt-1 flex w-full items-center justify-between">
-                <span className="text-2xl font-bold">{card.valor}</span>
+                <span className="text-2xl font-bold">{formatDisplayValor(card.valor)}</span>
                 <span className="text-lg opacity-70">{tendenciaIcon[tend]}</span>
               </div>
               <span className="mt-1 text-xs font-medium">{card.classificacao}</span>
@@ -88,7 +96,7 @@ export default function KpiCardsSection({ cards }: KpiCardsSectionProps) {
               {modalCard.historico?.map((h, i) => (
                 <div key={i} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2">
                   <span className="text-sm text-slate-600">{h.data}</span>
-                  <span className="font-medium">{h.valor}</span>
+                  <span className="font-medium">{formatDisplayValor(h.valor)}</span>
                 </div>
               ))}
             </div>
