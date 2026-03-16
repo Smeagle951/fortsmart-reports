@@ -82,14 +82,11 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
 
     if (!row) {
       console.warn('[fortsmart-reports] /r/[token] notFound: nenhum registro para token', token);
-      const diagnosticUrl = `/api/relatorio-public?token=${encodeURIComponent(token)}`;
       return (
         <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
           <div style={{ textAlign: 'center', maxWidth: 560 }}>
             <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório não encontrado</h1>
-            <p style={{ color: '#6b7280', marginBottom: 16 }}>O relatório solicitado não está disponível. Verifique o link ou tente novamente mais tarde.</p>
-            <p style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: 8 }}>Causas comuns: variáveis do Supabase não configuradas na Vercel; token não publicado no mesmo projeto; <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>is_public = false</code>.</p>
-            <a href={diagnosticUrl} style={{ fontSize: '0.875rem', color: '#166534', textDecoration: 'underline' }}>Ver diagnóstico técnico (JSON)</a>
+            <p style={{ color: '#6b7280' }}>O relatório solicitado não está disponível. Verifique o link ou tente novamente mais tarde.</p>
           </div>
         </main>
       );

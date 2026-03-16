@@ -76,30 +76,6 @@ function HomeContent() {
     return <div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>Redirecionando para o relatório…</div>;
   }
 
-  // Em produção, quando não há dados reais, mostrar landing em vez do relatório de exemplo (funciona em qualquer domínio: *.vercel.app ou personalizado)
-  if (source === 'mock') {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #f0fdf4 0%, #f8fafc 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <div style={{ maxWidth: 480, textAlign: 'center' }}>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#166534', marginBottom: 12 }}>Relatórios FortSmart</h1>
-          <p style={{ fontSize: '1rem', color: '#475569', lineHeight: 1.6, marginBottom: 24 }}>
-            Acesse seu relatório pelo link compartilhado pelo aplicativo ou pelo técnico responsável.
-          </p>
-          <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: 8 }}>O link tem o formato:</p>
-          <code style={{ display: 'block', padding: '12px 16px', background: '#f1f5f9', borderRadius: 8, fontSize: '0.8rem', color: '#334155', marginBottom: 24, wordBreak: 'break-all' }}>
-            {baseUrl ? `${baseUrl}/r/SEU_TOKEN` : '/r/SEU_TOKEN (mesmo domínio deste site)'}
-          </code>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
-            <a href="/monitoramento/preview" style={{ padding: '12px 24px', background: '#166534', color: '#fff', borderRadius: 10, fontWeight: 600, textDecoration: 'none', fontSize: '0.95rem' }}>
-              Ver relatório de demonstração
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', paddingBottom: 60 }}>
 
@@ -125,6 +101,11 @@ function HomeContent() {
         {source === 'sqlite' && (
           <div style={{ marginBottom: 16, fontSize: 11, color: '#64748B', padding: '6px 12px', background: '#E8F5E9', borderRadius: 6, display: 'inline-block' }}>
             Dados do banco local{dbPath ? ` · ${dbPath.split(/[\\/]/).slice(-2).join('/')}` : ''}
+          </div>
+        )}
+        {source === 'mock' && (
+          <div style={{ marginBottom: 16, fontSize: 11, color: '#64748B', padding: '6px 12px', background: '#F1F5F9', borderRadius: 6, display: 'inline-block' }}>
+            Dados de demonstração
           </div>
         )}
 

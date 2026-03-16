@@ -2,20 +2,7 @@
 
 Relatórios técnicos agrícolas — **framework reutilizável**, multi-app seguro, JSON como fonte de verdade, renderização na Vercel, PDF pelo navegador.
 
-**Repositório de deploy (Vercel):** [github.com/Smeagle951/fortsmart-reports](https://github.com/Smeagle951/fortsmart-reports)
-
-Esta pasta (`fortsmart_report/`) é a origem do código; o conteúdo é enviado para o repositório **fortsmart-reports** no GitHub, que a Vercel usa para deploy. Para publicar alterações no ar:
-
-```bash
-# No monorepo FortSmart-Agro (raiz do projeto):
-git add fortsmart_report/
-git commit -m "relatório: sua mensagem"
-git subtree push --prefix=fortsmart_report reports main
-```
-
-O remote `reports` deve apontar para `https://github.com/Smeagle951/fortsmart-reports.git` (`git remote add reports https://github.com/Smeagle951/fortsmart-reports.git` se ainda não existir).
-
-> **Nota:** Cada push no repositório [fortsmart-reports](https://github.com/Smeagle951/fortsmart-reports) dispara um novo deploy na Vercel. Se nada acontecer, confira em Vercel → projeto fortsmart-reports → **Settings** se o repositório conectado é este e se a branch é `main`.
+**Repositório:** [github.com/Smeagle951/fortsmart-reports](https://github.com/Smeagle951/fortsmart-reports)
 
 ## Arquitetura (Próximo Nível — Profissional)
 
