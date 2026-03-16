@@ -117,7 +117,32 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     }
 
     const rawPayload = row.dados ?? (row as RelatorioRow & { json_data?: unknown; dados_json?: unknown }).json_data ?? (row as RelatorioRow & { dados_json?: unknown }).dados_json;
-    const relatorio = parsePayload(rawPayload);
+    const parsed = parsePayload(rawPayload);
+    if (!parsed) {
+      console.warn('[fortsmart-reports] /r/[token] notFound: payload inválido', typeof rawPayload);
+      return (
+        <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+          <div style={{ textAlign: 'center', maxWidth: 560 }}>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório inválido</h1>
+            <p style={{ color: '#6b7280' }}>O conteúdo do relatório está corrompido ou não pode ser exibido.</p>
+          </div>
+        </main>
+      );
+    }
+    let relatorio: Record<string, unknown>;
+    try {
+      relatorio = JSON.parse(JSON.stringify(parsed)) as Record<string, unknown>;
+    } catch (_) {
+      console.warn('[fortsmart-reports] /r/[token] payload não serializável ao normalizar');
+      return (
+        <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+          <div style={{ textAlign: 'center', maxWidth: 560 }}>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório inválido</h1>
+            <p style={{ color: '#6b7280' }}>Os dados deste relatório não puderam ser preparados para exibição.</p>
+          </div>
+        </main>
+      );
+    }
     if (debugPayload) {
       const tipo = relatorio?.tipo;
       const tipoRelatorio = relatorio?.tipoRelatorio;
@@ -151,29 +176,6 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
         </main>
       );
     }
-    if (!relatorio) {
-      console.warn('[fortsmart-reports] /r/[token] notFound: payload inválido', typeof rawPayload);
-      return (
-        <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
-          <div style={{ textAlign: 'center', maxWidth: 560 }}>
-            <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório inválido</h1>
-            <p style={{ color: '#6b7280' }}>O conteúdo do relatório está corrompido ou não pode ser exibido.</p>
-            <pre style={{ textAlign: 'left', fontSize: 10, background: '#eee', padding: 10 }}>
-              {(() => {
-                try {
-                  const s = JSON.stringify(rawPayload);
-                  if (typeof s === 'string') return s.substring(0, 500);
-                  const f = String(rawPayload ?? '');
-                  return f.length > 500 ? f.slice(0, 500) : f;
-                } catch {
-                  return '';
-                }
-              })()}
-            </pre>
-          </div>
-        </main>
-      );
-    }
 
     // Detecta tipo via V1 (campo raiz) e V2 (core.reportType)
     const core = relatorio.core as Record<string, unknown> | undefined;
@@ -195,12 +197,8 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
 
     console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, isResearchPro, topKeys: Object.keys(relatorio).slice(0, 12) });
 
-    let payloadSafe: Record<string, unknown> = relatorio;
-    try {
-      payloadSafe = JSON.parse(JSON.stringify(relatorio)) as Record<string, unknown>;
-    } catch (_) {
-      payloadSafe = relatorio;
-    }
+    // relatorio já é clone serializável; usar como props para Client Components
+    const payloadSafe: Record<string, unknown> = relatorio;
 
     const reportIdStr = String((row.titulo || row.id) ?? '');
     const relatorioUuidStr = String(row.id ?? '');
@@ -247,13 +245,13 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       </>
     );
   } catch (e: any) {
-    console.error('[fortsmart-reports] /r/[token] erro:', e);
+    console.error('[fortsmart-reports] /r/[token] erro:', e?.message ?? e, 'digest=', e?.digest);
     const msg = e?.message ?? String(e ?? '');
     const stack = typeof e?.stack === 'string' ? e.stack : undefined;
     return <ErroServidor mensagem={msg} stack={stack} />;
   }
   } catch (e: any) {
-    console.error('[fortsmart-reports] /r/[token] erro (outer):', e);
+    console.error('[fortsmart-reports] /r/[token] erro (outer):', e?.message ?? e, 'digest=', e?.digest);
     const msg = e?.message ?? String(e ?? '');
     const stack = typeof e?.stack === 'string' ? e.stack : undefined;
     return <ErroServidor mensagem={msg} stack={stack} />;
