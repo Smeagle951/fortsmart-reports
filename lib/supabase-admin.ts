@@ -19,7 +19,12 @@ export function getSupabaseAdmin(): SupabaseClient | null {
     console.warn('[fortsmart-reports] getSupabaseAdmin: SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurado.');
     return null;
   }
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
+  try {
+    return createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
+  } catch (e) {
+    console.error('[fortsmart-reports] getSupabaseAdmin: falha ao criar cliente:', e);
+    return null;
+  }
 }
