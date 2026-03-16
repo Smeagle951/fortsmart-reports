@@ -33,7 +33,10 @@ export default function RelatorioError({
       <div style={{ textAlign: 'center', maxWidth: 560 }}>
         <h1 style={{ fontSize: '1.5rem', marginBottom: 12 }}>Erro ao abrir o relatório</h1>
         <p style={{ color: '#6b7280', marginBottom: 16 }}>
-          Ocorreu um erro no servidor ao carregar este relatório.
+          Ocorreu um erro no servidor ao carregar este relatório. Em produção a mensagem exata é ocultada pelo Next.js.
+        </p>
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
+          Para ver o erro real: Vercel → seu projeto → Deployments → último deploy → <strong>Functions</strong> ou <strong>Logs</strong>. Ou confira as variáveis de ambiente (Supabase URL e chaves).
         </p>
         {isLikelyConfig && (
           <div

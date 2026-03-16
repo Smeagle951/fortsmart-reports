@@ -195,14 +195,15 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
 
     console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, isResearchPro, topKeys: Object.keys(relatorio).slice(0, 12) });
 
-    let payloadMonitoramento = relatorio;
-    if (isMonitoramento) {
-      try {
-        payloadMonitoramento = JSON.parse(JSON.stringify(relatorio)) as typeof relatorio;
-      } catch (_) {
-        payloadMonitoramento = relatorio;
-      }
+    let payloadSafe: Record<string, unknown> = relatorio;
+    try {
+      payloadSafe = JSON.parse(JSON.stringify(relatorio)) as Record<string, unknown>;
+    } catch (_) {
+      payloadSafe = relatorio;
     }
+
+    const reportIdStr = String(row.titulo || row.id ?? '');
+    const relatorioUuidStr = String(row.id ?? '');
 
     return (
       <>
@@ -211,35 +212,35 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
           {isMonitoramento ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de monitoramento">
               <RelatorioFitossanitarioContent
-                relatorio={payloadMonitoramento as import('@/components/RelatorioFitossanitarioContent').PayloadFitossanitario}
-                reportId={row.titulo || row.id}
-                relatorioUuid={row.id}
+                relatorio={payloadSafe as import('@/components/RelatorioFitossanitarioContent').PayloadFitossanitario}
+                reportId={reportIdStr}
+                relatorioUuid={relatorioUuidStr}
               />
             </ErrorBoundary>
           ) : isResearchPro ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório Research Pro">
               <RelatorioResearchProContent
-                relatorio={relatorio as ResearchProReportPayload}
-                reportId={row.titulo || row.id}
+                relatorio={payloadSafe as ResearchProReportPayload}
+                reportId={reportIdStr}
               />
             </ErrorBoundary>
           ) : isSideBySide ? (
             <SideBySideReportContent
-              data={relatorio as SideBySideReportData}
-              reportId={row.titulo || row.id}
+              data={payloadSafe as SideBySideReportData}
+              reportId={reportIdStr}
             />
           ) : isPlantio ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de plantio">
               <RelatorioPlantio
-                relatorio={relatorio as any}
-                reportId={row.titulo || row.id}
+                relatorio={payloadSafe as any}
+                reportId={reportIdStr}
               />
             </ErrorBoundary>
           ) : (
             <RelatorioContent
-              relatorio={relatorio}
-              reportId={row.titulo || row.id}
-              relatorioUuid={row.id}
+              relatorio={payloadSafe}
+              reportId={reportIdStr}
+              relatorioUuid={relatorioUuidStr}
             />
           )}
         </article>
