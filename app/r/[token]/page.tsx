@@ -251,4 +251,10 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const stack = typeof e?.stack === 'string' ? e.stack : undefined;
     return <ErroServidor mensagem={msg} stack={stack} />;
   }
+  } catch (e: any) {
+    console.error('[fortsmart-reports] /r/[token] erro (outer):', e);
+    const msg = e?.message ?? String(e ?? '');
+    const stack = typeof e?.stack === 'string' ? e.stack : undefined;
+    return <ErroServidor mensagem={msg} stack={stack} />;
+  }
 }
