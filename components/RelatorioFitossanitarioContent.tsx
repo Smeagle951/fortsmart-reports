@@ -399,11 +399,31 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         : relatorio.talhao != null && typeof relatorio.talhao === 'object'
           ? [relatorio.talhao]
           : [];
-    const talhoes = talhoesRaw.map((t: unknown) => normalizeTalhao(t != null && typeof t === 'object' ? t as Record<string, unknown> : {}));
+    const talhoes: Talhao[] = [];
+    for (let i = 0; i < talhoesRaw.length; i++) {
+      try {
+        const t = talhoesRaw[i];
+        const raw = t != null && typeof t === 'object' ? (t as Record<string, unknown>) : {};
+        talhoes.push(normalizeTalhao(raw));
+      } catch (err) {
+        console.warn('[RelatorioFitossanitarioContent] normalizeTalhao falhou no índice', i, err);
+      }
+    }
     return { fazenda, safra, data, tecnico, crea: crea || undefined, talhoes };
   }, [relatorio]);
 
   const primeiroTalhao = normalized.talhoes[0];
+  if (!primeiroTalhao || normalized.talhoes.length === 0) {
+    return (
+      <main style={{ minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+        <div style={{ textAlign: 'center', maxWidth: 480 }}>
+          <h2 style={{ fontSize: '1.25rem', marginBottom: 8 }}>Relatório de monitoramento sem talhões</h2>
+          <p style={{ color: '#6b7280' }}>Este relatório não contém dados de talhões para exibir. Verifique o link ou gere um novo relatório no app.</p>
+        </div>
+      </main>
+    );
+  }
+
   /** Dados de plantio: payload ou derivados do módulo plantio (plantabilidade, estande, fenologia). */
   const dadosPlantioExibir = useMemo((): DadosPlantioMonitoramento | null | undefined => {
     const dp = relatorio.dados_plantio;

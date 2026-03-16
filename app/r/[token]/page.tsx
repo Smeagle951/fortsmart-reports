@@ -161,13 +161,24 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const isPlantio = tipo === 'plantio' || tipoRelatorio === 'plantio';
     const isVisitaTecnica = tipo === 'visita_tecnica';
     const hasTalhoes = Array.isArray(relatorio.talhoes) && (relatorio.talhoes as unknown[]).length > 0;
-    const isMonitoramento = (tipo === 'monitoramento') && hasTalhoes;
+    const talhoesArray = Array.isArray(relatorio.talhoes) ? relatorio.talhoes : (relatorio.talhao != null && typeof relatorio.talhao === 'object' ? [relatorio.talhao] : []);
+    const hasTalhoesValid = talhoesArray.length > 0 && talhoesArray.every((t: unknown) => t != null && typeof t === 'object');
+    const isMonitoramento = (tipo === 'monitoramento') && hasTalhoesValid;
     const isResearchPro =
       tipo === 'RESEARCH_PRO' ||
       reportTypeV2 === 'RESEARCH_PRO' ||
       (core?.report_type as string) === 'RESEARCH_PRO';
 
     console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, isResearchPro, topKeys: Object.keys(relatorio).slice(0, 12) });
+
+    let payloadMonitoramento = relatorio;
+    if (isMonitoramento) {
+      try {
+        payloadMonitoramento = JSON.parse(JSON.stringify(relatorio)) as typeof relatorio;
+      } catch (_) {
+        payloadMonitoramento = relatorio;
+      }
+    }
 
     return (
       <>
@@ -176,7 +187,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
           {isMonitoramento ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de monitoramento">
               <RelatorioFitossanitarioContent
-                relatorio={relatorio as import('@/components/RelatorioFitossanitarioContent').PayloadFitossanitario}
+                relatorio={payloadMonitoramento as import('@/components/RelatorioFitossanitarioContent').PayloadFitossanitario}
                 reportId={row.titulo || row.id}
                 relatorioUuid={row.id}
               />
