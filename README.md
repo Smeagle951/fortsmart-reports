@@ -111,8 +111,6 @@ Ver `data/schema-relatorio-visita-tecnica.json` e `data/exemplo-relatorio.json`.
 
 ## Deploy na Vercel
 
-O código deste repositório é sincronizado a partir da pasta `fortsmart_report/` do monorepo [FortSmart-Agro](https://github.com/Smeagle951/FortSmart-Agro) via `git subtree push --prefix=fortsmart_report reports main`.
-
 1. Conecte o repositório GitHub ao Vercel.
 2. Configure as variáveis de ambiente no painel da Vercel.
 3. Deploy automático a cada push.
