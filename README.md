@@ -15,6 +15,8 @@ git subtree push --prefix=fortsmart_report reports main
 
 O remote `reports` deve apontar para `https://github.com/Smeagle951/fortsmart-reports.git` (`git remote add reports https://github.com/Smeagle951/fortsmart-reports.git` se ainda não existir).
 
+> **Nota:** Cada push no repositório [fortsmart-reports](https://github.com/Smeagle951/fortsmart-reports) dispara um novo deploy na Vercel. Se nada acontecer, confira em Vercel → projeto fortsmart-reports → **Settings** se o repositório conectado é este e se a branch é `main`.
+
 ## Arquitetura (Próximo Nível — Profissional)
 
 - **Frontend:** Next.js App Router (Vercel)
