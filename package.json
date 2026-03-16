@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Relatórios técnicos agrícolas FortSmart — JSON como fonte de verdade, renderização HTML na Vercel",
   "private": true,
+  "_sync": "Sincronizado com fortsmart_report (monorepo FortSmart-Agro)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
