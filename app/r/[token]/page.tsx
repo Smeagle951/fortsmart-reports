@@ -202,7 +202,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       payloadSafe = relatorio;
     }
 
-    const reportIdStr = String(row.titulo || row.id ?? '');
+    const reportIdStr = String((row.titulo || row.id) ?? '');
     const relatorioUuidStr = String(row.id ?? '');
 
     return (
