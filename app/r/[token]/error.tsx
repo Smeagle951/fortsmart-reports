@@ -75,20 +75,24 @@ export default function RelatorioError({
         >
           Tentar novamente
         </button>
-        {process.env.NODE_ENV === 'development' && msg && (
-          <pre
-            style={{
-              textAlign: 'left',
-              fontSize: 11,
-              background: '#f3f4f6',
-              padding: 12,
-              marginTop: 20,
-              borderRadius: 8,
-              overflowX: 'auto',
-            }}
-          >
-            {msg}
-          </pre>
+        {msg && (
+          <details style={{ textAlign: 'left', marginTop: 20 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 14, color: '#6b7280' }}>Detalhes do erro</summary>
+            <pre
+              style={{
+                fontSize: 11,
+                background: '#f3f4f6',
+                padding: 12,
+                marginTop: 8,
+                borderRadius: 8,
+                overflowX: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {msg}
+            </pre>
+          </details>
         )}
       </div>
     </main>

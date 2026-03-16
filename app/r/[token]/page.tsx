@@ -32,11 +32,35 @@ function parsePayload(raw: unknown): Record<string, unknown> | null {
   return null;
 }
 
+function ErroServidor({ mensagem, stack }: { mensagem: string; stack?: string }) {
+  return (
+    <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+      <div style={{ textAlign: 'center', maxWidth: 640 }}>
+        <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Erro ao abrir o relatório</h1>
+        <p style={{ color: '#6b7280', marginBottom: 16 }}>Ocorreu um erro no servidor ao carregar este relatório.</p>
+        {mensagem && (
+          <details style={{ textAlign: 'left', marginTop: 16 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 14, color: '#6b7280' }}>Detalhes do erro (para diagnóstico)</summary>
+            <pre style={{ fontSize: 11, background: '#fef2f2', color: '#991b1b', padding: 12, marginTop: 8, borderRadius: 8, overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {mensagem}
+              {stack ? `\n\n${stack}` : ''}
+            </pre>
+          </details>
+        )}
+        <p style={{ fontSize: 13, color: '#6b7280', marginTop: 20 }}>
+          Confira na Vercel as variáveis <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> e <code>SUPABASE_SERVICE_ROLE_KEY</code>. Depois faça Redeploy.
+        </p>
+      </div>
+    </main>
+  );
+}
+
 /** Rota pública /r/[token]: usa SERVICE_ROLE se configurado; senão anon. Só filtra por share_token (não por publicado). */
 export default async function RelatorioCompartilhadoPage(props: Props) {
-  const resolvedParams = await props.params;
-  const token = resolvedParams?.token ?? '';
-  const sp = props.searchParams ? await props.searchParams : {};
+  try {
+    const resolvedParams = await props.params;
+    const token = resolvedParams?.token ?? '';
+    const sp = props.searchParams ? await props.searchParams : {};
 
   const debug = sp?.debug === '1' || sp?.debug === 'true';
   const debugPayload = sp?.debug === '2' || sp?.debug === 'payload';
@@ -223,18 +247,8 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     );
   } catch (e: any) {
     console.error('[fortsmart-reports] /r/[token] erro:', e);
-    return (
-      <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
-        <div style={{ textAlign: 'center', maxWidth: 860 }}>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Erro ao carregar o relatório</h1>
-          <p style={{ color: '#6b7280' }}>Ocorreu um erro inesperado ao carregar o relatório. Tente novamente mais tarde.</p>
-          <pre style={{ textAlign: 'left', fontSize: 10, background: '#f8d7da', color: '#721c24', padding: 10, marginTop: 20, overflowX: 'auto' }}>
-            {e?.message || String(e)}
-            {'\n'}
-            {e?.stack || ''}
-          </pre>
-        </div>
-      </main>
-    );
+    const msg = e?.message ?? String(e ?? '');
+    const stack = typeof e?.stack === 'string' ? e.stack : undefined;
+    return <ErroServidor mensagem={msg} stack={stack} />;
   }
 }
