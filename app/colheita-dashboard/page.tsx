@@ -25,7 +25,15 @@ const harvestData = [
   { talhao: "PIVO-02", variedade: "BALSAMO TMG", produto: "ESTIMULATE", media: 74.74, tipo: "tratamento" },
 
   { talhao: "T-09", variedade: "BALSAMO TMG", produto: "FÓSFORO NA LINHA", media: 71.55, tipo: "tratamento" },
-  { talhao: "T-09", variedade: "BALSAMO TMG", produto: "TESTEMUNHO", media: 70.17, tipo: "testemunha" }
+  { talhao: "T-09", variedade: "BALSAMO TMG", produto: "TESTEMUNHO", media: 70.17, tipo: "testemunha" },
+  
+  // Novos dados integrados
+  { talhao: "T-16", variedade: "ATAQUE", produto: "VICTRATO (Teste)", media: 84.11, tipo: "tratamento" },
+  { talhao: "T-16", variedade: "ATAQUE", produto: "VICTRATO (Testemunha)", media: 81.41, tipo: "testemunha" },
+  
+  { talhao: "T-17", variedade: "HO COARI", produto: "DOTTE OURO FINO", media: 76.84, tipo: "tratamento" },
+  { talhao: "T-17", variedade: "HO COARI", produto: "VIOVAN (Padrão Fazenda)", media: 69.75, tipo: "testemunha" },
+  { talhao: "T-17", variedade: "HO COARI", produto: "ADAMA (ExpertGrow e Armero)", media: 78.35, tipo: "testemunha" }
 ];
 
 export default function SoybeanHarvestDashboard() {
@@ -52,15 +60,48 @@ export default function SoybeanHarvestDashboard() {
     const element = reportRef.current;
     if (!element) return;
 
+    // Clone do elemento para não alterar o original durante a limpeza
+    const container = document.createElement('div');
+    const clone = element.cloneNode(true) as HTMLElement;
+    
+    // Forçar visibilidade das divs pdf-only no clone
+    clone.style.display = 'block';
+    clone.querySelectorAll('.pdf-only').forEach((el: any) => {
+      el.style.display = 'block';
+    });
+    
+    // Limpeza de estilos não suportados (ex: oklch do Tailwind v4)
+    // Isso percorre o clone e substitui oklch por versões seguras se necessário
+    const allElements = clone.querySelectorAll('*');
+    allElements.forEach((el: any) => {
+      const styles = window.getComputedStyle(el);
+      // html2canvas falha com cores oklch. Precisamos garantir cores seguras.
+      // Aqui apenas garantimos que o clone tenha um fundo branco se necessário
+      if (el.classList.contains('bg-white')) el.style.backgroundColor = '#ffffff';
+      if (el.classList.contains('bg-slate-900')) el.style.backgroundColor = '#0f172a';
+      if (el.classList.contains('text-slate-900')) el.style.color = '#0f172a';
+    });
+
     const opt = {
-      margin: [15, 15] as [number, number],
+      margin: [15, 10] as [number, number],
       filename: `Relatorio_Colheita_FortSmart_${new Date().getFullYear()}.pdf`,
-      image: { type: 'jpeg' as const, quality: 1.0 },
-      html2canvas: { scale: 3, useCORS: true, letterRendering: true },
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        letterRendering: true,
+        backgroundColor: '#ffffff'
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
     };
 
-    html2pdf().from(element).set(opt).save();
+    try {
+      await html2pdf().from(clone).set(opt).save();
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err);
+      // Fallback: tentar imprimir direto se html2pdf falhar
+      window.print();
+    }
   };
 
   return (
