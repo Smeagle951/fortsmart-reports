@@ -8,8 +8,11 @@ export const DB_NAME = 'fortsmart_agro.db';
  * Detecta automaticamente o caminho do banco SQLite do Flutter.
  * O Flutter usa getApplicationDocumentsDirectory() no Windows/macOS/Linux.
  * Em Windows isso resulta em %USERPROFILE%\Documents ou AppData\Roaming\<app>.
+ * Na Vercel (serverless) não há sistema de arquivos persistente — retorna null sem aviso.
  */
 export function findDatabasePath(): string | null {
+    if (process.env.VERCEL === '1') return null;
+
     const username = os.userInfo().username;
     const home = os.homedir();
 
@@ -42,12 +45,15 @@ export function findDatabasePath(): string | null {
         } catch { /* ignorar permissões */ }
     }
 
-    console.warn('⚠️ fortsmart_agro.db não encontrado. Usando dados mock.');
+    if (process.env.VERCEL !== '1') {
+        console.warn('⚠️ fortsmart_agro.db não encontrado. Usando dados mock.');
+    }
     return null;
 }
 
-/** Caminho configurável via variável de ambiente (para produção/Docker) */
+/** Caminho configurável via variável de ambiente (para produção/Docker). Na Vercel retorna null (só Supabase). */
 export function getDatabasePath(): string | null {
+    if (process.env.VERCEL === '1') return null;
     if (process.env.FORTSMART_DB_PATH) {
         const envPath = process.env.FORTSMART_DB_PATH;
         if (fs.existsSync(envPath)) {

@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { RelatorioMonitoramento } from '@/lib/types/monitoring';
-import { mockRelatorio } from '@/lib/data/mock_monitoring';
+import { emptyRelatorio } from '@/lib/data/empty_monitoring';
 import ReportHeader from '@/components/ReportHeader';
 import TalhaoBloco from '@/components/TalhaoBloco';
 import { calcularMetricasTalhao, corClassificacao } from '@/lib/calculations';
@@ -11,9 +11,10 @@ import { calcularMetricasTalhao, corClassificacao } from '@/lib/calculations';
 function HomeContent() {
   const searchParams = useSearchParams();
   const tokenFromUrl = searchParams.get('token');
-  const [relatorio, setRelatorio] = useState<RelatorioMonitoramento>(mockRelatorio);
-  const [source, setSource] = useState<'sqlite' | 'mock' | 'loading'>('loading');
+  const [relatorio, setRelatorio] = useState<RelatorioMonitoramento>(emptyRelatorio);
+  const [source, setSource] = useState<'sqlite' | 'supabase' | 'empty' | 'error' | 'loading'>('loading');
   const [dbPath, setDbPath] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   // Se tiver ?token= na URL, redireciona para /r/[token] (relatório publicado)
   useEffect(() => {
@@ -28,13 +29,15 @@ function HomeContent() {
     fetch('/api/relatorio')
       .then(r => r.json())
       .then(data => {
-        setRelatorio(data.relatorio);
-        setSource(data.source);
+        setRelatorio(data.relatorio ?? emptyRelatorio);
+        setSource(data.source === 'mock' ? 'empty' : data.source);
         setDbPath(data.dbPath ?? null);
+        setMessage(data.message ?? null);
       })
       .catch(() => {
-        setRelatorio(mockRelatorio);
-        setSource('mock');
+        setRelatorio(emptyRelatorio);
+        setSource('error');
+        setMessage('Falha ao carregar. Verifique a conexão e as variáveis de ambiente (Supabase).');
       });
   }, [tokenFromUrl]);
 
@@ -42,9 +45,11 @@ function HomeContent() {
     const { default: html2pdf } = await import('html2pdf.js');
     const element = document.getElementById('relatorio-content');
     if (!element) return;
+    const nomeFazenda = (relatorio.fazenda || 'relatorio').replace(/\s/g, '_');
+    const dataStr = (relatorio.data || new Date().toLocaleDateString('pt-BR')).replace(/\//g, '-');
     html2pdf().set({
       margin: [10, 10, 10, 10],
-      filename: `FortSmart_Relatorio_${relatorio.fazenda.replace(/\s/g, '_')}_${relatorio.data.replace(/\//g, '-')}.pdf`,
+      filename: `FortSmart_Relatorio_${nomeFazenda}_${dataStr}.pdf`,
       image: { type: 'jpeg', quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -52,6 +57,7 @@ function HomeContent() {
   };
 
   const handleExportExcel = async () => {
+    if (relatorio.talhoes.length === 0) return;
     const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
     relatorio.talhoes.forEach(t => {
@@ -65,9 +71,9 @@ function HomeContent() {
       });
       const sheet = XLSX.utils.aoa_to_sheet(rows);
       sheet['!cols'] = [{ wch: 8 }, { wch: 10 }, { wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 14 }];
-      XLSX.utils.book_append_sheet(wb, sheet, t.nome.substring(0, 31));
+      XLSX.utils.book_append_sheet(wb, sheet, (t.nome || 'Talhao').substring(0, 31));
     });
-    XLSX.writeFile(wb, `FortSmart_${relatorio.data.replace(/\//g, '-')}.xlsx`);
+    XLSX.writeFile(wb, `FortSmart_${(relatorio.data || '').replace(/\//g, '-') || 'export'}.xlsx`);
   };
 
   const cardStyle = { background: '#fff', borderRadius: 8, border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
@@ -79,13 +85,15 @@ function HomeContent() {
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', paddingBottom: 60 }}>
 
-      <nav className="nav-lateral no-print">
-        {relatorio.talhoes.map(t => (
-          <a key={t.id} href={`#talhao-${t.id}`} title={t.nome} className="nav-dot"
-            onClick={e => { e.preventDefault(); document.getElementById(`talhao-${t.id}`)?.scrollIntoView({ behavior: 'smooth' }); }}
-          />
-        ))}
-      </nav>
+      {relatorio.talhoes.length > 0 && (
+        <nav className="nav-lateral no-print">
+          {relatorio.talhoes.map(t => (
+            <a key={t.id} href={`#talhao-${t.id}`} title={t.nome} className="nav-dot"
+              onClick={e => { e.preventDefault(); document.getElementById(`talhao-${t.id}`)?.scrollIntoView({ behavior: 'smooth' }); }}
+            />
+          ))}
+        </nav>
+      )}
 
       <div id="relatorio-content" style={{ maxWidth: 960, margin: '0 auto', padding: '24px 24px 0' }}>
 
@@ -103,9 +111,22 @@ function HomeContent() {
             Dados do banco local{dbPath ? ` · ${dbPath.split(/[\\/]/).slice(-2).join('/')}` : ''}
           </div>
         )}
-        {source === 'mock' && (
-          <div style={{ marginBottom: 16, fontSize: 11, color: '#64748B', padding: '6px 12px', background: '#F1F5F9', borderRadius: 6, display: 'inline-block' }}>
-            Dados de demonstração
+        {source === 'supabase' && relatorio.talhoes.length > 0 && (
+          <div style={{ marginBottom: 16, fontSize: 11, color: '#64748B', padding: '6px 12px', background: '#E0F2FE', borderRadius: 6, display: 'inline-block' }}>
+            Dados do Supabase (Nuvem)
+          </div>
+        )}
+        {(source === 'empty' || source === 'supabase') && relatorio.talhoes.length === 0 && (
+          <div style={{ marginBottom: 16, padding: 16, background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: '#475569', marginBottom: 4 }}>Nenhum relatório disponível</p>
+            <p style={{ fontSize: 13, color: '#64748B' }}>Os dados vêm do Supabase (tabelas de monitoramento) ou do banco local. Configure as variáveis de ambiente ou use o app para gerar relatórios.</p>
+            {message && <p style={{ fontSize: 12, color: '#64748B', marginTop: 8 }}>{message}</p>}
+          </div>
+        )}
+        {source === 'error' && (
+          <div style={{ marginBottom: 16, padding: 16, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: '#991B1B', marginBottom: 4 }}>Erro ao carregar dados</p>
+            <p style={{ fontSize: 13, color: '#64748B' }}>{message || 'Verifique a conexão e as variáveis de ambiente (Supabase).'}</p>
           </div>
         )}
 
@@ -157,7 +178,7 @@ function HomeContent() {
         ))}
 
         <footer style={{ textAlign: 'center', padding: '32px 0', borderTop: '1px solid #E2E8F0', fontSize: 12, color: '#64748B' }}>
-          FortSmart Agro · Relatório gerado em {relatorio.data} · {relatorio.tecnico}
+          FortSmart Agro · {relatorio.data ? `Relatório gerado em ${relatorio.data}` : 'Relatórios do Supabase'} {relatorio.tecnico ? ` · ${relatorio.tecnico}` : ''}
         </footer>
       </div>
     </div>

@@ -260,8 +260,8 @@ export default function RelatorioLadoALadoDashboard({ data, reportId }: Relatori
         {radarData.length > 0 && (
           <section className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm overflow-hidden">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Radar Agronômico</h2>
-            <div className="h-64 min-h-[240px] sm:h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-64 min-h-[240px] sm:h-80 w-full" style={{ minHeight: 240 }}>
+              <ResponsiveContainer width="100%" height={240} minHeight={240}>
                 <RadarChart data={radarData}>
                   <PolarGrid />
                   <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
@@ -379,8 +379,8 @@ export default function RelatorioLadoALadoDashboard({ data, reportId }: Relatori
           <section className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Sistema Radicular</h2>
             {barKpis.filter((r) => r.name.includes('Raiz') || r.name.includes('Peso')).length > 0 ? (
-              <div className="h-56 min-h-[200px] sm:h-64 w-full overflow-x-auto">
-                <ResponsiveContainer width="100%" height="100%" minWidth={280}>
+              <div className="h-56 min-h-[200px] sm:h-64 w-full overflow-x-auto" style={{ minHeight: 200 }}>
+                <ResponsiveContainer width="100%" height={200} minWidth={280}>
                   <BarChart data={barKpis.filter((r) => r.name.includes('Raiz') || r.name.includes('Peso'))} layout="vertical" margin={{ left: 80 }}>
                     <XAxis type="number" />
                     <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 11 }} />
@@ -433,8 +433,8 @@ export default function RelatorioLadoALadoDashboard({ data, reportId }: Relatori
                 </table>
               </div>
               {ocorrenciasChart.length > 0 && (
-                <div className="h-44 min-h-[160px] sm:h-48 w-full overflow-x-auto">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={260}>
+                <div className="h-44 min-h-[160px] sm:h-48 w-full overflow-x-auto" style={{ minHeight: 160 }}>
+                  <ResponsiveContainer width="100%" height={160} minWidth={260}>
                     <BarChart data={ocorrenciasChart} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                       <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                       <YAxis tick={{ fontSize: 10 }} />

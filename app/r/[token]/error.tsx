@@ -36,8 +36,17 @@ export default function RelatorioError({
           Ocorreu um erro no servidor ao carregar este relatório. Em produção a mensagem exata é ocultada pelo Next.js.
         </p>
         <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
-          Para ver o erro real: Vercel → seu projeto → Deployments → último deploy → <strong>Functions</strong> ou <strong>Logs</strong>. Ou confira as variáveis de ambiente (Supabase URL e chaves).
+          Para ver o erro real: Vercel → seu projeto → <strong>Deployments</strong> → último deploy → <strong>Functions</strong> ou <strong>Logs</strong>. Ali pode aparecer: <code>relation "relatorios" does not exist</code>, <code>permission denied</code>, <code>Cannot read properties of null</code> ou mensagem de variável de ambiente.
         </p>
+        <details style={{ textAlign: 'left', marginBottom: 16, fontSize: 13, color: '#6b7280' }}>
+          <summary style={{ cursor: 'pointer' }}>Diagnóstico rápido (Supabase + rota)</summary>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
+            <li>Esta rota usa a tabela <strong>relatorios</strong> (não <code>reports</code>).</li>
+            <li>A busca é por <strong>share_token</strong> (não por <code>id</code>). A URL é <code>/r/[token]</code>.</li>
+            <li>No Supabase: Table Editor → <strong>relatorios</strong> → confira se existe um registro com o <code>share_token</code> do link. Se não existir, o relatório não abre.</li>
+            <li>RLS: com <code>SUPABASE_SERVICE_ROLE_KEY</code> a leitura ignora RLS. Sem ela, a chave anon precisa de política que permita <code>select</code> por <code>share_token</code>.</li>
+          </ul>
+        </details>
         {isLikelyConfig && (
           <div
             style={{
@@ -52,8 +61,7 @@ export default function RelatorioError({
           >
             <strong>Possível causa: variáveis de ambiente na Vercel</strong>
             <p style={{ margin: '8px 0 0' }}>
-              No projeto na Vercel, em <strong>Settings → Environment Variables</strong>, confira se
-              estão definidas:
+              Em <strong>Settings → Environment Variables</strong>, confira:
             </p>
             <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
               <li><code>NEXT_PUBLIC_SUPABASE_URL</code></li>

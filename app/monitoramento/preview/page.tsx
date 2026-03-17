@@ -2,18 +2,18 @@
 
 import RelatorioMonitoramentoContent from '@/components/RelatorioMonitoramentoContent';
 import PrintBar from '@/components/PrintBar';
-import { mockRelatorio } from '@/lib/data/mock_monitoring';
+import { emptyRelatorio } from '@/lib/data/empty_monitoring';
 
-/** Página de preview do relatório de monitoramento com dados de exemplo (modelo padrão). */
+/** Preview do layout do relatório de monitoramento (dados vazios — use /r/[token] para relatórios reais). */
 export default function RelatorioMonitoramentoPreviewPage() {
   const data = {
     tipo: 'monitoramento',
-    fazenda: mockRelatorio.fazenda,
-    safra: mockRelatorio.safra,
-    data: mockRelatorio.data,
-    tecnico: mockRelatorio.tecnico,
-    crea: mockRelatorio.crea,
-    talhoes: mockRelatorio.talhoes,
+    fazenda: emptyRelatorio.fazenda,
+    safra: emptyRelatorio.safra,
+    data: emptyRelatorio.data,
+    tecnico: emptyRelatorio.tecnico,
+    crea: emptyRelatorio.crea,
+    talhoes: emptyRelatorio.talhoes,
   } as Record<string, unknown>;
 
   return (

@@ -32,6 +32,30 @@ function parsePayload(raw: unknown): Record<string, unknown> | null {
   return null;
 }
 
+/**
+ * Garante objeto 100% serializável para RSC (evita erro genérico em produção).
+ * Remove undefined, converte Date/BigInt para string.
+ */
+function sanitizeForRSC(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return null;
+  if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') return obj;
+  if (typeof obj === 'bigint') return String(obj);
+  if (obj instanceof Date) return obj.toISOString();
+  if (Array.isArray(obj)) {
+    return obj.map((item) => sanitizeForRSC(item));
+  }
+  if (typeof obj === 'object' && obj !== null) {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (v === undefined) continue;
+      const key = typeof k === 'string' ? k : String(k);
+      out[key] = sanitizeForRSC(v);
+    }
+    return out;
+  }
+  return null;
+}
+
 function ErroServidor({ mensagem, stack }: { mensagem: string; stack?: string }) {
   return (
     <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
@@ -74,34 +98,42 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     if (supabaseAdmin) {
-      const { data, error } = await supabaseAdmin
-        .from('relatorios')
-        .select('*')
-        .eq('share_token', token)
-        .maybeSingle();
-      console.log('[fortsmart-reports] /r/[token] admin query:', { error: error?.message ?? null, hasData: !!data, is_public: data?.is_public });
-      if (error) {
-        console.warn('[fortsmart-reports] /r/[token] admin error:', error.message);
-      } else if (data) {
-        if (data.is_public !== false && (!data.share_expires_at || new Date(data.share_expires_at) >= new Date())) {
-          const r = data as RelatorioRow & { json_data?: unknown; dados_json?: unknown };
-          const raw = r.dados ?? r.json_data ?? r.dados_json;
-          if (!r.dados && raw != null) {
-            const parsed = parsePayload(raw);
-            if (parsed) r.dados = parsed;
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('relatorios')
+          .select('*')
+          .eq('share_token', token)
+          .maybeSingle();
+        console.log('[fortsmart-reports] /r/[token] admin query:', { error: error?.message ?? null, hasData: !!data, is_public: data?.is_public });
+        if (error) {
+          console.warn('[fortsmart-reports] /r/[token] admin error:', error.message);
+        } else if (data) {
+          if (data.is_public !== false && (!data.share_expires_at || new Date(data.share_expires_at) >= new Date())) {
+            const r = data as RelatorioRow & { json_data?: unknown; dados_json?: unknown };
+            const raw = r.dados ?? r.json_data ?? r.dados_json;
+            if (!r.dados && raw != null) {
+              const parsed = parsePayload(raw);
+              if (parsed) r.dados = parsed;
+            }
+            row = r;
+          } else {
+            console.warn('[fortsmart-reports] /r/[token] registro ignorado: is_public=', data.is_public, 'share_expires_at=', data.share_expires_at);
           }
-          row = r;
-        } else {
-          console.warn('[fortsmart-reports] /r/[token] registro ignorado: is_public=', data.is_public, 'share_expires_at=', data.share_expires_at);
         }
+      } catch (queryErr: any) {
+        console.error('[fortsmart-reports] /r/[token] query relatorios falhou:', queryErr?.message ?? queryErr);
       }
     } else {
       console.warn('[fortsmart-reports] /r/[token] supabaseAdmin null (SUPABASE_SERVICE_ROLE_KEY ou URL?)');
     }
 
     if (!row) {
-      row = await getRelatorioByShareToken(token);
-      console.log('[fortsmart-reports] /r/[token] fallback anon:', row ? 'encontrado' : 'não encontrado');
+      try {
+        row = await getRelatorioByShareToken(token);
+        console.log('[fortsmart-reports] /r/[token] fallback anon:', row ? 'encontrado' : 'não encontrado');
+      } catch (fallbackErr: any) {
+        console.error('[fortsmart-reports] /r/[token] fallback getRelatorioByShareToken falhou:', fallbackErr?.message ?? fallbackErr);
+      }
     }
 
     if (!row) {
@@ -131,7 +163,12 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     }
     let relatorio: Record<string, unknown>;
     try {
-      relatorio = JSON.parse(JSON.stringify(parsed)) as Record<string, unknown>;
+      const cloned = JSON.parse(JSON.stringify(parsed)) as Record<string, unknown>;
+      const sanitized = sanitizeForRSC(cloned);
+      relatorio =
+        sanitized != null && typeof sanitized === 'object' && !Array.isArray(sanitized)
+          ? (sanitized as Record<string, unknown>)
+          : cloned ?? {};
     } catch (_) {
       console.warn('[fortsmart-reports] /r/[token] payload não serializável ao normalizar');
       return (
@@ -200,8 +237,32 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     // relatorio já é clone serializável; usar como props para Client Components
     const payloadSafe: Record<string, unknown> = relatorio;
 
-    const reportIdStr = String((row.titulo || row.id) ?? '');
-    const relatorioUuidStr = String(row.id ?? '');
+    if (!payloadSafe || typeof payloadSafe !== 'object' || Array.isArray(payloadSafe)) {
+      console.warn('[fortsmart-reports] /r/[token] payloadSafe inválido antes do render');
+      return (
+        <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+          <div style={{ textAlign: 'center', maxWidth: 560 }}>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório inválido</h1>
+            <p style={{ color: '#6b7280' }}>Os dados do relatório não puderam ser preparados. Verifique no Supabase (tabela <code>relatorios</code>, coluna <code>dados</code>) se o registro existe e está válido.</p>
+          </div>
+        </main>
+      );
+    }
+
+    let reportIdStr = '';
+    let relatorioUuidStr = '';
+    try {
+      reportIdStr = String((row?.titulo ?? row?.id ?? '') ?? '');
+      relatorioUuidStr = String(row?.id ?? '');
+    } catch (_) {
+      try {
+        reportIdStr = String((row as any)?.id ?? '');
+        relatorioUuidStr = String((row as any)?.id ?? '');
+      } catch {
+        reportIdStr = '';
+        relatorioUuidStr = '';
+      }
+    }
 
     return (
       <>
