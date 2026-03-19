@@ -180,7 +180,8 @@ export default function SoybeanHarvestDashboard() {
           useCORS: true,
           backgroundColor: "#F0F2F5",
           letterRendering: true,
-          logging: false,
+          logging: true, // Habilitado para debug em produção caso precise
+          windowWidth: 1280, // Força layout Desktop no PDF
           onclone: (doc: Document) => {
             // Sanitizador Cirúrgico: Substitui apenas oklch() por fallbacks hex para evitar crash no canvas
             const styles = doc.querySelectorAll('style');
@@ -223,8 +224,8 @@ export default function SoybeanHarvestDashboard() {
               <div className="w-8 h-1 bg-green-800"></div>
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Inteligência Estratégica Field Pro</span>
             </div>
-            <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">
-              Informativo de <span className="text-green-800">Colheita Final</span>
+            <h1 className="text-3xl font-black tracking-tighter uppercase leading-none" style={{ color: '#0f172a' }}>
+              Informativo de <span className="text-green-800" style={{ color: '#166534' }}>Colheita Final</span>
             </h1>
             <p className="text-slate-400 mt-2 font-bold uppercase text-[10px] tracking-widest">Base Consolidada • Safra 2025/2026</p>
           </div>
@@ -246,7 +247,7 @@ export default function SoybeanHarvestDashboard() {
             
             <div className="flex flex-wrap gap-3">
               {/* Card 1: Produtividade */}
-              <div className="flex-1 min-w-[220px] bg-white p-4 border-t-2 border-l-4 border-blue-800 shadow-sm min-h-[160px]">
+              <div className="flex-1 min-w-[220px] bg-white p-4 border-t-2 border-l-4 shadow-sm min-h-[160px]" style={{ backgroundColor: '#ffffff', borderLeftColor: '#1e40af', borderTopColor: '#e2e8f0' }}>
                 <p className="text-[9px] font-black uppercase text-blue-800/60 mb-3 flex items-center gap-1">
                   <span className="text-xs">🏆</span> Top Produtividade
                 </p>
@@ -264,7 +265,7 @@ export default function SoybeanHarvestDashboard() {
               </div>
 
               {/* Card 2: ROI */}
-              <div className="flex-1 min-w-[220px] bg-white p-4 border-t-2 border-l-4 border-green-600 shadow-sm min-h-[160px]">
+              <div className="flex-1 min-w-[220px] bg-white p-4 border-t-2 border-l-4 shadow-sm min-h-[160px]" style={{ backgroundColor: '#ffffff', borderLeftColor: '#16a34a', borderTopColor: '#e2e8f0' }}>
                 <p className="text-[9px] font-black uppercase text-green-600/60 mb-3 flex items-center gap-1">
                   <span className="text-xs">🚀</span> Top ROI %
                 </p>
@@ -282,7 +283,7 @@ export default function SoybeanHarvestDashboard() {
               </div>
 
               {/* Card 3: Lucro/HA */}
-              <div className="flex-1 min-w-[220px] bg-white p-4 border-t-2 border-l-4 border-indigo-700 shadow-sm min-h-[160px]">
+              <div className="flex-1 min-w-[220px] bg-white p-4 border-t-2 border-l-4 shadow-sm min-h-[160px]" style={{ backgroundColor: '#ffffff', borderLeftColor: '#4338ca', borderTopColor: '#e2e8f0' }}>
                 <p className="text-[9px] font-black uppercase text-indigo-700/60 mb-3 flex items-center gap-1">
                   <span className="text-xs">💰</span> Top Lucro/HA
                 </p>
@@ -300,7 +301,7 @@ export default function SoybeanHarvestDashboard() {
               </div>
 
               {/* Card 4: Recomendação */}
-              <div className="flex-1 min-w-[220px] bg-amber-50 p-4 border-t-2 border-l-4 border-orange-500 shadow-sm min-h-[160px]">
+              <div className="flex-1 min-w-[220px] bg-amber-50 p-4 border-t-2 border-l-4 shadow-sm min-h-[160px]" style={{ backgroundColor: '#fffbeb', borderLeftColor: '#f97316', borderTopColor: '#e2e8f0' }}>
                 <p className="text-[9px] font-black uppercase text-orange-600/60 mb-3 flex items-center gap-1">
                   <span className="text-xs">✨</span> Recomendação
                 </p>
