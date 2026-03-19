@@ -10,7 +10,7 @@ const INITIAL_HARVEST_DATA = [
 
   // T-12 (BREV 5830 CE)
   { talhao: "T-12", variedade: "BREV 5830 CE", produto: "VERANGO", hectares: 3.43, media: 84.22, tipo: "testemunha", pa: "Fluopiram", classe: "Nematicida", categoria: "Químico", segmento: "TS", modo: "SDHI", composicao_custos: [{ produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
-  { talhao: "T-12", variedade: "BREV 5830 CE", produto: "AGRIVALLE", hectares: 3.83, media: 83.45, tipo: "tratamento", pa: "Metabólitos microbianos", classe: "Bioestimulante", categoria: "Biológico", segmento: "Foliar", modo: "Estímulo Fisiol.", composicao_custos: [{ produto: "AGRIVALLE", valor: 65, moeda: "BRL", dose_ha: 1 }] },
+  { talhao: "T-12", variedade: "BREV 5830 CE", produto: "AGRIVALLE", hectares: 3.83, media: 83.45, tipo: "tratamento", pa: "Shocker (2 Bacillus + Trichoderma) + Profix (2 Bacillus + 1 Fungo) + Raizer", classe: "Nematicida", categoria: "Biológico", segmento: "Solo/Foliar", modo: "Biofungicida + Nematicida Biológico", composicao_custos: [{ produto: "SHOCKER", valor: 14.00, moeda: "BRL", dose_ha: 1 }, { produto: "PROFIX", valor: 40.00, moeda: "BRL", dose_ha: 1 }, { produto: "RAIZER", valor: 8.50, moeda: "BRL", dose_ha: 1 }] },
 
   // T-12 (NEO 810 I2X)
   { talhao: "T-12", variedade: "NEO 810 I2X", produto: "PADRAO FAZENDA", hectares: 7.17, media: 77.57, tipo: "testemunha", pa: "Padrão", classe: "Baseline", categoria: "Baseline", segmento: "-", modo: "-", composicao_custos: [] },
@@ -53,7 +53,7 @@ const productInsights: Record<string, { alvo: string, proposta: string, bio: str
   "PADRAO FAZENDA / LALNIX RESIST + VERANGO": { alvo: "Nematoides de Galha e Cisto", proposta: "Indução de Resistência e Nematicida.", bio: "Colonização e supressão via B. licheniformis." },
   "NEM-OUT + TRUST": { alvo: "Nematoides e Patógenos de Solo", proposta: "Controle biológico + Competição radicular.", bio: "Ação combinada Bacillus + Trichoderma." },
   "VERANGO": { alvo: "Nematoides de Galha e Cisto", proposta: "Inibidor da respiração mitocondrial (SDHI).", bio: "Fluopiram: Proteção radicular de longa persistência." },
-  "AGRIVALLE": { alvo: "Estímulo Fisiológico e Ativação", proposta: "Ativação biológica e vigor radicular.", bio: "Bioestimulante via metabólitos microbianos." },
+  "AGRIVALLE": { alvo: "Nematoides e Patógenos de Solo", proposta: "Programa biológico (biofungicida + nematicida) para proteção radicular.", bio: "Shocker: 2 Bacillus + Trichoderma; Profix: 2 Bacillus + 1 Fungo; Raizer complementar." },
   "DOTTE OURO FINO": { alvo: "Doenças Foliares (Antracnose/Manchas)", proposta: "Controle fungicida sistêmico complementar.", bio: "Posicionamento foliar químico competitivo." },
   "VIOVAN (PADRAO FAZENDA)": { alvo: "Manchas e Ferrugem (QoI)", proposta: "Inibidor da respiração mitocondrial.", bio: "Picoxistrobina: Proteção sistêmica de baixeiro." },
   "ADAMA (ExpertGrow e Armero)": { alvo: "Doenças Foliar (DMI)", proposta: "Inibidor da biossíntese de ergosterol.", bio: "Protioconazol: Máxima eficiência contra doenças de final de ciclo." },
