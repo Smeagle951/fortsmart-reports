@@ -99,6 +99,7 @@ export default function SoybeanHarvestDashboard() {
   const [restoreSnapshotId, setRestoreSnapshotId] = React.useState<string>("");
   const [showRestorePanel, setShowRestorePanel] = React.useState(false);
   const [isLockedView, setIsLockedView] = React.useState(false);
+  const [showInformativoPanel, setShowInformativoPanel] = React.useState(false);
   const [lockOnSave, setLockOnSave] = React.useState(true);
   const [metaResponsavel, setMetaResponsavel] = React.useState("");
   const [metaSafra, setMetaSafra] = React.useState("2025/2026");
@@ -131,6 +132,12 @@ export default function SoybeanHarvestDashboard() {
     moeda: string;
     dose_ha: number;
   }>>([]);
+
+  const getViaAplicacao = (classe: string) => {
+    if (classe === "Nematicida") return "Via Sulco";
+    if (classe === "Fungicida") return "Aplicação Aérea";
+    return "Conforme manejo";
+  };
 
   React.useEffect(() => { setMounted(true); }, []);
   React.useEffect(() => {
@@ -265,6 +272,7 @@ export default function SoybeanHarvestDashboard() {
           lucroIncrementalHa,
           lucroIncrementalTot,
           payback_sc,
+          viaAplicacao: getViaAplicacao(item.classe),
           comparavel: item.classe === focoEnsaio
         };
       });
@@ -340,6 +348,7 @@ export default function SoybeanHarvestDashboard() {
       valorConvertido: number;
       subtotalHa: number;
       custoTotalHa: number;
+      viaAplicacao: string;
     };
 
     const rows: AuditRow[] = [];
@@ -368,6 +377,7 @@ export default function SoybeanHarvestDashboard() {
           valorConvertido: 0,
           subtotalHa: 0,
           custoTotalHa,
+          viaAplicacao: getViaAplicacao(item.classe),
         });
         continue;
       }
@@ -393,6 +403,7 @@ export default function SoybeanHarvestDashboard() {
           valorConvertido: convertido,
           subtotalHa: subtotal,
           custoTotalHa,
+          viaAplicacao: getViaAplicacao(item.classe),
         });
       }
     }
@@ -418,10 +429,32 @@ export default function SoybeanHarvestDashboard() {
         margemHa: Number(r.margemHa ?? 0),
         lucroIncrementalHa: Number(r.lucroIncrementalHa ?? 0),
         roiIncremental: r.roiIncremental == null ? null : Number(r.roiIncremental),
+        diffProd: Number(r.diff_prod ?? 0),
+        custoDiffHa: Number(r.custoDiffHa ?? 0),
       }))
       .sort((a: any, b: any) => b.lucroIncrementalHa - a.lucroIncrementalHa);
     return rows;
   }, [processedData]);
+
+  const explainEconomicDecision = (r: any) => {
+    const roi = r.roiIncremental;
+    if (r.lucroIncrementalHa > 0 && (roi == null || roi >= 0)) {
+      if (r.diffProd <= 0 && r.custoDiffHa < 0) {
+        return { label: "Vale a pena", reason: "Mesmo sem ganho de produção, a economia de custo gerou retorno." };
+      }
+      if (r.diffProd > 0 && r.custoDiffHa > 0) {
+        return { label: "Vale a pena", reason: "O ganho de produtividade pagou o custo adicional da tecnologia." };
+      }
+      return { label: "Vale a pena", reason: "Margem incremental positiva comparada ao padrão." };
+    }
+    if (r.lucroIncrementalHa <= 0 && r.diffProd > 0) {
+      return { label: "Não vale", reason: "Houve ganho de produção, mas o custo adicional foi maior que o benefício." };
+    }
+    if (r.lucroIncrementalHa <= 0 && r.diffProd <= 0) {
+      return { label: "Não vale", reason: "Sem ganho de produção e sem economia suficiente para compensar." };
+    }
+    return { label: "Atenção", reason: "Resultado limítrofe. Reavaliar preço, dose e custo unitário." };
+  };
 
   const handleSaveSnapshot = () => {
     const nome = snapshotName.trim();
@@ -461,6 +494,7 @@ export default function SoybeanHarvestDashboard() {
     }
     setSelectedSnapshotId("");
     setIsLockedView(false);
+    setShowInformativoPanel(true);
     setSnapshotName(`Informativo ${new Date().toLocaleDateString("pt-BR")}`);
     setMetaObservacao("");
     setInformativoData([]);
@@ -576,6 +610,14 @@ export default function SoybeanHarvestDashboard() {
       window.alert("Preencha talhão, variedade, produto, área e produtividade.");
       return;
     }
+
+    // Regra operacional: nematicida via sulco, fungicida via aplicação aérea.
+    const segmentoNormalizado =
+      newRow.classe === "Nematicida"
+        ? "Sulco"
+        : newRow.classe === "Fungicida"
+          ? "Aérea"
+          : newRow.segmento;
     const row = {
       talhao: newRow.talhao,
       variedade: newRow.variedade,
@@ -586,7 +628,7 @@ export default function SoybeanHarvestDashboard() {
       pa: newRow.pa || "—",
       classe: newRow.classe,
       categoria: newRow.categoria,
-      segmento: newRow.segmento,
+      segmento: segmentoNormalizado,
       modo: newRow.modo,
       composicao_custos: componentesTratamento.length > 0
         ? componentesTratamento
@@ -694,6 +736,12 @@ export default function SoybeanHarvestDashboard() {
           </div>
           <div className="flex gap-4">
             <button
+              onClick={() => setShowInformativoPanel((v) => !v)}
+              className="bg-white border border-slate-300 hover:border-slate-500 text-slate-700 px-5 py-3 font-black text-[10px] uppercase tracking-widest no-print"
+            >
+              {showInformativoPanel ? "Ocultar Novo Informativo" : "Novo Informativo"}
+            </button>
+            <button
               onClick={exportPDF}
               disabled={isExporting}
               className="bg-slate-900 hover:bg-black disabled:opacity-70 disabled:cursor-not-allowed text-white px-6 py-3 font-black text-[10px] uppercase tracking-widest no-print shadow-xl transition-all active:scale-95"
@@ -711,6 +759,9 @@ export default function SoybeanHarvestDashboard() {
               <span className="w-2 h-2 rounded-full bg-pink-400"></span>
               <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-500">Ranking de Performance ({viewMode.toUpperCase()})</h3>
             </div>
+            <p className="text-[10px] text-slate-500 bg-white border border-slate-200 px-3 py-2">
+              Ranking considera retorno econômico (lucro incremental/ha) e produtividade. ROI compara cada tratamento com o padrão do mesmo talhão.
+            </p>
             
             <div className="flex flex-wrap gap-3">
               {/* Card 1: Produtividade */}
@@ -842,6 +893,7 @@ export default function SoybeanHarvestDashboard() {
         </div>
 
         {/* Novo Informativo + Histórico */}
+        {showInformativoPanel && (
         <div className="bg-white border border-slate-200 shadow-sm mt-4 p-4 no-print">
           <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600 mb-3">
             Novo Informativo e Histórico
@@ -1010,6 +1062,7 @@ export default function SoybeanHarvestDashboard() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Auditoria de custo por dose */}
         <div className="bg-white border border-slate-200 shadow-sm overflow-hidden mt-4">
@@ -1018,7 +1071,7 @@ export default function SoybeanHarvestDashboard() {
               Auditoria de Custo por Dose (por produto/componente)
             </h3>
             <p className="text-[10px] text-slate-500 mt-1">
-              Conversão utilizada: 1 USD = R$ {cotacaoDolar.toFixed(2)}.
+              Conversão utilizada: 1 USD = R$ {cotacaoDolar.toFixed(2)}. Subtotal/ha = valor convertido x dose/ha.
             </p>
           </div>
 
@@ -1030,6 +1083,7 @@ export default function SoybeanHarvestDashboard() {
                   <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Variedade</th>
                   <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Tratamento</th>
                   <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Componente</th>
+                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Via</th>
                   <th className="py-2 px-3 text-center text-[9px] font-black uppercase text-slate-500">Moeda</th>
                   <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Valor Base</th>
                   <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Dose/ha</th>
@@ -1053,6 +1107,7 @@ export default function SoybeanHarvestDashboard() {
                       )}
                     </td>
                     <td className="py-2 px-3 text-[10px] font-semibold text-slate-700">{row.componente}</td>
+                    <td className="py-2 px-3 text-[10px] font-bold text-slate-600">{row.viaAplicacao}</td>
                     <td className="py-2 px-3 text-[10px] font-bold text-center text-slate-600">{row.moeda}</td>
                     <td className="py-2 px-3 text-[10px] font-bold text-right tabular-nums text-slate-700">
                       {row.valorBase.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1087,7 +1142,7 @@ export default function SoybeanHarvestDashboard() {
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse">
+            <table className="w-full min-w-[1280px] border-collapse">
               <thead>
                 <tr className="bg-slate-100 border-b border-slate-200">
                   <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Talhão</th>
@@ -1097,10 +1152,14 @@ export default function SoybeanHarvestDashboard() {
                   <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Margem/ha (R$)</th>
                   <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Lucro incremental/ha (R$)</th>
                   <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">ROI incremental (%)</th>
+                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Decisão</th>
+                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Motivo técnico-financeiro</th>
                 </tr>
               </thead>
               <tbody>
-                {resumoEconomico.map((r, idx) => (
+                {resumoEconomico.map((r, idx) => {
+                  const decision = explainEconomicDecision(r);
+                  return (
                   <tr key={r.key} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
                     <td className="py-2 px-3 text-[10px] font-bold text-slate-700">{r.talhao}</td>
                     <td className="py-2 px-3 text-[10px] font-bold text-slate-700">{r.variedade}</td>
@@ -1117,8 +1176,12 @@ export default function SoybeanHarvestDashboard() {
                     <td className={`py-2 px-3 text-[10px] text-right font-black tabular-nums ${r.roiIncremental != null && r.roiIncremental >= 0 ? 'text-green-800' : 'text-red-800'}`}>
                       {r.roiIncremental == null ? "N/A" : `${r.roiIncremental.toFixed(1)}%`}
                     </td>
+                    <td className={`py-2 px-3 text-[10px] font-black uppercase ${decision.label === "Vale a pena" ? "text-green-700" : decision.label === "Não vale" ? "text-red-700" : "text-amber-700"}`}>
+                      {decision.label}
+                    </td>
+                    <td className="py-2 px-3 text-[10px] text-slate-700">{decision.reason}</td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
@@ -1154,7 +1217,7 @@ export default function SoybeanHarvestDashboard() {
                         <th className="py-4 px-4 text-[9px] font-black uppercase text-slate-400">Produto / <span className="lowercase text-slate-300">categoria</span></th>
                         <th className="py-4 px-4 text-center text-[9px] font-black uppercase text-slate-400">Prod. <br /><span className="text-[7px]">sc/ha</span></th>
                         <th className="py-4 px-4 text-center text-[9px] font-black uppercase text-slate-400">Dif. <br /><span className="text-[7px]">sc/ha</span></th>
-                        <th className="py-4 px-4 text-center text-[9px] font-black uppercase text-slate-400">Custo <br /><span className="text-[7px]">r$/ha</span></th>
+                        <th className="py-4 px-4 text-center text-[9px] font-black uppercase text-slate-400">Custo <br /><span className="text-[7px]">r$/ha</span><br /><span className="text-[7px] normal-case text-slate-300">(toque para detalhar)</span></th>
                         <th className="py-4 px-4 text-center text-[9px] font-black uppercase text-slate-400">Área <br /><span className="text-[7px]">ha</span></th>
                         <th className="py-4 px-4 text-center text-[9px] font-black uppercase text-slate-400 bg-slate-100">Prod Tot <br /><span className="text-[7px]">sc</span></th>
                         <th className="py-4 px-4 text-center text-[9px] font-black uppercase text-slate-400 bg-slate-100">Rec. Tot <br /><span className="text-[7px]">r$</span></th>
@@ -1179,6 +1242,7 @@ export default function SoybeanHarvestDashboard() {
                                 <span className="text-[8px] font-bold px-1 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 uppercase">{item.pa}</span>
                                 <span className={`text-[8px] font-bold px-1 py-0.5 border uppercase ${item.categoria === 'Misto' ? 'border-blue-700 text-blue-700' : item.categoria === 'Químico' ? 'border-orange-700 text-orange-700' : 'border-green-700 text-green-700'}`}>{item.categoria}</span>
                                 {item.segmento !== "-" && <span className="text-[8px] font-bold px-1 py-0.5 bg-slate-800 text-white uppercase">{item.segmento}</span>}
+                                <span className="text-[8px] font-bold px-1 py-0.5 border border-cyan-700 text-cyan-700 uppercase">{item.viaAplicacao}</span>
                                 {item.modo !== "-" && <span className="text-[8px] font-bold px-1 py-0.5 border border-slate-400 text-slate-400 uppercase">{item.modo}</span>}
                                 {isWitness && <span className="text-[8px] font-black px-1 py-0.5 bg-slate-900 text-white uppercase">Padrão Fazenda</span>}
                               </div>
@@ -1193,7 +1257,31 @@ export default function SoybeanHarvestDashboard() {
                               )}
                               {isWitness && <span className="text-slate-200 font-black">-</span>}
                             </td>
-                            <td className="py-4 px-4 text-center text-xs font-bold tabular-nums border-x border-slate-50">{item.custoHa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                            <td className="py-4 px-4 text-center text-xs font-bold tabular-nums border-x border-slate-50">
+                              <details>
+                                <summary className="cursor-pointer list-none text-blue-800">
+                                  {item.custoHa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </summary>
+                                <div className="mt-1 text-left bg-slate-50 border border-slate-200 p-2">
+                                  <p className="text-[8px] font-black uppercase text-slate-500 mb-1">{item.viaAplicacao}</p>
+                                  {(item.composicao_custos || []).length === 0 && (
+                                    <p className="text-[8px] text-slate-400">Sem componentes detalhados.</p>
+                                  )}
+                                  {(item.composicao_custos || []).map((c: any, cIdx: number) => {
+                                    const valor = Number(c?.valor ?? 0);
+                                    const dose = Number(c?.dose_ha ?? 1);
+                                    const moeda = String(c?.moeda ?? "BRL").toUpperCase();
+                                    const convertido = moeda === "USD" ? valor * cotacaoDolar : valor;
+                                    const subtotal = convertido * dose;
+                                    return (
+                                      <p key={cIdx} className="text-[8px] text-slate-700">
+                                        {c?.produto ?? "Componente"}: {moeda} {valor.toLocaleString("pt-BR")} x dose {dose} = R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </p>
+                                    );
+                                  })}
+                                </div>
+                              </details>
+                            </td>
                             <td className="py-4 px-4 text-center text-xs font-bold tabular-nums text-slate-500">{item.hectares}</td>
                             <td className="py-4 px-4 text-center font-black text-xs bg-slate-100/30 tabular-nums">{formatNum(item.media * item.hectares)}</td>
                             <td className="py-4 px-4 text-center font-black text-xs bg-slate-100/30 tabular-nums">{formatNum(item.recTot)}</td>
@@ -1226,7 +1314,8 @@ export default function SoybeanHarvestDashboard() {
                     </div>
                     <div className="bg-slate-50 p-4 border border-slate-200 rounded-sm italic text-[11px] leading-relaxed text-slate-700 font-medium">
                       "Nesta área, a estratégia de manejo evidenciou que o {bestInGroup.lucroIncrementalHa > 0 ? 'investimento tecnológico superou a base econômica' : 'custo adicional não foi compensado pelo ganho produtivo'}.
-                      O tratamento {bestInGroup.produto} apresentou {bestInGroup.diff_prod > 0 ? `incremento de ${bestInGroup.diff_prod.toFixed(2)} sc/ha` : 'resultado estável'}, com {bestInGroup.roiIncremental != null ? `ROI incremental de ${Math.round(bestInGroup.roiIncremental)}%` : 'avaliação incremental por margem'} seguindo o padrão de comparação contra o padrão da fazenda."
+                      O tratamento {bestInGroup.produto} apresentou {bestInGroup.diff_prod > 0 ? `incremento de ${bestInGroup.diff_prod.toFixed(2)} sc/ha` : 'resultado estável'}, com {bestInGroup.roiIncremental != null ? `ROI incremental de ${Math.round(bestInGroup.roiIncremental)}%` : 'avaliação incremental por margem'}.
+                      Mesmo quando a produtividade cai, o modelo considera se a redução de custo manteve lucro incremental positivo para decidir se vale a pena."
                     </div>
                   </div>
 
