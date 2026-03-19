@@ -171,7 +171,9 @@ export default function SoybeanHarvestDashboard() {
       const html2pdf = (await import('html2pdf.js')).default;
       const element = reportRef.current;
       if (!element) return;
-      const opt = {
+
+      // Tentativa 1: preservar layout original da página (maior fidelidade visual)
+      const optPrimary = {
         margin: 5,
         filename: `Relatorio_Colheita_${new Date().getTime()}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
@@ -180,34 +182,105 @@ export default function SoybeanHarvestDashboard() {
           useCORS: true,
           backgroundColor: "#F0F2F5",
           letterRendering: true,
-          logging: true, // Habilitado para debug em produção caso precise
+          logging: false,
           windowWidth: 1280, // Força layout Desktop no PDF
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' as const }
+      };
+
+      try {
+        await html2pdf().from(element).set(optPrimary).save();
+        return;
+      } catch (primaryError) {
+        console.warn("Exportação primária falhou. Aplicando fallback de compatibilidade.", primaryError);
+      }
+
+      // Tentativa 2 (fallback): sanitização para ambientes que quebram com oklch/oklab
+      const optFallback = {
+        margin: 5,
+        filename: `Relatorio_Colheita_${new Date().getTime()}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#F0F2F5",
+          letterRendering: true,
+          logging: false,
+          windowWidth: 1280,
           onclone: (doc: Document) => {
-            // Sanitizador Cirúrgico: Substitui apenas oklch() por fallbacks hex para evitar crash no canvas
+            // NUCLEAR SANITIZER: html2canvas morre ao encontrar oklch() em arquivos CSS externos (Vercel)
+            // 1. Removemos os links de CSS externos que sabotam o parser
+            const links = doc.querySelectorAll('link[rel="stylesheet"]');
+            links.forEach(l => l.remove());
+
+            // 2. Sanitizamos exaustivamente todas as tags <style>
             const styles = doc.querySelectorAll('style');
             styles.forEach(styleTag => {
-              styleTag.innerHTML = styleTag.innerHTML.replace(/oklch\([^)]+\)/g, '#94a3b8');
+              try {
+                styleTag.innerHTML = styleTag.innerHTML.replace(/oklch\([^)]+\)/g, '#94a3b8');
+              } catch (e) { /* ignore */ }
             });
 
+            // 3. Injetamos um CSS Base "Seguro" (Pure HEX) para garantir o layout sem oklch
             const s = doc.createElement('style');
             s.innerHTML = `
-              * { font-family: 'Inter', Arial, sans-serif !important; -webkit-print-color-adjust: exact; }
+              :root { 
+                --background: #F0F2F5 !important;
+                --foreground: #0f172a !important;
+                --primary: #166534 !important;
+              }
+              * { 
+                font-family: 'Inter', Arial, sans-serif !important; 
+                -webkit-print-color-adjust: exact;
+                box-sizing: border-box;
+              }
+              body { background-color: #F0F2F5 !important; }
               .no-print { display: none !important; }
               .pdf-only { display: block !important; }
               .screen-only { display: none !important; }
-              /* Ajuste de largura para o painel lateral em modo paisagem A4 */
-              .lg\\:w-80 { width: 280px !important; flex-shrink: 0 !important; }
+              
+              /* RECONSTRUÇÃO DE CLASSES CORE (Tailwind Fallbacks) */
+              .flex { display: flex !important; }
+              .flex-col { flex-direction: column !important; }
+              .flex-row { flex-direction: row !important; }
+              .flex-wrap { flex-wrap: wrap !important; }
+              .gap-3 { gap: 12px !important; }
+              .gap-4 { gap: 16px !important; }
+              .bg-white { background-color: #ffffff !important; }
+              .bg-slate-900 { background-color: #0f172a !important; }
+              .text-white { color: #ffffff !important; }
+              .text-slate-900 { color: #0f172a !important; }
+              .text-green-800 { color: #166534 !important; }
+              .border-b-2 { border-bottom-width: 2px !important; border-bottom-style: solid !important; }
+              .border-slate-900 { border-color: #0f172a !important; }
+              .p-4 { padding: 16px !important; }
+              .p-8 { padding: 32px !important; }
+              .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; }
+              
+              /* Ajustes de Largura */
+              .max-w-7xl { max-width: 1280px !important; margin: 0 auto !important; }
+              .lg\\:w-80 { width: 320px !important; flex-shrink: 0 !important; }
               .flex-1 { flex: 1 !important; }
-              table { width: 100% !important; border-collapse: collapse !important; }
-              .break-inside-avoid { break-inside: avoid !important; }
+              
+              /* Tabelas */
+              table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #e2e8f0 !important; }
+              th, td { padding: 8px !important; border: 1px solid #e2e8f0 !important; text-align: left !important; }
+              .bg-slate-50 { background-color: #f8fafc !important; }
+              
+              /* Garante que oklch em variáveis CSS não quebrem o resto */
+              [style*="oklch"] { background-color: #94a3b8 !important; color: #1e293b !important; }
             `;
             doc.head.appendChild(s);
           }
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' as const }
       };
-      await html2pdf().from(element).set(opt).save();
-    } catch (err) { console.error("PDF Fail:", err); }
+
+      await html2pdf().from(element).set(optFallback).save();
+    } catch (err) {
+      console.error("PDF Fail:", err);
+      window.alert("Nao foi possivel exportar o relatorio em PDF. Tente novamente.");
+    }
     finally { setIsExporting(false); }
   };
 
@@ -230,8 +303,12 @@ export default function SoybeanHarvestDashboard() {
             <p className="text-slate-400 mt-2 font-bold uppercase text-[10px] tracking-widest">Base Consolidada • Safra 2025/2026</p>
           </div>
           <div className="flex gap-4">
-            <button onClick={exportPDF} className="bg-slate-900 hover:bg-black text-white px-6 py-3 font-black text-[10px] uppercase tracking-widest no-print shadow-xl transition-all active:scale-95">
-              {isExporting ? 'Processando...' : 'Exportar Relatório'}
+            <button
+              onClick={exportPDF}
+              disabled={isExporting}
+              className="bg-slate-900 hover:bg-black disabled:opacity-70 disabled:cursor-not-allowed text-white px-6 py-3 font-black text-[10px] uppercase tracking-widest no-print shadow-xl transition-all active:scale-95"
+            >
+              Exportar Relatório
             </button>
           </div>
         </div>
