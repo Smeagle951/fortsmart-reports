@@ -2,7 +2,7 @@
 
 import React, { useRef, useMemo } from 'react';
 
-const harvestData = [
+const INITIAL_HARVEST_DATA = [
   // T-15 (DM79K80 CE)
   { talhao: "T-15", variedade: "DM79K80 CE", produto: "NEM-OUT + ACTIVE + VERANGO", hectares: 30.29, media: 82.07, tipo: "tratamento", pa: "Bacillus + Fluopiram", classe: "Nematicida", categoria: "Misto", segmento: "Solo/TS", modo: "Bio + SDHI", composicao_custos: [{ produto: "NEM-OUT", valor: 110, moeda: "BRL", dose_ha: 1 }, { produto: "SOIL ACTIVE", valor: 40, moeda: "BRL", dose_ha: 1 }, { produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
   { talhao: "T-15", variedade: "DM79K80 CE", produto: "PADRAO FAZENDA / LALNIX RESIST + VERANGO", hectares: 33.46, media: 78.69, tipo: "testemunha", pa: "B. licheniformis + Fluopiram", classe: "Nematicida", categoria: "Misto", segmento: "Solo/TS", modo: "Bio + SDHI", composicao_custos: [{ produto: "LALNIX RESIST", valor: 475, moeda: "BRL", dose_ha: 0.1 }, { produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
@@ -63,8 +63,22 @@ const productInsights: Record<string, { alvo: string, proposta: string, bio: str
   "FÓSFORO NA LINHA": { alvo: "Suplementação de Fósforo", proposta: "Fósforo mineralizado para arranque.", bio: "Nutrição essencial P2O5 para energia celular." },
 };
 
+type InformativoSnapshot = {
+  id: string;
+  nome: string;
+  createdAt: string;
+  locked?: boolean;
+  meta?: {
+    responsavel?: string;
+    safra?: string;
+    observacao?: string;
+  };
+  data: any[];
+};
+
 export default function SoybeanHarvestDashboard() {
   const reportRef = useRef<HTMLDivElement>(null);
+  const importRef = useRef<HTMLInputElement>(null);
   const [mounted, setMounted] = React.useState(false);
 
   // Formatação de Núm e Moeda
@@ -77,45 +91,116 @@ export default function SoybeanHarvestDashboard() {
   const [viewMode, setViewMode] = React.useState<"Principal" | "Geral">("Principal");
   const [filtroCategoria, setFiltroCategoria] = React.useState<string>("TODOS");
   const [isExporting, setIsExporting] = React.useState(false);
+  const [informativoData, setInformativoData] = React.useState<any[]>(INITIAL_HARVEST_DATA);
+  const [snapshotName, setSnapshotName] = React.useState<string>("Informativo Safra 2025/2026");
+  const [savedSnapshots, setSavedSnapshots] = React.useState<InformativoSnapshot[]>([]);
+  const [trashSnapshots, setTrashSnapshots] = React.useState<InformativoSnapshot[]>([]);
+  const [selectedSnapshotId, setSelectedSnapshotId] = React.useState<string>("");
+  const [restoreSnapshotId, setRestoreSnapshotId] = React.useState<string>("");
+  const [showRestorePanel, setShowRestorePanel] = React.useState(false);
+  const [isLockedView, setIsLockedView] = React.useState(false);
+  const [lockOnSave, setLockOnSave] = React.useState(true);
+  const [metaResponsavel, setMetaResponsavel] = React.useState("");
+  const [metaSafra, setMetaSafra] = React.useState("2025/2026");
+  const [metaObservacao, setMetaObservacao] = React.useState("");
+  const [newRow, setNewRow] = React.useState({
+    talhao: "",
+    variedade: "",
+    produto: "",
+    tipo: "tratamento",
+    classe: "Nematicida",
+    categoria: "Químico",
+    segmento: "TS",
+    modo: "SDHI",
+    pa: "",
+    hectares: "",
+    media: "",
+    valor: "",
+    moeda: "BRL",
+    dose: "",
+  });
 
   React.useEffect(() => { setMounted(true); }, []);
-
-  const { groupedData, summaryMetrics, allProductClasses } = useMemo(() => {
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
     try {
-      const classes = Array.from(new Set(harvestData.map(item => item.classe))).filter(c => c !== "Baseline");
+      const raw = window.localStorage.getItem("fortsmart_colheita_snapshots_v1");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) setSavedSnapshots(parsed);
+      const trashRaw = window.localStorage.getItem("fortsmart_colheita_snapshots_trash_v1");
+      if (trashRaw) {
+        const trashParsed = JSON.parse(trashRaw);
+        if (Array.isArray(trashParsed)) setTrashSnapshots(trashParsed);
+      }
+    } catch (_) {
+      // ignore
+    }
+  }, []);
 
-      const processedData = harvestData.map(item => {
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("fortsmart_colheita_snapshots_v1", JSON.stringify(savedSnapshots));
+  }, [savedSnapshots]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("fortsmart_colheita_snapshots_trash_v1", JSON.stringify(trashSnapshots));
+  }, [trashSnapshots]);
+
+  const { groupedData, summaryMetrics, allProductClasses, processedData } = useMemo(() => {
+    try {
+      const classes = Array.from(new Set(informativoData.map(item => item.classe))).filter(c => c !== "Baseline");
+      const calcularCustoHa = (entry: any) => {
+        return (entry.composicao_custos || []).reduce((acc: number, c: any) => {
+          const valor = Number(c.valor ?? 0);
+          const dose = Number(c.dose_ha ?? 1);
+          const moeda = String(c.moeda ?? "BRL").toUpperCase();
+          const valorBRL = moeda === "USD" ? valor * cotacaoDolar : valor;
+          return acc + (valorBRL * dose);
+        }, 0);
+      };
+
+      const processedData = informativoData.map(item => {
         const key = `${item.talhao} - ${item.variedade}`;
-        const witnessGroup = harvestData.filter(h => `${h.talhao} - ${h.variedade}` === key);
+        const witnessGroup = informativoData.filter(h => `${h.talhao} - ${h.variedade}` === key);
         const witness = witnessGroup.find(h => h.tipo === 'testemunha') || witnessGroup[0];
-
-        let custoHaBRL = 0;
-        item.composicao_custos?.forEach((c: any) => {
-          const valorBRL = c.moeda === 'USD' ? c.valor * cotacaoDolar : c.valor;
-          custoHaBRL += valorBRL * (c.dose_ha || 1);
-        });
+        const witnessCustoHa = calcularCustoHa(witness);
+        const custoHaBRL = calcularCustoHa(item);
 
         const rec_sc_ha = item.media;
+        const rec_ha_rs = rec_sc_ha * precoSaca;
         const rec_tot_rs = rec_sc_ha * precoSaca * item.hectares;
         const custo_tot_rs = custoHaBRL * item.hectares;
         const lucro_tot_rs = rec_tot_rs - custo_tot_rs;
+        const margem_ha_rs = rec_ha_rs - custoHaBRL;
 
         const diff_prod = item.media - witness.media;
         const payback_sc = custoHaBRL / precoSaca;
 
-        // ROI Incremental: (Lucro Extra / Investimento Extra)
-        const lucro_incremental = (diff_prod * precoSaca) - custoHaBRL;
-        const roi = custoHaBRL > 0 ? (lucro_incremental / custoHaBRL) * 100 : 0;
+        // Incremental versus padrão do mesmo talhão/variedade
+        const custoDiffHa = custoHaBRL - witnessCustoHa;
+        const lucroIncrementalHa = (diff_prod * precoSaca) - custoDiffHa;
+        const lucroIncrementalTot = lucroIncrementalHa * item.hectares;
+        const roi = custoHaBRL > 0 ? ((diff_prod * precoSaca - custoHaBRL) / custoHaBRL) * 100 : 0;
+        const roiIncremental = custoDiffHa > 0 ? (lucroIncrementalHa / custoDiffHa) * 100 : null;
 
         return {
           ...item,
           groupKey: key,
           custoHa: custoHaBRL,
+          witnessCustoHa,
+          custoDiffHa,
           custoTot: custo_tot_rs,
+          receitaHa: rec_ha_rs,
           recTot: rec_tot_rs,
+          margemHa: margem_ha_rs,
           lucroTot: lucro_tot_rs,
           roi,
+          roiIncremental,
           diff_prod,
+          lucroIncrementalHa,
+          lucroIncrementalTot,
           payback_sc,
           comparavel: item.classe === focoEnsaio
         };
@@ -128,7 +213,16 @@ export default function SoybeanHarvestDashboard() {
       }, {});
 
       Object.keys(groups).forEach(key => {
-        groups[key].sort((a, b) => b.media - a.media);
+        groups[key].sort((a, b) => {
+          if (a.tipo === 'testemunha' && b.tipo !== 'testemunha') return 1;
+          if (b.tipo === 'testemunha' && a.tipo !== 'testemunha') return -1;
+          if (a.tipo !== 'testemunha' && b.tipo !== 'testemunha') {
+            const byLucro = (b.lucroIncrementalHa ?? 0) - (a.lucroIncrementalHa ?? 0);
+            if (byLucro !== 0) return byLucro;
+            return (b.media ?? 0) - (a.media ?? 0);
+          }
+          return (b.media ?? 0) - (a.media ?? 0);
+        });
       });
 
       const treatmentsOnly = processedData.filter(t => t.tipo === 'tratamento');
@@ -153,16 +247,306 @@ export default function SoybeanHarvestDashboard() {
 
       const summary = {
         topProdutividade: [...filteredResults].sort((a, b) => b.media - a.media).slice(0, 3),
-        topROI: [...filteredResults].filter(t => t.custoHa > 0).sort((a, b) => b.roi - a.roi).slice(0, 3),
-        topLucro: [...filteredResults].sort((a, b) => b.lucroTot - a.lucroTot).slice(0, 3),
+        topROI: [...filteredResults]
+          .filter(t => t.custoHa > 0)
+          .sort((a, b) => ((b.roiIncremental ?? b.roi) - (a.roiIncremental ?? a.roi)))
+          .slice(0, 3),
+        topLucro: [...filteredResults]
+          .sort((a, b) => (b.lucroIncrementalHa - a.lucroIncrementalHa))
+          .slice(0, 3),
       };
 
-      return { groupedData: groups, summaryMetrics: summary, allProductClasses: classes };
+      return { groupedData: groups, summaryMetrics: summary, allProductClasses: classes, processedData };
     } catch (e) {
       console.error("Critical Analysis Error:", e);
-      return { groupedData: {}, summaryMetrics: { topProdutividade: [], topROI: [], topLucro: [] }, allProductClasses: [] };
+      return { groupedData: {}, summaryMetrics: { topProdutividade: [], topROI: [], topLucro: [] }, allProductClasses: [], processedData: [] };
     }
-  }, [cotacaoDolar, precoSaca, focoEnsaio, viewMode, filtroCategoria]);
+  }, [informativoData, cotacaoDolar, precoSaca, focoEnsaio, viewMode, filtroCategoria]);
+
+  const auditRows = useMemo(() => {
+    type AuditRow = {
+      key: string;
+      talhao: string;
+      variedade: string;
+      tratamento: string;
+      tipo: string;
+      componente: string;
+      moeda: string;
+      valorBase: number;
+      doseHa: number;
+      valorConvertido: number;
+      subtotalHa: number;
+      custoTotalHa: number;
+    };
+
+    const rows: AuditRow[] = [];
+
+    for (const item of informativoData) {
+      const componentes = item.composicao_custos ?? [];
+      const custoTotalHa = componentes.reduce((sum: number, c: any) => {
+        const valor = Number(c?.valor ?? 0);
+        const dose = Number(c?.dose_ha ?? 1);
+        const moeda = String(c?.moeda ?? "BRL").toUpperCase();
+        const convertido = moeda === "USD" ? valor * cotacaoDolar : valor;
+        return sum + (convertido * dose);
+      }, 0);
+
+      if (componentes.length === 0) {
+        rows.push({
+          key: `${item.talhao}-${item.variedade}-${item.produto}-sem-componente`,
+          talhao: item.talhao,
+          variedade: item.variedade,
+          tratamento: item.produto,
+          tipo: item.tipo,
+          componente: "—",
+          moeda: "BRL",
+          valorBase: 0,
+          doseHa: 0,
+          valorConvertido: 0,
+          subtotalHa: 0,
+          custoTotalHa,
+        });
+        continue;
+      }
+
+      for (let i = 0; i < componentes.length; i++) {
+        const c = componentes[i];
+        const valor = Number(c?.valor ?? 0);
+        const dose = Number(c?.dose_ha ?? 1);
+        const moeda = String(c?.moeda ?? "BRL").toUpperCase();
+        const convertido = moeda === "USD" ? valor * cotacaoDolar : valor;
+        const subtotal = convertido * dose;
+
+        rows.push({
+          key: `${item.talhao}-${item.variedade}-${item.produto}-${i}`,
+          talhao: item.talhao,
+          variedade: item.variedade,
+          tratamento: item.produto,
+          tipo: item.tipo,
+          componente: String(c?.produto ?? "Componente"),
+          moeda,
+          valorBase: valor,
+          doseHa: dose,
+          valorConvertido: convertido,
+          subtotalHa: subtotal,
+          custoTotalHa,
+        });
+      }
+    }
+
+    rows.sort((a, b) => {
+      if (a.talhao !== b.talhao) return a.talhao.localeCompare(b.talhao);
+      if (a.variedade !== b.variedade) return a.variedade.localeCompare(b.variedade);
+      return a.tratamento.localeCompare(b.tratamento);
+    });
+
+    return rows;
+  }, [informativoData, cotacaoDolar]);
+
+  const resumoEconomico = useMemo(() => {
+    const rows = (processedData || [])
+      .filter((r: any) => r.tipo === "tratamento")
+      .map((r: any) => ({
+        key: `${r.talhao}-${r.variedade}-${r.produto}`,
+        talhao: r.talhao,
+        variedade: r.variedade,
+        produto: r.produto,
+        receitaHa: Number(r.receitaHa ?? 0),
+        margemHa: Number(r.margemHa ?? 0),
+        lucroIncrementalHa: Number(r.lucroIncrementalHa ?? 0),
+        roiIncremental: r.roiIncremental == null ? null : Number(r.roiIncremental),
+      }))
+      .sort((a: any, b: any) => b.lucroIncrementalHa - a.lucroIncrementalHa);
+    return rows;
+  }, [processedData]);
+
+  const handleSaveSnapshot = () => {
+    const nome = snapshotName.trim();
+    if (!nome) {
+      window.alert("Informe o nome do informativo para salvar.");
+      return;
+    }
+    const snap = {
+      id: `snap_${Date.now()}`,
+      nome,
+      createdAt: new Date().toISOString(),
+      locked: lockOnSave,
+      meta: {
+        responsavel: metaResponsavel.trim() || undefined,
+        safra: metaSafra.trim() || undefined,
+        observacao: metaObservacao.trim() || undefined,
+      },
+      data: informativoData,
+    };
+    setSavedSnapshots(prev => [snap, ...prev]);
+  };
+
+  const handleNovoInformativo = () => {
+    if (informativoData.length > 0) {
+      const snap = {
+        id: `snap_${Date.now()}`,
+        nome: `Auto backup ${new Date().toLocaleString("pt-BR")}`,
+        createdAt: new Date().toISOString(),
+        locked: false,
+        meta: {
+          responsavel: metaResponsavel.trim() || undefined,
+          safra: metaSafra.trim() || undefined,
+        },
+        data: informativoData,
+      };
+      setSavedSnapshots(prev => [snap, ...prev]);
+    }
+    setSelectedSnapshotId("");
+    setIsLockedView(false);
+    setSnapshotName(`Informativo ${new Date().toLocaleDateString("pt-BR")}`);
+    setMetaObservacao("");
+    setInformativoData([]);
+  };
+
+  const handleLoadSnapshot = (id: string) => {
+    setSelectedSnapshotId(id);
+    const target = savedSnapshots.find(s => s.id === id);
+    if (!target) return;
+    setInformativoData(target.data || []);
+    setIsLockedView(Boolean(target.locked));
+    setSnapshotName(target.nome || "");
+    setMetaResponsavel(target.meta?.responsavel || "");
+    setMetaSafra(target.meta?.safra || "");
+    setMetaObservacao(target.meta?.observacao || "");
+  };
+
+  const handleDeleteSnapshot = () => {
+    if (!selectedSnapshotId) {
+      window.alert("Selecione um informativo salvo para excluir.");
+      return;
+    }
+    const target = savedSnapshots.find((s) => s.id === selectedSnapshotId);
+    if (!target) {
+      window.alert("Snapshot não encontrado.");
+      return;
+    }
+
+    setSavedSnapshots((prev) => prev.filter((s) => s.id !== selectedSnapshotId));
+    setTrashSnapshots((prev) => [target, ...prev]);
+    setRestoreSnapshotId(target.id);
+    setShowRestorePanel(true);
+    setSelectedSnapshotId("");
+    setIsLockedView(false);
+  };
+
+  const handleRestoreSnapshot = (id: string) => {
+    if (!id) {
+      window.alert("Selecione um informativo da lixeira para restaurar.");
+      return;
+    }
+    const target = trashSnapshots.find((s) => s.id === id);
+    if (!target) {
+      window.alert("Snapshot da lixeira não encontrado.");
+      return;
+    }
+    setTrashSnapshots((prev) => prev.filter((s) => s.id !== id));
+    setSavedSnapshots((prev) => [target, ...prev]);
+    handleLoadSnapshot(target.id);
+    setShowRestorePanel(false);
+  };
+
+  const handleExportSnapshots = () => {
+    if (typeof window === "undefined") return;
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      snapshots: savedSnapshots,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fortsmart-informativos-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleImportSnapshots = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const raw = String(reader.result || "{}");
+        const parsed = JSON.parse(raw);
+        const imported = Array.isArray(parsed?.snapshots) ? parsed.snapshots : (Array.isArray(parsed) ? parsed : []);
+        if (!Array.isArray(imported) || imported.length === 0) {
+          window.alert("Arquivo sem snapshots válidos.");
+          return;
+        }
+        const normalized: InformativoSnapshot[] = imported
+          .filter((s: any) => s && Array.isArray(s.data))
+          .map((s: any) => ({
+            id: String(s.id || `snap_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`),
+            nome: String(s.nome || "Informativo importado"),
+            createdAt: String(s.createdAt || new Date().toISOString()),
+            locked: Boolean(s.locked),
+            meta: s.meta ?? {},
+            data: s.data,
+          }));
+        setSavedSnapshots(prev => [...normalized, ...prev]);
+        window.alert(`${normalized.length} informativo(s) importado(s) com sucesso.`);
+      } catch (_) {
+        window.alert("Não foi possível importar o JSON.");
+      } finally {
+        if (importRef.current) importRef.current.value = "";
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleAddNewRow = () => {
+    if (isLockedView) {
+      window.alert("Este informativo está bloqueado (histórico oficial). Crie um novo para editar.");
+      return;
+    }
+    const hectares = Number(newRow.hectares);
+    const media = Number(newRow.media);
+    const valor = Number(newRow.valor);
+    const dose = Number(newRow.dose);
+    if (!newRow.talhao || !newRow.variedade || !newRow.produto || !hectares || !media) {
+      window.alert("Preencha talhão, variedade, produto, área e produtividade.");
+      return;
+    }
+    const row = {
+      talhao: newRow.talhao,
+      variedade: newRow.variedade,
+      produto: newRow.produto,
+      hectares,
+      media,
+      tipo: newRow.tipo,
+      pa: newRow.pa || "—",
+      classe: newRow.classe,
+      categoria: newRow.categoria,
+      segmento: newRow.segmento,
+      modo: newRow.modo,
+      composicao_custos: valor > 0 && dose > 0
+        ? [{ produto: newRow.produto, valor, moeda: newRow.moeda, dose_ha: dose }]
+        : [],
+    };
+    setInformativoData(prev => [...prev, row]);
+    setNewRow({
+      talhao: "",
+      variedade: "",
+      produto: "",
+      tipo: "tratamento",
+      classe: "Nematicida",
+      categoria: "Químico",
+      segmento: "TS",
+      modo: "SDHI",
+      pa: "",
+      hectares: "",
+      media: "",
+      valor: "",
+      moeda: "BRL",
+      dose: "",
+    });
+  };
 
   const exportPDF = async () => {
     if (typeof window === "undefined" || isExporting) return;
@@ -249,7 +633,7 @@ export default function SoybeanHarvestDashboard() {
                         <span className="w-4 h-4 rounded-full bg-green-600 text-white text-[8px] flex items-center justify-center font-black">{idx + 1}º</span>
                         <span className="text-[10px] font-black uppercase truncate">{t.produto}</span>
                       </div>
-                      <span className="text-[9px] font-black text-green-700 ml-6">{Math.round(t.roi)}% ROI</span>
+                      <span className="text-[9px] font-black text-green-700 ml-6">{Math.round(t.roiIncremental ?? t.roi)}% ROI</span>
                     </div>
                   ))}
                 </div>
@@ -267,7 +651,7 @@ export default function SoybeanHarvestDashboard() {
                         <span className="w-4 h-4 rounded-full bg-indigo-700 text-white text-[8px] flex items-center justify-center font-black">{idx + 1}º</span>
                         <span className="text-[10px] font-black uppercase truncate">{t.produto}</span>
                       </div>
-                      <span className="text-[9px] font-bold text-slate-500 ml-6">R$ {formatNum(t.lucroTot / t.hectares)}</span>
+                      <span className="text-[9px] font-bold text-slate-500 ml-6">R$ {formatNum(t.lucroIncrementalHa)}</span>
                     </div>
                   ))}
                 </div>
@@ -347,10 +731,224 @@ export default function SoybeanHarvestDashboard() {
           </div>
         </div>
 
+        {/* Novo Informativo + Histórico */}
+        <div className="bg-white border border-slate-200 shadow-sm mt-4 p-4 no-print">
+          <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600 mb-3">
+            Novo Informativo e Histórico
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <input className="border border-slate-300 px-2 py-2 text-xs" placeholder="Nome do informativo (obrigatório)" value={snapshotName} onChange={(e) => setSnapshotName(e.target.value)} />
+            <button className="bg-slate-900 text-white px-3 py-2 text-xs font-black uppercase" onClick={handleSaveSnapshot}>Salvar Informativo Atual</button>
+            <button className="bg-amber-600 text-white px-3 py-2 text-xs font-black uppercase" onClick={handleNovoInformativo}>Novo Informativo</button>
+            <select className="border border-slate-300 px-2 py-2 text-xs" value={selectedSnapshotId} onChange={(e) => handleLoadSnapshot(e.target.value)}>
+              <option value="">Carregar informativo salvo...</option>
+              {savedSnapshots.map((s) => (
+                <option key={s.id} value={s.id}>{s.nome}</option>
+              ))}
+            </select>
+            <button className="bg-red-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60" disabled={!selectedSnapshotId} onClick={handleDeleteSnapshot}>
+              Excluir Selecionado
+            </button>
+          </div>
+          {showRestorePanel && (
+            <div className="mt-2 border border-amber-300 bg-amber-50 p-3">
+              <p className="text-[10px] font-black uppercase text-amber-700 mb-2">
+                Informativo excluído. Restaurar agora?
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <select className="border border-amber-300 px-2 py-2 text-xs bg-white" value={restoreSnapshotId} onChange={(e) => setRestoreSnapshotId(e.target.value)}>
+                  <option value="">Selecione na lixeira...</option>
+                  {trashSnapshots.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.nome} ({new Date(s.createdAt).toLocaleDateString("pt-BR")})
+                    </option>
+                  ))}
+                </select>
+                <button className="bg-emerald-700 text-white px-3 py-2 text-xs font-black uppercase" onClick={() => handleRestoreSnapshot(restoreSnapshotId)}>
+                  Restaurar Selecionado
+                </button>
+                <button className="bg-slate-500 text-white px-3 py-2 text-xs font-black uppercase" onClick={() => setShowRestorePanel(false)}>
+                  Fechar
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="mt-2 grid grid-cols-1 md:grid-cols-5 gap-2">
+            <input className="border border-slate-300 px-2 py-2 text-xs" placeholder="Responsável técnico" value={metaResponsavel} onChange={(e) => setMetaResponsavel(e.target.value)} />
+            <input className="border border-slate-300 px-2 py-2 text-xs" placeholder="Safra (ex: 2025/2026)" value={metaSafra} onChange={(e) => setMetaSafra(e.target.value)} />
+            <input className="border border-slate-300 px-2 py-2 text-xs md:col-span-2" placeholder="Observação do informativo" value={metaObservacao} onChange={(e) => setMetaObservacao(e.target.value)} />
+            <label className="flex items-center justify-center gap-2 text-xs font-bold border border-slate-300 px-2 py-2">
+              <input type="checkbox" checked={lockOnSave} onChange={(e) => setLockOnSave(e.target.checked)} />
+              Bloquear ao salvar
+            </label>
+          </div>
+          <div className="mt-2 grid grid-cols-1 md:grid-cols-4 gap-2">
+            <button className="bg-blue-700 text-white px-3 py-2 text-xs font-black uppercase" onClick={handleExportSnapshots}>
+              Exportar Snapshots (JSON)
+            </button>
+            <button className="bg-cyan-700 text-white px-3 py-2 text-xs font-black uppercase" onClick={() => importRef.current?.click()}>
+              Importar Snapshots (JSON)
+            </button>
+            <input ref={importRef} type="file" accept="application/json" className="hidden" onChange={handleImportSnapshots} />
+            <div className={`px-3 py-2 text-xs font-black uppercase text-center ${isLockedView ? "bg-rose-100 text-rose-700 border border-rose-300" : "bg-emerald-100 text-emerald-700 border border-emerald-300"}`}>
+              {isLockedView ? "Histórico Oficial (Bloqueado)" : "Modo Edição"}
+            </div>
+            <button
+              className="bg-slate-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60"
+              disabled={!isLockedView}
+              onClick={() => {
+                setIsLockedView(false);
+                setSelectedSnapshotId("");
+                setSnapshotName(`${snapshotName} - cópia editável`);
+              }}
+            >
+              Criar Cópia Editável
+            </button>
+          </div>
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-7 gap-2">
+            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Talhão" value={newRow.talhao} onChange={(e) => setNewRow(v => ({ ...v, talhao: e.target.value }))} />
+            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Variedade" value={newRow.variedade} onChange={(e) => setNewRow(v => ({ ...v, variedade: e.target.value }))} />
+            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Produto" value={newRow.produto} onChange={(e) => setNewRow(v => ({ ...v, produto: e.target.value }))} />
+            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Área (ha)" value={newRow.hectares} onChange={(e) => setNewRow(v => ({ ...v, hectares: e.target.value }))} />
+            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Produtividade (sc/ha)" value={newRow.media} onChange={(e) => setNewRow(v => ({ ...v, media: e.target.value }))} />
+            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Valor (por dose)" value={newRow.valor} onChange={(e) => setNewRow(v => ({ ...v, valor: e.target.value }))} />
+            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Dose/ha" value={newRow.dose} onChange={(e) => setNewRow(v => ({ ...v, dose: e.target.value }))} />
+          </div>
+          <div className="mt-2 grid grid-cols-2 md:grid-cols-6 gap-2">
+            <select disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" value={newRow.tipo} onChange={(e) => setNewRow(v => ({ ...v, tipo: e.target.value }))}>
+              <option value="tratamento">Tratamento</option>
+              <option value="testemunha">Padrão/Testemunha</option>
+            </select>
+            <select disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" value={newRow.moeda} onChange={(e) => setNewRow(v => ({ ...v, moeda: e.target.value }))}>
+              <option value="BRL">BRL</option>
+              <option value="USD">USD</option>
+            </select>
+            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Classe" value={newRow.classe} onChange={(e) => setNewRow(v => ({ ...v, classe: e.target.value }))} />
+            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Categoria" value={newRow.categoria} onChange={(e) => setNewRow(v => ({ ...v, categoria: e.target.value }))} />
+            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="PA (opcional)" value={newRow.pa} onChange={(e) => setNewRow(v => ({ ...v, pa: e.target.value }))} />
+            <button disabled={isLockedView} className="bg-green-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60" onClick={handleAddNewRow}>
+              Adicionar Linha
+            </button>
+          </div>
+        </div>
+
+        {/* Auditoria de custo por dose */}
+        <div className="bg-white border border-slate-200 shadow-sm overflow-hidden mt-4">
+          <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
+            <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">
+              Auditoria de Custo por Dose (por produto/componente)
+            </h3>
+            <p className="text-[10px] text-slate-500 mt-1">
+              Conversão utilizada: 1 USD = R$ {cotacaoDolar.toFixed(2)}.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1200px] border-collapse">
+              <thead>
+                <tr className="bg-slate-100 border-b border-slate-200">
+                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Talhão</th>
+                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Variedade</th>
+                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Tratamento</th>
+                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Componente</th>
+                  <th className="py-2 px-3 text-center text-[9px] font-black uppercase text-slate-500">Moeda</th>
+                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Valor Base</th>
+                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Dose/ha</th>
+                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Valor Conv. (R$)</th>
+                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Subtotal/ha (R$)</th>
+                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Custo Total/ha (R$)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditRows.map((row, idx) => (
+                  <tr
+                    key={row.key}
+                    className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}
+                  >
+                    <td className="py-2 px-3 text-[10px] font-bold text-slate-700">{row.talhao}</td>
+                    <td className="py-2 px-3 text-[10px] font-bold text-slate-700">{row.variedade}</td>
+                    <td className="py-2 px-3 text-[10px] font-black text-slate-900 uppercase">
+                      {row.tratamento}
+                      {row.tipo === 'testemunha' && (
+                        <span className="ml-2 text-[8px] px-1 py-0.5 border border-slate-300 text-slate-500 uppercase font-black">Padrão</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-3 text-[10px] font-semibold text-slate-700">{row.componente}</td>
+                    <td className="py-2 px-3 text-[10px] font-bold text-center text-slate-600">{row.moeda}</td>
+                    <td className="py-2 px-3 text-[10px] font-bold text-right tabular-nums text-slate-700">
+                      {row.valorBase.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2 px-3 text-[10px] font-bold text-right tabular-nums text-slate-700">
+                      {row.doseHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2 px-3 text-[10px] font-bold text-right tabular-nums text-slate-700">
+                      {row.valorConvertido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2 px-3 text-[10px] font-black text-right tabular-nums text-blue-800">
+                      {row.subtotalHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2 px-3 text-[10px] font-black text-right tabular-nums text-green-800">
+                      {row.custoTotalHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Visão econômica única por tratamento */}
+        <div className="bg-white border border-slate-200 shadow-sm overflow-hidden mt-4">
+          <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
+            <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">
+              Visão Econômica Única (por tratamento)
+            </h3>
+            <p className="text-[10px] text-slate-500 mt-1">
+              Receita/ha, Margem/ha, Lucro incremental/ha e ROI incremental versus padrão da fazenda.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] border-collapse">
+              <thead>
+                <tr className="bg-slate-100 border-b border-slate-200">
+                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Talhão</th>
+                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Variedade</th>
+                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Tratamento</th>
+                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Receita/ha (R$)</th>
+                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Margem/ha (R$)</th>
+                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Lucro incremental/ha (R$)</th>
+                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">ROI incremental (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resumoEconomico.map((r, idx) => (
+                  <tr key={r.key} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
+                    <td className="py-2 px-3 text-[10px] font-bold text-slate-700">{r.talhao}</td>
+                    <td className="py-2 px-3 text-[10px] font-bold text-slate-700">{r.variedade}</td>
+                    <td className="py-2 px-3 text-[10px] font-black uppercase text-slate-900">{r.produto}</td>
+                    <td className="py-2 px-3 text-[10px] text-right font-bold tabular-nums text-slate-700">
+                      {r.receitaHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className={`py-2 px-3 text-[10px] text-right font-black tabular-nums ${r.margemHa >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                      {r.margemHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className={`py-2 px-3 text-[10px] text-right font-black tabular-nums ${r.lucroIncrementalHa >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                      {r.lucroIncrementalHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className={`py-2 px-3 text-[10px] text-right font-black tabular-nums ${r.roiIncremental != null && r.roiIncremental >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                      {r.roiIncremental == null ? "N/A" : `${r.roiIncremental.toFixed(1)}%`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div className="space-y-10 bg-[#F0F2F5] pb-10">
 
           {/* Grid de Talhões */}
-          {Object.entries(groupedData).map(([groupKey, products]) => {
+          {Object.entries(groupedData as Record<string, any[]>).map(([groupKey, products]) => {
             const [talhao, variedade] = (groupKey as string).split(' - ');
             const typedProducts = products as any[];
             const bestInGroup = typedProducts[0];
@@ -391,6 +989,7 @@ export default function SoybeanHarvestDashboard() {
                         const isWinner = idx === 0;
                         const isWitness = item.tipo === 'testemunha';
                         const diff = item.diff_prod;
+                        const roiExibicao = item.roiIncremental ?? item.roi;
 
                         return (
                           <tr key={idx} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${isWinner ? 'bg-green-50/20' : ''}`}>
@@ -425,8 +1024,8 @@ export default function SoybeanHarvestDashboard() {
                               {isWitness ? (
                                 <span className="text-slate-300 font-black">-</span>
                               ) : (
-                                <div className={`text-xs font-black border-2 px-1 py-0.5 rounded ${item.roi >= 0 ? 'border-green-800 text-green-800' : 'border-red-700 text-red-700'}`}>
-                                  {Math.round(item.roi)}%
+                                <div className={`text-xs font-black border-2 px-1 py-0.5 rounded ${roiExibicao >= 0 ? 'border-green-800 text-green-800' : 'border-red-700 text-red-700'}`}>
+                                  {Math.round(roiExibicao)}%
                                 </div>
                               )}
                             </td>
@@ -447,8 +1046,8 @@ export default function SoybeanHarvestDashboard() {
                       <h4 className="text-sm font-black uppercase tracking-tighter">Veredito Técnico do Talhão</h4>
                     </div>
                     <div className="bg-slate-50 p-4 border border-slate-200 rounded-sm italic text-[11px] leading-relaxed text-slate-700 font-medium">
-                      "Nesta área, a estratégia de manejo evidenciou que o {bestInGroup.lucroTot > witness.lucroTot ? 'investimento tecnológico superou a base econômica' : 'custo fixo de alguns tratamentos não foi compensado pelo ganho produtivo marginal'}.
-                      O tratamento {bestInGroup.produto} apresentou {bestInGroup.diff_prod > 0 ? `incremento de ${bestInGroup.diff_prod.toFixed(2)} sc/ha` : 'resultado estável'}, provendo {bestInGroup.roi > 0 ? `ROI positivo de ${Math.round(bestInGroup.roi)}%` : 'proteção técnica contra patógenos'} mesmo sob pressão de custo."
+                      "Nesta área, a estratégia de manejo evidenciou que o {bestInGroup.lucroIncrementalHa > 0 ? 'investimento tecnológico superou a base econômica' : 'custo adicional não foi compensado pelo ganho produtivo'}.
+                      O tratamento {bestInGroup.produto} apresentou {bestInGroup.diff_prod > 0 ? `incremento de ${bestInGroup.diff_prod.toFixed(2)} sc/ha` : 'resultado estável'}, com {bestInGroup.roiIncremental != null ? `ROI incremental de ${Math.round(bestInGroup.roiIncremental)}%` : 'avaliação incremental por margem'} seguindo o padrão de comparação contra o padrão da fazenda."
                     </div>
                   </div>
 
