@@ -119,15 +119,73 @@ export default function SoybeanHarvestDashboard() {
     moeda: "BRL",
     dose: "",
   });
+  const [componentDraft, setComponentDraft] = React.useState({
+    produto: "",
+    valor: "",
+    moeda: "BRL",
+    dose: "",
+  });
+  const [componentesTratamento, setComponentesTratamento] = React.useState<Array<{
+    produto: string;
+    valor: number;
+    moeda: string;
+    dose_ha: number;
+  }>>([]);
 
   React.useEffect(() => { setMounted(true); }, []);
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const raw = window.localStorage.getItem("fortsmart_colheita_snapshots_v1");
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) setSavedSnapshots(parsed);
+      const snapshotKeys = [
+        "fortsmart_colheita_snapshots_v1",
+        "fortsmart_colheita_snapshots",
+        "fortsmart_colheita_informativos_v1",
+      ];
+
+      let loadedSnapshots: InformativoSnapshot[] = [];
+      for (const key of snapshotKeys) {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        const candidate = Array.isArray(parsed)
+          ? parsed
+          : (Array.isArray(parsed?.snapshots) ? parsed.snapshots : []);
+        if (!Array.isArray(candidate) || candidate.length === 0) continue;
+        loadedSnapshots = candidate
+          .filter((s: any) => s && Array.isArray(s.data))
+          .map((s: any) => ({
+            id: String(s.id || `snap_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`),
+            nome: String(s.nome || "Informativo"),
+            createdAt: String(s.createdAt || new Date().toISOString()),
+            locked: Boolean(s.locked),
+            meta: s.meta ?? {},
+            data: s.data,
+          }));
+        if (loadedSnapshots.length > 0) break;
+      }
+
+      if (loadedSnapshots.length > 0) {
+        setSavedSnapshots(loadedSnapshots);
+        // Prioriza abrir dados antigos primeiro (mais recente da lista).
+        const first = loadedSnapshots[0];
+        setInformativoData(first.data || []);
+        setSelectedSnapshotId(first.id);
+        setIsLockedView(Boolean(first.locked));
+        setSnapshotName(first.nome || "");
+        setMetaResponsavel(first.meta?.responsavel || "");
+        setMetaSafra(first.meta?.safra || "2025/2026");
+        setMetaObservacao(first.meta?.observacao || "");
+      } else {
+        // Compatibilidade: último rascunho sem snapshot salvo.
+        const currentRaw = window.localStorage.getItem("fortsmart_colheita_current_v1");
+        if (currentRaw) {
+          const currentParsed = JSON.parse(currentRaw);
+          if (Array.isArray(currentParsed) && currentParsed.length > 0) {
+            setInformativoData(currentParsed);
+          }
+        }
+      }
+
       const trashRaw = window.localStorage.getItem("fortsmart_colheita_snapshots_trash_v1");
       if (trashRaw) {
         const trashParsed = JSON.parse(trashRaw);
@@ -142,6 +200,11 @@ export default function SoybeanHarvestDashboard() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem("fortsmart_colheita_snapshots_v1", JSON.stringify(savedSnapshots));
   }, [savedSnapshots]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("fortsmart_colheita_current_v1", JSON.stringify(informativoData));
+  }, [informativoData]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -525,9 +588,11 @@ export default function SoybeanHarvestDashboard() {
       categoria: newRow.categoria,
       segmento: newRow.segmento,
       modo: newRow.modo,
-      composicao_custos: valor > 0 && dose > 0
-        ? [{ produto: newRow.produto, valor, moeda: newRow.moeda, dose_ha: dose }]
-        : [],
+      composicao_custos: componentesTratamento.length > 0
+        ? componentesTratamento
+        : (valor > 0 && dose > 0
+          ? [{ produto: newRow.produto, valor, moeda: newRow.moeda, dose_ha: dose }]
+          : []),
     };
     setInformativoData(prev => [...prev, row]);
     setNewRow({
@@ -546,7 +611,52 @@ export default function SoybeanHarvestDashboard() {
       moeda: "BRL",
       dose: "",
     });
+    setComponentDraft({
+      produto: "",
+      valor: "",
+      moeda: "BRL",
+      dose: "",
+    });
+    setComponentesTratamento([]);
   };
+
+  const handleAddComponente = () => {
+    if (isLockedView) return;
+    const produto = componentDraft.produto.trim();
+    const valor = Number(componentDraft.valor);
+    const dose = Number(componentDraft.dose);
+    if (!produto || !(valor > 0) || !(dose > 0)) {
+      window.alert("Informe componente, valor e dose válidos.");
+      return;
+    }
+    setComponentesTratamento((prev) => [
+      ...prev,
+      {
+        produto,
+        valor,
+        moeda: componentDraft.moeda,
+        dose_ha: dose,
+      },
+    ]);
+    setComponentDraft({
+      produto: "",
+      valor: "",
+      moeda: componentDraft.moeda,
+      dose: "",
+    });
+  };
+
+  const handleRemoveComponente = (idx: number) => {
+    if (isLockedView) return;
+    setComponentesTratamento((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const custoCompostoHaPreview = useMemo(() => {
+    return componentesTratamento.reduce((sum, c) => {
+      const convertido = c.moeda === "USD" ? c.valor * cotacaoDolar : c.valor;
+      return sum + (convertido * c.dose_ha);
+    }, 0);
+  }, [componentesTratamento, cotacaoDolar]);
 
   const exportPDF = async () => {
     if (typeof window === "undefined" || isExporting) return;
@@ -829,6 +939,75 @@ export default function SoybeanHarvestDashboard() {
             <button disabled={isLockedView} className="bg-green-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60" onClick={handleAddNewRow}>
               Adicionar Linha
             </button>
+          </div>
+          <div className="mt-3 border border-slate-200 p-3 bg-slate-50">
+            <p className="text-[10px] font-black uppercase text-slate-600 mb-2">
+              Composição de custo do tratamento (multi-produto)
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              <input
+                disabled={isLockedView}
+                className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
+                placeholder="Componente (produto)"
+                value={componentDraft.produto}
+                onChange={(e) => setComponentDraft((v) => ({ ...v, produto: e.target.value }))}
+              />
+              <input
+                disabled={isLockedView}
+                className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
+                placeholder="Valor"
+                value={componentDraft.valor}
+                onChange={(e) => setComponentDraft((v) => ({ ...v, valor: e.target.value }))}
+              />
+              <select
+                disabled={isLockedView}
+                className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
+                value={componentDraft.moeda}
+                onChange={(e) => setComponentDraft((v) => ({ ...v, moeda: e.target.value }))}
+              >
+                <option value="BRL">BRL</option>
+                <option value="USD">USD</option>
+              </select>
+              <input
+                disabled={isLockedView}
+                className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
+                placeholder="Dose/ha"
+                value={componentDraft.dose}
+                onChange={(e) => setComponentDraft((v) => ({ ...v, dose: e.target.value }))}
+              />
+              <button
+                disabled={isLockedView}
+                className="bg-indigo-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60"
+                onClick={handleAddComponente}
+              >
+                Adicionar Componente
+              </button>
+            </div>
+            <div className="mt-2 text-[10px] font-bold text-slate-700">
+              Custo composto preview/ha:{" "}
+              <span className="text-indigo-700">
+                {custoCompostoHaPreview.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="mt-2 space-y-1">
+              {componentesTratamento.length === 0 && (
+                <div className="text-[10px] text-slate-500">Nenhum componente adicionado. Se desejar, usa o custo simples acima.</div>
+              )}
+              {componentesTratamento.map((c, idx) => (
+                <div key={`${c.produto}-${idx}`} className="flex items-center justify-between bg-white border border-slate-200 px-2 py-1">
+                  <span className="text-[10px] font-bold text-slate-700">
+                    {c.produto} | {c.moeda} {c.valor.toLocaleString("pt-BR")} | dose {c.dose_ha}
+                  </span>
+                  <button
+                    disabled={isLockedView}
+                    className="text-[10px] font-black uppercase text-red-700 disabled:opacity-60"
+                    onClick={() => handleRemoveComponente(idx)}
+                  >
+                    remover
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
