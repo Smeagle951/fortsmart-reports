@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useMemo } from 'react';
+// BUILD: 2026-03-23T23:20:00Z | PIVO-05 data v3: COM VERANGO 5.6ha 61sc/ha | SEM VERANGO 4.08ha 68.73sc/ha
 
 const INITIAL_HARVEST_DATA = [
   // T-15 (DM79K80 CE)
@@ -50,27 +51,27 @@ const INITIAL_HARVEST_DATA = [
 
 const productInsights: Record<string, { alvo: string, proposta: string, bio: string }> = {
   // --- COMBOS E ASSEMBLEIAS ---
-  "NEM-OUT + ACTIVE + VERANGO": { 
-    alvo: "Complexo de Nematoides (Galha, Cisto e Lesões)", 
-    proposta: "Sinergismo Químico-Biológico de Alto Espectro.", 
-    bio: "Fluopiram (SDHI químico) garante choque inicial na respiração mitocondrial. O Bacillus sp. do Nem-Out e estruturadores de Active formam biofilme radicular de longo prazo." 
+  "NEM-OUT + ACTIVE + VERANGO": {
+    alvo: "Complexo de Nematoides (Galha, Cisto e Lesões)",
+    proposta: "Sinergismo Químico-Biológico de Alto Espectro.",
+    bio: "Fluopiram (SDHI químico) garante choque inicial na respiração mitocondrial. O Bacillus sp. do Nem-Out e estruturadores de Active formam biofilme radicular de longo prazo."
   },
-  "PADRAO FAZENDA / LALNIX RESIST + VERANGO": { 
-    alvo: "Defesa e Remoção do Inóculo Inicial", 
-    proposta: "Choque Químico + Indução Sistêmica de Resistência biológica.", 
-    bio: "Fluopiram reduz carga nematológica local. Lalnix (B. licheniformis) dispara a rota SAR/ISR, blindando sistemicamente o sistema radicular." 
+  "PADRAO FAZENDA / LALNIX RESIST + VERANGO": {
+    alvo: "Defesa e Remoção do Inóculo Inicial",
+    proposta: "Choque Químico + Indução Sistêmica de Resistência biológica.",
+    bio: "Fluopiram reduz carga nematológica local. Lalnix (B. licheniformis) dispara a rota SAR/ISR, blindando sistemicamente o sistema radicular."
   },
-  "NEM-OUT + TRUST": { 
-    alvo: "Nematoides e Patógenos Necrotróficos", 
-    proposta: "Controle biológico fúngico-bacteriano.", 
-    bio: "O consórcio (Bacillus + Trichoderma do Trust) parasita estruturas fúngicas de viabilidade e exibe forte competição no solo." 
+  "NEM-OUT + TRUST": {
+    alvo: "Nematoides e Patógenos Necrotróficos",
+    proposta: "Controle biológico fúngico-bacteriano.",
+    bio: "O consórcio (Bacillus + Trichoderma do Trust) parasita estruturas fúngicas de viabilidade e exibe forte competição no solo."
   },
 
   // --- PRODUTOS INDIVIDUAIS (Biológicos e Suplementos) ---
-  "VERANGO": { 
-    alvo: "Nematoides de Galha e Cisto (Fitonematoides)", 
-    proposta: "Nematicida Químico SDHI Sistemico de amplo residual.", 
-    bio: "Inibição do complexo II mitocondrial. Elevada mobilidade no sistema radicular, induzindo paralisia dos nematoides em formato agulha minutos pós-aplicação." 
+  "VERANGO": {
+    alvo: "Nematoides de Galha e Cisto (Fitonematoides)",
+    proposta: "Nematicida Químico SDHI Sistemico de amplo residual.",
+    bio: "Inibição do complexo II mitocondrial. Elevada mobilidade no sistema radicular, induzindo paralisia dos nematoides em formato agulha minutos pós-aplicação."
   },
   "NEM OUT": {
     alvo: "Fitonematoides de solo e manutenção da rizosfera",
@@ -114,45 +115,45 @@ const productInsights: Record<string, { alvo: string, proposta: string, bio: str
   },
 
   // --- OUTROS (Agrivalle, Fungicidas, Fósforo) ---
-  "AGRIVALLE": { 
-    alvo: "Proteção Radicular Completa (Nematoides e Fungos)", 
-    proposta: "Biocontrole Consorciado de Múltiplos Sítios Ativos.", 
-    bio: "Carga robusta via Shocker e Profix; liberação de lipopeptídeos formadores de poros na membrana fúngica, somado ao Raizer promovendo ramificação profunda." 
+  "AGRIVALLE": {
+    alvo: "Proteção Radicular Completa (Nematoides e Fungos)",
+    proposta: "Biocontrole Consorciado de Múltiplos Sítios Ativos.",
+    bio: "Carga robusta via Shocker e Profix; liberação de lipopeptídeos formadores de poros na membrana fúngica, somado ao Raizer promovendo ramificação profunda."
   },
-  "DOTTE OURO FINO": { 
-    alvo: "Doenças Foliares (Antracnose, Manchas)", 
-    proposta: "Fungicida Microbiológico Multissítio.", 
-    bio: "B. amyloliquefaciens atua preventivamente produzindo antibióticos naturais no filoplano, e funcionando como elicitor que bloqueia o ingresso hifal." 
+  "DOTTE OURO FINO": {
+    alvo: "Doenças Foliares (Antracnose, Manchas)",
+    proposta: "Fungicida Microbiológico Multissítio.",
+    bio: "B. amyloliquefaciens atua preventivamente produzindo antibióticos naturais no filoplano, e funcionando como elicitor que bloqueia o ingresso hifal."
   },
-  "VIOVAN (PADRAO FAZENDA)": { 
-    alvo: "Ferrugem Asiática e Manchas Foliares", 
-    proposta: "Manejo Químico Sistêmico e Protetor (QoI).", 
-    bio: "Picoxistrobina com fortíssimo efeito translaminar ('green effect'), neutralizando o estresse oxidativo e otimizando peso de grão." 
+  "VIOVAN (PADRAO FAZENDA)": {
+    alvo: "Ferrugem Asiática e Manchas Foliares",
+    proposta: "Manejo Químico Sistêmico e Protetor (QoI).",
+    bio: "Picoxistrobina com fortíssimo efeito translaminar ('green effect'), neutralizando o estresse oxidativo e otimizando peso de grão."
   },
-  "ADAMA (ExpertGrow e Armero)": { 
-    alvo: "Fase de Enchimento Fotossintético", 
-    proposta: "Controle de Espectro Largo (Cercospora e DFCs).", 
-    bio: "Armero inibe a síntese de ergosterol de forma aguda. ExpertGrow maximiza a taxa fotossintética, otimizando translocação orgânica." 
+  "ADAMA (ExpertGrow e Armero)": {
+    alvo: "Fase de Enchimento Fotossintético",
+    proposta: "Controle de Espectro Largo (Cercospora e DFCs).",
+    bio: "Armero inibe a síntese de ergosterol de forma aguda. ExpertGrow maximiza a taxa fotossintética, otimizando translocação orgânica."
   },
-  "VICTRATO": { 
-    alvo: "Alta Pressão Inicial de Fitonematoides (TS)", 
-    proposta: "SDHI Intracelular Ultrassistemizado.", 
-    bio: "Tyclopyrazoflor bloqueia infecções já nas primeiras horas da radícula. O redirecionamento da seiva foca no fechamento rápido do dossel vegetativo." 
+  "VICTRATO": {
+    alvo: "Alta Pressão Inicial de Fitonematoides (TS)",
+    proposta: "SDHI Intracelular Ultrassistemizado.",
+    bio: "Tyclopyrazoflor bloqueia infecções já nas primeiras horas da radícula. O redirecionamento da seiva foca no fechamento rápido do dossel vegetativo."
   },
-  "ESTIMULATE": { 
-    alvo: "Arquitetura Fisiológica e Engalhamento", 
-    proposta: "Regulador Hormonal (Auxina, Giberelina, Citocinina).", 
-    bio: "Quebra a dominância apical para engalhamento, aumenta ramificação de radicela absorvente e diminui abortamento de vagens." 
+  "ESTIMULATE": {
+    alvo: "Arquitetura Fisiológica e Engalhamento",
+    proposta: "Regulador Hormonal (Auxina, Giberelina, Citocinina).",
+    bio: "Quebra a dominância apical para engalhamento, aumenta ramificação de radicela absorvente e diminui abortamento de vagens."
   },
-  "ADUBO FOSFORO": { 
-    alvo: "Nutrição Mineral Base (P2O5)", 
-    proposta: "Suplementação de Arranque Fosfatado.", 
-    bio: "Fornece energia (ATP) para os momentos de maior demanda metabólica inicial, estruturando raízes pivotantes mais calibrosas." 
+  "ADUBO FOSFORO": {
+    alvo: "Nutrição Mineral Base (P2O5)",
+    proposta: "Suplementação de Arranque Fosfatado.",
+    bio: "Fornece energia (ATP) para os momentos de maior demanda metabólica inicial, estruturando raízes pivotantes mais calibrosas."
   },
-  "FÓSFORO NA LINHA": { 
-    alvo: "Nutrição Mineral Base (P2O5)", 
-    proposta: "Suplementação de Arranque Fosfatado.", 
-    bio: "Fornece energia (ATP) para os momentos de maior demanda metabólica inicial, estruturando raízes pivotantes mais calibrosas." 
+  "FÓSFORO NA LINHA": {
+    alvo: "Nutrição Mineral Base (P2O5)",
+    proposta: "Suplementação de Arranque Fosfatado.",
+    bio: "Fornece energia (ATP) para os momentos de maior demanda metabólica inicial, estruturando raízes pivotantes mais calibrosas."
   },
   "PADRAO FAZENDA": {
     alvo: "Manejo Standard Comercial Otimizado",
@@ -571,21 +572,21 @@ export default function SoybeanHarvestDashboard() {
     if (productInsights[produto]) return productInsights[produto];
     const key = Object.keys(productInsights).find(k => produto.toUpperCase().includes(k.toUpperCase()));
     if (key) return productInsights[key];
-    return { 
-      alvo: "Manejo Estratégico", 
-      proposta: "Posicionamento técnico de acordo com a bula.", 
-      bio: "Ação definida pela composição base." 
+    return {
+      alvo: "Manejo Estratégico",
+      proposta: "Posicionamento técnico de acordo com a bula.",
+      bio: "Ação definida pela composição base."
     };
   };
 
   const pareceresTecnicos = useMemo(() => {
-    const topProd = [...resumoEconomico].sort((a,b) => b.diffProd - a.diffProd);
-    const topROI = [...resumoEconomico].sort((a,b) => (b.roiIncremental ?? 0) - (a.roiIncremental ?? 0));
-    
+    const topProd = [...resumoEconomico].sort((a, b) => b.diffProd - a.diffProd);
+    const topROI = [...resumoEconomico].sort((a, b) => (b.roiIncremental ?? 0) - (a.roiIncremental ?? 0));
+
     return resumoEconomico.map((r: any) => {
       const isTop1Prod = topProd[0] && topProd[0].key === r.key;
       const isTop1ROI = topROI[0] && topROI[0].key === r.key;
-      
+
       let perfil = "Equilíbrio e Segurança";
       let resultado = `Produtividade ${r.diffProd > 0 ? 'superior' : 'próxima'} ao padrão com margem equilibrada.`;
       let recomendacao = "Estratégia segura para diferentes ambientes.";
@@ -630,7 +631,7 @@ export default function SoybeanHarvestDashboard() {
       }
 
       const dic = getDicionarioAgronomico(r.produto);
-      
+
       let textoInteligenciaOpcional: string | null = null;
       if (topProd[0] && r.media < topProd[0].media && r.lucroIncrementalHa > topProd[0].lucroIncrementalHa) {
         const diffSc = topProd[0].media - r.media;
@@ -663,7 +664,7 @@ export default function SoybeanHarvestDashboard() {
 
     return categoriasBase.map(cat => {
       // Filtrar items da cat e dar o sort por lucro
-      const itens = pareceresTecnicos.filter(cat.filtro).sort((a,b) => b.lucroIncrementalHa - a.lucroIncrementalHa);
+      const itens = pareceresTecnicos.filter(cat.filtro).sort((a, b) => b.lucroIncrementalHa - a.lucroIncrementalHa);
       return { ...cat, itens };
     }).filter(cat => cat.itens.length > 0);
   }, [pareceresTecnicos]);
@@ -672,11 +673,11 @@ export default function SoybeanHarvestDashboard() {
     if (pareceresTecnicos.length === 0) return null;
     const bestROI = pareceresTecnicos.find((p: any) => p.icon === "🏆" || p.icon === "💰" || p.destaque.includes("ROI")) || pareceresTecnicos[0];
     const bestProd = pareceresTecnicos.find((p: any) => p.icon === "🚀" || p.destaque.includes("Produtivo")) || pareceresTecnicos[0];
-    
+
     if (bestROI.key === bestProd.key) {
-       return `O tratamento ${bestROI.produto} despontou como a solução definitiva neste ensaio, apresentando não apenas o melhor ganho de produtividade, mas também a maior rentabilidade por hectare. É a escolha técnica e econômica mais indicada para adoção em escala.`;
+      return `O tratamento ${bestROI.produto} despontou como a solução definitiva neste ensaio, apresentando não apenas o melhor ganho de produtividade, mas também a maior rentabilidade por hectare. É a escolha técnica e econômica mais indicada para adoção em escala.`;
     } else {
-       return `O tratamento ${bestROI.produto} exibiu a melhor performance financeira (escolha mais inteligente para maximização de margem operacional com controle de risco), enquanto o ${bestProd.produto} demonstrou o maior potencial biológico (recomendado para elevação do teto produtivo em áreas de talhões premium).`;
+      return `O tratamento ${bestROI.produto} exibiu a melhor performance financeira (escolha mais inteligente para maximização de margem operacional com controle de risco), enquanto o ${bestProd.produto} demonstrou o maior potencial biológico (recomendado para elevação do teto produtivo em áreas de talhões premium).`;
     }
   }, [pareceresTecnicos]);
 
@@ -986,7 +987,7 @@ export default function SoybeanHarvestDashboard() {
             <p className="text-[10px] text-slate-500 bg-white border border-slate-200 px-3 py-2">
               Ranking considera retorno econômico (lucro incremental/ha) e produtividade. ROI compara cada tratamento com o padrão do mesmo talhão.
             </p>
-            
+
             <div className="flex flex-wrap gap-3">
               {/* Card 1: Produtividade */}
               <div className="flex-1 min-w-[220px] bg-white p-4 border-t-2 border-l-4 shadow-sm min-h-[160px]" style={{ backgroundColor: '#ffffff', borderLeftColor: '#1e40af', borderTopColor: '#e2e8f0' }}>
@@ -1094,9 +1095,9 @@ export default function SoybeanHarvestDashboard() {
               <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 block">Filtros de Performance</label>
               <div className="grid grid-cols-2 gap-1.5">
                 {["TODOS", "NEMATICIDA", "FUNGICIDAS", "NEM. QUÍMICO", "NEM. BIOLÓGICO"].map(btn => (
-                  <button 
-                    key={btn} 
-                    onClick={() => setFiltroCategoria(btn)} 
+                  <button
+                    key={btn}
+                    onClick={() => setFiltroCategoria(btn)}
                     className={`px-2 py-2 text-[8px] font-black uppercase border transition-all rounded-sm flex items-center justify-center text-center leading-none ${filtroCategoria === btn ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-white text-slate-400 border-slate-200 hover:border-slate-400'}`}
                     style={{ minHeight: '32px' }}
                   >
@@ -1107,11 +1108,11 @@ export default function SoybeanHarvestDashboard() {
             </div>
 
             <div className="pt-4 border-t border-slate-100 flex justify-between items-center gap-2">
-               <button onClick={() => setViewMode(viewMode === "Principal" ? "Geral" : "Principal")} className="flex-1 px-3 py-2 text-[8px] font-black uppercase bg-slate-50 border border-slate-200 text-slate-600 rounded-sm flex items-center justify-center gap-2">
-                 <span className={`w-2 h-2 rounded-full ${viewMode === "Principal" ? "bg-green-500" : "bg-blue-500"}`}></span>
-                 {viewMode === "Principal" ? "ROI > 0" : "Top 3 Geral"}
-               </button>
-               <div className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">{new Date().toLocaleDateString('pt-BR')}</div>
+              <button onClick={() => setViewMode(viewMode === "Principal" ? "Geral" : "Principal")} className="flex-1 px-3 py-2 text-[8px] font-black uppercase bg-slate-50 border border-slate-200 text-slate-600 rounded-sm flex items-center justify-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${viewMode === "Principal" ? "bg-green-500" : "bg-blue-500"}`}></span>
+                {viewMode === "Principal" ? "ROI > 0" : "Top 3 Geral"}
+              </button>
+              <div className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">{new Date().toLocaleDateString('pt-BR')}</div>
             </div>
           </div>
         </div>
@@ -1129,27 +1130,27 @@ export default function SoybeanHarvestDashboard() {
                 </p>
               </div>
             </div>
-            
+
             <div className="p-5 space-y-8">
               {pareceresCategorizados.map((catWrapper) => (
                 <div key={catWrapper.id} className="space-y-4">
                   <h4 className="text-sm font-black uppercase text-slate-800 border-b-2 border-slate-200 pb-2 flex items-center gap-2">
-                     <span className="text-xl">{catWrapper.icon}</span> Categoria: {catWrapper.titulo}
+                    <span className="text-xl">{catWrapper.icon}</span> Categoria: {catWrapper.titulo}
                   </h4>
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                     {catWrapper.itens.map((p: any, idx: number) => (
                       <div key={p.key} className={`border border-slate-200 p-4 relative flex flex-col ${p.icon === '🏆' ? 'bg-amber-50/50 border-amber-300' : 'bg-white'}`}>
                         <div className="absolute top-0 right-0 bg-slate-900 text-white text-[9px] font-black uppercase px-2 py-1 border-l border-b border-slate-900 shadow-sm">
-                          {catWrapper.titulo} • Rank #{idx+1}
+                          {catWrapper.titulo} • Rank #{idx + 1}
                         </div>
-                        
+
                         <div className="flex gap-2 items-center mb-3 mt-1">
-                           <span className="text-xl">{p.icon}</span>
-                           <div>
-                             <p className="text-[8px] font-black text-slate-400 mb-0.5 tracking-wider uppercase border-b border-slate-100 inline-block pb-0.5">📍 Origem: {p.talhao} • {p.variedade}</p>
-                             <h4 className="text-[11px] font-black uppercase text-slate-800 leading-tight pr-20">{p.produto}</h4>
-                             <p className={`text-[9px] font-bold uppercase ${p.icon === '⚠️' ? 'text-rose-600' : 'text-green-700'}`}>{p.destaque}</p>
-                           </div>
+                          <span className="text-xl">{p.icon}</span>
+                          <div>
+                            <p className="text-[8px] font-black text-slate-400 mb-0.5 tracking-wider uppercase border-b border-slate-100 inline-block pb-0.5">📍 Origem: {p.talhao} • {p.variedade}</p>
+                            <h4 className="text-[11px] font-black uppercase text-slate-800 leading-tight pr-20">{p.produto}</h4>
+                            <p className={`text-[9px] font-bold uppercase ${p.icon === '⚠️' ? 'text-rose-600' : 'text-green-700'}`}>{p.destaque}</p>
+                          </div>
                         </div>
 
                         <div className="space-y-3 mt-2 flex-grow">
@@ -1172,7 +1173,7 @@ export default function SoybeanHarvestDashboard() {
                             <p className="text-[11px] text-slate-700 font-medium leading-tight">{p.dic.bio}</p>
                           </div>
                         </div>
-                        
+
                         <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
                           <div className="bg-slate-50 border border-slate-100 p-2">
                             <h5 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">💡 Indicação</h5>
@@ -1194,174 +1195,174 @@ export default function SoybeanHarvestDashboard() {
 
         {/* Novo Informativo + Histórico */}
         {showInformativoPanel && (
-        <div className="bg-white border border-slate-200 shadow-sm mt-4 p-4 no-print">
-          <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600 mb-3">
-            Novo Informativo e Histórico
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            <input className="border border-slate-300 px-2 py-2 text-xs" placeholder="Nome do informativo (obrigatório)" value={snapshotName} onChange={(e) => setSnapshotName(e.target.value)} />
-            <button className="bg-slate-900 text-white px-3 py-2 text-xs font-black uppercase" onClick={handleSaveSnapshot}>Salvar Informativo Atual</button>
-            <button className="bg-amber-600 text-white px-3 py-2 text-xs font-black uppercase" onClick={handleNovoInformativo}>Novo Informativo</button>
-            <select className="border border-slate-300 px-2 py-2 text-xs" value={selectedSnapshotId} onChange={(e) => handleLoadSnapshot(e.target.value)}>
-              <option value="">Carregar informativo salvo...</option>
-              {savedSnapshots.map((s) => (
-                <option key={s.id} value={s.id}>{s.nome}</option>
-              ))}
-            </select>
-            <button className="bg-red-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60" disabled={!selectedSnapshotId} onClick={handleDeleteSnapshot}>
-              Excluir Selecionado
-            </button>
-          </div>
-          {showRestorePanel && (
-            <div className="mt-2 border border-amber-300 bg-amber-50 p-3">
-              <p className="text-[10px] font-black uppercase text-amber-700 mb-2">
-                Informativo excluído. Restaurar agora?
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <select className="border border-amber-300 px-2 py-2 text-xs bg-white" value={restoreSnapshotId} onChange={(e) => setRestoreSnapshotId(e.target.value)}>
-                  <option value="">Selecione na lixeira...</option>
-                  {trashSnapshots.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.nome} ({new Date(s.createdAt).toLocaleDateString("pt-BR")})
-                    </option>
-                  ))}
-                </select>
-                <button className="bg-emerald-700 text-white px-3 py-2 text-xs font-black uppercase" onClick={() => handleRestoreSnapshot(restoreSnapshotId)}>
-                  Restaurar Selecionado
-                </button>
-                <button className="bg-slate-500 text-white px-3 py-2 text-xs font-black uppercase" onClick={() => setShowRestorePanel(false)}>
-                  Fechar
-                </button>
+          <div className="bg-white border border-slate-200 shadow-sm mt-4 p-4 no-print">
+            <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600 mb-3">
+              Novo Informativo e Histórico
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              <input className="border border-slate-300 px-2 py-2 text-xs" placeholder="Nome do informativo (obrigatório)" value={snapshotName} onChange={(e) => setSnapshotName(e.target.value)} />
+              <button className="bg-slate-900 text-white px-3 py-2 text-xs font-black uppercase" onClick={handleSaveSnapshot}>Salvar Informativo Atual</button>
+              <button className="bg-amber-600 text-white px-3 py-2 text-xs font-black uppercase" onClick={handleNovoInformativo}>Novo Informativo</button>
+              <select className="border border-slate-300 px-2 py-2 text-xs" value={selectedSnapshotId} onChange={(e) => handleLoadSnapshot(e.target.value)}>
+                <option value="">Carregar informativo salvo...</option>
+                {savedSnapshots.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nome}</option>
+                ))}
+              </select>
+              <button className="bg-red-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60" disabled={!selectedSnapshotId} onClick={handleDeleteSnapshot}>
+                Excluir Selecionado
+              </button>
+            </div>
+            {showRestorePanel && (
+              <div className="mt-2 border border-amber-300 bg-amber-50 p-3">
+                <p className="text-[10px] font-black uppercase text-amber-700 mb-2">
+                  Informativo excluído. Restaurar agora?
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <select className="border border-amber-300 px-2 py-2 text-xs bg-white" value={restoreSnapshotId} onChange={(e) => setRestoreSnapshotId(e.target.value)}>
+                    <option value="">Selecione na lixeira...</option>
+                    {trashSnapshots.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nome} ({new Date(s.createdAt).toLocaleDateString("pt-BR")})
+                      </option>
+                    ))}
+                  </select>
+                  <button className="bg-emerald-700 text-white px-3 py-2 text-xs font-black uppercase" onClick={() => handleRestoreSnapshot(restoreSnapshotId)}>
+                    Restaurar Selecionado
+                  </button>
+                  <button className="bg-slate-500 text-white px-3 py-2 text-xs font-black uppercase" onClick={() => setShowRestorePanel(false)}>
+                    Fechar
+                  </button>
+                </div>
               </div>
+            )}
+            <div className="mt-2 grid grid-cols-1 md:grid-cols-5 gap-2">
+              <input className="border border-slate-300 px-2 py-2 text-xs" placeholder="Responsável técnico" value={metaResponsavel} onChange={(e) => setMetaResponsavel(e.target.value)} />
+              <input className="border border-slate-300 px-2 py-2 text-xs" placeholder="Safra (ex: 2025/2026)" value={metaSafra} onChange={(e) => setMetaSafra(e.target.value)} />
+              <input className="border border-slate-300 px-2 py-2 text-xs md:col-span-2" placeholder="Observação do informativo" value={metaObservacao} onChange={(e) => setMetaObservacao(e.target.value)} />
+              <label className="flex items-center justify-center gap-2 text-xs font-bold border border-slate-300 px-2 py-2">
+                <input type="checkbox" checked={lockOnSave} onChange={(e) => setLockOnSave(e.target.checked)} />
+                Bloquear ao salvar
+              </label>
             </div>
-          )}
-          <div className="mt-2 grid grid-cols-1 md:grid-cols-5 gap-2">
-            <input className="border border-slate-300 px-2 py-2 text-xs" placeholder="Responsável técnico" value={metaResponsavel} onChange={(e) => setMetaResponsavel(e.target.value)} />
-            <input className="border border-slate-300 px-2 py-2 text-xs" placeholder="Safra (ex: 2025/2026)" value={metaSafra} onChange={(e) => setMetaSafra(e.target.value)} />
-            <input className="border border-slate-300 px-2 py-2 text-xs md:col-span-2" placeholder="Observação do informativo" value={metaObservacao} onChange={(e) => setMetaObservacao(e.target.value)} />
-            <label className="flex items-center justify-center gap-2 text-xs font-bold border border-slate-300 px-2 py-2">
-              <input type="checkbox" checked={lockOnSave} onChange={(e) => setLockOnSave(e.target.checked)} />
-              Bloquear ao salvar
-            </label>
-          </div>
-          <div className="mt-2 grid grid-cols-1 md:grid-cols-4 gap-2">
-            <button className="bg-blue-700 text-white px-3 py-2 text-xs font-black uppercase" onClick={handleExportSnapshots}>
-              Exportar Snapshots (JSON)
-            </button>
-            <button className="bg-cyan-700 text-white px-3 py-2 text-xs font-black uppercase" onClick={() => importRef.current?.click()}>
-              Importar Snapshots (JSON)
-            </button>
-            <input ref={importRef} type="file" accept="application/json" className="hidden" onChange={handleImportSnapshots} />
-            <div className={`px-3 py-2 text-xs font-black uppercase text-center ${isLockedView ? "bg-rose-100 text-rose-700 border border-rose-300" : "bg-emerald-100 text-emerald-700 border border-emerald-300"}`}>
-              {isLockedView ? "Histórico Oficial (Bloqueado)" : "Modo Edição"}
-            </div>
-            <button
-              className="bg-slate-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60"
-              disabled={!isLockedView}
-              onClick={() => {
-                setIsLockedView(false);
-                setSelectedSnapshotId("");
-                setSnapshotName(`${snapshotName} - cópia editável`);
-              }}
-            >
-              Criar Cópia Editável
-            </button>
-          </div>
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-7 gap-2">
-            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Talhão" value={newRow.talhao} onChange={(e) => setNewRow(v => ({ ...v, talhao: e.target.value }))} />
-            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Variedade" value={newRow.variedade} onChange={(e) => setNewRow(v => ({ ...v, variedade: e.target.value }))} />
-            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Produto" value={newRow.produto} onChange={(e) => setNewRow(v => ({ ...v, produto: e.target.value }))} />
-            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Área (ha)" value={newRow.hectares} onChange={(e) => setNewRow(v => ({ ...v, hectares: e.target.value }))} />
-            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Produtividade (sc/ha)" value={newRow.media} onChange={(e) => setNewRow(v => ({ ...v, media: e.target.value }))} />
-            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Valor (por dose)" value={newRow.valor} onChange={(e) => setNewRow(v => ({ ...v, valor: e.target.value }))} />
-            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Dose/ha" value={newRow.dose} onChange={(e) => setNewRow(v => ({ ...v, dose: e.target.value }))} />
-          </div>
-          <div className="mt-2 grid grid-cols-2 md:grid-cols-6 gap-2">
-            <select disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" value={newRow.tipo} onChange={(e) => setNewRow(v => ({ ...v, tipo: e.target.value }))}>
-              <option value="tratamento">Tratamento</option>
-              <option value="testemunha">Padrão/Testemunha</option>
-            </select>
-            <select disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" value={newRow.moeda} onChange={(e) => setNewRow(v => ({ ...v, moeda: e.target.value }))}>
-              <option value="BRL">BRL</option>
-              <option value="USD">USD</option>
-            </select>
-            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Classe" value={newRow.classe} onChange={(e) => setNewRow(v => ({ ...v, classe: e.target.value }))} />
-            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Categoria" value={newRow.categoria} onChange={(e) => setNewRow(v => ({ ...v, categoria: e.target.value }))} />
-            <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="PA (opcional)" value={newRow.pa} onChange={(e) => setNewRow(v => ({ ...v, pa: e.target.value }))} />
-            <button disabled={isLockedView} className="bg-green-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60" onClick={handleAddNewRow}>
-              Adicionar Linha
-            </button>
-          </div>
-          <div className="mt-3 border border-slate-200 p-3 bg-slate-50">
-            <p className="text-[10px] font-black uppercase text-slate-600 mb-2">
-              Composição de custo do tratamento (multi-produto)
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-              <input
-                disabled={isLockedView}
-                className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
-                placeholder="Componente (produto)"
-                value={componentDraft.produto}
-                onChange={(e) => setComponentDraft((v) => ({ ...v, produto: e.target.value }))}
-              />
-              <input
-                disabled={isLockedView}
-                className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
-                placeholder="Valor"
-                value={componentDraft.valor}
-                onChange={(e) => setComponentDraft((v) => ({ ...v, valor: e.target.value }))}
-              />
-              <select
-                disabled={isLockedView}
-                className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
-                value={componentDraft.moeda}
-                onChange={(e) => setComponentDraft((v) => ({ ...v, moeda: e.target.value }))}
+            <div className="mt-2 grid grid-cols-1 md:grid-cols-4 gap-2">
+              <button className="bg-blue-700 text-white px-3 py-2 text-xs font-black uppercase" onClick={handleExportSnapshots}>
+                Exportar Snapshots (JSON)
+              </button>
+              <button className="bg-cyan-700 text-white px-3 py-2 text-xs font-black uppercase" onClick={() => importRef.current?.click()}>
+                Importar Snapshots (JSON)
+              </button>
+              <input ref={importRef} type="file" accept="application/json" className="hidden" onChange={handleImportSnapshots} />
+              <div className={`px-3 py-2 text-xs font-black uppercase text-center ${isLockedView ? "bg-rose-100 text-rose-700 border border-rose-300" : "bg-emerald-100 text-emerald-700 border border-emerald-300"}`}>
+                {isLockedView ? "Histórico Oficial (Bloqueado)" : "Modo Edição"}
+              </div>
+              <button
+                className="bg-slate-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60"
+                disabled={!isLockedView}
+                onClick={() => {
+                  setIsLockedView(false);
+                  setSelectedSnapshotId("");
+                  setSnapshotName(`${snapshotName} - cópia editável`);
+                }}
               >
+                Criar Cópia Editável
+              </button>
+            </div>
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-7 gap-2">
+              <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Talhão" value={newRow.talhao} onChange={(e) => setNewRow(v => ({ ...v, talhao: e.target.value }))} />
+              <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Variedade" value={newRow.variedade} onChange={(e) => setNewRow(v => ({ ...v, variedade: e.target.value }))} />
+              <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Produto" value={newRow.produto} onChange={(e) => setNewRow(v => ({ ...v, produto: e.target.value }))} />
+              <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Área (ha)" value={newRow.hectares} onChange={(e) => setNewRow(v => ({ ...v, hectares: e.target.value }))} />
+              <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Produtividade (sc/ha)" value={newRow.media} onChange={(e) => setNewRow(v => ({ ...v, media: e.target.value }))} />
+              <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Valor (por dose)" value={newRow.valor} onChange={(e) => setNewRow(v => ({ ...v, valor: e.target.value }))} />
+              <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Dose/ha" value={newRow.dose} onChange={(e) => setNewRow(v => ({ ...v, dose: e.target.value }))} />
+            </div>
+            <div className="mt-2 grid grid-cols-2 md:grid-cols-6 gap-2">
+              <select disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" value={newRow.tipo} onChange={(e) => setNewRow(v => ({ ...v, tipo: e.target.value }))}>
+                <option value="tratamento">Tratamento</option>
+                <option value="testemunha">Padrão/Testemunha</option>
+              </select>
+              <select disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" value={newRow.moeda} onChange={(e) => setNewRow(v => ({ ...v, moeda: e.target.value }))}>
                 <option value="BRL">BRL</option>
                 <option value="USD">USD</option>
               </select>
-              <input
-                disabled={isLockedView}
-                className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
-                placeholder="Dose/ha"
-                value={componentDraft.dose}
-                onChange={(e) => setComponentDraft((v) => ({ ...v, dose: e.target.value }))}
-              />
-              <button
-                disabled={isLockedView}
-                className="bg-indigo-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60"
-                onClick={handleAddComponente}
-              >
-                Adicionar Componente
+              <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Classe" value={newRow.classe} onChange={(e) => setNewRow(v => ({ ...v, classe: e.target.value }))} />
+              <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="Categoria" value={newRow.categoria} onChange={(e) => setNewRow(v => ({ ...v, categoria: e.target.value }))} />
+              <input disabled={isLockedView} className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100" placeholder="PA (opcional)" value={newRow.pa} onChange={(e) => setNewRow(v => ({ ...v, pa: e.target.value }))} />
+              <button disabled={isLockedView} className="bg-green-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60" onClick={handleAddNewRow}>
+                Adicionar Linha
               </button>
             </div>
-            <div className="mt-2 text-[10px] font-bold text-slate-700">
-              Custo composto preview/ha:{" "}
-              <span className="text-indigo-700">
-                {custoCompostoHaPreview.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="mt-2 space-y-1">
-              {componentesTratamento.length === 0 && (
-                <div className="text-[10px] text-slate-500">Nenhum componente adicionado. Se desejar, usa o custo simples acima.</div>
-              )}
-              {componentesTratamento.map((c, idx) => (
-                <div key={`${c.produto}-${idx}`} className="flex items-center justify-between bg-white border border-slate-200 px-2 py-1">
-                  <span className="text-[10px] font-bold text-slate-700">
-                    {c.produto} | {c.moeda} {c.valor.toLocaleString("pt-BR")} | dose {c.dose_ha}
-                  </span>
-                  <button
-                    disabled={isLockedView}
-                    className="text-[10px] font-black uppercase text-red-700 disabled:opacity-60"
-                    onClick={() => handleRemoveComponente(idx)}
-                  >
-                    remover
-                  </button>
-                </div>
-              ))}
+            <div className="mt-3 border border-slate-200 p-3 bg-slate-50">
+              <p className="text-[10px] font-black uppercase text-slate-600 mb-2">
+                Composição de custo do tratamento (multi-produto)
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <input
+                  disabled={isLockedView}
+                  className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
+                  placeholder="Componente (produto)"
+                  value={componentDraft.produto}
+                  onChange={(e) => setComponentDraft((v) => ({ ...v, produto: e.target.value }))}
+                />
+                <input
+                  disabled={isLockedView}
+                  className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
+                  placeholder="Valor"
+                  value={componentDraft.valor}
+                  onChange={(e) => setComponentDraft((v) => ({ ...v, valor: e.target.value }))}
+                />
+                <select
+                  disabled={isLockedView}
+                  className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
+                  value={componentDraft.moeda}
+                  onChange={(e) => setComponentDraft((v) => ({ ...v, moeda: e.target.value }))}
+                >
+                  <option value="BRL">BRL</option>
+                  <option value="USD">USD</option>
+                </select>
+                <input
+                  disabled={isLockedView}
+                  className="border border-slate-300 px-2 py-2 text-xs disabled:bg-slate-100"
+                  placeholder="Dose/ha"
+                  value={componentDraft.dose}
+                  onChange={(e) => setComponentDraft((v) => ({ ...v, dose: e.target.value }))}
+                />
+                <button
+                  disabled={isLockedView}
+                  className="bg-indigo-700 text-white px-3 py-2 text-xs font-black uppercase disabled:opacity-60"
+                  onClick={handleAddComponente}
+                >
+                  Adicionar Componente
+                </button>
+              </div>
+              <div className="mt-2 text-[10px] font-bold text-slate-700">
+                Custo composto preview/ha:{" "}
+                <span className="text-indigo-700">
+                  {custoCompostoHaPreview.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="mt-2 space-y-1">
+                {componentesTratamento.length === 0 && (
+                  <div className="text-[10px] text-slate-500">Nenhum componente adicionado. Se desejar, usa o custo simples acima.</div>
+                )}
+                {componentesTratamento.map((c, idx) => (
+                  <div key={`${c.produto}-${idx}`} className="flex items-center justify-between bg-white border border-slate-200 px-2 py-1">
+                    <span className="text-[10px] font-bold text-slate-700">
+                      {c.produto} | {c.moeda} {c.valor.toLocaleString("pt-BR")} | dose {c.dose_ha}
+                    </span>
+                    <button
+                      disabled={isLockedView}
+                      className="text-[10px] font-black uppercase text-red-700 disabled:opacity-60"
+                      onClick={() => handleRemoveComponente(idx)}
+                    >
+                      remover
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
         )}
 
         {/* Seções "Auditoria de Custo" e "Visão Econômica Única" Removidas a pedido corporativo */}
@@ -1525,19 +1526,19 @@ export default function SoybeanHarvestDashboard() {
 
           {/* RESUMO EXECUTIVO FINAL */}
           {!showInformativoPanel && resumoExecutivo && (
-          <div className="mt-8 mb-4 bg-slate-900 text-white p-6 md:p-8 border-l-4 border-green-500 shadow-xl break-inside-avoid">
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-2xl">🔥</span>
-              <h3 className="text-[13px] font-black uppercase tracking-widest text-slate-300">Resumo Executivo (Pitch de Venda Técnica)</h3>
+            <div className="mt-8 mb-4 bg-slate-900 text-white p-6 md:p-8 border-l-4 border-green-500 shadow-xl break-inside-avoid">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-2xl">🔥</span>
+                <h3 className="text-[13px] font-black uppercase tracking-widest text-slate-300">Resumo Executivo (Pitch de Venda Técnica)</h3>
+              </div>
+              <p className="text-base md:text-[17px] font-medium leading-relaxed italic text-slate-100 opacity-90">
+                "{resumoExecutivo}"
+              </p>
+              <div className="mt-6 pt-4 border-t border-slate-800 text-[9px] font-black uppercase tracking-widest text-slate-500 flex justify-between items-center">
+                <span>Gerado automaticamente por FortSmart Field Pro Intelligence</span>
+                <span className="text-green-600">Smart Report V2.9</span>
+              </div>
             </div>
-            <p className="text-base md:text-[17px] font-medium leading-relaxed italic text-slate-100 opacity-90">
-              "{resumoExecutivo}"
-            </p>
-            <div className="mt-6 pt-4 border-t border-slate-800 text-[9px] font-black uppercase tracking-widest text-slate-500 flex justify-between items-center">
-              <span>Gerado automaticamente por FortSmart Field Pro Intelligence</span>
-              <span className="text-green-600">Smart Report V2.9</span>
-            </div>
-          </div>
           )}
 
           {/* Rodapé Corporativo */}
