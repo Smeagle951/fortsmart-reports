@@ -289,7 +289,9 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               meta.tipo_layout ||
               meta.fator_pontos_ha != null ||
               meta.modo_coleta ||
-              meta.tipo
+              meta.tipo ||
+              meta.empresa_id ||
+              meta.usuario_coleta_id
           ) && (
             <details style={{ marginTop: 12, fontSize: 13, opacity: 0.94, maxWidth: 640 }}>
               <summary style={{ cursor: 'pointer', userSelect: 'none', fontWeight: 600 }}>
@@ -331,6 +333,16 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
                   <div>
                     <strong>Malha / intensidade:</strong> {String(meta.tipo_layout)}
                     {meta.fator_pontos_ha != null ? ` · ${String(meta.fator_pontos_ha)} pontos por hectare` : ''}
+                  </div>
+                ) : null}
+                {meta.empresa_id ? (
+                  <div>
+                    <strong>Identificador da propriedade (app):</strong> {String(meta.empresa_id)}
+                  </div>
+                ) : null}
+                {meta.usuario_coleta_id ? (
+                  <div>
+                    <strong>Identificador do usuário da coleta:</strong> {String(meta.usuario_coleta_id)}
                   </div>
                 ) : null}
               </div>
