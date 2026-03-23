@@ -533,6 +533,9 @@ export default function SoybeanHarvestDashboard() {
         talhao: r.talhao,
         variedade: r.variedade,
         produto: r.produto,
+        classe: r.classe,
+        categoria: r.categoria,
+        media: Number(r.media ?? 0),
         receitaHa: Number(r.receitaHa ?? 0),
         margemHa: Number(r.margemHa ?? 0),
         lucroIncrementalHa: Number(r.lucroIncrementalHa ?? 0),
@@ -627,6 +630,14 @@ export default function SoybeanHarvestDashboard() {
       }
 
       const dic = getDicionarioAgronomico(r.produto);
+      
+      let textoInteligenciaOpcional: string | null = null;
+      if (topProd[0] && r.media < topProd[0].media && r.lucroIncrementalHa > topProd[0].lucroIncrementalHa) {
+        const diffSc = topProd[0].media - r.media;
+        textoInteligenciaOpcional = `INTELIGÊNCIA FINANCEIRA: Mesmo produzindo ${diffSc.toFixed(1)} sc/ha a menos que o teto produtivo do ensaio, o menor custo de adoção na tecnologia garantiu o lucro líquido superior. A matemática aprovou a viabilidade final!`;
+      } else if (r.diffProd <= 0 && r.lucroIncrementalHa > 0) {
+        textoInteligenciaOpcional = `INTELIGÊNCIA FINANCEIRA: O tratamento não entregou produtividade adicional em relação ao Padrão (produziu ${r.diffProd.toFixed(1)} sc/ha). Porém, por ter um custo menor na operação, retornou um saldo financeiro final (R$ ${r.lucroIncrementalHa.toFixed(0)}/ha) positivo e justificado.`;
+      }
 
       return {
         ...r,
@@ -636,10 +647,26 @@ export default function SoybeanHarvestDashboard() {
         atencao,
         icon,
         destaque,
-        dic
+        dic,
+        textoInteligenciaOpcional
       };
     });
   }, [resumoEconomico]);
+
+  const pareceresCategorizados = useMemo(() => {
+    const categoriasBase = [
+      { id: 'fungicida', titulo: "Fungicidas", icon: "🛡️", filtro: (p: any) => p.classe === "Fungicida" },
+      { id: 'nematicida_bio', titulo: "Nematicidas Biológicos", icon: "🦠", filtro: (p: any) => p.classe === "Nematicida" && p.categoria === "Biológico" },
+      { id: 'nematicida_quim', titulo: "Nematicidas Químicos e Mistos", icon: "🧪", filtro: (p: any) => p.classe === "Nematicida" && p.categoria !== "Biológico" },
+      { id: 'outros', titulo: "Nutrição e Fisiologia", icon: "🌱", filtro: (p: any) => p.classe !== "Fungicida" && p.classe !== "Nematicida" }
+    ];
+
+    return categoriasBase.map(cat => {
+      // Filtrar items da cat e dar o sort por lucro
+      const itens = pareceresTecnicos.filter(cat.filtro).sort((a,b) => b.lucroIncrementalHa - a.lucroIncrementalHa);
+      return { ...cat, itens };
+    }).filter(cat => cat.itens.length > 0);
+  }, [pareceresTecnicos]);
 
   const resumoExecutivo = useMemo(() => {
     if (pareceresTecnicos.length === 0) return null;
@@ -1103,45 +1130,60 @@ export default function SoybeanHarvestDashboard() {
               </div>
             </div>
             
-            <div className="p-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-              {pareceresTecnicos.map((p: any, idx: number) => (
-                <div key={p.key} className={`border border-slate-200 p-4 relative flex flex-col ${p.icon === '🏆' ? 'bg-amber-50/50 border-amber-300' : 'bg-white'}`}>
-                  <div className="absolute top-0 right-0 bg-slate-100 text-[9px] font-black uppercase px-2 py-1 text-slate-500 border-l border-b border-slate-200">
-                    Posição #{idx+1} em Lucro
-                  </div>
-                  
-                  <div className="flex gap-2 items-center mb-3 mt-1">
-                     <span className="text-xl">{p.icon}</span>
-                     <div>
-                       <h4 className="text-[11px] font-black uppercase text-slate-800 leading-tight pr-14">{p.produto}</h4>
-                       <p className={`text-[9px] font-bold uppercase ${p.icon === '⚠️' ? 'text-rose-600' : 'text-green-700'}`}>{p.destaque}</p>
-                     </div>
-                  </div>
+            <div className="p-5 space-y-8">
+              {pareceresCategorizados.map((catWrapper) => (
+                <div key={catWrapper.id} className="space-y-4">
+                  <h4 className="text-sm font-black uppercase text-slate-800 border-b-2 border-slate-200 pb-2 flex items-center gap-2">
+                     <span className="text-xl">{catWrapper.icon}</span> Categoria: {catWrapper.titulo}
+                  </h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {catWrapper.itens.map((p: any, idx: number) => (
+                      <div key={p.key} className={`border border-slate-200 p-4 relative flex flex-col ${p.icon === '🏆' ? 'bg-amber-50/50 border-amber-300' : 'bg-white'}`}>
+                        <div className="absolute top-0 right-0 bg-slate-900 text-white text-[9px] font-black uppercase px-2 py-1 border-l border-b border-slate-900 shadow-sm">
+                          {catWrapper.titulo} • Rank #{idx+1}
+                        </div>
+                        
+                        <div className="flex gap-2 items-center mb-3 mt-1">
+                           <span className="text-xl">{p.icon}</span>
+                           <div>
+                             <h4 className="text-[11px] font-black uppercase text-slate-800 leading-tight pr-20">{p.produto}</h4>
+                             <p className={`text-[9px] font-bold uppercase ${p.icon === '⚠️' ? 'text-rose-600' : 'text-green-700'}`}>{p.destaque}</p>
+                           </div>
+                        </div>
 
-                  <div className="space-y-3 mt-2 flex-grow">
-                    <div>
-                      <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">📈 Resultado Observado</h5>
-                      <p className="text-[11px] text-slate-700 font-medium leading-tight">{p.resultado}</p>
-                    </div>
-                    <div>
-                      <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">🌱 Ação Agronômica</h5>
-                      <p className="text-[11px] text-slate-700 font-medium leading-tight">{p.dic.proposta}</p>
-                    </div>
-                    <div>
-                      <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">🚜 Benefício no Campo</h5>
-                      <p className="text-[11px] text-slate-700 font-medium leading-tight">{p.dic.bio}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                    <div className="bg-slate-50 border border-slate-100 p-2">
-                      <h5 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">💡 Indicação</h5>
-                      <p className="text-[10px] font-bold text-slate-800 leading-tight">{p.recomendacao}</p>
-                    </div>
-                    <div className="bg-rose-50 border border-rose-100 p-2">
-                      <h5 className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">⚠️ Ponto de Atenção</h5>
-                      <p className="text-[10px] font-bold text-rose-900 leading-tight">{p.atencao}</p>
-                    </div>
+                        <div className="space-y-3 mt-2 flex-grow">
+                          {p.textoInteligenciaOpcional && (
+                            <div className="bg-indigo-50 border border-indigo-200 p-2 text-indigo-900 rounded-sm">
+                              <h5 className="text-[9px] font-black uppercase tracking-widest mb-1 flex items-center gap-1"><span>🤖</span> Field Pro AI Insight</h5>
+                              <p className="text-[10px] font-bold leading-tight underline decoration-indigo-300 underline-offset-2">{p.textoInteligenciaOpcional}</p>
+                            </div>
+                          )}
+                          <div>
+                            <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">📈 Resultado Observado</h5>
+                            <p className="text-[11px] text-slate-700 font-medium leading-tight">{p.resultado}</p>
+                          </div>
+                          <div>
+                            <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">🌱 Ação Agronômica</h5>
+                            <p className="text-[11px] text-slate-700 font-medium leading-tight">{p.dic.proposta}</p>
+                          </div>
+                          <div>
+                            <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">🚜 Benefício no Campo</h5>
+                            <p className="text-[11px] text-slate-700 font-medium leading-tight">{p.dic.bio}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
+                          <div className="bg-slate-50 border border-slate-100 p-2">
+                            <h5 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">💡 Indicação</h5>
+                            <p className="text-[10px] font-bold text-slate-800 leading-tight">{p.recomendacao}</p>
+                          </div>
+                          <div className="bg-rose-50 border border-rose-100 p-2">
+                            <h5 className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">⚠️ Ponto de Atenção</h5>
+                            <p className="text-[10px] font-bold text-rose-900 leading-tight">{p.atencao}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
