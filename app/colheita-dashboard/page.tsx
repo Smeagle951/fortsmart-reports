@@ -1146,6 +1146,7 @@ export default function SoybeanHarvestDashboard() {
                         <div className="flex gap-2 items-center mb-3 mt-1">
                            <span className="text-xl">{p.icon}</span>
                            <div>
+                             <p className="text-[8px] font-black text-slate-400 mb-0.5 tracking-wider uppercase border-b border-slate-100 inline-block pb-0.5">📍 Origem: {p.talhao} • {p.variedade}</p>
                              <h4 className="text-[11px] font-black uppercase text-slate-800 leading-tight pr-20">{p.produto}</h4>
                              <p className={`text-[9px] font-bold uppercase ${p.icon === '⚠️' ? 'text-rose-600' : 'text-green-700'}`}>{p.destaque}</p>
                            </div>
