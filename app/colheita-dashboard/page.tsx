@@ -456,6 +456,95 @@ export default function SoybeanHarvestDashboard() {
     return { label: "Atenção", reason: "Resultado limítrofe. Reavaliar preço, dose e custo unitário." };
   };
 
+  const getDicionarioAgronomico = (produto: string) => {
+    if (productInsights[produto]) return productInsights[produto];
+    const key = Object.keys(productInsights).find(k => produto.toUpperCase().includes(k.toUpperCase()));
+    if (key) return productInsights[key];
+    return { 
+      alvo: "Manejo Estratégico", 
+      proposta: "Posicionamento técnico de acordo com a bula.", 
+      bio: "Ação definida pela composição base." 
+    };
+  };
+
+  const pareceresTecnicos = useMemo(() => {
+    const topProd = [...resumoEconomico].sort((a,b) => b.diffProd - a.diffProd);
+    const topROI = [...resumoEconomico].sort((a,b) => (b.roiIncremental ?? 0) - (a.roiIncremental ?? 0));
+    
+    return resumoEconomico.map((r: any) => {
+      const isTop1Prod = topProd[0] && topProd[0].key === r.key;
+      const isTop1ROI = topROI[0] && topROI[0].key === r.key;
+      
+      let perfil = "Equilíbrio e Segurança";
+      let resultado = `Produtividade ${r.diffProd > 0 ? 'superior' : 'próxima'} ao padrão com margem equilibrada.`;
+      let recomendacao = "Estratégia segura para diferentes ambientes.";
+      let atencao = "Monitorar responsividade em diferentes talhões.";
+      let icon = "⚖️";
+      let destaque = "Manejo Equilibrado";
+
+      if (isTop1Prod && !isTop1ROI) {
+        perfil = "Alta Performance (Teto Produtivo)";
+        resultado = `Entregou a maior produtividade agregando +${r.diffProd.toFixed(1)} sc/ha.`;
+        recomendacao = "Ideal para áreas de alto investimento e sem restrição hídrica.";
+        atencao = "Custo elevado reduziu a margem financeira. Requer cautela no preço da saca.";
+        icon = "🚀";
+        destaque = "Máximo Teto Produtivo";
+      } else if (isTop1ROI && r.lucroIncrementalHa > 0 && r.diffProd <= 0) {
+        perfil = "Alta Eficiência Econômica (Redução de Custo)";
+        resultado = `Mesmo produzindo o mesmo ou menos que o padrão, reduziu custos para gerar maior ROI.`;
+        recomendacao = "Excelente para otimização de margem em grandes extensões.";
+        atencao = "Limita o teto produtivo em talhões de altíssima fertilidade.";
+        icon = "💰";
+        destaque = "Melhor Escolha Econômica";
+      } else if (isTop1ROI && r.diffProd > 0 && r.lucroIncrementalHa > 0) {
+        perfil = "Campeão de Rentabilidade e Produção";
+        resultado = `Uniu ganho de produtividade (+${r.diffProd.toFixed(1)} sc/ha) com o maior lucro líquido.`;
+        recomendacao = "Adoção recomendada como padrão técnico para a próxima safra.";
+        atencao = "Garantir a mesma qualidade e janela de aplicação do teste.";
+        icon = "🏆";
+        destaque = "Alta Produtividade + Melhor ROI";
+      } else if (r.lucroIncrementalHa < 0) {
+        perfil = "Baixa Viabilidade Financeira";
+        resultado = `Custo operacional alto suprimiu ganhos, gerando prejuízo em relação ao padrão.`;
+        recomendacao = "Reavaliar viabilidade técnica ou negociar pesadamente o preço do insumo.";
+        atencao = "Margem negativa na atual cotação da saca.";
+        icon = "⚠️";
+        destaque = "Atenção Financeira";
+      } else if (r.lucroIncrementalHa > 0) {
+        resultado = `Gerou lucro adicional de R$ ${r.lucroIncrementalHa.toFixed(0)}/ha com produtividade segura.`;
+        recomendacao = "Candidato sólido a uso parcial na safra comercial.";
+        atencao = "Comparar com as versões Top ROI antes da tomada de decisão.";
+        icon = "📈";
+        destaque = "Boa Viabilidade Financeira";
+      }
+
+      const dic = getDicionarioAgronomico(r.produto);
+
+      return {
+        ...r,
+        perfil,
+        resultado,
+        recomendacao,
+        atencao,
+        icon,
+        destaque,
+        dic
+      };
+    });
+  }, [resumoEconomico]);
+
+  const resumoExecutivo = useMemo(() => {
+    if (pareceresTecnicos.length === 0) return null;
+    const bestROI = pareceresTecnicos.find((p: any) => p.icon === "🏆" || p.icon === "💰" || p.destaque.includes("ROI")) || pareceresTecnicos[0];
+    const bestProd = pareceresTecnicos.find((p: any) => p.icon === "🚀" || p.destaque.includes("Produtivo")) || pareceresTecnicos[0];
+    
+    if (bestROI.key === bestProd.key) {
+       return `O tratamento ${bestROI.produto} despontou como a solução definitiva neste ensaio, apresentando não apenas o melhor ganho de produtividade, mas também a maior rentabilidade por hectare. É a escolha técnica e econômica mais indicada para adoção em escala.`;
+    } else {
+       return `O tratamento ${bestROI.produto} exibiu a melhor performance financeira (escolha mais inteligente para maximização de margem operacional com controle de risco), enquanto o ${bestProd.produto} demonstrou o maior potencial biológico (recomendado para elevação do teto produtivo em áreas de talhões premium).`;
+    }
+  }, [pareceresTecnicos]);
+
   const handleSaveSnapshot = () => {
     const nome = snapshotName.trim();
     if (!nome) {
@@ -891,6 +980,66 @@ export default function SoybeanHarvestDashboard() {
             </div>
           </div>
         </div>
+
+        {/* NOVO: INTELIGÊNCIA AGRONÔMICA (PARECER TÉCNICO) */}
+        {!showInformativoPanel && (
+          <div className="bg-white border border-slate-200 shadow-sm mt-4 overflow-hidden break-inside-avoid">
+            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-[12px] font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
+                  <span className="text-sm">🧠</span> Parecer Técnico Automático
+                </h3>
+                <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">
+                  Análise Agronômica vs. Impacto Financeiro
+                </p>
+              </div>
+            </div>
+            
+            <div className="p-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              {pareceresTecnicos.slice(0, 3).map((p: any, idx: number) => (
+                <div key={p.key} className={`border border-slate-200 p-4 relative flex flex-col ${p.icon === '🏆' ? 'bg-amber-50/50 border-amber-300' : 'bg-white'}`}>
+                  <div className="absolute top-0 right-0 bg-slate-100 text-[9px] font-black uppercase px-2 py-1 text-slate-500 border-l border-b border-slate-200">
+                    Posição #{idx+1} em Lucro
+                  </div>
+                  
+                  <div className="flex gap-2 items-center mb-3 mt-1">
+                     <span className="text-xl">{p.icon}</span>
+                     <div>
+                       <h4 className="text-[11px] font-black uppercase text-slate-800 leading-tight pr-14">{p.produto}</h4>
+                       <p className={`text-[9px] font-bold uppercase ${p.icon === '⚠️' ? 'text-rose-600' : 'text-green-700'}`}>{p.destaque}</p>
+                     </div>
+                  </div>
+
+                  <div className="space-y-3 mt-2 flex-grow">
+                    <div>
+                      <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">📈 Resultado Observado</h5>
+                      <p className="text-[11px] text-slate-700 font-medium leading-tight">{p.resultado}</p>
+                    </div>
+                    <div>
+                      <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">🌱 Ação Agronômica</h5>
+                      <p className="text-[11px] text-slate-700 font-medium leading-tight">{p.dic.proposta}</p>
+                    </div>
+                    <div>
+                      <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">🚜 Benefício no Campo</h5>
+                      <p className="text-[11px] text-slate-700 font-medium leading-tight">{p.dic.bio}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
+                    <div className="bg-slate-50 border border-slate-100 p-2">
+                      <h5 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">💡 Indicação</h5>
+                      <p className="text-[10px] font-bold text-slate-800 leading-tight">{p.recomendacao}</p>
+                    </div>
+                    <div className="bg-rose-50 border border-rose-100 p-2">
+                      <h5 className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">⚠️ Ponto de Atenção</h5>
+                      <p className="text-[10px] font-bold text-rose-900 leading-tight">{p.atencao}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Novo Informativo + Histórico */}
         {showInformativoPanel && (
@@ -1343,6 +1492,23 @@ export default function SoybeanHarvestDashboard() {
               </div>
             );
           })}
+
+          {/* RESUMO EXECUTIVO FINAL */}
+          {!showInformativoPanel && resumoExecutivo && (
+          <div className="mt-8 mb-4 bg-slate-900 text-white p-6 md:p-8 border-l-4 border-green-500 shadow-xl break-inside-avoid">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-2xl">🔥</span>
+              <h3 className="text-[13px] font-black uppercase tracking-widest text-slate-300">Resumo Executivo (Pitch de Venda Técnica)</h3>
+            </div>
+            <p className="text-base md:text-[17px] font-medium leading-relaxed italic text-slate-100 opacity-90">
+              "{resumoExecutivo}"
+            </p>
+            <div className="mt-6 pt-4 border-t border-slate-800 text-[9px] font-black uppercase tracking-widest text-slate-500 flex justify-between items-center">
+              <span>Gerado automaticamente por FortSmart Field Pro Intelligence</span>
+              <span className="text-green-600">Smart Report V2.9</span>
+            </div>
+          </div>
+          )}
 
           {/* Rodapé Corporativo */}
           <div className="border-t-2 border-slate-200 pt-8 mt-12 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
