@@ -5,9 +5,11 @@ import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitario
 import RelatorioResearchProContent from '@/components/research/RelatorioResearchProContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import RelatorioPlantio from '@/components/RelatorioPlantio';
+import RelatorioAmostragemSoloContent from '@/components/amostragem-solo/RelatorioAmostragemSoloContent';
 import PrintBar from '@/components/PrintBar';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import type { ResearchProReportPayload } from '@/types/research-report';
+import { calcularEstatisticaFromAvaliacoes } from '@/lib/research-pro/anova-tukey';
 
 // Disable Vercel's SSR cache so the latest Supabase data is always served
 export const dynamic = 'force-dynamic';
@@ -231,8 +233,57 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       tipo === 'RESEARCH_PRO' ||
       reportTypeV2 === 'RESEARCH_PRO' ||
       (core?.report_type as string) === 'RESEARCH_PRO';
+    const isAmostragemSolo = tipo === 'amostragem_solo';
 
-    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, isResearchPro, topKeys: Object.keys(relatorio).slice(0, 12) });
+    // Research Pro: se houver avaliacoes e estatística vazia/ausente, calcular ANOVA e Tukey no servidor
+    if (isResearchPro) {
+      const av = relatorio.avaliacoes as ResearchProReportPayload['avaliacoes'] | undefined;
+      const est = relatorio.estatistica as ResearchProReportPayload['estatistica'] | undefined;
+      const precisaCalcular =
+        Array.isArray(av) &&
+        av.length > 0 &&
+        (!est || !Array.isArray(est.variaveis) || est.variaveis.length === 0);
+      if (precisaCalcular) {
+        try {
+          const estatistica = calcularEstatisticaFromAvaliacoes(av);
+          relatorio = { ...relatorio, estatistica };
+        } catch (err) {
+          console.warn('[fortsmart-reports] /r/[token] cálculo ANOVA/Tukey falhou:', err);
+        }
+      }
+    }
+
+    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, isResearchPro, isAmostragemSolo, topKeys: Object.keys(relatorio).slice(0, 12) });
+
+    // relatorio já é clone serializável; usar como props para Client Components
+    const payloadSafe: Record<string, unknown> = relatorio;
+
+    if (!payloadSafe || typeof payloadSafe !== 'object' || Array.isArray(payloadSafe)) {
+      console.warn('[fortsmart-reports] /r/[token] payloadSafe inválido antes do render');
+      return (
+        <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+          <div style={{ textAlign: 'center', maxWidth: 560 }}>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório inválido</h1>
+            <p style={{ color: '#6b7280' }}>Os dados do relatório não puderam ser preparados. Verifique no Supabase (tabela <code>relatorios</code>, coluna <code>dados</code>) se o registro existe e está válido.</p>
+          </div>
+        </main>
+      );
+    }
+
+    let reportIdStr = '';
+    let relatorioUuidStr = '';
+    try {
+      reportIdStr = String((row?.titulo ?? row?.id ?? '') ?? '');
+      relatorioUuidStr = String(row?.id ?? '');
+    } catch (_) {
+      try {
+        reportIdStr = String((row as any)?.id ?? '');
+        relatorioUuidStr = String((row as any)?.id ?? '');
+      } catch {
+        reportIdStr = '';
+        relatorioUuidStr = '';
+      }
+    }
 
     // relatorio já é clone serializável; usar como props para Client Components
     const payloadSafe: Record<string, unknown> = relatorio;
@@ -294,6 +345,10 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
                 relatorio={payloadSafe as any}
                 reportId={reportIdStr}
               />
+            </ErrorBoundary>
+          ) : isAmostragemSolo ? (
+            <ErrorBoundary fallbackTitle="Erro ao renderizar amostragem de solos">
+              <RelatorioAmostragemSoloContent payload={payloadSafe} shareToken={token} />
             </ErrorBoundary>
           ) : (
             <RelatorioContent

@@ -45,6 +45,30 @@ function HomeContent() {
     const { default: html2pdf } = await import('html2pdf.js');
     const element = document.getElementById('relatorio-content');
     if (!element) return;
+    // Garante que imagens dentro do relatório tenham terminado de carregar
+    // antes de capturar o DOM (evita "perder" fotos no PDF).
+    const waitForImages = async () => {
+      const images = Array.from(element.querySelectorAll('img'));
+      if (images.length === 0) return;
+
+      await Promise.all(
+        images.map((img) => {
+          // Se já carregou (ou falhou), não bloqueia.
+          // eslint-disable-next-line @next/next/no-img-element
+          const done = (img as HTMLImageElement).complete;
+          if (done) return Promise.resolve();
+
+          return new Promise<void>((resolve) => {
+            const image = img as HTMLImageElement;
+            image.addEventListener('load', () => resolve(), { once: true });
+            image.addEventListener('error', () => resolve(), { once: true });
+          });
+        })
+      );
+    };
+
+    await waitForImages();
+
     const nomeFazenda = (relatorio.fazenda || 'relatorio').replace(/\s/g, '_');
     const dataStr = (relatorio.data || new Date().toLocaleDateString('pt-BR')).replace(/\//g, '-');
     html2pdf().set({
