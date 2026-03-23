@@ -3,9 +3,11 @@ import { getRelatorioByIdForOwner } from '../../../../lib/supabase';
 
 /**
  * GET /api/relatorio/[id]
- * Relatório privado: só retorna se owner_firebase_uid corresponder ao dono.
- * O app deve enviar o Firebase UID em cookie (firebase_uid) ou header (X-Firebase-UID).
- * Nunca confie em device_id ou app_id para autorização — apenas owner_firebase_uid.
+ * Legado / integração: não faz parte do fluxo público dos relatórios web (/r/[token]),
+ * que funciona sem login (Supabase service_role ou anon + is_public), como os outros modelos.
+ *
+ * Esta rota filtra por owner_firebase_uid usando header/cookie — o valor não é provado aqui;
+ * não usar como substituto de autenticação forte na internet aberta.
  */
 export async function GET(
   request: NextRequest,

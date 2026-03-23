@@ -5,12 +5,9 @@ import dynamic from 'next/dynamic';
 import FortSmartLogo from '@/components/FortSmartLogo';
 import ModalImagem from '@/components/ModalImagem';
 import Mapa from '@/components/Mapa';
+import { formatDate } from '@/utils/format';
 
-import HeaderVisitaTecnica from './visita_tecnica/sections/HeaderVisitaTecnica';
-import DashboardResumoVT from './visita_tecnica/sections/DashboardResumoVT';
-import IdentificacaoEContexto, { sectionTitleStyle } from './visita_tecnica/sections/IdentificacaoEContexto';
-import FenologiaEEstandeVT from './visita_tecnica/sections/FenologiaEEstandeVT';
-import CondicoesCampoVT from './visita_tecnica/sections/CondicoesCampoVT';
+import TabelaTecnicaCampos from './visita_tecnica/TabelaTecnicaCampos';
 import OcorrenciasPragasVT from './visita_tecnica/sections/OcorrenciasPragasVT';
 import DiagnosticoEPlanoAcao from './visita_tecnica/sections/DiagnosticoEPlanoAcao';
 import AplicacoesRealizadasVT from './visita_tecnica/sections/AplicacoesRealizadasVT';
@@ -67,41 +64,6 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
   imagens?: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
   assinaturaTecnica?: Record<string, unknown>;
   consultoria?: { nome?: string };
-};
-
-const cardStyle: React.CSSProperties = {
-  background: '#fff',
-  borderRadius: 12,
-  border: '1px solid #E2E8F0',
-};
-
-function MetaItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>{value}</div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>{value}</div>
-    </div>
-  );
-}
-
-const categoriaLabel: Record<string, string> = {
-  fenologia: 'Fenologia',
-  praga: 'Praga',
-  doença: 'Doença',
-  doenca: 'Doença',
-  daninha: 'Planta daninha',
-  operacao: 'Operação',
-  desvio: 'Desvio',
-  evidencia: 'Evidência',
 };
 
 interface RelatorioVisitaTecnicaContentProps {
@@ -283,47 +245,105 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
         </button>
       </div>
 
-      <div id="relatorio-visita-tecnica-content" style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px 0' }}>
+      <div id="relatorio-visita-tecnica-content" className="relatorio-editorial" style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px 0' }}>
 
-        <HeaderVisitaTecnica
-          relatorio={relatorio}
-          fazenda={fazenda}
-          safra={safra}
-          data={data}
-          tecnico={tecnico}
-          tecnicoCrea={tecnicoCrea}
-          municipio={municipio}
-          estado={estado}
-          proprietario={proprietario}
-        />
+        {/* Título do relatório */}
+        <header style={{ marginBottom: 28, paddingBottom: 20, borderBottom: '2px solid #e2e8f0' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#14532d', margin: 0, letterSpacing: '-0.02em' }}>
+            Relatório Técnico de Visita
+          </h1>
+          <p style={{ fontSize: 13, color: '#64748b', marginTop: 8, marginBottom: 0 }}>
+            {fazenda}{talhao?.nome ? ` · ${String(talhao.nome)}` : ''}{safra ? ` · Safra ${safra}` : ''}
+          </p>
+        </header>
 
-        <DashboardResumoVT
-          relatorio={relatorio}
-          talhao={talhao}
-          fenologia={fenologia}
-          populacao={populacao}
-          diagnostico={diagnostico}
-          pragasCount={pragas.length}
-        />
+        {/* 1. Dados da Propriedade — tabela técnica */}
+        <section className="section-block">
+          <div className="section-block__title">Dados da Propriedade</div>
+          <div className="section-block__body">
+            <TabelaTecnicaCampos
+              linhas={[
+                { campo: 'Fazenda', valor: fazenda !== 'Fazenda' ? fazenda : undefined },
+                { campo: 'Município', valor: municipio },
+                { campo: 'Estado', valor: estado },
+                { campo: 'Talhão', valor: talhao?.nome != null ? String(talhao.nome) : undefined },
+                { campo: 'Cultura', valor: talhao?.cultura != null ? String(talhao.cultura) : undefined },
+                { campo: 'Área', valor: talhao?.area != null ? `${Number(talhao.area).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} ha` : undefined },
+                { campo: 'Safra', valor: safra || undefined },
+                { campo: 'Data do relatório', valor: data ? formatDate(data) || data : undefined },
+                { campo: 'Responsável técnico', valor: tecnicoCrea ? `${tecnico} · CREA ${tecnicoCrea}` : tecnico },
+              ]}
+            />
+          </div>
+        </section>
 
-        <IdentificacaoEContexto talhao={talhao} contextoSafra={contextoSafra} />
+        {/* 2. Contexto da Safra — tabela técnica (só renderiza se houver dados) */}
+        {(contextoSafra?.materialVariedade != null || contextoSafra?.empresa != null || contextoSafra?.espacamentoCm != null || contextoSafra?.populacaoAlvoPlHa != null || contextoSafra?.dap != null || contextoSafra?.dae != null) && (
+          <section className="section-block">
+            <div className="section-block__title">Contexto da Safra</div>
+            <div className="section-block__body">
+              <TabelaTecnicaCampos
+                linhas={[
+                  { campo: 'Material / Variedade', valor: contextoSafra?.materialVariedade != null ? String(contextoSafra.materialVariedade) : undefined },
+                  { campo: 'Empresa', valor: contextoSafra?.empresa != null ? String(contextoSafra.empresa) : undefined },
+                  { campo: 'Espaçamento', valor: contextoSafra?.espacamentoCm != null ? `${contextoSafra.espacamentoCm} cm` : undefined },
+                  { campo: 'População alvo', valor: contextoSafra?.populacaoAlvoPlHa != null ? `${Number(contextoSafra.populacaoAlvoPlHa).toLocaleString('pt-BR')} plantas/ha` : undefined },
+                  { campo: 'DAP', valor: contextoSafra?.dap != null ? String(contextoSafra.dap) : undefined },
+                  { campo: 'DAE', valor: contextoSafra?.dae != null ? String(contextoSafra.dae) : undefined },
+                ]}
+              />
+            </div>
+          </section>
+        )}
 
-        <FenologiaEEstandeVT
-          fenologia={fenologia}
-          contextoSafra={contextoSafra}
-          populacao={populacao}
-          imagensFenologia={imagensFenologia}
-          imagensTotais={imagens}
-          setLightboxIndex={setLightboxIndex}
-        />
+        {/* 3. Desenvolvimento da Cultura — tabela técnica */}
+        {(fenologia?.estadio != null || fenologia?.estagio != null || fenologia?.dataUltimaAvaliacao != null || fenologia?.ultimaAvaliacaoDias != null || populacao?.plantasHa != null || populacao?.plantasPorMetro != null || populacao?.eficienciaPct != null || populacao?.situacao != null) && (
+          <section className="section-block">
+            <div className="section-block__title">Desenvolvimento da Cultura</div>
+            <div className="section-block__body">
+              <TabelaTecnicaCampos
+                linhas={[
+                  { campo: 'Estágio atual', valor: (fenologia?.estadio ?? fenologia?.estagio) != null ? String(fenologia.estadio ?? fenologia.estagio) : undefined },
+                  { campo: 'Última avaliação', valor: fenologia?.dataUltimaAvaliacao != null ? formatDate(String(fenologia.dataUltimaAvaliacao)) || String(fenologia.dataUltimaAvaliacao) : undefined },
+                  { campo: 'Dias desde avaliação', valor: fenologia?.ultimaAvaliacaoDias != null ? String(fenologia.ultimaAvaliacaoDias) : undefined },
+                  { campo: 'Plantas por hectare', valor: populacao?.plantasHa != null ? Number(populacao.plantasHa).toLocaleString('pt-BR') : undefined },
+                  { campo: 'Plantas por metro', valor: populacao?.plantasPorMetro != null ? Number(populacao.plantasPorMetro) : undefined },
+                  { campo: 'Eficiência de estande', valor: populacao?.eficienciaPct != null ? `${Number(populacao.eficienciaPct)}%` : undefined },
+                  { campo: 'Situação', valor: populacao?.situacao != null ? String(populacao.situacao) : undefined },
+                ]}
+              />
+            </div>
+          </section>
+        )}
 
-        <CondicoesCampoVT condicoes={condicoes} />
+        {/* Condições de campo — opcional, só se houver dados */}
+        {(condicoes?.temperatura != null || condicoes?.umidade != null || condicoes?.vento != null || condicoes?.soloUmidade != null || condicoes?.vigorCultura != null) && (
+          <section className="section-block">
+            <div className="section-block__title">Condições de Campo</div>
+            <div className="section-block__body">
+              <TabelaTecnicaCampos
+                linhas={[
+                  { campo: 'Temperatura', valor: condicoes?.temperatura != null ? `${condicoes.temperatura} °C` : undefined },
+                  { campo: 'Umidade', valor: condicoes?.umidade != null ? `${condicoes.umidade}%` : undefined },
+                  { campo: 'Vento', valor: condicoes?.vento != null ? String(condicoes.vento) : undefined },
+                  { campo: 'Nebulosidade', valor: condicoes?.nebulosidade != null ? String(condicoes.nebulosidade) : undefined },
+                  { campo: 'Solo / Umidade', valor: condicoes?.soloUmidade != null ? String(condicoes.soloUmidade) : undefined },
+                  { campo: 'Palhada', valor: condicoes?.palhada != null ? String(condicoes.palhada) : undefined },
+                  { campo: 'Compactação', valor: condicoes?.compactacao != null ? String(condicoes.compactacao) : undefined },
+                  { campo: 'Vigor da cultura', valor: condicoes?.vigorCultura != null ? String(condicoes.vigorCultura) : undefined },
+                  { campo: 'Uniformidade', valor: condicoes?.uniformidade != null ? String(condicoes.uniformidade) : undefined },
+                  { campo: 'Sintomas', valor: condicoes?.sintomas != null ? String(condicoes.sintomas) : undefined },
+                ]}
+              />
+            </div>
+          </section>
+        )}
 
-        {/* Mapa do talhão — mapa real (MapTiler) com polígono e alfinetes, ou fallback SVG */}
+        {/* 4. Mapa do talhão */}
         {hasMapa && (
-          <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
-            <div style={sectionTitleStyle}>Geomonitoramento da Visita</div>
-            <div style={{ padding: 24 }}>
+          <section className="section-block">
+            <div className="section-block__title">Mapa do Talhão</div>
+            <div className="section-block__body" style={{ padding: 24 }}>
               {useRealMap ? (
                 <MapaTalhaoDynamic
                   polygon={polygonForMap && polygonForMap.length >= 3 ? polygonForMap : undefined}
@@ -352,6 +372,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           </section>
         )}
 
+        {/* 5. Monitoramento Fitossanitário */}
         <OcorrenciasPragasVT pragas={pragas} />
 
         <DiagnosticoEPlanoAcao diagnostico={diagnostico} planoAcao={planoAcao} />

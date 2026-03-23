@@ -96,6 +96,37 @@ export default function EstatisticaAvancada({ data }: Props) {
                                 </div>
                             </div>
 
+                            {/* Tabela ANOVA (Fonte, GL, SQ, QM, F, p) */}
+                            {varStats.anova_tabela && varStats.anova_tabela.length > 0 && (
+                                <div className="overflow-x-auto p-5 border-b border-gray-100">
+                                    <h5 className="text-sm font-semibold text-gray-700 mb-3">Tabela de Análise de Variância (DBC)</h5>
+                                    <table className="w-full text-sm text-left text-gray-600 rounded-lg overflow-hidden border border-gray-200">
+                                        <thead className="bg-[#f8fafc] text-xs uppercase text-gray-500 font-semibold tracking-wider">
+                                            <tr>
+                                                <th className="px-4 py-2 border-b border-gray-200">Fonte</th>
+                                                <th className="px-4 py-2 border-b border-gray-200 border-l text-right">GL</th>
+                                                <th className="px-4 py-2 border-b border-gray-200 border-l text-right">SQ</th>
+                                                <th className="px-4 py-2 border-b border-gray-200 border-l text-right">QM</th>
+                                                <th className="px-4 py-2 border-b border-gray-200 border-l text-right">F</th>
+                                                <th className="px-4 py-2 border-b border-gray-200 border-l text-right">p</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100 bg-white">
+                                            {varStats.anova_tabela.map((linha, i) => (
+                                                <tr key={i} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-2 font-medium text-gray-900">{linha.fonte}</td>
+                                                    <td className="px-4 py-2 text-right font-mono">{linha.gl}</td>
+                                                    <td className="px-4 py-2 text-right font-mono">{linha.sq.toFixed(3)}</td>
+                                                    <td className="px-4 py-2 text-right font-mono">{linha.qm > 0 ? linha.qm.toFixed(3) : '—'}</td>
+                                                    <td className="px-4 py-2 text-right font-mono">{linha.f != null ? linha.f.toFixed(3) : '—'}</td>
+                                                    <td className="px-4 py-2 text-right font-mono">{linha.p != null ? linha.p.toFixed(4) : '—'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
                             {/* Tabela de Tukey */}
                             <div className="overflow-x-auto p-5">
 

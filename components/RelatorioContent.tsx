@@ -69,7 +69,10 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
   const isVisitaTecnica =
     tipoStr === 'visita_tecnica' ||
     (tipoStr !== 'plantio' && tipoStr !== 'avaliacao_lado_a_lado' && tipoStr !== 'monitoramento' && (hasVisitaKeys || hasVisitaBlocks));
-  if (isVisitaTecnica) {
+  // Para "visita técnica", o layout SaaS premium ainda não cobre todas as seções esperadas
+  // (ex.: data de plantio, fenologia/histórico, condições do momento e mapa).
+  // Por isso, renderizamos o layout completo (não-SaaS) para garantir que tudo apareça.
+  if (isVisitaTecnica && tipoStr !== 'visita_tecnica') {
     const ctxDae = (contextoSafra as any)?.dae;
     const saasData: ReportPageSaaSData = {
       meta: {
@@ -112,6 +115,19 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
       diagnostico: diagnostico && typeof diagnostico === 'object' ? { problemaPrincipal: (diagnostico as any).problemaPrincipal, causaProvavel: (diagnostico as any).causaProvavel, nivelRisco: (diagnostico as any).nivelRisco, urgenciaAcao: (diagnostico as any).urgenciaAcao, recomendacoes: Array.isArray((diagnostico as any).recomendacoes) ? (diagnostico as any).recomendacoes : undefined } : undefined,
       planoAcao: planoAcao && typeof planoAcao === 'object' ? { objetivoManejo: (planoAcao as any).objetivoManejo, acoes: Array.isArray((planoAcao as any).acoes) ? (planoAcao as any).acoes.map((a: any) => ({ prioridade: a.prioridade != null ? String(a.prioridade) : undefined, acao: a.acao, prazo: a.prazo })) : undefined } : undefined,
       conclusao: typeof conclusao === 'string' ? conclusao : undefined,
+      mapa: (() => {
+        const m = (relatorio as any).mapa;
+        if (!m || typeof m !== 'object') return undefined;
+        const pts = Array.isArray(m.pontos) ? m.pontos : [];
+        const poly = Array.isArray(m.polygon) ? m.polygon : [];
+        if (pts.length === 0 && poly.length < 3) return undefined;
+        return {
+          polygon: poly,
+          pontos: pts,
+          clusters: Array.isArray(m.clusters) ? m.clusters : undefined,
+          evolucao_espacial: m.evolucao_espacial && typeof m.evolucao_espacial === 'object' ? m.evolucao_espacial : undefined,
+        };
+      })(),
     };
 
     return <ReportPageSaaS data={saasData} reportId={reportId} relatorioUuid={relatorioUuid} />;

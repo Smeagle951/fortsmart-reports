@@ -1,6 +1,4 @@
 import React from 'react';
-import { cardStyle, sectionTitleStyle } from './IdentificacaoEContexto';
-import ModalImagem from '@/components/ModalImagem';
 
 interface FotografiasEAutoriaVTProps {
     imagens: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
@@ -23,30 +21,11 @@ const categoriaLabel: Record<string, string> = {
 export default function FotografiasEAutoriaVT({ imagens, assinatura, conclusao, setLightboxIndex }: FotografiasEAutoriaVTProps) {
     return (
         <>
-            {/* 9. Conclusão do consultor */}
-            {conclusao != null && String(conclusao).trim() && (
-                <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
-                    <div style={{
-                        padding: '18px 24px',
-                        background: 'linear-gradient(135deg, #14532d 0%, #166534 100%)',
-                        color: '#fff',
-                        fontSize: 15,
-                        fontWeight: 700,
-                        letterSpacing: '-0.01em',
-                    }}>
-                        Parecer Técnico Conclusivo
-                    </div>
-                    <div style={{ padding: 24, fontSize: 15, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                        {String(conclusao)}
-                    </div>
-                </section>
-            )}
-
-            {/* 10. Registros fotográficos */}
+            {/* Galeria de Imagens */}
             {imagens.length > 0 && (
-                <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
-                    <div style={sectionTitleStyle}>Registros Fotográficos Oficiais</div>
-                    <div style={{ padding: 24 }}>
+                <section className="section-block relatorio-editorial">
+                    <div className="section-block__title">Galeria de Imagens</div>
+                    <div className="section-block__body" style={{ padding: 24 }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
                             {imagens.map((img, i) => {
                                 const src = img.url;
@@ -104,10 +83,20 @@ export default function FotografiasEAutoriaVT({ imagens, assinatura, conclusao, 
                 </section>
             )}
 
+            {/* Conclusão Técnica */}
+            {conclusao != null && String(conclusao).trim() && (
+                <section className="section-block relatorio-editorial">
+                    <div className="section-block__title">Conclusão Técnica</div>
+                    <div className="section-block__body" style={{ padding: 24, fontSize: 15, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                        {String(conclusao)}
+                    </div>
+                </section>
+            )}
+
             {/* Assinatura técnica */}
             {assinatura && (assinatura.nome != null || assinatura.crea != null) && (
-                <section style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
-                    <div style={{ padding: 24, borderTop: '1px dashed #E2E8F0', textAlign: 'center' }}>
+                <section className="section-block relatorio-editorial">
+                    <div className="section-block__body" style={{ padding: 24, textAlign: 'center' }}>
                         <div style={{ fontSize: 11, color: '#64748B', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Assinatura técnica digital</div>
                         <div style={{ fontSize: 16, fontWeight: 700, color: '#334155' }}>{String(assinatura.nome ?? '—')}</div>
                         {assinatura.crea != null && <div style={{ fontSize: 13, color: '#64748B' }}>CREA {String(assinatura.crea)}</div>}
@@ -119,3 +108,4 @@ export default function FotografiasEAutoriaVT({ imagens, assinatura, conclusao, 
         </>
     );
 }
+

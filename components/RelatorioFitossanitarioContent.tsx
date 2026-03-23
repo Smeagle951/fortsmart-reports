@@ -210,6 +210,18 @@ function deriveDadosPlantioFromModuloPlantio(modulo: Record<string, unknown> | n
   const hibrido = getStr(ctx?.hibrido ?? ctx?.variedade ?? ctx?.materialVariedade ?? modulo.hibrido ?? est?.hibrido);
   const dataPlantio = getDate(ctx?.dataPlantio ?? ctx?.data_plantio ?? modulo.data_plantio ?? est?.data_plantio);
   const dataEmergencia = getDate(fen?.dataEmergencia ?? fen?.data_emergencia ?? fen?.data ?? modulo.data_emergencia);
+  const histRaw = (ctx as any)?.historicoPlantios ?? (ctx as any)?.historico_plantios ?? (modulo as any)?.historico_plantios ?? (modulo as any)?.historicoPlantios;
+  const historico_plantios = Array.isArray(histRaw) && histRaw.length > 0
+    ? histRaw
+      .filter((x: unknown) => x != null && typeof x === 'object')
+      .map((x: any) => ({
+        data: getDate(x.data ?? x.data_plantio ?? x.dataPlantio),
+        cultura: getStr(x.cultura),
+        variedade: getStr(x.variedade ?? x.cultivar),
+        observacao: getStr(x.observacao ?? x.obs),
+      }))
+      .filter((x: any) => x.data || x.cultura || x.variedade || x.observacao)
+    : undefined;
   const populacaoDesejada = getNum(ctx?.populacaoAlvoPlHa ?? ctx?.populacao_desejada ?? est?.populacao_ideal ?? est?.populacao_desejada);
   const populacaoReal = getNum(est?.populacao ?? est?.populacao_real ?? est?.plantasPorMetro);
   const espacamentoMedio = getNum(pb?.espacamentoRealCm ?? pb?.espacamento_real_cm ?? ctx?.espacamentoCm ?? ctx?.espacamento_cm ?? est?.espacamento_medio_cm);
@@ -267,6 +279,7 @@ function deriveDadosPlantioFromModuloPlantio(modulo: Record<string, unknown> | n
     hibrido: hibrido ?? undefined,
     data_plantio: dataPlantio ?? undefined,
     data_emergencia: dataEmergencia ?? undefined,
+    historico_plantios,
     populacao_desejada: populacaoDesejada ?? undefined,
     populacao_real: populacaoReal ?? undefined,
     espacamento_medio_cm: espacamentoMedio ?? undefined,
@@ -291,6 +304,7 @@ export interface DadosPlantioMonitoramento {
   hibrido?: string;
   data_plantio?: string;
   data_emergencia?: string;
+  historico_plantios?: Array<{ data?: string; cultura?: string; variedade?: string; observacao?: string }>;
   populacao_desejada?: number;
   populacao_real?: number;
   espacamento_entre_linhas_m?: number;
@@ -385,11 +399,31 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         : relatorio.talhao != null && typeof relatorio.talhao === 'object'
           ? [relatorio.talhao]
           : [];
-    const talhoes = talhoesRaw.map((t: unknown) => normalizeTalhao(t != null && typeof t === 'object' ? t as Record<string, unknown> : {}));
+    const talhoes: Talhao[] = [];
+    for (let i = 0; i < talhoesRaw.length; i++) {
+      try {
+        const t = talhoesRaw[i];
+        const raw = t != null && typeof t === 'object' ? (t as Record<string, unknown>) : {};
+        talhoes.push(normalizeTalhao(raw));
+      } catch (err) {
+        console.warn('[RelatorioFitossanitarioContent] normalizeTalhao falhou no índice', i, err);
+      }
+    }
     return { fazenda, safra, data, tecnico, crea: crea || undefined, talhoes };
   }, [relatorio]);
 
   const primeiroTalhao = normalized.talhoes[0];
+  if (!primeiroTalhao || normalized.talhoes.length === 0) {
+    return (
+      <main style={{ minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+        <div style={{ textAlign: 'center', maxWidth: 480 }}>
+          <h2 style={{ fontSize: '1.25rem', marginBottom: 8 }}>Relatório de monitoramento sem talhões</h2>
+          <p style={{ color: '#6b7280' }}>Este relatório não contém dados de talhões para exibir. Verifique o link ou gere um novo relatório no app.</p>
+        </div>
+      </main>
+    );
+  }
+
   /** Dados de plantio: payload ou derivados do módulo plantio (plantabilidade, estande, fenologia). */
   const dadosPlantioExibir = useMemo((): DadosPlantioMonitoramento | null | undefined => {
     const dp = relatorio.dados_plantio;
@@ -663,9 +697,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       tecnico={normalized.tecnico}
       crea={normalized.crea}
       reportId={reportId}
-      onExportPDF={handleExportPDF}
-      onExportExcel={handleExportExcel}
       onShare={handleShare}
+      farmLogoUrl={(relatorio as any).propriedade?.logo_url ?? (relatorio as any).perfil_fazenda?.logo_url ?? (relatorio as any).logo_fazenda ?? undefined}
     >
       {/* Barra técnica horizontal: Fazenda | Talhão | Cultura | Cultivar | Área | DAE */}
       <BarraTecnicaRelatorio
@@ -765,10 +798,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       <div id="resumo-executivo" className="card resumo-executivo-card pdf-keep-together" style={{ marginTop: '1.25rem' }}>
         <div className="card-title resumo-executivo-title"><span className="card-title-icon">📌</span> Resumo Executivo</div>
         <p className="resumo-executivo-text">
-          Relatório de monitoramento fitossanitário do talhão <strong>{primeiroTalhao.nome}</strong>, cultura <strong>{primeiroTalhao.cultura}</strong>{primeiroTalhao.variedade ? ` (${primeiroTalhao.variedade})` : ''}, safra {normalized.safra}.
-          {primeiroTalhao.area_ha > 0 && ` Área: ${formatDecimal2(primeiroTalhao.area_ha)} ha.`}
-          {primeiroTalhao.estagio && ` Estádio fenológico atual: ${primeiroTalhao.estagio}${primeiroTalhao.dae != null ? ` (${primeiroTalhao.dae} DAE)` : ''}.`}
-          {' '}Qualidade de plantio e estande constam na seção Dados do Plantio.
+          Síntese técnica da visita e pontos de atenção do talhão (dados gerais no cabeçalho).
+          {' '}Qualidade de plantio e estande constam na seção Avaliação do Plantio.
           {' '}Risco agronômico atual: <strong>{riscoLabel}</strong> (score {riscoNum}).
           {proximaVisita !== '—' && ` Próxima visita técnica recomendada: ${proximaVisita}.`}
           {topPragas.length > 0 && ` Foram identificadas ${topPragas.length} praga(s)/doença(s) nos pontos amostrados; recomendações e plano de aplicação constam nas seções abaixo.`}
@@ -857,7 +888,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
 
       {/* #propriedade — Mapa do Talhão (Propriedade + Mapa) */}
       <RelatorioSection id="propriedade" title="Mapa do Talhão" icon="🗺️" defaultOpen={true}>
-      <div className="grid-2 pdf-keep-together">
+      <div className="mapa-vertical-stack pdf-keep-together">
         <div className="card card-propriedade-compact">
           <div className="card-title"><span className="card-title-icon">🏡</span> Propriedade</div>
           <div className="info-row"><span className="info-label">Fazenda</span><span className="info-value">{normalized.fazenda}</span></div>
@@ -1009,28 +1040,33 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                 })()}
               </div>
             )}
-            <div className="grid-2" style={{ marginBottom: '1rem' }}>
-              <div className="card">
-                <div className="card-title"><span className="card-title-icon">📋</span> Informações principais</div>
-                <div className="info-row"><span className="info-label">Cultura</span><span className="info-value">{dp.cultura ?? '—'}</span></div>
-                <div className="info-row"><span className="info-label">Híbrido/Variedade</span><span className="info-value">{dp.hibrido ?? '—'}</span></div>
-                <div className="info-row"><span className="info-label">Data de plantio</span><span className="info-value">{dp.data_plantio ? formatDate(dp.data_plantio) : '—'}</span></div>
-                <div className="info-row"><span className="info-label">Data de emergência</span><span className="info-value">{dp.data_emergencia ? formatDate(dp.data_emergencia) : '—'}</span></div>
-                <div className="info-row"><span className="info-label">Ciclo (DAE/DAP)</span><span className="info-value">{dp.dae != null ? `${dp.dae} dias` : (dp.dap != null ? `${dp.dap} dias` : '—')}</span></div>
-                <div className="info-row"><span className="info-label">Estádio fenológico</span><span className="info-value" style={dp.estagio_atual ? { fontWeight: 700, color: 'var(--primary)' } : undefined}>{dp.estagio_atual ?? '—'}</span></div>
-                <div className="info-row"><span className="info-label">Espaçamento entre linhas</span><span className="info-value">{dp.espacamento_entre_linhas_m != null ? `${fmt(dp.espacamento_entre_linhas_m)} m` : '—'}</span></div>
-                <div className="info-row"><span className="info-label">Espaçamento médio entre plantas</span><span className="info-value">{dp.espacamento_medio_cm != null ? `${fmt(dp.espacamento_medio_cm)} cm` : '—'}</span></div>
-              </div>
-              <div className="card">
-                <div className="card-title"><span className="card-title-icon">📊</span> Qualidade do plantio</div>
-                <div className="info-row"><span className="info-label">CV de plantio</span><span className="info-value" style={dp.cv_classificacao ? { fontWeight: 700 } : undefined}>{dp.cv_percent != null ? `${fmt(dp.cv_percent)}%` : '—'}{dp.cv_classificacao ? ` (${dp.cv_classificacao})` : ''}</span></div>
-                <div className="info-row"><span className="info-label">Índice de falhas</span><span className="info-value">{dp.indice_falhas_percent != null ? `${fmt(dp.indice_falhas_percent)}%` : '—'}</span></div>
-                <div className="info-row"><span className="info-label">Índice de duplas</span><span className="info-value">{dp.indice_duplas_percent != null ? `${fmt(dp.indice_duplas_percent)}%` : '—'}</span></div>
-                <div className="info-row"><span className="info-label">Eficiência do estande</span><span className="info-value">{dp.eficiencia_estande_percent != null ? `${fmt(dp.eficiencia_estande_percent)}%` : '—'}</span></div>
-                <div className="info-row"><span className="info-label">Plantas contadas / metros amostrados</span><span className="info-value">{dp.plantas_contadas != null && dp.metros_amostrados != null ? `${fmtInt(dp.plantas_contadas)} plantas em ${fmt(dp.metros_amostrados)} m` : (dp.plantas_contadas != null ? fmtInt(dp.plantas_contadas) : (dp.metros_amostrados != null ? `${fmt(dp.metros_amostrados)} m` : '—'))}</span></div>
-              </div>
+            {/* Tabela técnica única — dados do talhão e desenvolvimento (evita vários cards) */}
+            <div className="card" style={{ marginBottom: '1rem' }}>
+              <div className="card-title"><span className="card-title-icon">📋</span> Dados do talhão e desenvolvimento da cultura</div>
+              <table className="tabela-tecnica-compacta">
+                <thead>
+                  <tr><th>Indicador</th><th>Valor</th></tr>
+                </thead>
+                <tbody>
+                  {dp.cultura != null && <tr><td>Cultura</td><td>{dp.cultura}</td></tr>}
+                  {dp.hibrido != null && <tr><td>Híbrido/Variedade</td><td>{dp.hibrido}</td></tr>}
+                  <tr><td>Data de plantio</td><td>{dp.data_plantio ? formatDate(dp.data_plantio) : '—'}</td></tr>
+                  <tr><td>Data de emergência</td><td>{dp.data_emergencia ? formatDate(dp.data_emergencia) : '—'}</td></tr>
+                  <tr><td>Estágio da cultura</td><td style={dp.estagio_atual ? { fontWeight: 700, color: 'var(--primary)' } : undefined}>{dp.estagio_atual ?? '—'}</td></tr>
+                  <tr><td>DAE</td><td>{dp.dae != null ? `${dp.dae} dias` : '—'}</td></tr>
+                  <tr><td>DAP</td><td>{dp.dap != null ? `${dp.dap} dias` : '—'}</td></tr>
+                  <tr><td>Espaçamento entre linhas</td><td>{dp.espacamento_entre_linhas_m != null ? `${fmt(dp.espacamento_entre_linhas_m)} m` : '—'}</td></tr>
+                  <tr><td>Espaçamento médio entre plantas</td><td>{dp.espacamento_medio_cm != null ? `${fmt(dp.espacamento_medio_cm)} cm` : '—'}</td></tr>
+                  <tr><td>População</td><td>{dp.populacao_real != null ? `${fmtInt(dp.populacao_real)} plantas/ha` : (dp.populacao_desejada != null ? `${fmtInt(dp.populacao_desejada)} (alvo)` : '—')}</td></tr>
+                  <tr><td>Eficiência do estande</td><td>{dp.eficiencia_estande_percent != null ? `${fmt(dp.eficiencia_estande_percent)}%` : '—'}</td></tr>
+                  <tr><td>CV de plantio</td><td style={dp.cv_classificacao ? { fontWeight: 700 } : undefined}>{dp.cv_percent != null ? `${fmt(dp.cv_percent)}%` : '—'}{dp.cv_classificacao ? ` (${dp.cv_classificacao})` : ''}</td></tr>
+                  <tr><td>Falhas</td><td>{dp.indice_falhas_percent != null ? `${fmt(dp.indice_falhas_percent)}%` : '—'}</td></tr>
+                  <tr><td>Duplos</td><td>{dp.indice_duplas_percent != null ? `${fmt(dp.indice_duplas_percent)}%` : '—'}</td></tr>
+                  <tr><td>Plantas contadas / metros amostrados</td><td>{dp.plantas_contadas != null && dp.metros_amostrados != null ? `${fmtInt(dp.plantas_contadas)} plantas em ${fmt(dp.metros_amostrados)} m` : (dp.plantas_contadas != null ? fmtInt(dp.plantas_contadas) : (dp.metros_amostrados != null ? `${fmt(dp.metros_amostrados)} m` : '—'))}</td></tr>
+                </tbody>
+              </table>
             </div>
-            {/* 3️⃣ Diagnóstico do estande — números + recomendações padrão (referência) */}
+            {/* 3️⃣ Diagnóstico do estande — tabela técnica + recomendações (referência) */}
             {dp.populacao_desejada != null && dp.populacao_real != null && (
               <div className="card" style={{ marginBottom: '1rem', borderLeft: '4px solid var(--warning)' }}>
                 <div className="card-title"><span className="card-title-icon">📉</span> Diagnóstico do estande (referência)</div>
@@ -1038,7 +1074,6 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                   const alvo = dp.populacao_desejada;
                   const real = dp.populacao_real;
                   const perda = Math.max(0, alvo - real);
-                  const perdaPct = alvo > 0 ? (perda / alvo) * 100 : 0;
                   const impactoScHa = perda > 0 ? (perda / 1000) * 0.4 : 0;
                   const recomendacoes = perda > 5000
                     ? ['Revisar pressão da roda compactadora', 'Conferir profundidade de plantio', 'Avaliar regulagem do dosador']
@@ -1047,13 +1082,17 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                       : ['Manter monitoramento do estande'];
                   return (
                     <>
-                      <div className="info-row"><span className="info-label">População alvo</span><span className="info-value">{fmtInt(alvo)} plantas/ha</span></div>
-                      <div className="info-row"><span className="info-label">População real</span><span className="info-value">{fmt(real)} plantas/ha</span></div>
-                      <div className="info-row"><span className="info-label">Perda estimada</span><span className="info-value" style={{ color: perda > 0 ? 'var(--warning)' : undefined }}>{fmtInt(perda)} plantas/ha</span></div>
+                      <table className="tabela-tecnica-compacta" style={{ marginBottom: perda > 0 ? '0.75rem' : 0 }}>
+                        <tbody>
+                          <tr><td>População alvo</td><td>{fmtInt(alvo)} plantas/ha</td></tr>
+                          <tr><td>População real</td><td>{fmt(real)} plantas/ha</td></tr>
+                          <tr><td>Perda estimada</td><td style={{ color: perda > 0 ? 'var(--warning)' : undefined }}>{fmtInt(perda)} plantas/ha</td></tr>
+                          {perda > 0 && <tr><td>Impacto produtivo estimado</td><td style={{ color: 'var(--danger)' }}>-{formatDecimal2(impactoScHa)} sc/ha</td></tr>}
+                        </tbody>
+                      </table>
                       {perda > 0 && (
                         <>
-                          <div className="info-row"><span className="info-label">Impacto produtivo estimado</span><span className="info-value" style={{ color: 'var(--danger)' }}>-{formatDecimal2(impactoScHa)} sc/ha</span></div>
-                          <p style={{ fontSize: '0.85rem', marginTop: '0.75rem', marginBottom: '0.5rem', fontWeight: 600 }}>Recomenda-se:</p>
+                          <p style={{ fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600 }}>Recomenda-se:</p>
                           <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.85rem', lineHeight: 1.7 }}>
                             {recomendacoes.map((r, i) => <li key={i}>✔ {r}</li>)}
                           </ul>
@@ -1082,84 +1121,19 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
               const pxPerCm = 4;
               return (
                 <>
-                  {/* Card 1 — CV%, Comprimento, Espaçamento ideal */}
-                  <div className="card" style={{ marginBottom: '1rem' }}>
-                    <div className="card-title"><span className="card-title-icon">📐</span> Qualidade do plantio</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 2 }}>CV%</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{dp.cv_percent != null ? formatDecimal2(dp.cv_percent) : '—'}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 2 }}>Comprimento avaliado</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{comprimentoAvaliado != null ? `${formatDecimal2(comprimentoAvaliado)} m` : '—'}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 2 }}>Espaç. ideal</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{espacamentoIdeal != null ? `${formatDecimal2(espacamentoIdeal)} cm` : '—'}</div>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Card 2 — Visualização da linha: ●----Xcm----● com largura proporcional ao espaçamento */}
+                  {/* Métricas da linha em tabela técnica (evita card extra) */}
+                  <table className="tabela-tecnica-compacta" style={{ marginBottom: '1rem', maxWidth: 420 }}>
+                    <tbody>
+                      <tr><td>CV%</td><td>{dp.cv_percent != null ? formatDecimal2(dp.cv_percent) : '—'}</td></tr>
+                      <tr><td>Comprimento avaliado</td><td>{comprimentoAvaliado != null ? `${formatDecimal2(comprimentoAvaliado)} m` : '—'}</td></tr>
+                      <tr><td>Espaç. ideal</td><td>{espacamentoIdeal != null ? `${formatDecimal2(espacamentoIdeal)} cm` : '—'}</td></tr>
+                    </tbody>
+                  </table>
+                  {/* Visualização da qualidade do plantio: sulco com espaçamento real (módulo plantio / CV%) */}
                   <div className="card" style={{ marginBottom: '1rem' }}>
                     <div className="card-title"><span className="card-title-icon">📐</span> Visualização da qualidade do plantio</div>
                     <div style={{ overflowX: 'auto', padding: '12px 0' }}>
-                      {/* Linha com pontos e espaçamentos entre eles: ●----31cm----●----41cm----● */}
-                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, minWidth: 'max-content', fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>
-                        {linShow.map((p, i) => (
-                          <React.Fragment key={i}>
-                            <span
-                              title={`Semente ${i + 1} — ${p.espacamento_cm.toFixed(1)} cm — ${tipoLabel(p.tipo)}`}
-                              style={{
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                width: 24, height: 24, borderRadius: '50%', backgroundColor: corDot(p.tipo), color: '#fff', fontWeight: 700, flexShrink: 0,
-                              }}
-                            >
-                              ●
-                            </span>
-                            {i < linShow.length - 1 && (
-                              <span
-                                style={{
-                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                  minWidth: Math.max(20, p.espacamento_cm * pxPerCm),
-                                  padding: '0 4px',
-                                  color: 'var(--text-muted)',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                ——{p.espacamento_cm.toFixed(0)}cm——
-                              </span>
-                            )}
-                          </React.Fragment>
-                        ))}
-                        {lin.length > sliceShow && <span style={{ marginLeft: 8, fontSize: '0.8rem', color: 'var(--text-muted)' }}>+{lin.length - sliceShow} pontos</span>}
-                      </div>
-                      {/* Linha de bolinhas com espaçamento proporcional ao espacamento (cm) */}
-                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, marginTop: 10, minWidth: 'max-content' }}>
-                        {linShow.map((p, i) => (
-                          <React.Fragment key={i}>
-                            <span
-                              title={`${p.espacamento_cm.toFixed(1)} cm — ${tipoLabel(p.tipo)}`}
-                              style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', backgroundColor: corDot(p.tipo), flexShrink: 0 }}
-                            />
-                            {i < linShow.length - 1 && (
-                              <span style={{ display: 'inline-block', minWidth: Math.max(4, p.espacamento_cm * (pxPerCm * 0.4)), flexShrink: 0 }} />
-                            )}
-                          </React.Fragment>
-                        ))}
-                        {lin.length > sliceShow && <span style={{ marginLeft: 6, fontSize: '0.75rem', color: 'var(--text-muted)' }}>…</span>}
-                      </div>
-                      {/* Legenda */}
-                      <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#22c55e', marginRight: 4, verticalAlign: 'middle' }} /> OK</span>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#eab308', marginRight: 4, verticalAlign: 'middle' }} /> Dupla</span>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#a855f7', marginRight: 4, verticalAlign: 'middle' }} /> Tripla</span>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#ef4444', marginRight: 4, verticalAlign: 'middle' }} /> Falha</span>
-                      </div>
-                    </div>
-                    {/* Sulco simulado: distância entre plantas proporcional ao espaçamento (cm) informado */}
-                    <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>Sulco simulado (espaçamento real entre plantas)</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>Sulco simulado — espaçamento real entre uma planta e outra (cm)</div>
                       <div style={{ fontFamily: 'monospace', fontSize: '1rem', lineHeight: 1.8, overflowX: 'auto', padding: '10px 12px', background: 'var(--surface-muted)', borderRadius: 8, border: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, minWidth: 'max-content' }}>
                           <span style={{ marginRight: 4 }}>|</span>
@@ -1200,7 +1174,14 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                           ))}
                           <span style={{ marginLeft: 4 }}>|</span>
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>🌱 planta · espaço vazio = falha · distância entre plantas proporcional ao espaçamento (cm)</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>🌱 planta · espaço vazio = falha · distância entre plantas proporcional ao espaçamento real (cm)</div>
+                      </div>
+                      {/* Legenda */}
+                      <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#22c55e', marginRight: 4, verticalAlign: 'middle' }} /> OK</span>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#eab308', marginRight: 4, verticalAlign: 'middle' }} /> Dupla</span>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#a855f7', marginRight: 4, verticalAlign: 'middle' }} /> Tripla</span>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#ef4444', marginRight: 4, verticalAlign: 'middle' }} /> Falha</span>
                       </div>
                     </div>
                     {/* Resumo contagem */}
@@ -1212,111 +1193,10 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                       <span style={{ color: '#ef4444' }}>Falhas: {falhas} ({pct(falhas)}%)</span>
                     </div>
                   </div>
-                  {/* Tabela de espaçamentos */}
-                  <div className="card" style={{ marginBottom: '1rem' }}>
-                    <div className="card-title"><span className="card-title-icon">📋</span> Tabela de espaçamentos</div>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
-                            <th style={{ padding: '6px 8px', fontWeight: 600, color: 'var(--text-muted)' }}>Semente</th>
-                            <th style={{ padding: '6px 8px', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'right' }}>Espaçamento (cm)</th>
-                            <th style={{ padding: '6px 8px', fontWeight: 600, color: 'var(--text-muted)' }}>Classificação</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lin.slice(0, 100).map((p, i) => (
-                            <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                              <td style={{ padding: '6px 8px' }}>{i + 1}</td>
-                              <td style={{ padding: '6px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{p.espacamento_cm.toFixed(1)}</td>
-                              <td style={{ padding: '6px 8px' }}>{tipoLabel(p.tipo)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {lin.length > 100 && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>Exibindo as primeiras 100 de {lin.length} sementes.</p>}
-                    </div>
-                  </div>
                 </>
               );
             })()}
-            {/* Evolução fenológica (tabela) */}
-            {Array.isArray(dp.evolucao_fenologica) && dp.evolucao_fenologica.length > 0 && (
-              <>
-                {/* 5️⃣ Linha do tempo da lavoura — âncora Evolução Fenológica */}
-                <div id="evolucao-fenologica" className="card" style={{ marginBottom: '1rem' }}>
-                  <div className="card-title"><span className="card-title-icon">📅</span> Linha do tempo da lavoura</div>
-                  <div style={{ overflowX: 'auto', padding: '12px 0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, minWidth: 'max-content' }}>
-                      {dp.data_plantio && (
-                        <>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap' }}>Plantio</span>
-                          <span style={{ margin: '0 8px', color: 'var(--text-muted)' }}>───</span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formatDate(dp.data_plantio)}</span>
-                          <span style={{ margin: '0 12px', color: 'var(--text-muted)' }}>───</span>
-                        </>
-                      )}
-                      {dp.evolucao_fenologica.map((ev, i) => (
-                        <React.Fragment key={i}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{ev.estagio ?? `Estágio ${i + 1}`}</span>
-                          <span style={{ margin: '0 6px', color: 'var(--text-muted)' }}>───</span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{ev.data ? formatDate(ev.data) : (ev.dae != null ? `${ev.dae} DAE` : '—')}</span>
-                          {i < dp.evolucao_fenologica!.length - 1 && <span style={{ margin: '0 12px', color: 'var(--text-muted)' }}>───</span>}
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="card" style={{ marginBottom: '1rem' }}>
-                  <div className="card-title"><span className="card-title-icon">🌱</span> Evolução fenológica</div>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
-                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Data</th>
-                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAE</th>
-                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAP</th>
-                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Estágio</th>
-                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Altura (cm)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dp.evolucao_fenologica.map((ev, i) => (
-                          <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                            <td style={{ padding: '8px 12px' }}>{ev.data ? formatDate(ev.data) : '—'}</td>
-                            <td style={{ padding: '8px 12px' }}>{ev.dae ?? '—'}</td>
-                            <td style={{ padding: '8px 12px' }}>{ev.dap ?? ev.dae ?? '—'}</td>
-                            <td style={{ padding: '8px 12px', fontWeight: 600 }}>{ev.estagio ?? '—'}</td>
-                            <td style={{ padding: '8px 12px' }}>{ev.altura_cm != null ? formatDecimal2(ev.altura_cm) : '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
-            {/* Resumo estágio atual quando não há tabela */}
-            {dp.estagio_atual && (!Array.isArray(dp.evolucao_fenologica) || dp.evolucao_fenologica.length === 0) && (
-              <div className="card" style={{ marginBottom: '1rem' }}>
-                <div className="card-title"><span className="card-title-icon">🌱</span> Estágio atual</div>
-                <div className="info-row"><span className="info-label">Estágio</span><span className="info-value" style={{ color: 'var(--primary)', fontWeight: 700 }}>{dp.estagio_atual}</span></div>
-                <div className="info-row"><span className="info-label">DAE / DAP</span><span className="info-value">{dp.dae != null ? `${dp.dae} dias` : '—'}</span></div>
-              </div>
-            )}
-            {/* Relação Plantio × Infestação (insight) */}
-            {((dp.cv_percent != null && dp.cv_percent > 25) || (dp.indice_falhas_percent != null && dp.indice_falhas_percent > 5)) && (primeiroTalhao?.pontos?.length ?? 0) > 0 && (
-              <div className="card" style={{ background: 'var(--surface-muted)', borderColor: 'var(--primary-muted)' }}>
-                <div className="card-title"><span className="card-title-icon">🔗</span> Relação Plantio × Monitoramento</div>
-                <p style={{ fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
-                  {(dp.cv_percent != null && dp.cv_percent > 25) && (dp.indice_falhas_percent != null && dp.indice_falhas_percent > 5)
-                    ? 'Alta variabilidade de plantio (CV% e falhas) pode favorecer reboleiras e plantas daninhas. Recomenda-se monitorar com maior frequência áreas com falhas e duplas.'
-                    : (dp.cv_percent != null && dp.cv_percent > 25)
-                      ? 'CV% de plantio elevado indica desuniformidade. Considere correlacionar pontos de maior infestação com áreas de maior variabilidade de estande.'
-                      : 'Áreas com falhas de estande podem apresentar maior pressão de plantas daninhas. O monitoramento fitossanitário complementa a análise do plantio.'}
-                </p>
-              </div>
-            )}
+            {/* Evolução da cultura (fenologia/timeline/estágio) foi movida para a seção Evolução da Cultura para evitar duplicidade */} 
             {/* Diagnóstico do Agrônomo: apenas conteúdo do responsável técnico — sem texto fictício do sistema */}
             {/* Removido: parágrafo gerado automaticamente. Observações e parecer vêm somente de observacoes/diagnostico_tecnico do payload. */}
             {/* Removido: card Simulação de produtividade (recomendação do usuário). */}
@@ -1325,6 +1205,171 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       })()}
 
       </RelatorioSection>
+
+      {/* #evolucao-cultura — Evolução da Cultura (fenologia + timeline + histórico) */}
+      {dadosPlantioExibir && (() => {
+        const dp = dadosPlantioExibir as DadosPlantioMonitoramento;
+        const temEvolucao = Array.isArray(dp.evolucao_fenologica) && dp.evolucao_fenologica.length > 0;
+        const temEstagio = !!dp.estagio_atual || (fenologiaGlobal?.estadio != null);
+        const temHistorico = Array.isArray(dp.historico_plantios) && dp.historico_plantios.length > 0;
+        if (!temEvolucao && !temEstagio && !temHistorico) return null;
+        const currentStage = String(dp.estagio_atual ?? fenologiaGlobal?.estadio ?? '—');
+        const stages = temEvolucao ? dp.evolucao_fenologica!.map((ev) => String(ev.estagio ?? '').trim()).filter(Boolean) : [];
+        const uniqueStages = Array.from(new Set(stages));
+        return (
+          <RelatorioSection id="evolucao-cultura" title="Evolução da Cultura" icon="📅" defaultOpen={true}>
+            {/* Timeline SaaS (chips) */}
+            <div id="evolucao-fenologica" className="card" style={{ marginBottom: '1rem' }}>
+              <div className="card-title"><span className="card-title-icon">🧭</span> Timeline fenológica</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                {dp.data_plantio && (
+                  <span className="timeline-chip">
+                    <span className="timeline-chip-title">Plantio</span>
+                    <span className="timeline-chip-sub">{formatDate(dp.data_plantio)}</span>
+                  </span>
+                )}
+                {uniqueStages.map((stg) => {
+                  const isCurrent = currentStage !== '—' && stg.toLowerCase() === currentStage.toLowerCase();
+                  return (
+                    <span key={stg} className={`timeline-chip ${isCurrent ? 'timeline-chip--current' : ''}`}>
+                      <span className="timeline-chip-title">{stg}</span>
+                      <span className="timeline-chip-sub">
+                        {temEvolucao
+                          ? (dp.evolucao_fenologica!.find((x) => String(x.estagio ?? '').toLowerCase() === stg.toLowerCase())?.dae != null
+                            ? `${dp.evolucao_fenologica!.find((x) => String(x.estagio ?? '').toLowerCase() === stg.toLowerCase())!.dae} DAE`
+                            : '—')
+                          : '—'}
+                      </span>
+                    </span>
+                  );
+                })}
+                {currentStage !== '—' && uniqueStages.length === 0 && (
+                  <span className="timeline-chip timeline-chip--current">
+                    <span className="timeline-chip-title">{currentStage}</span>
+                    <span className="timeline-chip-sub">{dp.dae != null ? `${dp.dae} DAE` : '—'}</span>
+                  </span>
+                )}
+              </div>
+              {/* Tabela técnica única (Indicador | Valor) — mais densidade, menos cards */} 
+              <div style={{ marginTop: 12, overflowX: 'auto' }}>
+                <table className="tabela-tecnica-compacta">
+                  <thead>
+                    <tr>
+                      <th>Indicador</th>
+                      <th>Valor</th>
+                      <th style={{ display: 'none' }}>Ideal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Estágio da cultura</td>
+                      <td><strong style={{ color: 'var(--primary)' }}>{currentStage}</strong></td>
+                      <td style={{ display: 'none' }}>—</td>
+                    </tr>
+                    <tr>
+                      <td>DAE</td>
+                      <td>{dp.dae != null ? `${dp.dae}` : '—'}</td>
+                      <td style={{ display: 'none' }}>—</td>
+                    </tr>
+                    <tr>
+                      <td>DAP</td>
+                      <td>{dp.dap != null ? `${dp.dap}` : '—'}</td>
+                      <td style={{ display: 'none' }}>—</td>
+                    </tr>
+                    <tr>
+                      <td>Data de plantio</td>
+                      <td>{dp.data_plantio ? formatDate(dp.data_plantio) : '—'}</td>
+                      <td style={{ display: 'none' }}>—</td>
+                    </tr>
+                    <tr>
+                      <td>Data de emergência</td>
+                      <td>{dp.data_emergencia ? formatDate(dp.data_emergencia) : '—'}</td>
+                      <td style={{ display: 'none' }}>—</td>
+                    </tr>
+                    <tr>
+                      <td>Última avaliação</td>
+                      <td>{temEvolucao ? (dp.evolucao_fenologica![dp.evolucao_fenologica!.length - 1].data ? formatDate(dp.evolucao_fenologica![dp.evolucao_fenologica!.length - 1].data) : '—') : '—'}</td>
+                      <td style={{ display: 'none' }}>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Tabela detalhada de evolução (se existir) */}
+            {temEvolucao && (
+              <div className="card" style={{ marginBottom: '1rem' }}>
+                <div className="card-title"><span className="card-title-icon">🌱</span> Evolução fenológica</div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Data</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAE</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>DAP</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Estágio</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Altura (cm)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dp.evolucao_fenologica!.map((ev, i) => {
+                        const isCurrent = currentStage !== '—' && String(ev.estagio ?? '').toLowerCase() === currentStage.toLowerCase();
+                        return (
+                          <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: isCurrent ? 'var(--primary-bg)' : 'transparent' }}>
+                            <td style={{ padding: '8px 12px' }}>{ev.data ? formatDate(ev.data) : '—'}</td>
+                            <td style={{ padding: '8px 12px' }}>{ev.dae ?? '—'}</td>
+                            <td style={{ padding: '8px 12px' }}>{ev.dap ?? ev.dae ?? '—'}</td>
+                            <td style={{ padding: '8px 12px', fontWeight: 700, color: isCurrent ? 'var(--primary)' : 'var(--text-main)' }}>{ev.estagio ?? '—'}</td>
+                            <td style={{ padding: '8px 12px' }}>{ev.altura_cm != null ? formatDecimal2(ev.altura_cm) : '—'}</td>
+                          </tr>
+                        ); 
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Estágio atual (quando não houver evolução) */}
+            {!temEvolucao && currentStage !== '—' && (
+              <div className="card" style={{ marginBottom: '1rem' }}>
+                <div className="card-title"><span className="card-title-icon">🌱</span> Estágio atual</div>
+                <div className="info-row"><span className="info-label">Estágio</span><span className="info-value" style={{ color: 'var(--primary)', fontWeight: 800 }}>{currentStage}</span></div>
+                <div className="info-row"><span className="info-label">DAE / DAP</span><span className="info-value">{dp.dae != null ? `${dp.dae} dias` : '—'}</span></div>
+              </div>
+            )}
+
+            {/* Histórico de plantios (opcional — se vier do módulo/submódulo) */}
+            {temHistorico && (
+              <div className="card" style={{ marginBottom: '0.25rem' }}>
+                <div className="card-title"><span className="card-title-icon">🗂️</span> Histórico de plantios</div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Data</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Cultura</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Variedade</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Observação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dp.historico_plantios!.slice(0, 20).map((h, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '8px 12px' }}>{h.data ? formatDate(h.data) : '—'}</td>
+                          <td style={{ padding: '8px 12px' }}>{h.cultura ?? '—'}</td>
+                          <td style={{ padding: '8px 12px' }}>{h.variedade ?? '—'}</td>
+                          <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{h.observacao ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </RelatorioSection>
+        );
+      })()}
 
       {/* 8️⃣ Ranking de desempenho da lavoura (múltiplos talhões) */}
       {normalized.talhoes.length > 1 && (
@@ -1363,20 +1408,67 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
 
       {/* #monitoramento — Ciclo + Visita + Clima (base: relatorio.html) */}
       <div id="monitoramento" className="pdf-keep-together">
-        <div className="section-heading">🔬 Visita de Monitoramento</div>
-        <div className="grid-2" style={{ marginBottom: '1.25rem' }}>
-          <div className="stat-card">
-            <div className="stat-label">Método</div>
-            <div className="stat-value" style={{ fontSize: '1.1rem', marginTop: 6, lineHeight: 1.3 }}>{metodoAmostragem}</div>
-            <div className="stat-unit">Padrão técnico</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Pontos amostrados</div>
-            <div className="stat-value">{String(metricasTalhao?.totalPontos ?? metricasGlobais?.totalPontos ?? primeiroTalhao?.pontos?.length ?? '—')}</div>
-            <div className="stat-unit">pontos de coleta</div>
-          </div>
+        <div className="section-heading">🔬 Monitoramento Fitossanitário</div>
+        <div className="monitoramento-meta-line">
+          <span><strong>Método:</strong> {metodoAmostragem}</span>
+          <span><strong>Pontos amostrados:</strong> {String(metricasTalhao?.totalPontos ?? metricasGlobais?.totalPontos ?? primeiroTalhao?.pontos?.length ?? '—')}</span>
         </div>
-        {/* Card "Ciclo da Cultura" removido — informações já exibidas em Dados do Plantio e no bloco #dados-plantio */}
+        {primeiroTalhao?.pontos && primeiroTalhao.pontos.length > 0 && (() => {
+          const rows: { ponto: string; tipo: string; alvo: string; incidencia: string; severidade: string; situacao: string }[] = [];
+          const severidadeLabelLocal = (s: number) => s < 25 ? 'baixa' : s < 50 ? 'moderada' : s < 75 ? 'alta' : 'crítica';
+          const situacaoLabelLocal = (s: number) => s < 25 ? 'Monitorar' : s < 50 ? 'Atenção' : s < 75 ? 'Atenção' : 'Crítico';
+          primeiroTalhao.pontos.forEach((p) => {
+            if (p.infestacoes.length === 0) {
+              rows.push({ ponto: p.identificador, tipo: '—', alvo: 'Sem ocorrência', incidencia: '—', severidade: '—', situacao: '—' });
+            } else {
+              p.infestacoes.forEach((inf) => {
+                const sev = inf.severidade ?? 0;
+                rows.push({
+                  ponto: p.identificador,
+                  tipo: TIPO_LABEL[inf.tipo],
+                  alvo: inf.nome,
+                  incidencia: inf.quantidade != null ? String(inf.quantidade) : '—',
+                  severidade: severidadeLabelLocal(sev),
+                  situacao: situacaoLabelLocal(sev),
+                });
+              });
+            }
+          });
+          if (rows.length === 0) return null;
+          return (
+            <div className="card" style={{ marginTop: '0.75rem' }}>
+              <table className="tabela-monitoramento-fitossanitario">
+                <thead>
+                  <tr>
+                    <th>Ponto</th>
+                    <th>Tipo</th>
+                    <th>Alvo</th>
+                    <th>Incidência</th>
+                    <th>Severidade</th>
+                    <th>Situação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.slice(0, 250).map((r, i) => (
+                    <tr key={i}>
+                      <td>{r.ponto}</td>
+                      <td>{r.tipo}</td>
+                      <td>{r.alvo}</td>
+                      <td>{r.incidencia}</td>
+                      <td>{r.severidade}</td>
+                      <td>{r.situacao}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {rows.length > 250 && (
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.5rem 0 0' }}>
+                  Exibindo as primeiras 250 linhas de {rows.length}.
+                </p>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Observações e anotações do responsável técnico — apenas conteúdo do payload (nunca texto fictício do sistema) */}

@@ -14,12 +14,10 @@ interface RelatorioLayoutEnterpriseProps {
   crea?: string;
   /** ID do relatório (ex: FS-ENT-2026-000014) para o header */
   reportId?: string;
-  /** Callback ao clicar em Exportar PDF */
-  onExportPDF: () => void;
-  /** Callback ao clicar em Exportar Excel (opcional) */
-  onExportExcel?: () => void;
   /** Callback ao clicar em Compartilhar (opcional) */
   onShare?: () => void;
+  /** URL do logo da fazenda para exibir na sidebar (opcional; sem valor mostra iniciais) */
+  farmLogoUrl?: string | null;
   /** Conteúdo principal (page-content) */
   children: React.ReactNode;
 }
@@ -37,9 +35,8 @@ export default function RelatorioLayoutEnterprise({
   tecnico,
   crea,
   reportId,
-  onExportPDF,
-  onExportExcel,
   onShare,
+  farmLogoUrl,
   children,
 }: RelatorioLayoutEnterpriseProps) {
   return (
@@ -55,7 +52,13 @@ export default function RelatorioLayoutEnterprise({
             </div>
           </div>
           <div className="sidebar-user">
-            <div className="user-avatar">{iniciais(fazenda)}</div>
+            <div className="user-avatar" style={farmLogoUrl && farmLogoUrl.trim() ? { overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' } : undefined}>
+              {farmLogoUrl && farmLogoUrl.trim() ? (
+                <img src={farmLogoUrl} alt={fazenda} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
+              ) : (
+                iniciais(fazenda)
+              )}
+            </div>
             <div className="user-name">{fazenda}</div>
             <div className="user-role">
               {tecnico && tecnico.trim() ? (crea ? `${tecnico.trim()} · CREA ${crea}` : tecnico.trim()) : (crea ? `Eng. Agrônomo · CREA ${crea}` : 'Relatório Técnico')}
@@ -96,15 +99,6 @@ export default function RelatorioLayoutEnterprise({
             <a className="nav-item" href="#auditoria">
               <span className="nav-icon">🔒</span> Auditoria
             </a>
-            <div className="nav-section-label" style={{ marginTop: '1rem' }}>Exportar</div>
-            <button
-              type="button"
-              className="nav-item"
-              style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', font: 'inherit' }}
-              onClick={onExportPDF}
-            >
-              <span className="nav-icon">🖨️</span> Exportar PDF
-            </button>
           </nav>
         </aside>
 
@@ -125,14 +119,6 @@ export default function RelatorioLayoutEnterprise({
             </div>
             <div className="header-right no-print" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               {reportId && <span className="meta-tag">{reportId}</span>}
-              <button type="button" onClick={onExportPDF} className="btn-action outline">
-                🖨️ Exportar PDF
-              </button>
-              {onExportExcel != null && (
-                <button type="button" onClick={onExportExcel} className="btn-action outline">
-                  📊 Exportar Excel
-                </button>
-              )}
               {onShare != null && (
                 <button type="button" onClick={onShare} className="btn-action outline">
                   🔗 Compartilhar

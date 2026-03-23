@@ -485,6 +485,37 @@
     font-weight: 600;
 }
 
+/* ── Timeline fenológica (chips) ─────────────────────────────────── */
+.relatorio-enterprise .timeline-chip {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    min-width: 92px;
+}
+
+.relatorio-enterprise .timeline-chip-title {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1.1;
+}
+
+.relatorio-enterprise .timeline-chip-sub {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    line-height: 1.1;
+}
+
+.relatorio-enterprise .timeline-chip--current {
+    border-color: rgba(22, 101, 52, 0.35);
+    background: linear-gradient(135deg, var(--primary-bg) 0%, #ffffff 100%);
+    box-shadow: 0 2px 10px rgba(22, 101, 52, 0.08);
+}
+
 /* ── Page Content ──────────────────────────────── */
 .relatorio-enterprise .page-content {
     padding: 2.25rem 2.5rem 3rem;
@@ -544,6 +575,41 @@
     background: var(--bg);
     color: var(--text-muted);
     border: 1px solid var(--border);
+}
+
+/* Linha compacta do monitoramento (Método · Pontos) */
+.relatorio-enterprise .monitoramento-meta-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    font-size: 0.85rem;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+}
+.relatorio-enterprise .monitoramento-meta-line strong {
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-right: 0.35rem;
+}
+
+/* Tabela técnica de monitoramento fitossanitário */
+.relatorio-enterprise .tabela-monitoramento-fitossanitario {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+.relatorio-enterprise .tabela-monitoramento-fitossanitario th,
+.relatorio-enterprise .tabela-monitoramento-fitossanitario td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+.relatorio-enterprise .tabela-monitoramento-fitossanitario th {
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.relatorio-enterprise .tabela-monitoramento-fitossanitario td {
+    color: var(--text-main);
 }
 
 .relatorio-enterprise .report-header-right {
@@ -1051,6 +1117,13 @@
     border-radius: var(--radius-sm);
     overflow: hidden;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Mapa do Talhão em layout vertical (stack) */
+.relatorio-enterprise .mapa-vertical-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 /* Legenda do mapa no rodapé do card (não sobre o mapa) */
