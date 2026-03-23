@@ -111,6 +111,7 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
       desvios: Array.isArray((relatorio as any).desvios) ? ((relatorio as any).desvios as any[]).map((d: any) => ({ tipo: d.tipo, descricao: d.descricao, data: d.data, severidade: d.severidade, local: d.local, acaoRecomendada: d.acaoRecomendada })) : undefined,
       diagnostico: diagnostico && typeof diagnostico === 'object' ? { problemaPrincipal: (diagnostico as any).problemaPrincipal, causaProvavel: (diagnostico as any).causaProvavel, nivelRisco: (diagnostico as any).nivelRisco, urgenciaAcao: (diagnostico as any).urgenciaAcao, recomendacoes: Array.isArray((diagnostico as any).recomendacoes) ? (diagnostico as any).recomendacoes : undefined } : undefined,
       planoAcao: planoAcao && typeof planoAcao === 'object' ? { objetivoManejo: (planoAcao as any).objetivoManejo, acoes: Array.isArray((planoAcao as any).acoes) ? (planoAcao as any).acoes.map((a: any) => ({ prioridade: a.prioridade != null ? String(a.prioridade) : undefined, acao: a.acao, prazo: a.prazo })) : undefined } : undefined,
+      checklist: (relatorio as any).checklist && typeof (relatorio as any).checklist === 'object' ? (relatorio as any).checklist : undefined,
       conclusao: typeof conclusao === 'string' ? conclusao : undefined,
     };
 

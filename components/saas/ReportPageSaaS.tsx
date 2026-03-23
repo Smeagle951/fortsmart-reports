@@ -66,6 +66,7 @@ export interface ReportPageSaaSData {
   desvios?: Array<{ tipo?: string; descricao?: string; data?: string; severidade?: string; local?: string; acaoRecomendada?: string }>;
   diagnostico?: { problemaPrincipal?: string; causaProvavel?: string; nivelRisco?: string; urgenciaAcao?: string; recomendacoes?: string[] };
   planoAcao?: { objetivoManejo?: string; acoes?: Array<{ prioridade?: string; acao?: string; prazo?: string }> };
+  checklist?: Record<string, string | null>;
   conclusao?: string;
 }
 
@@ -433,6 +434,39 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Checklist da Visita */}
+        {data.checklist != null && Object.keys(data.checklist).length > 0 && (
+          <section className="saas-section print:break-inside-avoid">
+            <div className="mx-auto max-w-7xl">
+              <h2 className="saas-section-title">Checklist da visita</h2>
+              <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {Object.entries(data.checklist).map(([key, value], i) => {
+                    if (value == null || value.trim() === '') return null;
+                    
+                    let colorClass = 'text-slate-800';
+                    const valLower = value.toLowerCase();
+                    const keyLower = key.toLowerCase();
+                    if (valLower === 'sim') colorClass = 'text-amber-600 font-medium';
+                    if (valLower === 'não' || valLower === 'nao') colorClass = 'text-emerald-600 font-medium';
+                    if (keyLower.includes('uniforme') || keyLower.includes('ok')) {
+                      if (valLower === 'sim') colorClass = 'text-emerald-600 font-medium';
+                      if (valLower === 'não' || valLower === 'nao') colorClass = 'text-amber-600 font-medium';
+                    }
+
+                    return (
+                      <div key={i}>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{key}</p>
+                        <p className={`text-sm mt-0.5 ${colorClass}`}>{value}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </section>

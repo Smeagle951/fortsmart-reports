@@ -1104,7 +1104,7 @@ export default function SoybeanHarvestDashboard() {
             </div>
             
             <div className="p-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-              {pareceresTecnicos.slice(0, 3).map((p: any, idx: number) => (
+              {pareceresTecnicos.map((p: any, idx: number) => (
                 <div key={p.key} className={`border border-slate-200 p-4 relative flex flex-col ${p.icon === '🏆' ? 'bg-amber-50/50 border-amber-300' : 'bg-white'}`}>
                   <div className="absolute top-0 right-0 bg-slate-100 text-[9px] font-black uppercase px-2 py-1 text-slate-500 border-l border-b border-slate-200">
                     Posição #{idx+1} em Lucro
@@ -1462,7 +1462,7 @@ export default function SoybeanHarvestDashboard() {
                       <h4 className="text-sm font-black uppercase tracking-tighter">Proposta Tecnológica</h4>
                     </div>
                     <div className="space-y-4">
-                      {products.slice(0, 3).map((item, pi) => {
+                      {products.map((item, pi) => {
                         const insight = productInsights[item.produto];
                         if (!insight) return null;
                         return (
