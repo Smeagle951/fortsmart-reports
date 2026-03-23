@@ -13,6 +13,34 @@ type Props = {
   shareToken: string;
 };
 
+/** Paleta e tipografia — relatório técnico agronómico (dados reais do módulo; sem placeholders). */
+const ag = {
+  fontTitle: '"Source Serif 4", "Georgia", "Times New Roman", serif',
+  fontBody: '"Source Sans 3", "Segoe UI", system-ui, sans-serif',
+  paper: '#f7f4ee',
+  paper2: '#efe9df',
+  ink: '#1c1917',
+  inkMuted: '#57534e',
+  forest: '#1a3d2e',
+  forest2: '#0f2419',
+  border: '#d6d3cd',
+  card: '#fffcf7',
+} as const;
+
+function labelTipoColeta(raw: unknown): string {
+  const s = String(raw ?? '');
+  if (s === 'compactacao') return 'Levantamento de compactação do solo';
+  if (s === 'solos') return 'Amostragem de solos';
+  return s ? s.replace(/_/g, ' ') : '';
+}
+
+function labelModoColeta(raw: unknown): string {
+  const s = String(raw ?? '');
+  if (s === 'manual') return 'Pontos definidos no mapa';
+  if (s === 'caminhada') return 'Trajeto contínuo (GPS)';
+  return s || '';
+}
+
 function colorForClass(c: string | undefined): string {
   switch (c) {
     case 'Crítica':
@@ -75,6 +103,24 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
     return t.filter((x) => x.id);
   }, [p.talhoes]);
 
+  const centerLat = useMemo(() => {
+    for (const o of observacoes) {
+      if (o.lat != null && Number.isFinite(o.lat)) return o.lat;
+    }
+    return -14.235;
+  }, [observacoes]);
+
+  const centerLng = useMemo(() => {
+    for (const o of observacoes) {
+      if (o.lng != null && Number.isFinite(o.lng)) return o.lng;
+    }
+    return -51.9253;
+  }, [observacoes]);
+
+  const initialZoom = useMemo(() => {
+    return observacoes.some((o) => o.lat != null && o.lng != null) ? 15 : 4;
+  }, [observacoes]);
+
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
@@ -88,7 +134,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
 
       if (destroyed || !mapRef.current) return;
 
-      const map = L.map(mapRef.current).setView([-14.235, -51.9253], 4);
+      const map = L.map(mapRef.current).setView([centerLat, centerLng], initialZoom);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
       }).addTo(map);
@@ -108,7 +154,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       heatRef.current = null;
       isolineLayerRef.current = null;
     };
-  }, []);
+  }, [centerLat, centerLng, initialZoom]);
 
   useEffect(() => {
     const map = mapInstance.current;
@@ -194,24 +240,46 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
 
   const shpUrl = `/api/amostragem/export/shp?token=${encodeURIComponent(shareToken)}`;
 
+  const cultura = (meta.culture as string) || '';
+  const nomeCampanha = (meta.campaignName as string) || '';
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'system-ui, sans-serif' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: `linear-gradient(180deg, ${ag.paper} 0%, ${ag.paper2} 100%)`,
+        fontFamily: ag.fontBody,
+        color: ag.ink,
+      }}
+    >
       <header
         style={{
-          padding: '16px 20px',
-          background: '#14532d',
-          color: '#fff',
+          padding: '20px 22px',
+          background: `linear-gradient(135deg, ${ag.forest} 0%, ${ag.forest2} 100%)`,
+          color: '#fafaf9',
+          borderBottom: `3px solid ${ag.paper2}`,
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 12,
-          alignItems: 'center',
+          gap: 14,
+          alignItems: 'flex-start',
           justifyContent: 'space-between',
         }}
       >
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Amostragem de solos</h1>
-          <p style={{ margin: '6px 0 0', opacity: 0.9, fontSize: 14 }}>
-            {(meta.campaignName as string) ?? 'Campanha'} · {(meta.culture as string) ?? '—'}
+        <div style={{ maxWidth: 720 }}>
+          <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.88 }}>
+            Relatório técnico agronómico
+          </p>
+          <h1 style={{ margin: '6px 0 0', fontFamily: ag.fontTitle, fontSize: '1.45rem', fontWeight: 700, lineHeight: 1.25 }}>
+            Compactação do solo / amostragem pontual
+          </h1>
+          <p style={{ margin: '10px 0 0', opacity: 0.92, fontSize: 15, lineHeight: 1.45 }}>
+            <strong>{nomeCampanha}</strong>
+            {cultura ? (
+              <>
+                {' '}
+                · <span style={{ fontStyle: 'italic' }}>{cultura}</span>
+              </>
+            ) : null}
           </p>
           {Boolean(
             meta.description ||
@@ -223,39 +291,46 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               meta.modo_coleta ||
               meta.tipo
           ) && (
-            <details style={{ marginTop: 10, fontSize: 13, opacity: 0.92, maxWidth: 560 }}>
-              <summary style={{ cursor: 'pointer', userSelect: 'none' }}>Detalhes da campanha</summary>
-              <div style={{ marginTop: 8, lineHeight: 1.5 }}>
+            <details style={{ marginTop: 12, fontSize: 13, opacity: 0.94, maxWidth: 640 }}>
+              <summary style={{ cursor: 'pointer', userSelect: 'none', fontWeight: 600 }}>
+                Identificação do levantamento
+              </summary>
+              <div style={{ marginTop: 10, lineHeight: 1.55 }}>
                 {meta.description ? <div>{String(meta.description)}</div> : null}
                 {meta.safra ? (
                   <div>
-                    <strong>Safra:</strong> {String(meta.safra)}
+                    <strong>Safra agrícola:</strong> {String(meta.safra)}
                   </div>
                 ) : null}
                 {meta.responsavel ? (
                   <div>
-                    <strong>Responsável:</strong> {String(meta.responsavel)}
-                    {meta.crea ? ` · CREA ${String(meta.crea)}` : ''}
+                    <strong>Responsável técnico:</strong> {String(meta.responsavel)}
+                    {meta.crea ? (
+                      <>
+                        {' '}
+                        · <strong>Registro profissional (CREA):</strong> {String(meta.crea)}
+                      </>
+                    ) : null}
                   </div>
                 ) : meta.crea ? (
                   <div>
-                    <strong>CREA:</strong> {String(meta.crea)}
+                    <strong>Registro profissional (CREA):</strong> {String(meta.crea)}
                   </div>
                 ) : null}
                 {meta.tipo ? (
                   <div>
-                    <strong>Tipo de coleta:</strong> {String(meta.tipo)}
+                    <strong>Objetivo do levantamento:</strong> {labelTipoColeta(meta.tipo)}
                   </div>
                 ) : null}
                 {meta.modo_coleta ? (
                   <div>
-                    <strong>Modo:</strong> {String(meta.modo_coleta)}
+                    <strong>Modo de coleta:</strong> {labelModoColeta(meta.modo_coleta)}
                   </div>
                 ) : null}
                 {meta.tipo_layout ? (
                   <div>
-                    <strong>Layout:</strong> {String(meta.tipo_layout)}
-                    {meta.fator_pontos_ha != null ? ` (${String(meta.fator_pontos_ha)} pts/ha)` : ''}
+                    <strong>Malha / intensidade:</strong> {String(meta.tipo_layout)}
+                    {meta.fator_pontos_ha != null ? ` · ${String(meta.fator_pontos_ha)} pontos por hectare` : ''}
                   </div>
                 ) : null}
               </div>
@@ -267,7 +342,15 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
             <select
               value={selectedTalhao}
               onChange={(e) => setSelectedTalhao(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 8, border: 'none' }}
+              style={{
+                padding: '9px 11px',
+                borderRadius: 6,
+                border: `1px solid ${ag.border}`,
+                background: ag.card,
+                color: ag.ink,
+                fontFamily: ag.fontBody,
+                fontSize: 13,
+              }}
             >
               <option value="">Todos os talhões</option>
               {talhoesOptions.map((t) => (
@@ -277,93 +360,118 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               ))}
             </select>
           )}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
             <input type="checkbox" checked={showHeat} onChange={(e) => setShowHeat(e.target.checked)} />
-            Heatmap
+            Mapa de intensidade (IC)
           </label>
           {isolinesFc ? (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
               <input
                 type="checkbox"
                 checked={showIsolines}
                 onChange={(e) => setShowIsolines(e.target.checked)}
               />
-              Isolinhas (premium)
+              Isolinhas de IC
             </label>
           ) : null}
           <a
             href={shpUrl}
             style={{
-              background: '#fff',
-              color: '#14532d',
-              padding: '8px 14px',
-              borderRadius: 8,
-              fontWeight: 600,
+              background: ag.card,
+              color: ag.forest,
+              padding: '9px 14px',
+              borderRadius: 6,
+              fontWeight: 700,
               textDecoration: 'none',
+              border: `1px solid ${ag.border}`,
+              fontSize: 13,
             }}
           >
-            Exportar SHP
+            Exportar Shapefile (SHP)
           </a>
         </div>
       </header>
 
-      <div style={{ position: 'relative', height: 'min(70vh, 640px)', margin: 16 }}>
-        <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden' }} />
+      <div style={{ position: 'relative', height: 'min(70vh, 640px)', margin: 18, boxShadow: '0 8px 28px rgba(28,25,23,0.08)' }}>
+        <div
+          ref={mapRef}
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: 4,
+            overflow: 'hidden',
+            border: `1px solid ${ag.border}`,
+          }}
+        />
         <div
           style={{
             position: 'absolute',
-            bottom: 16,
-            left: 16,
-            background: 'rgba(255,255,255,0.95)',
-            padding: '10px 12px',
-            borderRadius: 10,
-            boxShadow: '0 4px 16px rgba(0,0,0,.12)',
+            bottom: 14,
+            left: 14,
+            background: 'rgba(255,252,247,0.97)',
+            padding: '11px 13px',
+            borderRadius: 4,
+            boxShadow: '0 4px 20px rgba(28,25,23,0.12)',
             fontSize: 12,
             zIndex: 500,
-            lineHeight: 1.6,
+            lineHeight: 1.55,
+            border: `1px solid ${ag.border}`,
+            fontFamily: ag.fontBody,
+            maxWidth: 280,
           }}
         >
-          <strong style={{ display: 'block', marginBottom: 6 }}>Legenda — MPa</strong>
+          <strong style={{ display: 'block', marginBottom: 8, fontFamily: ag.fontTitle, color: ag.forest }}>
+            Legenda — índice de cone (IC)
+          </strong>
           <div>
-            <span style={{ color: '#dc2626' }}>●</span> Crítica (&gt;3)
+            <span style={{ color: '#dc2626' }}>●</span> Restrição crítica (IC &gt; 3 MPa)
           </div>
           <div>
-            <span style={{ color: '#ea580c' }}>●</span> Alta (2–3)
+            <span style={{ color: '#ea580c' }}>●</span> Restrição alta (2–3 MPa)
           </div>
           <div>
-            <span style={{ color: '#ca8a04' }}>●</span> Moderada (1–2)
+            <span style={{ color: '#ca8a04' }}>●</span> Restrição moderada (1–2 MPa)
           </div>
           <div>
-            <span style={{ color: '#16a34a' }}>●</span> Baixa (&lt;1)
+            <span style={{ color: '#16a34a' }}>●</span> Baixa restrição (IC &lt; 1 MPa)
           </div>
         </div>
       </div>
 
-      <section style={{ padding: '0 20px 24px' }}>
-        <h2 style={{ fontSize: '1.05rem' }}>Pontos ({filteredObs.length})</h2>
-        <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+      <section style={{ padding: '0 22px 28px' }}>
+        <h2 style={{ fontFamily: ag.fontTitle, fontSize: '1.15rem', color: ag.forest, marginBottom: 10 }}>
+          Registro de pontos ({filteredObs.length})
+        </h2>
+        <div
+          style={{
+            overflowX: 'auto',
+            borderRadius: 4,
+            border: `1px solid ${ag.border}`,
+            background: ag.card,
+          }}
+        >
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
-              <tr style={{ background: '#f1f5f9' }}>
-                <th style={{ textAlign: 'left', padding: 8 }}>#</th>
-                <th style={{ textAlign: 'left', padding: 8 }}>Prof.</th>
-                <th style={{ textAlign: 'left', padding: 8 }}>MPa</th>
-                <th style={{ textAlign: 'left', padding: 8 }}>Classe</th>
-                <th style={{ textAlign: 'left', padding: 8 }}>Talhão</th>
+              <tr style={{ background: ag.paper2, color: ag.ink, fontWeight: 600 }}>
+                <th style={{ textAlign: 'left', padding: 10 }}>Ponto</th>
+                <th style={{ textAlign: 'left', padding: 10 }}>Profundidade (camada)</th>
+                <th style={{ textAlign: 'left', padding: 10 }}>IC médio (MPa)</th>
+                <th style={{ textAlign: 'left', padding: 10 }}>Classe de restrição</th>
+                <th style={{ textAlign: 'left', padding: 10 }}>Talhão</th>
               </tr>
             </thead>
             <tbody>
               {filteredObs.map((o) => (
                 <tr
                   key={String(o.id)}
-                  style={{ borderTop: '1px solid #e2e8f0', cursor: 'pointer' }}
+                  style={{ borderTop: `1px solid ${ag.border}`, cursor: 'pointer' }}
                   onClick={() => setSelected(o)}
                 >
-                  <td style={{ padding: 8 }}>{o.numero}</td>
-                  <td style={{ padding: 8 }}>{o.profundidade ?? '—'}</td>
-                  <td style={{ padding: 8 }}>{o.compactacao != null ? o.compactacao.toFixed(2) : '—'}</td>
-                  <td style={{ padding: 8 }}>{o.classificacao}</td>
-                  <td style={{ padding: 8 }}>{o.talhao_id ?? '—'}</td>
+                  <td style={{ padding: 10 }}>{o.numero}</td>
+                  <td style={{ padding: 10 }}>{o.profundidade ?? '—'}</td>
+                  <td style={{ padding: 10 }}>{o.compactacao != null ? o.compactacao.toFixed(2) : '—'}</td>
+                  <td style={{ padding: 10 }}>{o.classificacao}</td>
+                  <td style={{ padding: 10 }}>{o.talhao_nome || o.talhao_id || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -388,57 +496,65 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         >
           <div
             style={{
-              background: '#fff',
-              maxWidth: 420,
+              background: ag.card,
+              maxWidth: 440,
               width: '100%',
-              borderRadius: 12,
-              padding: 20,
+              borderRadius: 4,
+              padding: 22,
               maxHeight: '90vh',
               overflow: 'auto',
+              border: `1px solid ${ag.border}`,
+              fontFamily: ag.fontBody,
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginTop: 0 }}>Ponto #{selected.numero}</h3>
+            <h3 style={{ marginTop: 0, fontFamily: ag.fontTitle, color: ag.forest }}>Ponto de amostragem #{selected.numero}</h3>
             {selected.point_name ? (
               <p style={{ fontSize: 14, marginBottom: 4 }}>
-                <strong>Nome:</strong> {selected.point_name}
+                <strong>Identificação no campo:</strong> {selected.point_name}
               </p>
             ) : null}
-            <p style={{ fontSize: 14, color: '#475569' }}>
-              {selected.lat?.toFixed(6)}, {selected.lng?.toFixed(6)}
+            {(selected.talhao_nome || selected.talhao_id) && (
+              <p style={{ fontSize: 14 }}>
+                <strong>Talhão:</strong> {selected.talhao_nome || selected.talhao_id}
+              </p>
+            )}
+            <p style={{ fontSize: 13, color: ag.inkMuted }}>
+              <strong>Coordenadas (WGS84):</strong> {selected.lat?.toFixed(6)}, {selected.lng?.toFixed(6)}
             </p>
             {selected.altitude_m != null ? (
-              <p style={{ fontSize: 13, color: '#475569' }}>
-                Alt. {selected.altitude_m.toFixed(1)} m
-                {selected.gps_accuracy_m != null ? ` · precisão ±${selected.gps_accuracy_m.toFixed(1)} m` : ''}
-                {selected.gps_provider ? ` · ${selected.gps_provider}` : ''}
+              <p style={{ fontSize: 13, color: ag.inkMuted }}>
+                <strong>Cota ortométrica aprox.:</strong> {selected.altitude_m.toFixed(1)} m
+                {selected.gps_accuracy_m != null ? ` · precisão horizontal ±${selected.gps_accuracy_m.toFixed(1)} m` : ''}
+                {selected.gps_provider ? ` · fonte: ${selected.gps_provider}` : ''}
               </p>
             ) : null}
             <p>
-              <strong>Profundidade:</strong> {selected.profundidade ?? '—'}
+              <strong>Profundidade da amostra / camada:</strong> {selected.profundidade ?? '—'}
             </p>
             {selected.sample_code ? (
               <p>
-                <strong>Código amostra:</strong> {selected.sample_code}
+                <strong>Código da amostra:</strong> {selected.sample_code}
               </p>
             ) : null}
             {selected.moisture_percent != null ? (
               <p>
-                <strong>Umidade:</strong> {selected.moisture_percent.toFixed(1)}%
+                <strong>Teor de umidade (gravimétrico, %):</strong> {selected.moisture_percent.toFixed(1)}
               </p>
             ) : null}
             {selected.bulk_density != null ? (
               <p>
-                <strong>Densidade:</strong> {selected.bulk_density.toFixed(3)} g/cm³
+                <strong>Densidade aparente:</strong> {selected.bulk_density.toFixed(3)} g/cm³
               </p>
             ) : null}
             <p>
-              <strong>Compactação:</strong>{' '}
-              {selected.compactacao != null ? `${selected.compactacao.toFixed(2)} MPa` : '—'} ({selected.classificacao})
+              <strong>Índice de cone (IC) médio na camada:</strong>{' '}
+              {selected.compactacao != null ? `${selected.compactacao.toFixed(2)} MPa` : '—'}{' '}
+              <span style={{ color: ag.inkMuted }}>({selected.classificacao})</span>
             </p>
             {selected.quantidade != null ? (
               <p>
-                <strong>Quantidade (solo):</strong> {selected.quantidade}
+                <strong>Volume / massa coletada (registro de campo):</strong> {selected.quantidade}
               </p>
             ) : null}
             {(selected.tipo_penetrometro ||
@@ -446,33 +562,33 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               selected.altura_queda_cm != null ||
               selected.numero_impactos != null ||
               selected.profundidade_atingida_cm != null) && (
-              <div style={{ fontSize: 13, marginTop: 8 }}>
-                <strong>Penetrômetro / manual</strong>
+              <div style={{ fontSize: 13, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${ag.border}` }}>
+                <strong>Penetrômetro — parâmetros de ensaio</strong>
                 {selected.tipo_penetrometro ? (
-                  <div>Tipo: {selected.tipo_penetrometro}</div>
+                  <div>Equipamento / modo: {selected.tipo_penetrometro}</div>
                 ) : null}
                 {selected.peso_martelo_kg != null ? (
-                  <div>Martelo: {selected.peso_martelo_kg} kg</div>
+                  <div>Massa do martelo: {selected.peso_martelo_kg} kg</div>
                 ) : null}
                 {selected.altura_queda_cm != null ? (
-                  <div>Queda: {selected.altura_queda_cm} cm</div>
+                  <div>Altura de queda: {selected.altura_queda_cm} cm</div>
                 ) : null}
                 {selected.numero_impactos != null ? (
-                  <div>Impactos: {selected.numero_impactos}</div>
+                  <div>Número de impactos: {selected.numero_impactos}</div>
                 ) : null}
                 {selected.profundidade_atingida_cm != null ? (
-                  <div>Prof. atingida: {selected.profundidade_atingida_cm} cm</div>
+                  <div>Profundidade máxima atingida: {selected.profundidade_atingida_cm} cm</div>
                 ) : null}
               </div>
             )}
             {selected.leituras && selected.leituras.length > 0 ? (
-              <div style={{ marginTop: 10, fontSize: 13 }}>
-                <strong>Leituras ({selected.leituras.length})</strong>
+              <div style={{ marginTop: 12, fontSize: 13 }}>
+                <strong>Leituras brutas e IC por golpe ({selected.leituras.length})</strong>
                 <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
                   {selected.leituras.map((L, i) => (
                     <li key={i}>
                       {L.raw_value != null ? `${L.raw_value} ${L.unit ?? ''}` : '—'}
-                      {L.ci_mpa != null && Number.isFinite(L.ci_mpa) ? ` → ${Number(L.ci_mpa).toFixed(2)} MPa` : ''}
+                      {L.ci_mpa != null && Number.isFinite(L.ci_mpa) ? ` → IC ${Number(L.ci_mpa).toFixed(2)} MPa` : ''}
                     </li>
                   ))}
                 </ul>
@@ -480,20 +596,28 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
             ) : null}
             {selected.obs ? (
               <p>
-                <strong>Obs.:</strong> {selected.obs}
+                <strong>Observações de campo:</strong> {selected.obs}
               </p>
             ) : null}
             {selected.imagem_url ? (
               <img
                 src={selected.imagem_url}
-                alt="Amostra"
-                style={{ width: '100%', borderRadius: 8, marginTop: 8 }}
+                alt="Registro fotográfico da amostra"
+                style={{ width: '100%', borderRadius: 4, marginTop: 10, border: `1px solid ${ag.border}` }}
               />
             ) : null}
             <button
               type="button"
               onClick={() => setSelected(null)}
-              style={{ marginTop: 16, padding: '8px 16px', borderRadius: 8, border: '1px solid #cbd5e1' }}
+              style={{
+                marginTop: 18,
+                padding: '10px 18px',
+                borderRadius: 4,
+                border: `1px solid ${ag.border}`,
+                background: ag.paper2,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
             >
               Fechar
             </button>

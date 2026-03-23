@@ -35,6 +35,8 @@ export type AmostragemObservacao = {
   compactacao?: number | null;
   classificacao?: string;
   talhao_id?: string | null;
+  /** Nome do talhão resolvido no app (SQLite); preferir na UI em relação a só o id. */
+  talhao_nome?: string | null;
   obs?: string | null;
   imagem_url?: string | null;
   point_id?: number;
@@ -82,6 +84,7 @@ export function getFeatureCollection(payload: AmostragemSoloPayload): FeatureCol
         compactacao: o.compactacao ?? null,
         classificacao: o.classificacao ?? 'Indefinido',
         talhao_id: o.talhao_id ?? '',
+        ...(o.talhao_nome != null && o.talhao_nome !== '' ? { talhao_nome: o.talhao_nome } : {}),
         obs: o.obs ?? '',
         point_id: o.point_id,
         depth_id: o.depth_id,
