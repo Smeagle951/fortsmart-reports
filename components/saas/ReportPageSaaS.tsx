@@ -1,7 +1,11 @@
 'use client';
 
 import { useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import HeaderInstitucionalVisitaTecnica from '@/components/visita/HeaderInstitucionalVisitaTecnica';
+import type { VisitaMapaEspacialPayload } from './VisitaMapaEspacialSaaS';
+
+const VisitaMapaEspacialSaaS = dynamic(() => import('./VisitaMapaEspacialSaaS'), { ssr: false });
 import HeaderSection, { type StatusGeral } from './HeaderSection';
 import KpiCardsSection from './KpiCardsSection';
 import EvaluationTable, { type AvaliacaoRow } from './EvaluationTable';
@@ -67,6 +71,8 @@ export interface ReportPageSaaSData {
   diagnostico?: { problemaPrincipal?: string; causaProvavel?: string; nivelRisco?: string; urgenciaAcao?: string; recomendacoes?: string[] };
   planoAcao?: { objetivoManejo?: string; acoes?: Array<{ prioridade?: string; acao?: string; prazo?: string }> };
   conclusao?: string;
+  /** Mapa Leaflet: polígono do talhão, pontos georreferenciados, clusters e time-lapse (evolução espacial). */
+  mapa?: VisitaMapaEspacialPayload;
 }
 
 interface ReportPageSaaSProps {
@@ -268,6 +274,12 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
   const imagens = buildImagens(data);
   const comparativo = buildComparativo(data);
 
+  const mapaVisita = data.mapa;
+  const showMapaEspacial =
+    mapaVisita != null &&
+    ((Array.isArray(mapaVisita.pontos) && mapaVisita.pontos.length > 0) ||
+      (Array.isArray(mapaVisita.polygon) && mapaVisita.polygon.length >= 3));
+
   const handleExportPdf = useCallback(() => {
     window.print();
   }, []);
@@ -329,6 +341,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         {imagens.length > 0 && (
           <ImageGallerySaaS imagens={imagens} marcaDagua="FortSmart" />
         )}
+        {showMapaEspacial && <VisitaMapaEspacialSaaS mapa={mapaVisita!} />}
         {comparativo.length > 0 && (
           <ComparisonSection
             items={comparativo}

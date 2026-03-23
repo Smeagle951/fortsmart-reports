@@ -91,8 +91,8 @@ export default function MatrizRiscoFenologico({
                 Matriz de Risco Fenológico
             </h3>
 
-            <div style={{ width: '100%', height: 320 }}>
-                <ResponsiveContainer>
+            <div style={{ width: '100%', height: 320, minHeight: 320 }}>
+                <ResponsiveContainer width="100%" height={320}>
                     <LineChart
                         data={data}
                         margin={{ top: 20, right: 30, left: 0, bottom: 10 }}

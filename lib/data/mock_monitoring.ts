@@ -1,5 +1,10 @@
 import { RelatorioMonitoramento } from '../types/monitoring';
 
+/**
+ * @deprecated Dados de demonstração — não usado no fluxo de produção.
+ * Produção usa apenas dados reais (Supabase) ou emptyRelatorio quando não há dados.
+ * Mantido apenas para testes ou referência de estrutura.
+ */
 export const mockRelatorio: RelatorioMonitoramento = {
     fazenda: 'Fazenda Boa Esperança',
     safra: '2024/2025',

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FeatureCollection, GeoJsonObject, Point } from 'geojson';
+import { buildCompactacaoDiagnostico } from '@/lib/amostragem-solo/diagnostics';
 import {
   getFeatureCollection,
   type AmostragemObservacao,
@@ -26,6 +27,9 @@ const ag = {
   border: '#d6d3cd',
   card: '#fffcf7',
 } as const;
+
+const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || 'TiQt1yLZoL6EmShd1flj';
+const MAPTILER_SATELLITE_URL = `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_KEY}`;
 
 function labelTipoColeta(raw: unknown): string {
   const s = String(raw ?? '');
@@ -56,6 +60,16 @@ function colorForClass(c: string | undefined): string {
   }
 }
 
+function colorForDepth(prof: string | null | undefined): string {
+  const s = String(prof ?? '').toLowerCase();
+  if (s.startsWith('0-10')) return '#38bdf8';
+  if (s.startsWith('10-20')) return '#22c55e';
+  if (s.startsWith('20-30')) return '#f59e0b';
+  if (s.startsWith('30-40')) return '#f97316';
+  if (s.startsWith('40-50')) return '#a855f7';
+  return '#475569';
+}
+
 export default function RelatorioAmostragemSoloContent({ payload, shareToken }: Props) {
   const p = payload as unknown as AmostragemSoloPayload;
   const meta = (p.meta ?? {}) as Record<string, unknown>;
@@ -74,6 +88,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
   const [selectedTalhao, setSelectedTalhao] = useState<string>('');
   const [showHeat, setShowHeat] = useState(false);
   const [showIsolines, setShowIsolines] = useState(true);
+  const [showTalhaoLabels, setShowTalhaoLabels] = useState(true);
   const [selected, setSelected] = useState<AmostragemObservacao | null>(null);
 
   const mapRef = useRef<HTMLDivElement>(null);
@@ -81,6 +96,10 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
   const clusterRef = useRef<import('leaflet').LayerGroup | null>(null);
   const heatRef = useRef<import('leaflet').Layer | null>(null);
   const isolineLayerRef = useRef<import('leaflet').Layer | null>(null);
+  const talhoesLayerRef = useRef<import('leaflet').Layer | null>(null);
+  const rotaLayerRef = useRef<import('leaflet').Layer | null>(null);
+  const talhaoLabelLayerRef = useRef<import('leaflet').Layer | null>(null);
+  const rotaDirectionLayerRef = useRef<import('leaflet').Layer | null>(null);
 
   const filteredObs = useMemo(() => {
     if (!selectedTalhao) return observacoes;
@@ -103,23 +122,53 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
     return t.filter((x) => x.id);
   }, [p.talhoes]);
 
-  const centerLat = useMemo(() => {
+  const talhoesFc = useMemo(() => {
+    const gj = p.talhoes_geojson as FeatureCollection | undefined;
+    if (gj && gj.type === 'FeatureCollection' && Array.isArray(gj.features) && gj.features.length > 0) return gj;
+    return null;
+  }, [p.talhoes_geojson]);
+
+  const rotaFc = useMemo(() => {
+    const gj = p.rota_geojson as FeatureCollection | undefined;
+    if (gj && gj.type === 'FeatureCollection' && Array.isArray(gj.features) && gj.features.length > 0) return gj;
+    return null;
+  }, [p.rota_geojson]);
+
+  /** Todos os pontos com coordenadas válidas — centro e fit inicial por extensão real, não só o 1.º ponto. */
+  const obsLatLngPoints = useMemo((): [number, number][] => {
+    const pts: [number, number][] = [];
     for (const o of observacoes) {
-      if (o.lat != null && Number.isFinite(o.lat)) return o.lat;
+      if (o.lat != null && o.lng != null && Number.isFinite(o.lat) && Number.isFinite(o.lng)) {
+        pts.push([o.lat, o.lng]);
+      }
     }
-    return -14.235;
+    return pts;
   }, [observacoes]);
+
+  const centerLat = useMemo(() => {
+    if (obsLatLngPoints.length === 0) return -14.235;
+    let s = 0;
+    for (const [lat] of obsLatLngPoints) s += lat;
+    return s / obsLatLngPoints.length;
+  }, [obsLatLngPoints]);
 
   const centerLng = useMemo(() => {
-    for (const o of observacoes) {
-      if (o.lng != null && Number.isFinite(o.lng)) return o.lng;
-    }
-    return -51.9253;
-  }, [observacoes]);
+    if (obsLatLngPoints.length === 0) return -51.9253;
+    let s = 0;
+    for (const [, lng] of obsLatLngPoints) s += lng;
+    return s / obsLatLngPoints.length;
+  }, [obsLatLngPoints]);
 
   const initialZoom = useMemo(() => {
-    return observacoes.some((o) => o.lat != null && o.lng != null) ? 15 : 4;
-  }, [observacoes]);
+    return obsLatLngPoints.length > 0 ? 14 : 4;
+  }, [obsLatLngPoints]);
+
+  const isLegacyPayload = !p.schemaVersion || Number(p.schemaVersion) < 2;
+
+  const diagnosticoText = useMemo(
+    () => buildCompactacaoDiagnostico(selectedTalhao ? filteredObs : observacoes),
+    [filteredObs, observacoes, selectedTalhao],
+  );
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
@@ -135,8 +184,9 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       if (destroyed || !mapRef.current) return;
 
       const map = L.map(mapRef.current).setView([centerLat, centerLng], initialZoom);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
+      L.tileLayer(MAPTILER_SATELLITE_URL, {
+        attribution: '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; OpenStreetMap',
+        maxZoom: 20,
       }).addTo(map);
       mapInstance.current = map;
 
@@ -144,6 +194,10 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       const cluster = (L as any).markerClusterGroup({ maxClusterRadius: 40, spiderfyOnMaxZoom: true });
       cluster.addTo(map);
       clusterRef.current = cluster;
+
+      if (obsLatLngPoints.length > 0) {
+        map.fitBounds(obsLatLngPoints, { padding: [40, 40], maxZoom: 17 });
+      }
     })();
 
     return () => {
@@ -153,8 +207,12 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       clusterRef.current = null;
       heatRef.current = null;
       isolineLayerRef.current = null;
+      talhoesLayerRef.current = null;
+      rotaLayerRef.current = null;
+      talhaoLabelLayerRef.current = null;
+      rotaDirectionLayerRef.current = null;
     };
-  }, [centerLat, centerLng, initialZoom]);
+  }, [centerLat, centerLng, initialZoom, obsLatLngPoints]);
 
   useEffect(() => {
     const map = mapInstance.current;
@@ -168,6 +226,22 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       if (isolineLayerRef.current) {
         map.removeLayer(isolineLayerRef.current);
         isolineLayerRef.current = null;
+      }
+      if (talhoesLayerRef.current) {
+        map.removeLayer(talhoesLayerRef.current);
+        talhoesLayerRef.current = null;
+      }
+      if (rotaLayerRef.current) {
+        map.removeLayer(rotaLayerRef.current);
+        rotaLayerRef.current = null;
+      }
+      if (talhaoLabelLayerRef.current) {
+        map.removeLayer(talhaoLabelLayerRef.current);
+        talhaoLabelLayerRef.current = null;
+      }
+      if (rotaDirectionLayerRef.current) {
+        map.removeLayer(rotaDirectionLayerRef.current);
+        rotaDirectionLayerRef.current = null;
       }
       if (showIsolines && isolinesFc) {
         const isoLayer = L.geoJSON(isolinesFc as unknown as GeoJsonObject, {
@@ -185,7 +259,120 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         isolineLayerRef.current = isoLayer;
       }
 
+      if (talhoesFc) {
+        const talhoesLayer = L.geoJSON(talhoesFc as unknown as GeoJsonObject, {
+          style: {
+            color: '#f8fafc',
+            weight: 2,
+            opacity: 0.95,
+            fillColor: '#0f172a',
+            fillOpacity: 0.16,
+          },
+        });
+        talhoesLayer.addTo(map);
+        talhoesLayerRef.current = talhoesLayer;
+
+        if (showTalhaoLabels) {
+          const labels = L.layerGroup();
+          for (const ft of talhoesFc.features) {
+            if (ft.geometry?.type !== 'Polygon') continue;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const rings = (ft.geometry as any).coordinates as number[][][];
+            if (!Array.isArray(rings) || rings.length === 0 || rings[0].length === 0) continue;
+            const ring = rings[0];
+            let sLat = 0;
+            let sLng = 0;
+            let n = 0;
+            for (const [lng, lat] of ring) {
+              sLat += lat;
+              sLng += lng;
+              n++;
+            }
+            if (n === 0) continue;
+            const label = String((ft.properties as Record<string, unknown>)?.talhao_nome ?? 'Talhão');
+            const marker = L.marker([sLat / n, sLng / n], {
+              icon: L.divIcon({
+                className: 'fs-talhao-label',
+                html: `<div style="padding:2px 6px;border-radius:4px;background:rgba(15,23,42,.72);color:#fff;font-size:11px;font-weight:700;border:1px solid rgba(255,255,255,.35);white-space:nowrap;">${label}</div>`,
+              }),
+              interactive: false,
+            });
+            labels.addLayer(marker);
+          }
+          labels.addTo(map);
+          talhaoLabelLayerRef.current = labels;
+        }
+      }
+
+      if (rotaFc) {
+        const rotaLayer = L.geoJSON(rotaFc as unknown as GeoJsonObject, {
+          style: {
+            color: '#60a5fa',
+            weight: Math.min(6, 2 + Math.floor(filteredObs.length / 40)),
+            opacity: 0.95,
+          },
+        });
+        rotaLayer.addTo(map);
+        rotaLayerRef.current = rotaLayer;
+
+        // Indicadores de direção: início/fim + setas ao longo da rota
+        const dirLayer = L.layerGroup();
+        for (const ft of rotaFc.features) {
+          if (ft.geometry?.type !== 'LineString') continue;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const line = (ft.geometry as any).coordinates as number[][];
+          if (!Array.isArray(line) || line.length < 2) continue;
+
+          const [startLng, startLat] = line[0];
+          const [endLng, endLat] = line[line.length - 1];
+          const mkStart = L.circleMarker([startLat, startLng], {
+            radius: 6,
+            color: '#16a34a',
+            fillColor: '#16a34a',
+            fillOpacity: 1,
+            weight: 2,
+          }).bindTooltip('Início', { permanent: false });
+          const mkEnd = L.circleMarker([endLat, endLng], {
+            radius: 6,
+            color: '#dc2626',
+            fillColor: '#dc2626',
+            fillOpacity: 1,
+            weight: 2,
+          }).bindTooltip('Fim', { permanent: false });
+          dirLayer.addLayer(mkStart);
+          dirLayer.addLayer(mkEnd);
+
+          const step = Math.max(2, Math.floor(line.length / 12));
+          for (let i = step; i < line.length - 1; i += step) {
+            const [lng, lat] = line[i];
+            const marker = L.marker([lat, lng], {
+              icon: L.divIcon({
+                className: 'fs-route-arrow',
+                html: '<div style="font-size:13px;color:#bfdbfe;text-shadow:0 1px 2px rgba(0,0,0,.8)">➤</div>',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7],
+              }),
+              interactive: false,
+            });
+            dirLayer.addLayer(marker);
+          }
+        }
+        dirLayer.addTo(map);
+        rotaDirectionLayerRef.current = dirLayer;
+      }
+
       const bounds: import('leaflet').LatLngBoundsExpression = [];
+      if (talhoesFc) {
+        for (const ft of talhoesFc.features) {
+          if (ft.geometry?.type === 'Polygon') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const rings = (ft.geometry as any).coordinates as number[][][];
+            for (const ring of rings) {
+              for (const [lng, lat] of ring) bounds.push([lat, lng]);
+            }
+          }
+        }
+      }
       for (const f of filteredFc.features) {
         if (f.geometry?.type !== 'Point') continue;
         const coords = (f.geometry as Point).coordinates;
@@ -195,9 +382,10 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         const num = Number(pr.numero) || 0;
         const cls = String(pr.classificacao ?? '');
         const color = colorForClass(cls);
+        const depthColor = colorForDepth(String(pr.profundidade ?? ''));
         const icon = L.divIcon({
           className: 'fs-soil-marker',
-          html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);">${num}</div>`,
+          html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid ${depthColor};box-shadow:0 1px 4px rgba(0,0,0,.35);">${num}</div>`,
           iconSize: [22, 22],
           iconAnchor: [11, 11],
         });
@@ -236,12 +424,14 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         }
       }
     })();
-  }, [filteredFc, filteredObs, observacoes, showHeat, showIsolines, isolinesFc]);
+  }, [filteredFc, filteredObs, observacoes, showHeat, showIsolines, showTalhaoLabels, isolinesFc, talhoesFc, rotaFc]);
 
   const shpUrl = `/api/amostragem/export/shp?token=${encodeURIComponent(shareToken)}`;
 
   const cultura = (meta.culture as string) || '';
   const nomeCampanha = (meta.campaignName as string) || '';
+  const nomeFazenda = (meta.fazenda_nome as string) || '';
+  const talhoesTexto = talhoesOptions.map((t) => t.nome ?? t.id).join(' · ');
 
   return (
     <div
@@ -281,6 +471,21 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               </>
             ) : null}
           </p>
+          {(nomeFazenda || talhoesTexto) ? (
+            <p style={{ margin: '8px 0 0', opacity: 0.96, fontSize: 13, lineHeight: 1.45 }}>
+              {nomeFazenda ? (
+                <>
+                  <strong>Fazenda:</strong> {nomeFazenda}
+                </>
+              ) : null}
+              {talhoesTexto ? (
+                <>
+                  {nomeFazenda ? ' · ' : ''}
+                  <strong>Talhões coletados:</strong> {talhoesTexto}
+                </>
+              ) : null}
+            </p>
+          ) : null}
           {Boolean(
             meta.description ||
               meta.safra ||
@@ -290,6 +495,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               meta.fator_pontos_ha != null ||
               meta.modo_coleta ||
               meta.tipo ||
+              meta.fazenda_nome ||
               meta.empresa_id ||
               meta.usuario_coleta_id
           ) && (
@@ -333,6 +539,11 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
                   <div>
                     <strong>Malha / intensidade:</strong> {String(meta.tipo_layout)}
                     {meta.fator_pontos_ha != null ? ` · ${String(meta.fator_pontos_ha)} pontos por hectare` : ''}
+                  </div>
+                ) : null}
+                {meta.fazenda_nome ? (
+                  <div>
+                    <strong>Fazenda:</strong> {String(meta.fazenda_nome)}
                   </div>
                 ) : null}
                 {meta.empresa_id ? (
@@ -386,6 +597,16 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               Isolinhas de IC
             </label>
           ) : null}
+          {talhoesFc ? (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={showTalhaoLabels}
+                onChange={(e) => setShowTalhaoLabels(e.target.checked)}
+              />
+              Rótulos de talhão
+            </label>
+          ) : null}
           <a
             href={shpUrl}
             style={{
@@ -403,6 +624,46 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
           </a>
         </div>
       </header>
+
+      {isLegacyPayload ? (
+        <div
+          style={{
+            margin: '0 22px',
+            padding: '12px 14px',
+            borderRadius: 4,
+            background: '#fffbeb',
+            border: `1px solid #fcd34d`,
+            color: ag.ink,
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>Relatório legado (schema &lt; 2):</strong> metadados de campanha (empresa, usuário da coleta ou nome de
+          talhão) podem estar incompletos ou inferidos dos pontos. Publique novamente pelo app atualizado para snapshot
+          completo na campanha.
+        </div>
+      ) : null}
+
+      <section
+        style={{
+          margin: '16px 22px 0',
+          padding: '16px 18px',
+          borderRadius: 4,
+          background: ag.card,
+          border: `1px solid ${ag.border}`,
+          boxShadow: '0 4px 18px rgba(28,25,23,0.06)',
+        }}
+      >
+        <h2 style={{ margin: 0, fontFamily: ag.fontTitle, fontSize: '1.05rem', color: ag.forest }}>
+          Síntese automática (IC)
+        </h2>
+        <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.55, color: ag.ink }}>
+          {diagnosticoText}
+        </p>
+        <p style={{ margin: '8px 0 0', fontSize: 11, color: ag.inkMuted, fontStyle: 'italic' }}>
+          Texto gerado por regras sobre os dados publicados; não substitui visita e interpretação local.
+        </p>
+      </section>
 
       <div style={{ position: 'relative', height: 'min(70vh, 640px)', margin: 18, boxShadow: '0 8px 28px rgba(28,25,23,0.08)' }}>
         <div
@@ -446,6 +707,18 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
           </div>
           <div>
             <span style={{ color: '#16a34a' }}>●</span> Baixa restrição (IC &lt; 1 MPa)
+          </div>
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${ag.border}` }}>
+            <strong style={{ display: 'block', marginBottom: 4 }}>Borda do ponto por profundidade</strong>
+            <div><span style={{ color: '#38bdf8' }}>●</span> 0-10 cm</div>
+            <div><span style={{ color: '#22c55e' }}>●</span> 10-20 cm</div>
+            <div><span style={{ color: '#f59e0b' }}>●</span> 20-30 cm</div>
+            <div><span style={{ color: '#f97316' }}>●</span> 30-40 cm</div>
+            <div><span style={{ color: '#a855f7' }}>●</span> 40-50 cm</div>
+          </div>
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${ag.border}` }}>
+            <div><span style={{ color: '#60a5fa' }}>━</span> Rota de coleta</div>
+            <div><span style={{ color: '#f8fafc' }}>▭</span> Limite de talhão (KML/GeoJSON)</div>
           </div>
         </div>
       </div>

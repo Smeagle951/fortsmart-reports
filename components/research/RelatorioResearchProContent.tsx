@@ -10,7 +10,7 @@ import DashboardResumo from './sections/DashboardResumo';
 import CondicoesAmbientais from './sections/CondicoesAmbientais';
 import DelineamentoExperimental from './sections/DelineamentoExperimental';
 import CroquiExperimental from './sections/CroquiExperimental';
-import ListaTratamentos from './sections/ListaTratamentos';
+import QuadroManejoProgramas from './sections/QuadroManejoProgramas';
 import HistoricoAplicacoes from './sections/HistoricoAplicacoes';
 import AvaliacoesTecnicas from './sections/AvaliacoesTecnicas';
 import EstatisticaAvancada from './sections/EstatisticaAvancada';
@@ -62,7 +62,7 @@ export default function RelatorioResearchProContent({ relatorio, reportId }: Pro
 
                 <section id="tratamentos" className="mt-8 scroll-mt-6">
                     <h2 className="text-xl font-bold text-[#0D2438] mb-4">Programas de Manejo (Tratamentos)</h2>
-                    <ListaTratamentos data={relatorio.programas_manejo} />
+                    <QuadroManejoProgramas relatorio={relatorio} />
                 </section>
 
                 <section id="aplicacoes" className="mt-8 scroll-mt-6">

@@ -1,15 +1,6 @@
 'use client';
 
+/** Barra de exportar PDF removida por solicitação — relatório só compartilhamento. */
 export default function PrintBar() {
-  return (
-    <div className="report no-print">
-      <button
-        type="button"
-        className="btn btn-primary btn-print"
-        onClick={() => window.print()}
-      >
-        Exportar PDF
-      </button>
-    </div>
-  );
+  return null;
 }

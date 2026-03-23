@@ -1,11 +1,14 @@
 import type { FeatureCollection, Feature, Point } from 'geojson';
 
 export type AmostragemSoloPayload = {
+  /** 2 = metadados de campanha (empresa/usuário) persistidos no app; 1 ou ausente = legado. */
   schemaVersion?: number;
   meta?: Record<string, unknown>;
   talhoes?: Array<{ id?: string; nome?: string }>;
   observacoes?: AmostragemObservacao[];
   geojson?: FeatureCollection;
+  talhoes_geojson?: FeatureCollection;
+  rota_geojson?: FeatureCollection;
   /** Isolinhas premium (IDW + marching squares no app). */
   premium?: {
     isolines?: boolean;

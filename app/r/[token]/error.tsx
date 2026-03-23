@@ -33,8 +33,20 @@ export default function RelatorioError({
       <div style={{ textAlign: 'center', maxWidth: 560 }}>
         <h1 style={{ fontSize: '1.5rem', marginBottom: 12 }}>Erro ao abrir o relatório</h1>
         <p style={{ color: '#6b7280', marginBottom: 16 }}>
-          Ocorreu um erro no servidor ao carregar este relatório.
+          Ocorreu um erro no servidor ao carregar este relatório. Em produção a mensagem exata é ocultada pelo Next.js.
         </p>
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
+          Para ver o erro real: Vercel → seu projeto → <strong>Deployments</strong> → último deploy → <strong>Functions</strong> ou <strong>Logs</strong>. Ali pode aparecer: <code>relation "relatorios" does not exist</code>, <code>permission denied</code>, <code>Cannot read properties of null</code> ou mensagem de variável de ambiente.
+        </p>
+        <details style={{ textAlign: 'left', marginBottom: 16, fontSize: 13, color: '#6b7280' }}>
+          <summary style={{ cursor: 'pointer' }}>Diagnóstico rápido (Supabase + rota)</summary>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
+            <li>Esta rota usa a tabela <strong>relatorios</strong> (não <code>reports</code>).</li>
+            <li>A busca é por <strong>share_token</strong> (não por <code>id</code>). A URL é <code>/r/[token]</code>.</li>
+            <li>No Supabase: Table Editor → <strong>relatorios</strong> → confira se existe um registro com o <code>share_token</code> do link. Se não existir, o relatório não abre.</li>
+            <li>RLS: com <code>SUPABASE_SERVICE_ROLE_KEY</code> a leitura ignora RLS. Sem ela, a chave anon precisa de política que permita <code>select</code> por <code>share_token</code>.</li>
+          </ul>
+        </details>
         {isLikelyConfig && (
           <div
             style={{
@@ -49,8 +61,7 @@ export default function RelatorioError({
           >
             <strong>Possível causa: variáveis de ambiente na Vercel</strong>
             <p style={{ margin: '8px 0 0' }}>
-              No projeto na Vercel, em <strong>Settings → Environment Variables</strong>, confira se
-              estão definidas:
+              Em <strong>Settings → Environment Variables</strong>, confira:
             </p>
             <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
               <li><code>NEXT_PUBLIC_SUPABASE_URL</code></li>
@@ -75,20 +86,24 @@ export default function RelatorioError({
         >
           Tentar novamente
         </button>
-        {process.env.NODE_ENV === 'development' && msg && (
-          <pre
-            style={{
-              textAlign: 'left',
-              fontSize: 11,
-              background: '#f3f4f6',
-              padding: 12,
-              marginTop: 20,
-              borderRadius: 8,
-              overflowX: 'auto',
-            }}
-          >
-            {msg}
-          </pre>
+        {msg && (
+          <details style={{ textAlign: 'left', marginTop: 20 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 14, color: '#6b7280' }}>Detalhes do erro</summary>
+            <pre
+              style={{
+                fontSize: 11,
+                background: '#f3f4f6',
+                padding: 12,
+                marginTop: 8,
+                borderRadius: 8,
+                overflowX: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {msg}
+            </pre>
+          </details>
         )}
       </div>
     </main>

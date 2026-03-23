@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDatabasePath } from '@/lib/db/findDatabase';
-import { mockRelatorio } from '@/lib/data/mock_monitoring';
+import { emptyRelatorio } from '@/lib/data/empty_monitoring';
 import { RelatorioMonitoramento, Talhao, PontoMonitoramento, Infestacao, TipoOrganismo } from '@/lib/types/monitoring';
 import { gerarRecomendacoes } from '@/lib/recommendations';
 
@@ -136,7 +136,7 @@ function buildPolygonFromPoints(pontos: PointRow[], radiusKm = 0.25): Talhao['po
 // ─── Leitura do banco real ────────────────────────────────────────────────────
 function readFromDatabase(dbPath: string): RelatorioMonitoramento {
     const BetterSqlite3 = loadBetterSqlite3();
-    if (!BetterSqlite3) return mockRelatorio;
+    if (!BetterSqlite3) return emptyRelatorio;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = (BetterSqlite3 as any)(dbPath, { readonly: true, fileMustExist: true });
 
@@ -154,7 +154,7 @@ function readFromDatabase(dbPath: string): RelatorioMonitoramento {
         const hasSafras = tables.includes('safras_talhao');
 
         if (!hasSessions || !hasPoints || !hasOccur) {
-            return mockRelatorio;
+            return emptyRelatorio;
         }
 
         // ── Fazenda ───────────────────────────────────────────────────────────
@@ -173,7 +173,7 @@ function readFromDatabase(dbPath: string): RelatorioMonitoramento {
       ORDER BY started_at DESC
     `).all() as SessionRow[];
 
-        if (sessions.length === 0) return mockRelatorio;
+        if (sessions.length === 0) return emptyRelatorio;
 
         // Pegar só a sessão mais recente por talhão
         const sessPerTalhao: Record<string, SessionRow> = {};
@@ -318,7 +318,7 @@ import { supabase as clientSupabase } from '@/lib/db/supabase';
 async function readFromSupabase(): Promise<RelatorioMonitoramento> {
     try {
         const supabase = getSupabaseAdmin() ?? clientSupabase;
-        if (!supabase) return mockRelatorio;
+        if (!supabase) return emptyRelatorio;
 
         // 1. Pega todas as sessoes finalizadas recentes
         const { data: sessions, error: sessErr } = await supabase
@@ -327,7 +327,7 @@ async function readFromSupabase(): Promise<RelatorioMonitoramento> {
             .in('status', ['finalized', 'draft'])
             .order('started_at', { ascending: false });
 
-        if (sessErr || !sessions || sessions.length === 0) return mockRelatorio;
+        if (sessErr || !sessions || sessions.length === 0) return emptyRelatorio;
 
         const sessPerTalhao: Record<string, SessionRow> = {};
         for (const s of sessions) {
@@ -448,41 +448,41 @@ async function readFromSupabase(): Promise<RelatorioMonitoramento> {
             talhoes,
         };
     } catch {
-        return mockRelatorio;
+        return emptyRelatorio;
     }
 }
 
 // ─── Handler GET /api/relatorio ───────────────────────────────────────────────
+// Na Vercel: getDatabasePath() retorna null → só Supabase + mock (sem SQLite).
 export async function GET() {
     try {
         const dbPath = getDatabasePath();
 
-        // 1. Tenta SQLite local (App desktop/mobile)
+        // 1. SQLite só em ambiente local (desktop/dev). Na Vercel dbPath é sempre null.
         if (dbPath) {
             const relatorio = readFromDatabase(dbPath);
             return NextResponse.json({ source: 'sqlite', dbPath, relatorio });
         }
 
-        // 2. Tenta Supabase remoto (Vercel)
+        // 2. Supabase (fonte principal em serverless)
         const relatorio = await readFromSupabase();
-        if (relatorio.talhoes.length > 0 && relatorio.fazenda.includes('Supabase')) {
+        if (relatorio.talhoes.length > 0) {
             return NextResponse.json({ source: 'supabase', dbPath: 'Nuvem (PostgreSQL)', relatorio });
         }
-
-        // 3. Fallback final para Mock
         return NextResponse.json({
-            source: 'mock',
+            source: 'supabase',
             dbPath: null,
-            message: 'Banco não encontrado localmente nem dados no Supabase. Usando demonstração.',
-            relatorio: mockRelatorio,
+            message: 'Nenhum relatório no Supabase. Configure as tabelas de monitoramento ou use o app para gerar dados.',
+            relatorio: emptyRelatorio,
         });
     } catch (error) {
         console.error('[/api/relatorio] Erro:', error);
         return NextResponse.json({
-            source: 'mock',
+            source: 'error',
             dbPath: null,
             error: String(error),
-            relatorio: mockRelatorio,
+            message: 'Erro ao carregar dados. Verifique Supabase e variáveis de ambiente.',
+            relatorio: emptyRelatorio,
         });
     }
 }

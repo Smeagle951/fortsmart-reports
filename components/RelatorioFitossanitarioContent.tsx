@@ -697,9 +697,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       tecnico={normalized.tecnico}
       crea={normalized.crea}
       reportId={reportId}
-      onExportPDF={handleExportPDF}
-      onExportExcel={handleExportExcel}
       onShare={handleShare}
+      farmLogoUrl={(relatorio as any).propriedade?.logo_url ?? (relatorio as any).perfil_fazenda?.logo_url ?? (relatorio as any).logo_fazenda ?? undefined}
     >
       {/* Barra técnica horizontal: Fazenda | Talhão | Cultura | Cultivar | Área | DAE */}
       <BarraTecnicaRelatorio
@@ -1130,66 +1129,11 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                       <tr><td>Espaç. ideal</td><td>{espacamentoIdeal != null ? `${formatDecimal2(espacamentoIdeal)} cm` : '—'}</td></tr>
                     </tbody>
                   </table>
-                  {/* Visualização da linha: ●----Xcm----● com largura proporcional ao espaçamento */}
+                  {/* Visualização da qualidade do plantio: sulco com espaçamento real (módulo plantio / CV%) */}
                   <div className="card" style={{ marginBottom: '1rem' }}>
                     <div className="card-title"><span className="card-title-icon">📐</span> Visualização da qualidade do plantio</div>
                     <div style={{ overflowX: 'auto', padding: '12px 0' }}>
-                      {/* Linha com pontos e espaçamentos entre eles: ●----31cm----●----41cm----● */}
-                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, minWidth: 'max-content', fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>
-                        {linShow.map((p, i) => (
-                          <React.Fragment key={i}>
-                            <span
-                              title={`Semente ${i + 1} — ${p.espacamento_cm.toFixed(1)} cm — ${tipoLabel(p.tipo)}`}
-                              style={{
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                width: 24, height: 24, borderRadius: '50%', backgroundColor: corDot(p.tipo), color: '#fff', fontWeight: 700, flexShrink: 0,
-                              }}
-                            >
-                              ●
-                            </span>
-                            {i < linShow.length - 1 && (
-                              <span
-                                style={{
-                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                  minWidth: Math.max(20, p.espacamento_cm * pxPerCm),
-                                  padding: '0 4px',
-                                  color: 'var(--text-muted)',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                ——{p.espacamento_cm.toFixed(0)}cm——
-                              </span>
-                            )}
-                          </React.Fragment>
-                        ))}
-                        {lin.length > sliceShow && <span style={{ marginLeft: 8, fontSize: '0.8rem', color: 'var(--text-muted)' }}>+{lin.length - sliceShow} pontos</span>}
-                      </div>
-                      {/* Linha de bolinhas com espaçamento proporcional ao espacamento (cm) */}
-                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, marginTop: 10, minWidth: 'max-content' }}>
-                        {linShow.map((p, i) => (
-                          <React.Fragment key={i}>
-                            <span
-                              title={`${p.espacamento_cm.toFixed(1)} cm — ${tipoLabel(p.tipo)}`}
-                              style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', backgroundColor: corDot(p.tipo), flexShrink: 0 }}
-                            />
-                            {i < linShow.length - 1 && (
-                              <span style={{ display: 'inline-block', minWidth: Math.max(4, p.espacamento_cm * (pxPerCm * 0.4)), flexShrink: 0 }} />
-                            )}
-                          </React.Fragment>
-                        ))}
-                        {lin.length > sliceShow && <span style={{ marginLeft: 6, fontSize: '0.75rem', color: 'var(--text-muted)' }}>…</span>}
-                      </div>
-                      {/* Legenda */}
-                      <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#22c55e', marginRight: 4, verticalAlign: 'middle' }} /> OK</span>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#eab308', marginRight: 4, verticalAlign: 'middle' }} /> Dupla</span>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#a855f7', marginRight: 4, verticalAlign: 'middle' }} /> Tripla</span>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#ef4444', marginRight: 4, verticalAlign: 'middle' }} /> Falha</span>
-                      </div>
-                    </div>
-                    {/* Sulco simulado: distância entre plantas proporcional ao espaçamento (cm) informado */}
-                    <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>Sulco simulado (espaçamento real entre plantas)</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>Sulco simulado — espaçamento real entre uma planta e outra (cm)</div>
                       <div style={{ fontFamily: 'monospace', fontSize: '1rem', lineHeight: 1.8, overflowX: 'auto', padding: '10px 12px', background: 'var(--surface-muted)', borderRadius: 8, border: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, minWidth: 'max-content' }}>
                           <span style={{ marginRight: 4 }}>|</span>
@@ -1230,7 +1174,14 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                           ))}
                           <span style={{ marginLeft: 4 }}>|</span>
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>🌱 planta · espaço vazio = falha · distância entre plantas proporcional ao espaçamento (cm)</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>🌱 planta · espaço vazio = falha · distância entre plantas proporcional ao espaçamento real (cm)</div>
+                      </div>
+                      {/* Legenda */}
+                      <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#22c55e', marginRight: 4, verticalAlign: 'middle' }} /> OK</span>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#eab308', marginRight: 4, verticalAlign: 'middle' }} /> Dupla</span>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#a855f7', marginRight: 4, verticalAlign: 'middle' }} /> Tripla</span>
+                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', backgroundColor: '#ef4444', marginRight: 4, verticalAlign: 'middle' }} /> Falha</span>
                       </div>
                     </div>
                     {/* Resumo contagem */}
@@ -1240,31 +1191,6 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                       <span style={{ color: '#eab308' }}>Duplas: {duplas} ({pct(duplas)}%)</span>
                       <span style={{ color: '#a855f7' }}>Triplas: {triplas} ({pct(triplas)}%)</span>
                       <span style={{ color: '#ef4444' }}>Falhas: {falhas} ({pct(falhas)}%)</span>
-                    </div>
-                  </div>
-                  {/* Tabela de espaçamentos */}
-                  <div className="card" style={{ marginBottom: '1rem' }}>
-                    <div className="card-title"><span className="card-title-icon">📋</span> Tabela de espaçamentos</div>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
-                            <th style={{ padding: '6px 8px', fontWeight: 600, color: 'var(--text-muted)' }}>Semente</th>
-                            <th style={{ padding: '6px 8px', fontWeight: 600, color: 'var(--text-muted)', textAlign: 'right' }}>Espaçamento (cm)</th>
-                            <th style={{ padding: '6px 8px', fontWeight: 600, color: 'var(--text-muted)' }}>Classificação</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lin.slice(0, 100).map((p, i) => (
-                            <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                              <td style={{ padding: '6px 8px' }}>{i + 1}</td>
-                              <td style={{ padding: '6px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{p.espacamento_cm.toFixed(1)}</td>
-                              <td style={{ padding: '6px 8px' }}>{tipoLabel(p.tipo)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {lin.length > 100 && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>Exibindo as primeiras 100 de {lin.length} sementes.</p>}
                     </div>
                   </div>
                 </>

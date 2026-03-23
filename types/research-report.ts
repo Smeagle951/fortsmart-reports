@@ -93,6 +93,16 @@ export type ResearchProReportEstatisticaVariavelAnova = {
     significativo: boolean;
 };
 
+/** Uma linha da tabela ANOVA (Fonte, GL, SQ, QM, F, p). */
+export type ResearchProReportAnovaLinha = {
+    fonte: string;
+    gl: number;
+    sq: number;
+    qm: number;
+    f?: number;
+    p?: number;
+};
+
 export type ResearchProReportEstatisticaVariavel = {
     nome: string;
     unidade: string;
@@ -100,6 +110,8 @@ export type ResearchProReportEstatisticaVariavel = {
     cv_percentual: number;
     tukey: ResearchProReportTukeyGrupo[];
     dms: number;
+    /** Tabela completa ANOVA (Tratamento, Bloco, Erro, Total). */
+    anova_tabela?: ResearchProReportAnovaLinha[];
 };
 
 export type ResearchProReportEstatistica = {
