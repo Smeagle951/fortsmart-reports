@@ -285,36 +285,6 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       }
     }
 
-    // relatorio já é clone serializável; usar como props para Client Components
-    const payloadSafe: Record<string, unknown> = relatorio;
-
-    if (!payloadSafe || typeof payloadSafe !== 'object' || Array.isArray(payloadSafe)) {
-      console.warn('[fortsmart-reports] /r/[token] payloadSafe inválido antes do render');
-      return (
-        <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
-          <div style={{ textAlign: 'center', maxWidth: 560 }}>
-            <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório inválido</h1>
-            <p style={{ color: '#6b7280' }}>Os dados do relatório não puderam ser preparados. Verifique no Supabase (tabela <code>relatorios</code>, coluna <code>dados</code>) se o registro existe e está válido.</p>
-          </div>
-        </main>
-      );
-    }
-
-    let reportIdStr = '';
-    let relatorioUuidStr = '';
-    try {
-      reportIdStr = String((row?.titulo ?? row?.id ?? '') ?? '');
-      relatorioUuidStr = String(row?.id ?? '');
-    } catch (_) {
-      try {
-        reportIdStr = String((row as any)?.id ?? '');
-        relatorioUuidStr = String((row as any)?.id ?? '');
-      } catch {
-        reportIdStr = '';
-        relatorioUuidStr = '';
-      }
-    }
-
     return (
       <>
         <PrintBar />
