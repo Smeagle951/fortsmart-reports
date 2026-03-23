@@ -49,70 +49,125 @@ const INITIAL_HARVEST_DATA = [
 ];
 
 const productInsights: Record<string, { alvo: string, proposta: string, bio: string }> = {
+  // --- COMBOS E ASSEMBLEIAS ---
   "NEM-OUT + ACTIVE + VERANGO": { 
     alvo: "Complexo de Nematoides (Galha, Cisto e Lesões)", 
     proposta: "Sinergismo Químico-Biológico de Alto Espectro.", 
-    bio: "O Fluopiram (SDHI) atua no complexo II da cadeia respiratória mitocondrial com alto efeito de choque, enquanto o consórcio de Bacillus sp. estabelece um biofilme na rizosfera, garantindo supressão prolongada e estímulo radicular." 
+    bio: "Fluopiram (SDHI químico) garante choque inicial na respiração mitocondrial. O Bacillus sp. do Nem-Out e estruturadores de Active formam biofilme radicular de longo prazo." 
   },
   "PADRAO FAZENDA / LALNIX RESIST + VERANGO": { 
-    alvo: "Fisiologia de Defesa e Controle Nematológico", 
-    proposta: "Indução Sistêmica de Resistência e Choque Químico.", 
-    bio: "Ação de contato e ingestão do Fluopiram reduz o inóculo drasticamente. O B. licheniformis induz a rota do ácido salicílico/jasmonato (SAR/ISR), blindando a planta contra estresses abióticos futuros." 
+    alvo: "Defesa e Remoção do Inóculo Inicial", 
+    proposta: "Choque Químico + Indução Sistêmica de Resistência biológica.", 
+    bio: "Fluopiram reduz carga nematológica local. Lalnix (B. licheniformis) dispara a rota SAR/ISR, blindando sistemicamente o sistema radicular." 
   },
+  "NEM-OUT + TRUST": { 
+    alvo: "Nematoides e Patógenos Necrotróficos", 
+    proposta: "Controle biológico fúngico-bacteriano.", 
+    bio: "O consórcio (Bacillus + Trichoderma do Trust) parasita estruturas fúngicas de viabilidade e exibe forte competição no solo." 
+  },
+
+  // --- PRODUTOS INDIVIDUAIS (Biológicos e Suplementos) ---
   "VERANGO": { 
-    alvo: "Nematoides de Galha (M. incognita / javanica) e Cisto", 
-    proposta: "Inibidor da respiração mitocondrial (SDHI) de altíssima sistemicidade.", 
-    bio: "Molécula sistêmica (Fluopiram) aplicada no sulco ou TS apresenta excelente mobilidade no perfil do solo. Interrompe a produção de ATP celular do nematoide, resultando em imobilidade em formato de agulha minutos após a exposição, preservando o stand da cultura." 
+    alvo: "Nematoides de Galha e Cisto (Fitonematoides)", 
+    proposta: "Nematicida Químico SDHI Sistemico de amplo residual.", 
+    bio: "Inibição do complexo II mitocondrial. Elevada mobilidade no sistema radicular, induzindo paralisia dos nematoides em formato agulha minutos pós-aplicação." 
   },
+  "NEM OUT": {
+    alvo: "Fitonematoides de solo e manutenção da rizosfera",
+    proposta: "Nematicida Microbiológico (Bacillus spp.).",
+    bio: "Colonização simbiótica e agressiva do sistema radicular. Os Bacillus liberam enzimas e toxinas que degradam a cutícula do nematoide, enquanto bloqueiam a exsudação para evitar atração de novos fitonematoides."
+  },
+  "NEM-OUT": {
+    alvo: "Fitonematoides de solo e manutenção da rizosfera",
+    proposta: "Nematicida Microbiológico (Bacillus spp.).",
+    bio: "Colonização simbiótica e agressiva do sistema radicular. Os Bacillus liberam enzimas e toxinas que degradam a cutícula do nematoide, enquanto bloqueiam a exsudação para evitar atração de novos fitonematoides."
+  },
+  "ACTIVE": {
+    alvo: "Estruturação Biolótiga do Solo",
+    proposta: "Bioativador e Condicionador Microbiano.",
+    bio: "Promove ambiência favorável para proliferação de microrganismos benéficos, aumentando a atividade enzimática do solo e auxiliando na descompactação biológica da rizosfera."
+  },
+  "SOIL ACTIVE": {
+    alvo: "Estruturação Biolótiga do Solo",
+    proposta: "Bioativador e Condicionador Microbiano.",
+    bio: "Promove ambiência favorável para proliferação de microrganismos benéficos, aumentando a atividade enzimática do solo e auxiliando na descompactação biológica da rizosfera."
+  },
+  "TRUST": {
+    alvo: "Fungos Fitopatogênicos (Macrophomina, Fusarium, Rhizoctonia)",
+    proposta: "Biofungicida de Micoparasitismo (Trichoderma spp.).",
+    bio: "Agressivo micoparasita e competidor. Envolve e perfura hifas dos patógenos causadores de tombamento, agindo sinergicamente como promotor de enraizamento através de metabólitos secundários."
+  },
+  "LALNIX": {
+    alvo: "Indução de Resistência SAR e Proteção",
+    proposta: "Elicitor biológico (B. licheniformis).",
+    bio: "Sinaliza a planta para aumentar a expressão gênica de defesa basal, espessando parede celular e aumentando a resistência climática e fitossanitária sem gasto excessivo de ATP."
+  },
+  "LALNIX RESIST": {
+    alvo: "Indução de Resistência SAR e Proteção",
+    proposta: "Elicitor biológico (B. licheniformis).",
+    bio: "Sinaliza a planta para aumentar a expressão gênica de defesa basal, espessando parede celular e aumentando a resistência climática e fitossanitária sem gasto excessivo de ATP."
+  },
+  "QUALITY": {
+    alvo: "Balanço Nutricional e Fisiológico",
+    proposta: "Manejo Nutricional e Bioestimulação Avançada.",
+    bio: "Fornece componentes orgânicos e minerais de rápida absorção via floema/xilema, destravando a planta pós-estresse (salino, hídrico, ou químico) e sustentando o engalhamento contínuo."
+  },
+
+  // --- OUTROS (Agrivalle, Fungicidas, Fósforo) ---
   "AGRIVALLE": { 
-    alvo: "Proteção Radicular (Nematoides e Fungos de Solo)", 
+    alvo: "Proteção Radicular Completa (Nematoides e Fungos)", 
     proposta: "Biocontrole Consorciado de Múltiplos Sítios Ativos.", 
-    bio: "Bacillus competem por exsudatos liberando lipopeptídeos (Iturina, Surfactina), enquanto Trichoderma atua por micoparasitismo contra fungos fitopatogênicos. O Raizer promove ramificação radicular profunda." 
+    bio: "Carga robusta via Shocker e Profix; liberação de lipopeptídeos formadores de poros na membrana fúngica, somado ao Raizer promovendo ramificação profunda." 
   },
   "DOTTE OURO FINO": { 
-    alvo: "Complexo de Doenças Foliares (Antracnose, Manchas)", 
+    alvo: "Doenças Foliares (Antracnose, Manchas)", 
     proposta: "Fungicida Microbiológico Multissítio.", 
-    bio: "B. amyloliquefaciens atua preventivamente, produz antibióticos naturais no filoplano, e atua como elicitor de defesa, bloqueando o estabelecimento do tubo germinativo da doença." 
+    bio: "B. amyloliquefaciens atua preventivamente produzindo antibióticos naturais no filoplano, e funcionando como elicitor que bloqueia o ingresso hifal." 
   },
   "VIOVAN (PADRAO FAZENDA)": { 
     alvo: "Ferrugem Asiática e Manchas Foliares", 
-    proposta: "Inibição de transferência eletrônica mitocondrial (QoI).", 
-    bio: "A Picoxistrobina possui excepcional sistemicidade (translaminar/xilemático) e forte efeito 'Vapor'. Protege folhas novas não tratadas e entrega o 'green effect', neutralizando o estresse oxidativo." 
+    proposta: "Manejo Químico Sistêmico e Protetor (QoI).", 
+    bio: "Picoxistrobina com fortíssimo efeito translaminar ('green effect'), neutralizando o estresse oxidativo e otimizando peso de grão." 
   },
   "ADAMA (ExpertGrow e Armero)": { 
-    alvo: "Patógenos de final de ciclo e Mancha-alvo", 
-    proposta: "Manutenção da Área Foliar Fotossinteticamente Ativa.", 
-    bio: "Protioconazol (Armero) inibe a biossíntese fúngica do ergosterol com alta eficácia. O ExpertGrow age como precursor enzimático que maximiza taxa fotossintética, otimizando o peso de mil grãos." 
+    alvo: "Fase de Enchimento Fotossintético", 
+    proposta: "Controle de Espectro Largo (Cercospora e DFCs).", 
+    bio: "Armero inibe a síntese de ergosterol de forma aguda. ExpertGrow maximiza a taxa fotossintética, otimizando translocação orgânica." 
   },
   "VICTRATO": { 
-    alvo: "Proteção Sistêmica de Tratamento de Sementes (TS)", 
-    proposta: "Nematicida Inovador SDHI Sistêmico Intracelular.", 
-    bio: "Tyclopyrazoflor entra prontamente pelo sistema vascular da plântula. Confere proteção estendida desde a germinação contra múltiplas raças, redirecionando o balanço energético para produção em vez de reparo de gotejamento radicular." 
+    alvo: "Alta Pressão Inicial de Fitonematoides (TS)", 
+    proposta: "SDHI Intracelular Ultrassistemizado.", 
+    bio: "Tyclopyrazoflor bloqueia infecções já nas primeiras horas da radícula. O redirecionamento da seiva foca no fechamento rápido do dossel vegetativo." 
   },
   "ESTIMULATE": { 
-    alvo: "Fisiologia e Engenharia de Arquitetura de Planta", 
-    proposta: "Balanço Hormonal Triplo (Auxinas, Giberelinas, Citocininas).", 
-    bio: "Equilíbrio exógeno perfeito para induzir a divisão celular, alongamento e enraizamento. Quebra a dominância apical para engalhamento e melhora a resiliência a veranicos prolongados." 
+    alvo: "Arquitetura Fisiológica e Engalhamento", 
+    proposta: "Regulador Hormonal (Auxina, Giberelina, Citocinina).", 
+    bio: "Quebra a dominância apical para engalhamento, aumenta ramificação de radicela absorvente e diminui abortamento de vagens." 
   },
   "ADUBO FOSFORO": { 
-    alvo: "Nutrição Mineral (P2O5)", 
-    proposta: "Suplementação energética celular via fósforo no solo.", 
-    bio: "Molécula vital na constituição do ATP (Adenosina Trifosfato). O uso extra da fonte acelerou o arranque e estruturou um sistema radicular volumoso ainda na fase vegetativa." 
+    alvo: "Nutrição Mineral Base (P2O5)", 
+    proposta: "Suplementação de Arranque Fosfatado.", 
+    bio: "Fornece energia (ATP) para os momentos de maior demanda metabólica inicial, estruturando raízes pivotantes mais calibrosas." 
+  },
+  "FÓSFORO NA LINHA": { 
+    alvo: "Nutrição Mineral Base (P2O5)", 
+    proposta: "Suplementação de Arranque Fosfatado.", 
+    bio: "Fornece energia (ATP) para os momentos de maior demanda metabólica inicial, estruturando raízes pivotantes mais calibrosas." 
   },
   "PADRAO FAZENDA": {
-    alvo: "Manejo Standard de Alta Tecnologia",
-    proposta: "Tratamento baseline já estabelecido para a região.",
-    bio: "Adoção de controle fitossanitário da propriedade. Define a régua econômica e o teto limite do lote, sobre o qual toda a curva de inovações e ROI é baseada."
+    alvo: "Manejo Standard Comercial Otimizado",
+    proposta: "Baseline Safra do Custo de Produção Histórico.",
+    bio: "Define o Teto Econômico Limitante. Serve como métrica comparativa para quantificar em Reais (R$) a margem incremental das novas tecnologias bio/químicas."
   },
   "PADRAO FAZENDA (1)": {
-    alvo: "Manejo Standard de Alta Tecnologia",
-    proposta: "Tratamento baseline já estabelecido para a região.",
-    bio: "Adoção de controle fitossanitário da propriedade. Define a régua econômica e o teto limite do lote, sobre o qual toda a curva de inovações e ROI é baseada."
+    alvo: "Manejo Standard Comercial Otimizado",
+    proposta: "Baseline Safra do Custo de Produção Histórico.",
+    bio: "Define o Teto Econômico Limitante. Serve como métrica comparativa para quantificar em Reais (R$) a margem incremental das novas tecnologias bio/químicas."
   },
   "Manejo Equilibrado": {
-    alvo: "Manejo Estratégico Seguro",
-    proposta: "Posicionamento técnico equilibrado.",
-    bio: "Performance fisiológica dentro dos níveis esperados com gestão controlada de risco de custos."
+    alvo: "Estratégia Defensiva Conservadora",
+    proposta: "Posicionamento técnico central de segurança.",
+    bio: "Produtividade estabilizada com volatilidade mínima de custo. A performance fisiológica suporta intempéries dentro de flutuações aceitáveis sem dilapidar o fluxo de caixa."
   }
 };
 
