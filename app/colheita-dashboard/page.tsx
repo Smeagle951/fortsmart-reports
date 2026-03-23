@@ -27,8 +27,8 @@ const INITIAL_HARVEST_DATA = [
   { talhao: "PIVO-02", variedade: "BALSAMO TMG", produto: "ESTIMULATE", hectares: 3.44, media: 74.74, tipo: "tratamento", pa: "Citocinina + GA + Auxina", classe: "Bioestimulante", categoria: "Químico", segmento: "Foliar", modo: "Regulador Cresc.", composicao_custos: [{ produto: "ESTIMULATE", valor: 120, moeda: "BRL", dose_ha: 1 }] },
 
   // PIVO-05 (BALSAMO TMG)
-  { talhao: "PIVO-05", variedade: "BALSAMO TMG", produto: "COM VERANGO", hectares: 10, media: 78.00, tipo: "tratamento", pa: "Fluopiram", classe: "Nematicida", categoria: "Químico", segmento: "TS", modo: "SDHI", composicao_custos: [{ produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
-  { talhao: "PIVO-05", variedade: "BALSAMO TMG", produto: "SEM VERANGO (Pad. Fazenda)", hectares: 10, media: 75.00, tipo: "testemunha", pa: "Padrão", classe: "Baseline", categoria: "Baseline", segmento: "-", modo: "-", composicao_custos: [] },
+  { talhao: "PIVO-05", variedade: "BALSAMO TMG", produto: "COM VERANGO", hectares: 5.6, media: 61.00, tipo: "tratamento", pa: "Fluopiram", classe: "Nematicida", categoria: "Químico", segmento: "Sulco", modo: "SDHI", composicao_custos: [{ produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
+  { talhao: "PIVO-05", variedade: "BALSAMO TMG", produto: "SEM VERANGO (Pad. Fazenda)", hectares: 4.08, media: 68.73, tipo: "testemunha", pa: "Padrão", classe: "Baseline", categoria: "Baseline", segmento: "-", modo: "-", composicao_custos: [] },
 
   // T-09 (BALSAMO TMG)
   { talhao: "T-09", variedade: "BALSAMO TMG", produto: "FÓSFORO NA LINHA", hectares: 48, media: 71.55, tipo: "tratamento", pa: "P2O5 (Fósforo)", classe: "Fertilizante", categoria: "Químico", segmento: "Solo", modo: "Nutrição", composicao_custos: [{ produto: "FOSFORO", valor: 200, moeda: "BRL", dose_ha: 1 }] },
@@ -49,18 +49,71 @@ const INITIAL_HARVEST_DATA = [
 ];
 
 const productInsights: Record<string, { alvo: string, proposta: string, bio: string }> = {
-  "NEM-OUT + ACTIVE + VERANGO": { alvo: "Nematoides de Galha e Cisto", proposta: "Nematicida químico-biológico convergente.", bio: "Ação: Inibidor SDHI + Antagonismo Bacillus." },
-  "PADRAO FAZENDA / LALNIX RESIST + VERANGO": { alvo: "Nematoides de Galha e Cisto", proposta: "Indução de Resistência e Nematicida.", bio: "Colonização e supressão via B. licheniformis." },
-  "NEM-OUT + TRUST": { alvo: "Nematoides e Patógenos de Solo", proposta: "Controle biológico + Competição radicular.", bio: "Ação combinada Bacillus + Trichoderma." },
-  "VERANGO": { alvo: "Nematoides de Galha e Cisto", proposta: "Inibidor da respiração mitocondrial (SDHI).", bio: "Fluopiram: Proteção radicular de longa persistência." },
-  "AGRIVALLE": { alvo: "Nematoides e Patógenos de Solo", proposta: "Programa biológico (biofungicida + nematicida) para proteção radicular.", bio: "Shocker: 2 Bacillus + Trichoderma; Profix: 2 Bacillus + 1 Fungo; Raizer complementar." },
-  "DOTTE OURO FINO": { alvo: "Doenças Foliares (Antracnose/Manchas)", proposta: "Controle fungicida sistêmico complementar.", bio: "Posicionamento foliar químico competitivo." },
-  "VIOVAN (PADRAO FAZENDA)": { alvo: "Manchas e Ferrugem (QoI)", proposta: "Inibidor da respiração mitocondrial.", bio: "Picoxistrobina: Proteção sistêmica de baixeiro." },
-  "ADAMA (ExpertGrow e Armero)": { alvo: "Doenças Foliar (DMI)", proposta: "Inibidor da biossíntese de ergosterol.", bio: "Protioconazol: Máxima eficiência contra doenças de final de ciclo." },
-  "ESTIMULATE": { alvo: "Crescimento Vegetal", proposta: "Regulador de crescimento (Aux/Gib/Cit).", bio: "Equilíbrio hormonal para arranque vigoroso." },
-  "VICTRATO": { alvo: "Controle Sistêmico de Nematoides", proposta: "Tyclopyrazoflor: Ação sistêmica radicular.", bio: "Nova tecnologia de alta performance via TS." },
-  "ADUBO FOSFORO": { alvo: "Nutrição Mineral (P2O5)", proposta: "Suplementação energética via fósforo.", bio: "Arranque inicial e estruturação de planta." },
-  "FÓSFORO NA LINHA": { alvo: "Suplementação de Fósforo", proposta: "Fósforo mineralizado para arranque.", bio: "Nutrição essencial P2O5 para energia celular." },
+  "NEM-OUT + ACTIVE + VERANGO": { 
+    alvo: "Complexo de Nematoides (Galha, Cisto e Lesões)", 
+    proposta: "Sinergismo Químico-Biológico de Alto Espectro.", 
+    bio: "O Fluopiram (SDHI) atua no complexo II da cadeia respiratória mitocondrial com alto efeito de choque, enquanto o consórcio de Bacillus sp. estabelece um biofilme na rizosfera, garantindo supressão prolongada e estímulo radicular." 
+  },
+  "PADRAO FAZENDA / LALNIX RESIST + VERANGO": { 
+    alvo: "Fisiologia de Defesa e Controle Nematológico", 
+    proposta: "Indução Sistêmica de Resistência e Choque Químico.", 
+    bio: "Ação de contato e ingestão do Fluopiram reduz o inóculo drasticamente. O B. licheniformis induz a rota do ácido salicílico/jasmonato (SAR/ISR), blindando a planta contra estresses abióticos futuros." 
+  },
+  "VERANGO": { 
+    alvo: "Nematoides de Galha (M. incognita / javanica) e Cisto", 
+    proposta: "Inibidor da respiração mitocondrial (SDHI) de altíssima sistemicidade.", 
+    bio: "Molécula sistêmica (Fluopiram) aplicada no sulco ou TS apresenta excelente mobilidade no perfil do solo. Interrompe a produção de ATP celular do nematoide, resultando em imobilidade em formato de agulha minutos após a exposição, preservando o stand da cultura." 
+  },
+  "AGRIVALLE": { 
+    alvo: "Proteção Radicular (Nematoides e Fungos de Solo)", 
+    proposta: "Biocontrole Consorciado de Múltiplos Sítios Ativos.", 
+    bio: "Bacillus competem por exsudatos liberando lipopeptídeos (Iturina, Surfactina), enquanto Trichoderma atua por micoparasitismo contra fungos fitopatogênicos. O Raizer promove ramificação radicular profunda." 
+  },
+  "DOTTE OURO FINO": { 
+    alvo: "Complexo de Doenças Foliares (Antracnose, Manchas)", 
+    proposta: "Fungicida Microbiológico Multissítio.", 
+    bio: "B. amyloliquefaciens atua preventivamente, produz antibióticos naturais no filoplano, e atua como elicitor de defesa, bloqueando o estabelecimento do tubo germinativo da doença." 
+  },
+  "VIOVAN (PADRAO FAZENDA)": { 
+    alvo: "Ferrugem Asiática e Manchas Foliares", 
+    proposta: "Inibição de transferência eletrônica mitocondrial (QoI).", 
+    bio: "A Picoxistrobina possui excepcional sistemicidade (translaminar/xilemático) e forte efeito 'Vapor'. Protege folhas novas não tratadas e entrega o 'green effect', neutralizando o estresse oxidativo." 
+  },
+  "ADAMA (ExpertGrow e Armero)": { 
+    alvo: "Patógenos de final de ciclo e Mancha-alvo", 
+    proposta: "Manutenção da Área Foliar Fotossinteticamente Ativa.", 
+    bio: "Protioconazol (Armero) inibe a biossíntese fúngica do ergosterol com alta eficácia. O ExpertGrow age como precursor enzimático que maximiza taxa fotossintética, otimizando o peso de mil grãos." 
+  },
+  "VICTRATO": { 
+    alvo: "Proteção Sistêmica de Tratamento de Sementes (TS)", 
+    proposta: "Nematicida Inovador SDHI Sistêmico Intracelular.", 
+    bio: "Tyclopyrazoflor entra prontamente pelo sistema vascular da plântula. Confere proteção estendida desde a germinação contra múltiplas raças, redirecionando o balanço energético para produção em vez de reparo de gotejamento radicular." 
+  },
+  "ESTIMULATE": { 
+    alvo: "Fisiologia e Engenharia de Arquitetura de Planta", 
+    proposta: "Balanço Hormonal Triplo (Auxinas, Giberelinas, Citocininas).", 
+    bio: "Equilíbrio exógeno perfeito para induzir a divisão celular, alongamento e enraizamento. Quebra a dominância apical para engalhamento e melhora a resiliência a veranicos prolongados." 
+  },
+  "ADUBO FOSFORO": { 
+    alvo: "Nutrição Mineral (P2O5)", 
+    proposta: "Suplementação energética celular via fósforo no solo.", 
+    bio: "Molécula vital na constituição do ATP (Adenosina Trifosfato). O uso extra da fonte acelerou o arranque e estruturou um sistema radicular volumoso ainda na fase vegetativa." 
+  },
+  "PADRAO FAZENDA": {
+    alvo: "Manejo Standard de Alta Tecnologia",
+    proposta: "Tratamento baseline já estabelecido para a região.",
+    bio: "Adoção de controle fitossanitário da propriedade. Define a régua econômica e o teto limite do lote, sobre o qual toda a curva de inovações e ROI é baseada."
+  },
+  "PADRAO FAZENDA (1)": {
+    alvo: "Manejo Standard de Alta Tecnologia",
+    proposta: "Tratamento baseline já estabelecido para a região.",
+    bio: "Adoção de controle fitossanitário da propriedade. Define a régua econômica e o teto limite do lote, sobre o qual toda a curva de inovações e ROI é baseada."
+  },
+  "Manejo Equilibrado": {
+    alvo: "Manejo Estratégico Seguro",
+    proposta: "Posicionamento técnico equilibrado.",
+    bio: "Performance fisiológica dentro dos níveis esperados com gestão controlada de risco de custos."
+  }
 };
 
 type InformativoSnapshot = {
@@ -1213,128 +1266,7 @@ export default function SoybeanHarvestDashboard() {
         </div>
         )}
 
-        {/* Auditoria de custo por dose */}
-        <div className="bg-white border border-slate-200 shadow-sm overflow-hidden mt-4">
-          <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
-            <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">
-              Auditoria de Custo por Dose (por produto/componente)
-            </h3>
-            <p className="text-[10px] text-slate-500 mt-1">
-              Conversão utilizada: 1 USD = R$ {cotacaoDolar.toFixed(2)}. Subtotal/ha = valor convertido x dose/ha.
-            </p>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1200px] border-collapse">
-              <thead>
-                <tr className="bg-slate-100 border-b border-slate-200">
-                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Talhão</th>
-                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Variedade</th>
-                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Tratamento</th>
-                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Componente</th>
-                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Via</th>
-                  <th className="py-2 px-3 text-center text-[9px] font-black uppercase text-slate-500">Moeda</th>
-                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Valor Base</th>
-                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Dose/ha</th>
-                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Valor Conv. (R$)</th>
-                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Subtotal/ha (R$)</th>
-                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Custo Total/ha (R$)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditRows.map((row, idx) => (
-                  <tr
-                    key={row.key}
-                    className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}
-                  >
-                    <td className="py-2 px-3 text-[10px] font-bold text-slate-700">{row.talhao}</td>
-                    <td className="py-2 px-3 text-[10px] font-bold text-slate-700">{row.variedade}</td>
-                    <td className="py-2 px-3 text-[10px] font-black text-slate-900 uppercase">
-                      {row.tratamento}
-                      {row.tipo === 'testemunha' && (
-                        <span className="ml-2 text-[8px] px-1 py-0.5 border border-slate-300 text-slate-500 uppercase font-black">Padrão</span>
-                      )}
-                    </td>
-                    <td className="py-2 px-3 text-[10px] font-semibold text-slate-700">{row.componente}</td>
-                    <td className="py-2 px-3 text-[10px] font-bold text-slate-600">{row.viaAplicacao}</td>
-                    <td className="py-2 px-3 text-[10px] font-bold text-center text-slate-600">{row.moeda}</td>
-                    <td className="py-2 px-3 text-[10px] font-bold text-right tabular-nums text-slate-700">
-                      {row.valorBase.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-2 px-3 text-[10px] font-bold text-right tabular-nums text-slate-700">
-                      {row.doseHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-2 px-3 text-[10px] font-bold text-right tabular-nums text-slate-700">
-                      {row.valorConvertido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-2 px-3 text-[10px] font-black text-right tabular-nums text-blue-800">
-                      {row.subtotalHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-2 px-3 text-[10px] font-black text-right tabular-nums text-green-800">
-                      {row.custoTotalHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Visão econômica única por tratamento */}
-        <div className="bg-white border border-slate-200 shadow-sm overflow-hidden mt-4">
-          <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
-            <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">
-              Visão Econômica Única (por tratamento)
-            </h3>
-            <p className="text-[10px] text-slate-500 mt-1">
-              Receita/ha, Margem/ha, Lucro incremental/ha e ROI incremental versus padrão da fazenda.
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1280px] border-collapse">
-              <thead>
-                <tr className="bg-slate-100 border-b border-slate-200">
-                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Talhão</th>
-                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Variedade</th>
-                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Tratamento</th>
-                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Receita/ha (R$)</th>
-                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Margem/ha (R$)</th>
-                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">Lucro incremental/ha (R$)</th>
-                  <th className="py-2 px-3 text-right text-[9px] font-black uppercase text-slate-500">ROI incremental (%)</th>
-                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Decisão</th>
-                  <th className="py-2 px-3 text-left text-[9px] font-black uppercase text-slate-500">Motivo técnico-financeiro</th>
-                </tr>
-              </thead>
-              <tbody>
-                {resumoEconomico.map((r, idx) => {
-                  const decision = explainEconomicDecision(r);
-                  return (
-                  <tr key={r.key} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
-                    <td className="py-2 px-3 text-[10px] font-bold text-slate-700">{r.talhao}</td>
-                    <td className="py-2 px-3 text-[10px] font-bold text-slate-700">{r.variedade}</td>
-                    <td className="py-2 px-3 text-[10px] font-black uppercase text-slate-900">{r.produto}</td>
-                    <td className="py-2 px-3 text-[10px] text-right font-bold tabular-nums text-slate-700">
-                      {r.receitaHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className={`py-2 px-3 text-[10px] text-right font-black tabular-nums ${r.margemHa >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                      {r.margemHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className={`py-2 px-3 text-[10px] text-right font-black tabular-nums ${r.lucroIncrementalHa >= 0 ? 'text-green-800' : 'text-red-800'}`}>
-                      {r.lucroIncrementalHa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className={`py-2 px-3 text-[10px] text-right font-black tabular-nums ${r.roiIncremental != null && r.roiIncremental >= 0 ? 'text-green-800' : 'text-red-800'}`}>
-                      {r.roiIncremental == null ? "N/A" : `${r.roiIncremental.toFixed(1)}%`}
-                    </td>
-                    <td className={`py-2 px-3 text-[10px] font-black uppercase ${decision.label === "Vale a pena" ? "text-green-700" : decision.label === "Não vale" ? "text-red-700" : "text-amber-700"}`}>
-                      {decision.label}
-                    </td>
-                    <td className="py-2 px-3 text-[10px] text-slate-700">{decision.reason}</td>
-                  </tr>
-                )})}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Seções "Auditoria de Custo" e "Visão Econômica Única" Removidas a pedido corporativo */}
 
         <div className="space-y-10 bg-[#F0F2F5] pb-10">
 
