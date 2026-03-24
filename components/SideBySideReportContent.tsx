@@ -82,6 +82,20 @@ export type SideBySideReportData = {
   };
   colheita?: Record<string, unknown> | null;
   custo?: Record<string, unknown> | null;
+  /** Estatística indicativa por critério (média/DP/CV% entre pontos) — preenchido quando o app enviar o bloco. */
+  criteriosEstatistica?: Array<{
+    criterio?: string;
+    unidade?: string;
+    mediaA?: number;
+    mediaB?: number;
+    dpA?: number;
+    dpB?: number;
+    cvPctA?: number;
+    cvPctB?: number;
+    diferencaIndicativa?: boolean;
+    estabilidadeDpDiff?: number;
+    notaRegra?: string;
+  }>;
 };
 
 type SideData = {

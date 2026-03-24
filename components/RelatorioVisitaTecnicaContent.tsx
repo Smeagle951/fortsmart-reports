@@ -9,6 +9,10 @@ import { formatDate } from '@/utils/format';
 
 import TabelaTecnicaCampos from './visita_tecnica/TabelaTecnicaCampos';
 import OcorrenciasPragasVT from './visita_tecnica/sections/OcorrenciasPragasVT';
+import InteligenciaEstrategicaVisitaVT, {
+  labelMetodoAmostragem,
+  labelCiclo,
+} from './visita_tecnica/sections/InteligenciaEstrategicaVisitaVT';
 import DiagnosticoEPlanoAcao from './visita_tecnica/sections/DiagnosticoEPlanoAcao';
 import AplicacoesRealizadasVT from './visita_tecnica/sections/AplicacoesRealizadasVT';
 import FotografiasEAutoriaVT from './visita_tecnica/sections/FotografiasEAutoriaVT';
@@ -64,6 +68,9 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
   imagens?: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
   assinaturaTecnica?: Record<string, unknown>;
   consultoria?: { nome?: string };
+  /** Bloco gerado pelo app FortSmart (inteligência estratégica) */
+  inteligencia_estrategica?: Record<string, unknown>;
+  produtividade?: Record<string, unknown> | null;
 };
 
 interface RelatorioVisitaTecnicaContentProps {
@@ -120,6 +127,18 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const conclusao = relatorio.conclusao as string | undefined;
   const pragas = (relatorio.pragas ?? []) as Record<string, unknown>[];
   const condicoes = (relatorio.condicoes ?? {}) as Record<string, unknown>;
+  const amostragem =
+    condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
+      ? (condicoes.amostragem as Record<string, unknown>)
+      : undefined;
+  const inteligenciaEstrategica =
+    relatorio.inteligencia_estrategica != null && typeof relatorio.inteligencia_estrategica === 'object'
+      ? (relatorio.inteligencia_estrategica as Record<string, unknown>)
+      : undefined;
+  const produtividadePayload =
+    relatorio.produtividade != null && typeof relatorio.produtividade === 'object'
+      ? (relatorio.produtividade as Record<string, unknown>)
+      : undefined;
   const fenologia = (relatorio.fenologia ?? {}) as Record<string, unknown>;
   const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
   const imagensFenologia = imagens.filter((img) => (img.categoria ?? '').toLowerCase() === 'fenologia');
@@ -278,7 +297,20 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
         </section>
 
         {/* 2. Contexto da Safra — tabela técnica (só renderiza se houver dados) */}
-        {(contextoSafra?.materialVariedade != null || contextoSafra?.empresa != null || contextoSafra?.espacamentoCm != null || contextoSafra?.populacaoAlvoPlHa != null || contextoSafra?.dap != null || contextoSafra?.dae != null) && (
+        {(contextoSafra?.materialVariedade != null ||
+          contextoSafra?.empresa != null ||
+          contextoSafra?.espacamentoCm != null ||
+          contextoSafra?.populacaoAlvoPlHa != null ||
+          contextoSafra?.dap != null ||
+          contextoSafra?.dae != null ||
+          contextoSafra?.potencialScHa != null ||
+          contextoSafra?.estimativaAtualScHa != null ||
+          contextoSafra?.notaMetodoEstimativa != null ||
+          contextoSafra?.cicloCultivar != null ||
+          contextoSafra?.tecnologiaSementes != null ||
+          contextoSafra?.resistFerrugem != null ||
+          contextoSafra?.resistNematoide != null ||
+          contextoSafra?.resistLagarta != null) && (
           <section className="section-block">
             <div className="section-block__title">Contexto da Safra</div>
             <div className="section-block__body">
@@ -290,6 +322,26 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                   { campo: 'População alvo', valor: contextoSafra?.populacaoAlvoPlHa != null ? `${Number(contextoSafra.populacaoAlvoPlHa).toLocaleString('pt-BR')} plantas/ha` : undefined },
                   { campo: 'DAP', valor: contextoSafra?.dap != null ? String(contextoSafra.dap) : undefined },
                   { campo: 'DAE', valor: contextoSafra?.dae != null ? String(contextoSafra.dae) : undefined },
+                  { campo: 'Potencial (sc/ha)', valor: contextoSafra?.potencialScHa != null ? String(contextoSafra.potencialScHa) : undefined },
+                  { campo: 'Estimativa atual (sc/ha)', valor: contextoSafra?.estimativaAtualScHa != null ? String(contextoSafra.estimativaAtualScHa) : undefined },
+                  { campo: 'Nota método estimativa', valor: contextoSafra?.notaMetodoEstimativa != null ? String(contextoSafra.notaMetodoEstimativa) : undefined },
+                  { campo: 'Ciclo da cultivar', valor: contextoSafra?.cicloCultivar != null ? labelCiclo(contextoSafra.cicloCultivar) : undefined },
+                  { campo: 'Tecnologia sementes', valor: contextoSafra?.tecnologiaSementes != null ? String(contextoSafra.tecnologiaSementes) : undefined },
+                  {
+                    campo: 'Resist. ferrugem / nematóide / lagarta',
+                    valor:
+                      contextoSafra?.resistFerrugem != null ||
+                      contextoSafra?.resistNematoide != null ||
+                      contextoSafra?.resistLagarta != null
+                        ? [
+                            contextoSafra?.resistFerrugem != null ? `Ferrugem: ${contextoSafra.resistFerrugem === true || contextoSafra.resistFerrugem === 1 ? 'Sim' : 'Não'}` : null,
+                            contextoSafra?.resistNematoide != null ? `Nematóide: ${contextoSafra.resistNematoide === true || contextoSafra.resistNematoide === 1 ? 'Sim' : 'Não'}` : null,
+                            contextoSafra?.resistLagarta != null ? `Lagarta: ${contextoSafra.resistLagarta === true || contextoSafra.resistLagarta === 1 ? 'Sim' : 'Não'}` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ') || undefined
+                        : undefined,
+                  },
                 ]}
               />
             </div>
@@ -317,7 +369,15 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
         )}
 
         {/* Condições de campo — opcional, só se houver dados */}
-        {(condicoes?.temperatura != null || condicoes?.umidade != null || condicoes?.vento != null || condicoes?.soloUmidade != null || condicoes?.vigorCultura != null) && (
+        {(condicoes?.temperatura != null ||
+          condicoes?.umidade != null ||
+          condicoes?.vento != null ||
+          condicoes?.soloUmidade != null ||
+          condicoes?.vigorCultura != null ||
+          amostragem?.metodo != null ||
+          amostragem?.nPlantasAvaliadas != null ||
+          amostragem?.nPontosColetados != null ||
+          amostragem?.raioAmostraM != null) && (
           <section className="section-block">
             <div className="section-block__title">Condições de Campo</div>
             <div className="section-block__body">
@@ -333,11 +393,17 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                   { campo: 'Vigor da cultura', valor: condicoes?.vigorCultura != null ? String(condicoes.vigorCultura) : undefined },
                   { campo: 'Uniformidade', valor: condicoes?.uniformidade != null ? String(condicoes.uniformidade) : undefined },
                   { campo: 'Sintomas', valor: condicoes?.sintomas != null ? String(condicoes.sintomas) : undefined },
+                  { campo: 'Método de amostragem', valor: amostragem?.metodo != null ? labelMetodoAmostragem(amostragem.metodo) : undefined },
+                  { campo: 'Nº plantas avaliadas', valor: amostragem?.nPlantasAvaliadas != null ? String(amostragem.nPlantasAvaliadas) : undefined },
+                  { campo: 'Nº pontos coletados', valor: amostragem?.nPontosColetados != null ? String(amostragem.nPontosColetados) : undefined },
+                  { campo: 'Raio da amostra (m)', valor: amostragem?.raioAmostraM != null ? String(amostragem.raioAmostraM) : undefined },
                 ]}
               />
             </div>
           </section>
         )}
+
+        <InteligenciaEstrategicaVisitaVT produtividade={produtividadePayload} inteligenciaEstrategica={inteligenciaEstrategica} />
 
         {/* 4. Mapa do talhão */}
         {hasMapa && (

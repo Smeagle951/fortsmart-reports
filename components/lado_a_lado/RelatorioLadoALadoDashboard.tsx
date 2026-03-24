@@ -197,6 +197,64 @@ export default function RelatorioLadoALadoDashboard({ data, reportId }: Relatori
           </div>
         </section>
 
+        {Array.isArray(data.criteriosEstatistica) && data.criteriosEstatistica.length > 0 && (
+          <section className="bg-amber-50/90 border border-amber-200 rounded-xl p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900 mb-1">Critérios numéricos (entre pontos)</h2>
+            <p className="text-xs text-slate-600 mb-4">
+              Média, desvio padrão e CV% por lado; diferença &quot;indicativa&quot; não substitui ANOVA/DIC. Exibido quando o relatório incluir o bloco <code className="text-amber-900/80">criteriosEstatistica</code>.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-amber-300/80 text-left text-slate-600">
+                    <th className="py-2 pr-3">Critério</th>
+                    <th className="py-2 pr-3">Média A</th>
+                    <th className="py-2 pr-3">Média B</th>
+                    <th className="py-2 pr-3">DP A</th>
+                    <th className="py-2 pr-3">DP B</th>
+                    <th className="py-2 pr-3">CV% A</th>
+                    <th className="py-2 pr-3">CV% B</th>
+                    <th className="py-2 pr-3">Destaque</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.criteriosEstatistica!.map((row, i) => (
+                    <tr key={i} className="border-b border-amber-200/60">
+                      <td className="py-2 pr-3 font-medium text-slate-800">
+                        {row.criterio || '—'}
+                        {row.unidade ? <span className="text-slate-500 font-normal"> ({row.unidade})</span> : null}
+                      </td>
+                      <td className="py-2 pr-3">{row.mediaA != null ? formatNumber(row.mediaA, { decimals: 2 }) : '—'}</td>
+                      <td className="py-2 pr-3">{row.mediaB != null ? formatNumber(row.mediaB, { decimals: 2 }) : '—'}</td>
+                      <td className="py-2 pr-3">{row.dpA != null ? formatNumber(row.dpA, { decimals: 2 }) : '—'}</td>
+                      <td className="py-2 pr-3">{row.dpB != null ? formatNumber(row.dpB, { decimals: 2 }) : '—'}</td>
+                      <td className="py-2 pr-3">{row.cvPctA != null ? `${row.cvPctA.toFixed(1)}%` : '—'}</td>
+                      <td className="py-2 pr-3">{row.cvPctB != null ? `${row.cvPctB.toFixed(1)}%` : '—'}</td>
+                      <td className="py-2 pr-3">
+                        {row.diferencaIndicativa ? (
+                          <span className="text-amber-800 font-semibold">Sim</span>
+                        ) : (
+                          <span className="text-slate-500">Não</span>
+                        )}
+                        {row.estabilidadeDpDiff != null && (
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            Estab. (DP B−A): {formatNumber(row.estabilidadeDpDiff, { decimals: 2 })}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {data.criteriosEstatistica!.some((r) => r.notaRegra) && (
+              <p className="text-xs text-slate-500 mt-3 italic">
+                {data.criteriosEstatistica!.find((r) => r.notaRegra)?.notaRegra}
+              </p>
+            )}
+          </section>
+        )}
+
         {/* 3. Painel de Indicadores Agronômicos — cards A vs B com barra */}
         <section>
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Indicadores Agronômicos</h2>
