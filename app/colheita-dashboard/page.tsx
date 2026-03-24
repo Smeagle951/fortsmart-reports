@@ -49,6 +49,28 @@ const INITIAL_HARVEST_DATA = [
   { talhao: "T-17", variedade: "HO COARI", produto: "ADAMA (ExpertGrow e Armero)", hectares: 3.92, media: 78.35, tipo: "tratamento", pa: "Protioconazol + B. ativos", classe: "Fungicida", categoria: "Químico", segmento: "Foliar", modo: "DMI", composicao_custos: [{ produto: "ARMEO", valor: 12.81, moeda: "USD", dose_ha: 1 }] }
 ];
 
+/** Incrementar quando atualizar linhas do INITIAL_HARVEST_DATA — força fusão nos dados do localStorage (ex.: PIVO-05 / Verango). */
+const COLHEITA_SEED_REVISION = 6;
+const COLHEITA_SEED_REVISION_KEY = 'fortsmart_colheita_seed_revision';
+
+type HarvestRow = (typeof INITIAL_HARVEST_DATA)[number];
+
+function harvestRowKey(r: { talhao: string; variedade: string; produto: string; tipo: string }) {
+  return `${r.talhao}|${r.variedade}|${r.produto}|${r.tipo}`;
+}
+
+/** Sobrescreve hectares, média e composição do seed nas linhas já salvas (mesmo talhão/variedade/produto/tipo). */
+function mergeHarvestSeedIntoStored<T extends { talhao: string; variedade: string; produto: string; tipo: string }>(
+  stored: T[],
+  seed: T[],
+): T[] {
+  const seedByKey = new Map(seed.map((row) => [harvestRowKey(row), row]));
+  return stored.map((row) => {
+    const s = seedByKey.get(harvestRowKey(row));
+    return s ? { ...row, ...s } : row;
+  });
+}
+
 const productInsights: Record<string, { alvo: string, proposta: string, bio: string }> = {
   // --- COMBOS E ASSEMBLEIAS ---
   "NEM-OUT + ACTIVE + VERANGO": {
@@ -169,6 +191,16 @@ const productInsights: Record<string, { alvo: string, proposta: string, bio: str
     alvo: "Estratégia Defensiva Conservadora",
     proposta: "Posicionamento técnico central de segurança.",
     bio: "Produtividade estabilizada com volatilidade mínima de custo. A performance fisiológica suporta intempéries dentro de flutuações aceitáveis sem dilapidar o fluxo de caixa."
+  },
+  "COM VERANGO": {
+    alvo: "Nematoides de Galha e Cisto (Fitonematoides)",
+    proposta: "Tratamento com fluopiram (SDHI) no sulco.",
+    bio: "Mesma base técnica do VERANGO isolado; comparar sempre com a testemunha sem Verango do mesmo talhão."
+  },
+  "SEM VERANGO (Pad. Fazenda)": {
+    alvo: "Linha de base do manejo da propriedade",
+    proposta: "Testemunha sem aplicação de Verango.",
+    bio: "Referência econômica e produtiva para calcular diferença e ROI do tratamento COM VERANGO na mesma área."
   }
 };
 
@@ -280,11 +312,24 @@ export default function SoybeanHarvestDashboard() {
         if (loadedSnapshots.length > 0) break;
       }
 
+      const storedSeedRev = Number(window.localStorage.getItem(COLHEITA_SEED_REVISION_KEY) || "0");
+      const shouldMergeSeed = storedSeedRev < COLHEITA_SEED_REVISION;
+
       if (loadedSnapshots.length > 0) {
-        setSavedSnapshots(loadedSnapshots);
         // Prioriza abrir dados antigos primeiro (mais recente da lista).
         const first = loadedSnapshots[0];
-        setInformativoData(first.data || []);
+        let rows = (first.data || []) as HarvestRow[];
+        let snapshotsToSet = loadedSnapshots;
+        if (shouldMergeSeed) {
+          rows = mergeHarvestSeedIntoStored(rows, INITIAL_HARVEST_DATA);
+          window.localStorage.setItem(COLHEITA_SEED_REVISION_KEY, String(COLHEITA_SEED_REVISION));
+          snapshotsToSet = loadedSnapshots.map((s, i) =>
+            i === 0 ? { ...s, data: rows } : s,
+          );
+          window.localStorage.setItem("fortsmart_colheita_snapshots_v1", JSON.stringify(snapshotsToSet));
+        }
+        setSavedSnapshots(snapshotsToSet);
+        setInformativoData(rows);
         setSelectedSnapshotId(first.id);
         setIsLockedView(Boolean(first.locked));
         setSnapshotName(first.nome || "");
@@ -297,8 +342,16 @@ export default function SoybeanHarvestDashboard() {
         if (currentRaw) {
           const currentParsed = JSON.parse(currentRaw);
           if (Array.isArray(currentParsed) && currentParsed.length > 0) {
-            setInformativoData(currentParsed);
+            let rows = currentParsed as HarvestRow[];
+            if (shouldMergeSeed) {
+              rows = mergeHarvestSeedIntoStored(rows, INITIAL_HARVEST_DATA);
+              window.localStorage.setItem(COLHEITA_SEED_REVISION_KEY, String(COLHEITA_SEED_REVISION));
+              window.localStorage.setItem("fortsmart_colheita_current_v1", JSON.stringify(rows));
+            }
+            setInformativoData(rows);
           }
+        } else if (shouldMergeSeed) {
+          window.localStorage.setItem(COLHEITA_SEED_REVISION_KEY, String(COLHEITA_SEED_REVISION));
         }
       }
 
@@ -314,6 +367,8 @@ export default function SoybeanHarvestDashboard() {
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
+    // Evita sobrescrever o armazenamento com [] antes do efeito de hidratação terminar.
+    if (savedSnapshots.length === 0) return;
     window.localStorage.setItem("fortsmart_colheita_snapshots_v1", JSON.stringify(savedSnapshots));
   }, [savedSnapshots]);
 
@@ -570,7 +625,10 @@ export default function SoybeanHarvestDashboard() {
 
   const getDicionarioAgronomico = (produto: string) => {
     if (productInsights[produto]) return productInsights[produto];
-    const key = Object.keys(productInsights).find(k => produto.toUpperCase().includes(k.toUpperCase()));
+    const upper = produto.toUpperCase();
+    // Evita que "SEM VERANGO (...)" caia no insight de "VERANGO" — preferir chaves mais longas primeiro.
+    const keys = Object.keys(productInsights).sort((a, b) => b.length - a.length);
+    const key = keys.find((k) => upper.includes(k.toUpperCase()));
     if (key) return productInsights[key];
     return {
       alvo: "Manejo Estratégico",
