@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FeatureCollection, GeoJsonObject, Point } from 'geojson';
-import { buildCompactacaoDiagnostico } from '@/lib/amostragem-solo/diagnostics';
+import {
+  computeCompactacaoAnalytics,
+  computeSamplingQuality,
+} from '@/lib/amostragem-solo/compactacaoAnalytics';
+import {
+  buildCompactacaoDiagnostico,
+  buildDiagnosticoAgronomicoBreve,
+  buildRecomendacoesCompactacao,
+} from '@/lib/amostragem-solo/diagnostics';
+import { IC_LEGEND_ROWS } from '@/lib/amostragem-solo/mpa';
 import {
   getFeatureCollection,
   type AmostragemObservacao,
@@ -68,6 +77,10 @@ function colorForDepth(prof: string | null | undefined): string {
   if (s.startsWith('30-40')) return '#f97316';
   if (s.startsWith('40-50')) return '#a855f7';
   return '#475569';
+}
+
+function escapeTooltipText(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 export default function RelatorioAmostragemSoloContent({ payload, shareToken }: Props) {
@@ -165,10 +178,35 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
 
   const isLegacyPayload = !p.schemaVersion || Number(p.schemaVersion) < 2;
 
-  const diagnosticoText = useMemo(
-    () => buildCompactacaoDiagnostico(selectedTalhao ? filteredObs : observacoes),
-    [filteredObs, observacoes, selectedTalhao],
+  const analyticsObs = selectedTalhao ? filteredObs : observacoes;
+  const analytics = useMemo(() => computeCompactacaoAnalytics(analyticsObs), [analyticsObs]);
+  const samplingQ = useMemo(
+    () => computeSamplingQuality(analyticsObs, talhoesFc ?? undefined, meta),
+    [analyticsObs, talhoesFc, meta],
   );
+
+  const diagnosticoBreve = useMemo(() => buildDiagnosticoAgronomicoBreve(analytics), [analytics]);
+  const recomendacoes = useMemo(() => buildRecomendacoesCompactacao(analytics), [analytics]);
+  const diagnosticoText = useMemo(() => buildCompactacaoDiagnostico(analyticsObs), [analyticsObs]);
+
+  const obsComFoto = useMemo(
+    () => filteredObs.filter((o) => o.imagem_url && String(o.imagem_url).trim()),
+    [filteredObs],
+  );
+  const tabelaTemFoto = useMemo(() => filteredObs.some((o) => o.imagem_url), [filteredObs]);
+
+  const comparacaoPlanejadoLabel = (() => {
+    switch (samplingQ.comparacaoPlanejado) {
+      case 'abaixo':
+        return 'Amostragem mais esparsa que o fator planejado (pontos/ha).';
+      case 'acima':
+        return 'Densidade de pontos acima do fator planejado (pontos/ha).';
+      case 'proximo':
+        return 'Densidade compatível com o fator planejado (pontos/ha).';
+      default:
+        return null;
+    }
+  })();
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
@@ -390,6 +428,19 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
           iconAnchor: [11, 11],
         });
         const m = L.marker([lat, lng], { icon });
+        const profStr = String(pr.profundidade ?? '—');
+        const icStr =
+          pr.compactacao != null && Number.isFinite(Number(pr.compactacao))
+            ? `${Number(pr.compactacao).toFixed(2)} MPa`
+            : '—';
+        const talhaoStr = String(pr.talhao_nome ?? pr.talhao_id ?? '—');
+        const tipHtml = [
+          `<strong>Ponto ${num}</strong>`,
+          `IC: ${escapeTooltipText(icStr)} (${escapeTooltipText(cls || '—')})`,
+          `Prof: ${escapeTooltipText(profStr)}`,
+          `Talhão: ${escapeTooltipText(talhaoStr)}`,
+        ].join('<br/>');
+        m.bindTooltip(tipHtml, { direction: 'top', opacity: 0.95 });
         m.on('click', () => {
           const id = String(pr.id ?? '');
           const hit = observacoes.find((o) => String(o.id) === id);
@@ -583,18 +634,18 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               ))}
             </select>
           )}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, maxWidth: 220 }}>
             <input type="checkbox" checked={showHeat} onChange={(e) => setShowHeat(e.target.checked)} />
-            Mapa de intensidade (IC)
+            Intensidade por pontos (kernel)
           </label>
           {isolinesFc ? (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, maxWidth: 240 }}>
               <input
                 type="checkbox"
                 checked={showIsolines}
                 onChange={(e) => setShowIsolines(e.target.checked)}
               />
-              Isolinhas de IC
+              Superfície interpolada (IDW) / isolinhas
             </label>
           ) : null}
           {talhoesFc ? (
@@ -654,15 +705,96 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
           boxShadow: '0 4px 18px rgba(28,25,23,0.06)',
         }}
       >
-        <h2 style={{ margin: 0, fontFamily: ag.fontTitle, fontSize: '1.05rem', color: ag.forest }}>
-          Síntese automática (IC)
+        <h2 style={{ margin: 0, fontFamily: ag.fontTitle, fontSize: '1.1rem', color: ag.forest }}>
+          Resumo técnico
         </h2>
-        <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.55, color: ag.ink }}>
-          {diagnosticoText}
+        <p style={{ margin: '8px 0 0', fontSize: 12, color: ag.inkMuted, lineHeight: 1.5 }}>
+          Estatísticas sobre <strong>camadas amostradas</strong> (cada linha = ponto × profundidade com IC). Percentuais não
+          representam % da área do talhão sem interpolação espacial por polígono.
         </p>
-        <p style={{ margin: '8px 0 0', fontSize: 11, color: ag.inkMuted, fontStyle: 'italic' }}>
-          Texto gerado por regras sobre os dados publicados; não substitui visita e interpretação local.
-        </p>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: 12,
+            marginTop: 14,
+          }}
+        >
+          <div style={{ padding: 12, background: ag.paper2, borderRadius: 4, border: `1px solid ${ag.border}` }}>
+            <div style={{ fontSize: 11, color: ag.inkMuted, textTransform: 'uppercase' }}>IC médio</div>
+            <div style={{ fontSize: 1.25 + 'rem', fontWeight: 700, marginTop: 4 }}>
+              {analytics.icMedia != null ? `${analytics.icMedia.toFixed(2)}` : '—'} MPa
+            </div>
+          </div>
+          <div style={{ padding: 12, background: ag.paper2, borderRadius: 4, border: `1px solid ${ag.border}` }}>
+            <div style={{ fontSize: 11, color: ag.inkMuted, textTransform: 'uppercase' }}>Mín / Máx</div>
+            <div style={{ fontSize: 1.05 + 'rem', fontWeight: 700, marginTop: 4 }}>
+              {analytics.icMin != null ? analytics.icMin.toFixed(2) : '—'} /{' '}
+              {analytics.icMax != null ? analytics.icMax.toFixed(2) : '—'}
+            </div>
+          </div>
+          <div style={{ padding: 12, background: ag.paper2, borderRadius: 4, border: `1px solid ${ag.border}` }}>
+            <div style={{ fontSize: 11, color: ag.inkMuted, textTransform: 'uppercase' }}>Mediana</div>
+            <div style={{ fontSize: 1.25 + 'rem', fontWeight: 700, marginTop: 4 }}>
+              {analytics.icMediana != null ? `${analytics.icMediana.toFixed(2)}` : '—'} MPa
+            </div>
+          </div>
+          <div style={{ padding: 12, background: ag.paper2, borderRadius: 4, border: `1px solid ${ag.border}` }}>
+            <div style={{ fontSize: 11, color: ag.inkMuted, textTransform: 'uppercase' }}>Alta + crítica</div>
+            <div style={{ fontSize: 1.25 + 'rem', fontWeight: 700, marginTop: 4 }}>
+              {analytics.nObservacoesComIc ? `${analytics.pctCamadasAltaCritica}%` : '—'}{' '}
+              <span style={{ fontSize: 12, fontWeight: 500, color: ag.inkMuted }}>das camadas</span>
+            </div>
+          </div>
+        </div>
+        {analytics.distribuicao.length > 0 ? (
+          <div style={{ marginTop: 16 }}>
+            <strong style={{ fontSize: 13, color: ag.forest }}>Distribuição por classe (camadas com IC)</strong>
+            <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.6 }}>
+              {analytics.distribuicao.map((d) => (
+                <li key={d.classe}>
+                  <span style={{ color: colorForClass(d.classe) }}>●</span> {d.classe}: {d.count} ({d.pct}%)
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${ag.border}` }}>
+          <strong style={{ fontSize: 13, color: ag.forest }}>Qualidade da amostragem</strong>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.6 }}>
+            <li>
+              <strong>Registros no recorte:</strong> {analytics.nObservacoesTotal} linhas ·{' '}
+              <strong>Camadas com IC:</strong> {analytics.nObservacoesComIc} · <strong>Pontos de campo distintos:</strong>{' '}
+              {analytics.pontosDistintos}
+            </li>
+            {samplingQ.layoutLabel ? (
+              <li>
+                <strong>Modo de malha (app):</strong> {samplingQ.layoutLabel}
+                {samplingQ.fatorPlanejado != null ? ` · fator planejado: ${samplingQ.fatorPlanejado} pontos/ha` : ''}
+              </li>
+            ) : samplingQ.fatorPlanejado != null ? (
+              <li>
+                <strong>Fator planejado:</strong> {samplingQ.fatorPlanejado} pontos/ha
+              </li>
+            ) : null}
+            {samplingQ.areaHa != null ? (
+              <li>
+                <strong>Área aproximada dos talhões (polígonos):</strong> {samplingQ.areaHa} ha
+                {samplingQ.densidadePontosPorHa != null ? (
+                  <>
+                    {' '}
+                    · <strong>Densidade observada:</strong> {samplingQ.densidadePontosPorHa} pontos/ha
+                  </>
+                ) : null}
+              </li>
+            ) : (
+              <li>Área do talhão não disponível (sem polígonos no relatório); densidade em pontos/ha não calculada.</li>
+            )}
+            {comparacaoPlanejadoLabel ? (
+              <li style={{ fontStyle: 'italic', color: ag.inkMuted }}>{comparacaoPlanejadoLabel}</li>
+            ) : null}
+          </ul>
+        </div>
       </section>
 
       <div style={{ position: 'relative', height: 'min(70vh, 640px)', margin: 18, boxShadow: '0 8px 28px rgba(28,25,23,0.08)' }}>
@@ -696,18 +828,11 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
           <strong style={{ display: 'block', marginBottom: 8, fontFamily: ag.fontTitle, color: ag.forest }}>
             Legenda — índice de cone (IC)
           </strong>
-          <div>
-            <span style={{ color: '#dc2626' }}>●</span> Restrição crítica (IC &gt; 3 MPa)
-          </div>
-          <div>
-            <span style={{ color: '#ea580c' }}>●</span> Restrição alta (2–3 MPa)
-          </div>
-          <div>
-            <span style={{ color: '#ca8a04' }}>●</span> Restrição moderada (1–2 MPa)
-          </div>
-          <div>
-            <span style={{ color: '#16a34a' }}>●</span> Baixa restrição (IC &lt; 1 MPa)
-          </div>
+          {IC_LEGEND_ROWS.map((row) => (
+            <div key={row.classificacao}>
+              <span style={{ color: row.color }}>●</span> {row.descricao} ({row.faixaMpa})
+            </div>
+          ))}
           <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${ag.border}` }}>
             <strong style={{ display: 'block', marginBottom: 4 }}>Borda do ponto por profundidade</strong>
             <div><span style={{ color: '#38bdf8' }}>●</span> 0-10 cm</div>
@@ -723,7 +848,51 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         </div>
       </div>
 
-      <section style={{ padding: '0 22px 28px' }}>
+      {analytics.porProfundidade.length > 0 ? (
+        <section
+          style={{
+            margin: '0 22px 18px',
+            padding: '16px 18px',
+            borderRadius: 4,
+            background: ag.card,
+            border: `1px solid ${ag.border}`,
+            boxShadow: '0 4px 18px rgba(28,25,23,0.06)',
+          }}
+        >
+          <h2 style={{ margin: 0, fontFamily: ag.fontTitle, fontSize: '1.1rem', color: ag.forest }}>
+            Análise por profundidade (camada)
+          </h2>
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: ag.inkMuted }}>
+            Média de IC por faixa de profundidade; classe predominante = maior número de camadas naquela faixa.
+          </p>
+          <div style={{ overflowX: 'auto', marginTop: 12 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: ag.paper2, fontWeight: 600 }}>
+                  <th style={{ textAlign: 'left', padding: 10 }}>Camada</th>
+                  <th style={{ textAlign: 'left', padding: 10 }}>Nº camadas</th>
+                  <th style={{ textAlign: 'left', padding: 10 }}>IC médio (MPa)</th>
+                  <th style={{ textAlign: 'left', padding: 10 }}>Classe predominante</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analytics.porProfundidade.map((row) => (
+                  <tr key={row.profundidade} style={{ borderTop: `1px solid ${ag.border}` }}>
+                    <td style={{ padding: 10 }}>{row.profundidade}</td>
+                    <td style={{ padding: 10 }}>{row.n}</td>
+                    <td style={{ padding: 10 }}>{row.icMedio.toFixed(2)}</td>
+                    <td style={{ padding: 10 }}>
+                      <span style={{ color: colorForClass(row.classePredominante) }}>●</span> {row.classePredominante}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      <section style={{ padding: '0 22px 18px' }}>
         <h2 style={{ fontFamily: ag.fontTitle, fontSize: '1.15rem', color: ag.forest, marginBottom: 10 }}>
           Registro de pontos ({filteredObs.length})
         </h2>
@@ -743,6 +912,9 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
                 <th style={{ textAlign: 'left', padding: 10 }}>IC médio (MPa)</th>
                 <th style={{ textAlign: 'left', padding: 10 }}>Classe de restrição</th>
                 <th style={{ textAlign: 'left', padding: 10 }}>Talhão</th>
+                {tabelaTemFoto ? (
+                  <th style={{ textAlign: 'left', padding: 10 }}>Foto</th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -757,11 +929,131 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
                   <td style={{ padding: 10 }}>{o.compactacao != null ? o.compactacao.toFixed(2) : '—'}</td>
                   <td style={{ padding: 10 }}>{o.classificacao}</td>
                   <td style={{ padding: 10 }}>{o.talhao_nome || o.talhao_id || '—'}</td>
+                  {tabelaTemFoto ? (
+                    <td style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
+                      {o.imagem_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={o.imagem_url}
+                          alt=""
+                          style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4, border: `1px solid ${ag.border}` }}
+                        />
+                      ) : (
+                        <span style={{ color: ag.inkMuted }}>—</span>
+                      )}
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      </section>
+
+      {obsComFoto.length > 0 ? (
+        <section style={{ padding: '0 22px 22px' }}>
+          <h2 style={{ fontFamily: ag.fontTitle, fontSize: '1.15rem', color: ag.forest, marginBottom: 10 }}>
+            Registros fotográficos ({obsComFoto.length})
+          </h2>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: 14,
+            }}
+          >
+            {obsComFoto.map((o) => (
+              <button
+                key={String(o.id)}
+                type="button"
+                onClick={() => setSelected(o)}
+                style={{
+                  textAlign: 'left',
+                  padding: 0,
+                  border: `1px solid ${ag.border}`,
+                  borderRadius: 4,
+                  overflow: 'hidden',
+                  background: ag.card,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 10px rgba(28,25,23,0.06)',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={o.imagem_url!}
+                  alt={`Ponto ${o.numero ?? ''}`}
+                  style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }}
+                />
+                <div style={{ padding: 10, fontSize: 12, lineHeight: 1.45 }}>
+                  <strong>Ponto {o.numero}</strong>
+                  {o.profundidade ? <div>{o.profundidade}</div> : null}
+                  {o.compactacao != null ? (
+                    <div style={{ color: ag.forest, fontWeight: 600 }}>
+                      IC {o.compactacao.toFixed(2)} MPa · {o.classificacao}
+                    </div>
+                  ) : null}
+                  {(o.talhao_nome || o.talhao_id) && (
+                    <div style={{ color: ag.inkMuted }}>{o.talhao_nome || o.talhao_id}</div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section
+        style={{
+          margin: '0 22px 18px',
+          padding: '16px 18px',
+          borderRadius: 4,
+          background: ag.card,
+          border: `1px solid ${ag.border}`,
+          boxShadow: '0 4px 18px rgba(28,25,23,0.06)',
+        }}
+      >
+        <h2 style={{ margin: 0, fontFamily: ag.fontTitle, fontSize: '1.05rem', color: ag.forest }}>
+          Diagnóstico agronômico (automático)
+        </h2>
+        <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.55, color: ag.ink }}>{diagnosticoBreve}</p>
+      </section>
+
+      <section
+        style={{
+          margin: '0 22px 18px',
+          padding: '16px 18px',
+          borderRadius: 4,
+          background: ag.card,
+          border: `1px solid ${ag.border}`,
+          boxShadow: '0 4px 18px rgba(28,25,23,0.06)',
+        }}
+      >
+        <h2 style={{ margin: 0, fontFamily: ag.fontTitle, fontSize: '1.05rem', color: ag.forest }}>
+          Recomendações técnicas
+        </h2>
+        <ul style={{ margin: '10px 0 0', paddingLeft: 20, fontSize: 14, lineHeight: 1.6 }}>
+          {recomendacoes.map((item, i) => (
+            <li key={i}>{item}</li>
+          ))}
+        </ul>
+        <p style={{ margin: '12px 0 0', fontSize: 11, color: ag.inkMuted, fontStyle: 'italic' }}>
+          Sugestões geradas por regras sobre os dados publicados; não substituem receituário agronômico nem visita presencial.
+        </p>
+      </section>
+
+      <section
+        style={{
+          margin: '0 22px 28px',
+          padding: '16px 18px',
+          borderRadius: 4,
+          background: ag.paper2,
+          border: `1px solid ${ag.border}`,
+        }}
+      >
+        <h2 style={{ margin: 0, fontFamily: ag.fontTitle, fontSize: '1rem', color: ag.forest }}>
+          Síntese detalhada (IC)
+        </h2>
+        <p style={{ margin: '10px 0 0', fontSize: 13, lineHeight: 1.55, color: ag.ink }}>{diagnosticoText}</p>
       </section>
 
       {selected && (
