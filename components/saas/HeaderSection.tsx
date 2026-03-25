@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import FortSmartLogo from '@/components/FortSmartLogo';
+import { buildShareUrl } from '@/utils/canonicalUrl';
 
 export type StatusGeral = 'Saudável' | 'Atenção' | 'Crítico';
 
@@ -42,14 +43,15 @@ export default function HeaderSection({
   const [copied, setCopied] = useState(false);
 
   const handleShare = () => {
+    const shareUrl = buildShareUrl(window.location.pathname + window.location.search + window.location.hash);
     if (navigator.share) {
       navigator.share({
         title: `Relatório Agronômico - ${talhao}`,
-        url: window.location.href,
+        url: shareUrl || window.location.href,
         text: `Relatório ${talhao} - ${cultura}`,
       }).catch(() => onCompartilhar?.());
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      navigator.clipboard.writeText(shareUrl || window.location.href);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       onCompartilhar?.();

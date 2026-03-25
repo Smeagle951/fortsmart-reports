@@ -6,6 +6,7 @@ import FortSmartLogo from '@/components/FortSmartLogo';
 import ModalImagem from '@/components/ModalImagem';
 import Mapa from '@/components/Mapa';
 import { formatDate } from '@/utils/format';
+import { buildShareUrl } from '@/utils/canonicalUrl';
 
 import TabelaTecnicaCampos from './visita_tecnica/TabelaTecnicaCampos';
 import OcorrenciasPragasVT from './visita_tecnica/sections/OcorrenciasPragasVT';
@@ -223,7 +224,10 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   );
 
   const handleShare = useCallback(async () => {
-    const url = typeof window !== 'undefined' ? window.location.href : '';
+    const url =
+      typeof window !== 'undefined'
+        ? (buildShareUrl(window.location.pathname + window.location.search + window.location.hash) || window.location.href)
+        : '';
     try {
       if (navigator.share && url) {
         await navigator.share({
