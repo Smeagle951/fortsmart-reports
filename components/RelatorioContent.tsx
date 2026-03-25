@@ -69,7 +69,10 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
   const isVisitaTecnica =
     tipoStr === 'visita_tecnica' ||
     (tipoStr !== 'plantio' && tipoStr !== 'avaliacao_lado_a_lado' && tipoStr !== 'monitoramento' && (hasVisitaKeys || hasVisitaBlocks));
-  if (isVisitaTecnica) {
+  // Para "visita técnica", o layout SaaS premium ainda não cobre todas as seções esperadas
+  // (ex.: data de plantio, fenologia/histórico, condições do momento e mapa).
+  // Por isso, renderizamos o layout completo (não-SaaS) para garantir que tudo apareça.
+  if (isVisitaTecnica && tipoStr !== 'visita_tecnica') {
     const ctxDae = (contextoSafra as any)?.dae;
     const saasData: ReportPageSaaSData = {
       meta: {
@@ -84,17 +87,66 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
       propriedade: { fazenda: String(prop.fazenda ?? ''), proprietario: String(prop.proprietario ?? ''), municipio: (prop as any).municipio != null ? String((prop as any).municipio) : undefined, estado: (prop as any).estado != null ? String((prop as any).estado) : undefined },
       talhao: { nome: String(talhao.nome ?? ''), cultura: String(talhao.cultura ?? '') },
       contextoSafra: { dae: ctxDae != null ? Number(ctxDae) : undefined, dap: (contextoSafra as any)?.dap != null ? Number((contextoSafra as any).dap) : undefined, materialVariedade: (contextoSafra as any)?.materialVariedade != null ? String((contextoSafra as any).materialVariedade) : undefined, empresa: (contextoSafra as any)?.empresa != null ? String((contextoSafra as any).empresa) : undefined, espacamentoCm: (contextoSafra as any)?.espacamentoCm != null ? Number((contextoSafra as any).espacamentoCm) : undefined, populacaoAlvoPlHa: (contextoSafra as any)?.populacaoAlvoPlHa != null ? Number((contextoSafra as any).populacaoAlvoPlHa) : undefined },
-      fenologia: { estadio: (fenologia as any)?.estadio ?? undefined },
-      populacao: (populacao && (populacao as any).plantasPorMetro != null) ? { plantasPorMetro: Number((populacao as any).plantasPorMetro), eficienciaPct: (populacao as any).eficienciaPct != null ? Number((populacao as any).eficienciaPct) : undefined } : undefined,
+      fenologia: {
+        estadio: (() => {
+          const fe = (fenologia as any)?.estadio;
+          if (fe != null && String(fe).trim() !== '') return String(fe).trim();
+          const pg = (populacao as any)?.estagioFenologico;
+          if (pg != null && String(pg).trim() !== '') return String(pg).trim();
+          return undefined;
+        })(),
+      },
+      populacao: (() => {
+        const p = populacao as any;
+        if (!p || typeof p !== 'object') return undefined;
+        const out: NonNullable<ReportPageSaaSData['populacao']> = {};
+        if (p.plantasPorMetro != null && Number.isFinite(Number(p.plantasPorMetro))) {
+          out.plantasPorMetro = Number(p.plantasPorMetro);
+        }
+        if (p.eficienciaPct != null && Number.isFinite(Number(p.eficienciaPct))) {
+          out.eficienciaPct = Number(p.eficienciaPct);
+        }
+        if (p.perdaTotalPct != null && Number.isFinite(Number(p.perdaTotalPct))) {
+          out.perdaTotalPct = Number(p.perdaTotalPct);
+        }
+        if (p.estagioFenologico != null && String(p.estagioFenologico).trim() !== '') {
+          out.estagioFenologico = String(p.estagioFenologico).trim();
+        }
+        return Object.keys(out).length ? out : undefined;
+      })(),
       estande: (relatorio as any).estande ?? undefined,
       plantabilidade: (relatorio as any).plantabilidade ?? (relatorio as any).modulo_plantio?.plantabilidade ?? undefined,
-      fitossanidade: (relatorio as any).fitossanidade ? { ipe: Number(((relatorio as any).fitossanidade as any).ipe ?? 0), ipeStatus: ((relatorio as any).fitossanidade as any).ipeStatus ?? undefined } : undefined,
+      fitossanidade: (() => {
+        const f = (relatorio as any).fitossanidade;
+        if (!f || typeof f !== 'object') return undefined;
+        const ipeRaw = f.ipe;
+        const ipe = ipeRaw != null && ipeRaw !== '' ? Number(ipeRaw) : undefined;
+        if (ipe != null && !Number.isFinite(ipe)) return undefined;
+        const hasIpe = ipe != null;
+        const hasStatus = f.ipeStatus != null && String(f.ipeStatus).trim() !== '';
+        if (!hasIpe && !hasStatus) return undefined;
+        return {
+          ...(hasIpe ? { ipe } : {}),
+          ipeStatus: hasStatus ? String(f.ipeStatus) : undefined,
+        };
+      })(),
       diagnosticoIntegrado: (() => {
         const sptRaw = (diagnostico as any).spt ?? (relatorio as any).indiceAgronomicoTalhao?.valor;
         const spt = typeof sptRaw === 'number' && Number.isFinite(sptRaw) ? sptRaw : undefined;
         return { spt };
       })(),
       indiceAgronomicoTalhao: (relatorio as any).indiceAgronomicoTalhao ?? undefined,
+      inteligenciaAgronomica: (() => {
+        const ia = (relatorio as any).inteligencia_agronomica;
+        if (!ia || typeof ia !== 'object') return undefined;
+        const score = ia.score != null ? Number(ia.score) : undefined;
+        const status = ia.status != null ? String(ia.status) : undefined;
+        if ((score == null || !Number.isFinite(score)) && !status) return undefined;
+        return {
+          score: score != null && Number.isFinite(score) ? score : undefined,
+          status: status || undefined,
+        };
+      })(),
       aplicacoes: aplicacoes.map((a: any) => ({
         tipo: a.tipo ?? a.classe ?? '',
         data: a.data ?? '',
@@ -110,9 +162,36 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
       pragas: (pragas as any[]).map((p: any) => ({ tipo: p.tipo, nome: p.nome, alvo: p.alvo, incidencia: p.incidencia, severidade: p.severidade, situacao: p.situacao, observacoes: p.observacoes })),
       desvios: Array.isArray((relatorio as any).desvios) ? ((relatorio as any).desvios as any[]).map((d: any) => ({ tipo: d.tipo, descricao: d.descricao, data: d.data, severidade: d.severidade, local: d.local, acaoRecomendada: d.acaoRecomendada })) : undefined,
       diagnostico: diagnostico && typeof diagnostico === 'object' ? { problemaPrincipal: (diagnostico as any).problemaPrincipal, causaProvavel: (diagnostico as any).causaProvavel, nivelRisco: (diagnostico as any).nivelRisco, urgenciaAcao: (diagnostico as any).urgenciaAcao, recomendacoes: Array.isArray((diagnostico as any).recomendacoes) ? (diagnostico as any).recomendacoes : undefined } : undefined,
-      planoAcao: planoAcao && typeof planoAcao === 'object' ? { objetivoManejo: (planoAcao as any).objetivoManejo, acoes: Array.isArray((planoAcao as any).acoes) ? (planoAcao as any).acoes.map((a: any) => ({ prioridade: a.prioridade != null ? String(a.prioridade) : undefined, acao: a.acao, prazo: a.prazo })) : undefined } : undefined,
-      checklist: (relatorio as any).checklist && typeof (relatorio as any).checklist === 'object' ? (relatorio as any).checklist : undefined,
+      planoAcao: planoAcao && typeof planoAcao === 'object'
+        ? {
+            objetivoManejo: (planoAcao as any).objetivoManejo,
+            acoes: Array.isArray((planoAcao as any).acoes)
+              ? (planoAcao as any).acoes.map((a: any) => ({
+                  prioridade: a.prioridade != null ? String(a.prioridade) : undefined,
+                  acao: a.acao,
+                  prazo: a.prazo,
+                  produto: a.produto,
+                  dose: a.dose,
+                  momento: a.momento,
+                  objetivoTecnico: a.objetivoTecnico,
+                }))
+              : undefined,
+          }
+        : undefined,
       conclusao: typeof conclusao === 'string' ? conclusao : undefined,
+      mapa: (() => {
+        const m = (relatorio as any).mapa;
+        if (!m || typeof m !== 'object') return undefined;
+        const pts = Array.isArray(m.pontos) ? m.pontos : [];
+        const poly = Array.isArray(m.polygon) ? m.polygon : [];
+        if (pts.length === 0 && poly.length < 3) return undefined;
+        return {
+          polygon: poly,
+          pontos: pts,
+          clusters: Array.isArray(m.clusters) ? m.clusters : undefined,
+          evolucao_espacial: m.evolucao_espacial && typeof m.evolucao_espacial === 'object' ? m.evolucao_espacial : undefined,
+        };
+      })(),
     };
 
     return <ReportPageSaaS data={saasData} reportId={reportId} relatorioUuid={relatorioUuid} />;

@@ -1,8 +1,8 @@
-import type { CompactacaoAnalytics } from './compactacaoAnalytics';
+import type { CompactacaoAnalytics, ProfundidadeAgg } from './compactacaoAnalytics';
 import type { AmostragemObservacao } from './payload';
 
 /**
- * Parágrafo curto para o bloco “Diagnóstico agronômico” (2–3 frases).
+ * Parágrafo curto para o bloco "Diagnóstico agronômico" (2–3 frases).
  * Percentuais referem-se às camadas amostradas (ponto × profundidade), não à área do mapa interpolada.
  */
 export function buildDiagnosticoAgronomicoBreve(analytics: CompactacaoAnalytics): string {
@@ -10,12 +10,12 @@ export function buildDiagnosticoAgronomicoBreve(analytics: CompactacaoAnalytics)
     return 'Não há camadas com IC numérico neste recorte; não é possível emitir diagnóstico automático de compactação.';
   }
 
-  const { icMedia, pctCamadasAltaCritica, profundidadeMaiorIcMedio, nObservacoesComIc } = analytics;
+  const { icMedia, pctCamadasAltaCritica, profundidadeMaiorIcMedio, nObservacoesComIc, icDesvioPadrao, coefVariacao } = analytics;
   const mediaTxt = icMedia != null ? `${icMedia.toFixed(2)} MPa` : '—';
 
   let fragil = '';
   if (pctCamadasAltaCritica >= 50) {
-    fragil = `Cerca de ${pctCamadasAltaCritica}% das camadas amostradas apresentam restrição alta ou crítica (IC alinhado ao classificador do app), indicando condição frequentemente limitante ao crescimento radicular.`;
+    fragil = `Cerca de ${pctCamadasAltaCritica}% das camadas amostradas apresentam restrição alta ou crítica, indicando condição frequentemente limitante ao crescimento radicular.`;
   } else if (pctCamadasAltaCritica >= 25) {
     fragil = `Cerca de ${pctCamadasAltaCritica}% das camadas amostradas estão em restrição alta ou crítica; há trechos com maior risco de limitação radicular.`;
   } else {
@@ -27,13 +27,23 @@ export function buildDiagnosticoAgronomicoBreve(analytics: CompactacaoAnalytics)
       ? ` O maior IC médio (${profundidadeMaiorIcMedio.icMedio.toFixed(2)} MPa) concentra-se na camada ${profundidadeMaiorIcMedio.profundidade}.`
       : '';
 
+  // Variabilidade espacial
+  let variabilidade = '';
+  if (coefVariacao != null) {
+    if (coefVariacao > 40) {
+      variabilidade = ' A variabilidade é alta (CV > 40%), sugerindo heterogeneidade espacial que pode exigir manejo localizado.';
+    } else if (coefVariacao > 25) {
+      variabilidade = ` Variabilidade moderada (CV ${coefVariacao.toFixed(0)}%), indicando zonas com comportamento distinto dentro da área.`;
+    }
+  }
+
   return (
-    `Com base em ${nObservacoesComIc} camada(s) com IC válido, a média global é ${mediaTxt}.${profTxt} ${fragil} ` +
+    `Com base em ${nObservacoesComIc} camada(s) com IC válido, a média global é ${mediaTxt}.${profTxt} ${fragil}${variabilidade} ` +
       '(Valores são amostra pontual; não substituem visita técnica nem mapa de manejo por área real.)'
   );
 }
 
-/** Lista curta de recomendações de manejo baseada em regras sobre o resumo numérico. */
+/** Lista curta de recomendações de manejo baseada em regras sobre o resumo numérico + profundidade. */
 export function buildRecomendacoesCompactacao(analytics: CompactacaoAnalytics): string[] {
   const out: string[] = [];
   if (analytics.nObservacoesComIc === 0) {
@@ -43,25 +53,57 @@ export function buildRecomendacoesCompactacao(analytics: CompactacaoAnalytics): 
   const media = analytics.icMedia ?? 0;
   const pctAC = analytics.pctCamadasAltaCritica;
   const profPico = analytics.profundidadeMaiorIcMedio;
+  const porProf = analytics.porProfundidade;
 
-  if (pctAC >= 25 || media > 2.2) {
+  // Recomendação contextualizada por profundidade do pico
+  if (profPico && profPico.icMedio > 2.5) {
+    // Extrair profundidade em cm para sugerir implemento
+    const match = profPico.profundidade.match(/(\d+)\s*[-–]\s*(\d+)/);
+    const profCm = match ? parseInt(match[2], 10) : null;
+    if (profCm) {
+      out.push(
+        `Subsolagem recomendada a ${profCm + 5} cm nas áreas com IC > 2.5 MPa (pico detectado na camada ${profPico.profundidade}, IC médio ${profPico.icMedio.toFixed(2)} MPa).`,
+      );
+    } else {
+      out.push(
+        `Avaliar subsolagem na faixa ${profPico.profundidade}, onde o IC médio é ${profPico.icMedio.toFixed(2)} MPa — acima do limiar crítico.`,
+      );
+    }
+  } else if (pctAC >= 25 || media > 2.2) {
     out.push(
       'Avaliar alívio de compactação (subsolagem ou escarificação) na profundidade do pico de IC, respeitando umidade adequada do solo e orientação técnica local.',
     );
   }
+
+  // Camadas com restrição moderada+
+  const camadasComRestricao = porProf.filter((p) => p.icMedio > 1.5);
+  if (camadasComRestricao.length > 0 && camadasComRestricao.length < porProf.length) {
+    const nomes = camadasComRestricao.map((p) => p.profundidade).join(', ');
+    out.push(
+      `Atenção especial às camadas ${nomes}, onde o IC indica restrição moderada a alta ao crescimento radicular.`,
+    );
+  }
+
   if (pctAC >= 15 || media > 1.8) {
     out.push(
-      'Incluir na rotação culturas ou coberturas com sistema radicular agressivo (ex.: nabo forrageiro, aveia, milheto) para melhorar porosidade ao longo do tempo.',
+      'Incluir na rotação culturas ou coberturas com sistema radicular agressivo (ex.: nabo forrageiro, aveia preta, milheto) para melhorar porosidade biológica.',
     );
   }
-  out.push('Evitar tráfego de máquinas com solo acima da capacidade de suporte (umidade elevada), reduzindo novo compactação em subsuperfície.');
-  out.push('Repetir o levantamento após intervenção ou na safra seguinte para verificar resposta e ajustar manejo.');
 
-  if (profPico && profPico.icMedio > 2.5) {
-    out.push(
-      `Priorizar diagnóstico visual e decisão localizada na faixa ${profPico.profundidade}, onde o IC médio é mais elevado.`,
-    );
+  out.push('Evitar tráfego de máquinas com solo acima da capacidade de suporte (umidade elevada), reduzindo risco de nova compactação em subsuperfície.');
+
+  // Superficial vs profunda
+  const superficial = porProf.find((p) => p.profundidade.startsWith('0'));
+  const profunda = porProf.find((p) => p.profundidade.startsWith('20') || p.profundidade.startsWith('30'));
+  if (superficial && profunda) {
+    if (superficial.icMedio < 1.5 && profunda.icMedio > 2.0) {
+      out.push('Compactação predomina em subsuperfície (camadas > 20 cm), típica de pé-de-grade/pé-de-arado. Subsolagem profunda é mais indicada que escarificação superficial.');
+    } else if (superficial.icMedio > 2.0 && profunda.icMedio < 1.5) {
+      out.push('Compactação concentrada na camada superficial (0-10/0-20 cm). Escarificação leve ou uso de rotação com raízes pivotantes pode ser suficiente.');
+    }
   }
+
+  out.push('Repetir o levantamento após intervenção ou na safra seguinte para verificar resposta e ajustar manejo.');
 
   return out;
 }
@@ -91,7 +133,7 @@ export function buildCompactacaoDiagnostico(obs: AmostragemObservacao[]): string
   const partesClasse: string[] = [];
   for (const c of ordem) {
     const n = porClasse[c];
-    if (n) partesClasse.push(`${n} ${n === 1 ? 'registro' : 'registros'} em “${c}”`);
+    if (n) partesClasse.push(`${n} ${n === 1 ? 'registro' : 'registros'} em "${c}"`);
   }
 
   const porProf: Record<string, { n: number; soma: number }> = {};
@@ -144,4 +186,12 @@ export function buildCompactacaoDiagnostico(obs: AmostragemObservacao[]): string
       `Distribuição por classe: ${partesClasse.join('; ')}.${profText} ` +
       conclusao
   );
+}
+
+/** Gera texto de interpretação para cada camada de profundidade (para exibir na tabela). */
+export function buildDepthInterpretations(porProfundidade: ProfundidadeAgg[]): Array<{ profundidade: string; texto: string }> {
+  return porProfundidade.map((p) => ({
+    profundidade: p.profundidade,
+    texto: p.interpretacao,
+  }));
 }

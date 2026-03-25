@@ -746,17 +746,61 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               <span style={{ fontSize: 12, fontWeight: 500, color: ag.inkMuted }}>das camadas</span>
             </div>
           </div>
+          {analytics.icDesvioPadrao != null && (
+            <div style={{ padding: 12, background: ag.paper2, borderRadius: 4, border: `1px solid ${ag.border}` }}>
+              <div style={{ fontSize: 11, color: ag.inkMuted, textTransform: 'uppercase' }}>Desv. Padrão</div>
+              <div style={{ fontSize: 1.25 + 'rem', fontWeight: 700, marginTop: 4 }}>
+                {analytics.icDesvioPadrao.toFixed(2)} MPa
+              </div>
+            </div>
+          )}
+          {analytics.coefVariacao != null && (
+            <div style={{ padding: 12, background: ag.paper2, borderRadius: 4, border: `1px solid ${ag.border}` }}>
+              <div style={{ fontSize: 11, color: ag.inkMuted, textTransform: 'uppercase' }}>CV%</div>
+              <div style={{ fontSize: 1.25 + 'rem', fontWeight: 700, marginTop: 4, color: analytics.coefVariacao > 40 ? '#dc2626' : analytics.coefVariacao > 25 ? '#ca8a04' : ag.ink }}>
+                {analytics.coefVariacao.toFixed(1)}%
+                <span style={{ fontSize: 11, fontWeight: 500, color: ag.inkMuted, marginLeft: 4 }}>
+                  {analytics.coefVariacao > 40 ? '(alto)' : analytics.coefVariacao > 25 ? '(moderado)' : '(baixo)'}
+                </span>
+              </div>
+            </div>
+          )}
+          {analytics.icP90 != null && (
+            <div style={{ padding: 12, background: ag.paper2, borderRadius: 4, border: `1px solid ${ag.border}` }}>
+              <div style={{ fontSize: 11, color: ag.inkMuted, textTransform: 'uppercase' }}>Percentil 90</div>
+              <div style={{ fontSize: 1.25 + 'rem', fontWeight: 700, marginTop: 4 }}>
+                {analytics.icP90.toFixed(2)} MPa
+              </div>
+            </div>
+          )}
         </div>
         {analytics.distribuicao.length > 0 ? (
           <div style={{ marginTop: 16 }}>
             <strong style={{ fontSize: 13, color: ag.forest }}>Distribuição por classe (camadas com IC)</strong>
-            <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, lineHeight: 1.6 }}>
+            <div style={{ marginTop: 10 }}>
               {analytics.distribuicao.map((d) => (
-                <li key={d.classe}>
-                  <span style={{ color: colorForClass(d.classe) }}>●</span> {d.classe}: {d.count} ({d.pct}%)
-                </li>
+                <div key={d.classe} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <span style={{ width: 80, fontSize: 12, fontWeight: 600, color: colorForClass(d.classe) }}>
+                    ● {d.classe}
+                  </span>
+                  <div style={{ flex: 1, height: 20, background: `${ag.border}40`, borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                    <div
+                      style={{
+                        width: `${Math.max(d.pct, 2)}%`,
+                        height: '100%',
+                        background: colorForClass(d.classe),
+                        borderRadius: 4,
+                        transition: 'width 0.6s ease',
+                        opacity: 0.85,
+                      }}
+                    />
+                  </div>
+                  <span style={{ width: 80, fontSize: 12, fontWeight: 600, textAlign: 'right' }}>
+                    {d.count} ({d.pct}%)
+                  </span>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         ) : null}
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${ag.border}` }}>
@@ -872,17 +916,23 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
                   <th style={{ textAlign: 'left', padding: 10 }}>Camada</th>
                   <th style={{ textAlign: 'left', padding: 10 }}>Nº camadas</th>
                   <th style={{ textAlign: 'left', padding: 10 }}>IC médio (MPa)</th>
-                  <th style={{ textAlign: 'left', padding: 10 }}>Classe predominante</th>
+                  <th style={{ textAlign: 'left', padding: 10 }}>Mín / Máx</th>
+                  <th style={{ textAlign: 'left', padding: 10 }}>Classe</th>
+                  <th style={{ textAlign: 'left', padding: 10, minWidth: 220 }}>Interpretação agronômica</th>
                 </tr>
               </thead>
               <tbody>
                 {analytics.porProfundidade.map((row) => (
                   <tr key={row.profundidade} style={{ borderTop: `1px solid ${ag.border}` }}>
-                    <td style={{ padding: 10 }}>{row.profundidade}</td>
+                    <td style={{ padding: 10, fontWeight: 600 }}>{row.profundidade}</td>
                     <td style={{ padding: 10 }}>{row.n}</td>
-                    <td style={{ padding: 10 }}>{row.icMedio.toFixed(2)}</td>
+                    <td style={{ padding: 10, fontWeight: 700 }}>{row.icMedio.toFixed(2)}</td>
+                    <td style={{ padding: 10, fontSize: 12 }}>{row.icMin.toFixed(2)} / {row.icMax.toFixed(2)}</td>
                     <td style={{ padding: 10 }}>
                       <span style={{ color: colorForClass(row.classePredominante) }}>●</span> {row.classePredominante}
+                    </td>
+                    <td style={{ padding: 10, fontSize: 12, color: row.icMedio > 2.0 ? '#dc2626' : row.icMedio > 1.5 ? '#ca8a04' : ag.inkMuted, fontStyle: 'italic' }}>
+                      {row.interpretacao}
                     </td>
                   </tr>
                 ))}
