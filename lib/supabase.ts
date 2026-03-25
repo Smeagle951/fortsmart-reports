@@ -72,7 +72,7 @@ export async function getRelatorioByShareToken(token: string): Promise<Relatorio
     }
     if (!data) {
       console.warn(`[fortsmart-reports] getRelatorioByShareToken (${name}): nenhum registro para token`, (token || '').slice(0, 8) + '…');
-      return null;
+      continue;
     }
 
     const rowData = data as any;

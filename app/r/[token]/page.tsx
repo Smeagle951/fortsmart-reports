@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
+import { getRelatorioByShareToken, getSupabase, type RelatorioRow } from '@/lib/supabase';
 import RelatorioContent from '@/components/RelatorioContent';
 import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitarioContent';
 import RelatorioResearchProContent from '@/components/research/RelatorioResearchProContent';
@@ -58,6 +58,89 @@ function sanitizeForRSC(obj: unknown): unknown {
   return null;
 }
 
+/** Token da URL: trim, decode e remove aspas acidentais (cópia do Supabase / WhatsApp). */
+function normalizeShareToken(raw: string): string {
+  let t = String(raw ?? '').trim();
+  try {
+    t = decodeURIComponent(t);
+  } catch {
+    /* já decodificado */
+  }
+  t = t.trim();
+  if (
+    (t.startsWith('"') && t.endsWith('"')) ||
+    (t.startsWith("'") && t.endsWith("'"))
+  ) {
+    t = t.slice(1, -1).trim();
+  }
+  return t;
+}
+
+function DebugNotFound({
+  tokenRaw,
+  tokenNorm,
+  hasAdminClient,
+  hasAnonClient,
+}: {
+  tokenRaw: string;
+  tokenNorm: string;
+  hasAdminClient: boolean;
+  hasAnonClient: boolean;
+}) {
+  return (
+    <main style={{ padding: 20, fontFamily: 'ui-sans-serif, system-ui, sans-serif', maxWidth: 720, margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.25rem', marginBottom: 12 }}>Debug: relatório não encontrado</h1>
+      <p style={{ color: '#4b5563', fontSize: 14, lineHeight: 1.5 }}>
+        A rota <code>/r/[token]</code> executou as buscas no Supabase e não obteve linha utilizável (ou o registro está privado/expirado).
+        Isso não é erro de renderização React — é ausência de dado após a query.
+      </p>
+      <dl
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '200px 1fr',
+          gap: '8px 12px',
+          fontSize: 13,
+          marginTop: 20,
+          fontFamily: 'ui-monospace, Menlo, monospace',
+        }}
+      >
+        <dt style={{ color: '#6b7280' }}>token (raw segment)</dt>
+        <dd style={{ wordBreak: 'break-all' }}>{tokenRaw || '—'}</dd>
+        <dt style={{ color: '#6b7280' }}>token normalizado</dt>
+        <dd style={{ wordBreak: 'break-all' }}>{tokenNorm || '(vazio — verifique o link)'}</dd>
+        <dt style={{ color: '#6b7280' }}>comprimento</dt>
+        <dd>{tokenNorm.length}</dd>
+        <dt style={{ color: '#6b7280' }}>SERVICE_ROLE (Vercel)</dt>
+        <dd>
+          {hasAdminClient ? (
+            <span style={{ color: '#166534' }}>✓ Cliente admin criado — RLS não bloqueia esta rota</span>
+          ) : (
+            <span style={{ color: '#991b1b' }}>
+              ✗ Ausente ou URL inválida — configure <code>SUPABASE_SERVICE_ROLE_KEY</code> (+ URL). Sem isso, só vale o cliente anon (RLS precisa permitir leitura por{' '}
+              <code>share_token</code>).
+            </span>
+          )}
+        </dd>
+        <dt style={{ color: '#6b7280' }}>Cliente anon</dt>
+        <dd>{hasAnonClient ? '✓ NEXT_PUBLIC_SUPABASE_* ok' : '✗ Falta URL ou ANON_KEY'}</dd>
+      </dl>
+      <h2 style={{ fontSize: 14, marginTop: 24, marginBottom: 8 }}>Checklist no Supabase</h2>
+      <ul style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, paddingLeft: 20 }}>
+        <li>
+          Existe linha em <code>relatorios</code> com <code>share_token</code> igual ao token normalizado (sem espaço extra)?
+        </li>
+        <li>
+          <code>is_public</code> não é <code>false</code>; <code>share_expires_at</code> não está no passado.
+        </li>
+        <li>Coluna de payload: <code>dados</code>, <code>json_data</code> ou <code>dados_json</code> preenchida.</li>
+      </ul>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 20 }}>
+        O modo <code>?debug=payload</code> só mostra o JSON <strong>depois</strong> de encontrar o registro. Com “não encontrado”, use esta página ou os logs da função no dashboard da Vercel.
+      </p>
+    </main>
+  );
+}
+
 function ErroServidor({ mensagem, stack }: { mensagem: string; stack?: string }) {
   return (
     <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
@@ -85,14 +168,44 @@ function ErroServidor({ mensagem, stack }: { mensagem: string; stack?: string })
 export default async function RelatorioCompartilhadoPage(props: Props) {
   try {
     const resolvedParams = await props.params;
-    const token = resolvedParams?.token ?? '';
+    const tokenRaw = resolvedParams?.token ?? '';
+    const token = normalizeShareToken(tokenRaw);
     const sp = props.searchParams ? await props.searchParams : {};
 
   const debug = sp?.debug === '1' || sp?.debug === 'true';
   const debugPayload = sp?.debug === '2' || sp?.debug === 'payload';
-  console.log('[fortsmart-reports] /r/[token] token recebido:', token);
+  console.log('[fortsmart-reports] /r/[token] token raw/normalizado:', { raw: tokenRaw, norm: token });
   if (debug) {
-    return <div style={{ padding: 20, fontFamily: 'sans-serif' }}><h1>Token (roteamento OK)</h1><pre>{token}</pre></div>;
+    return (
+      <div style={{ padding: 20, fontFamily: 'sans-serif' }}>
+        <h1>Token (roteamento OK)</h1>
+        <p style={{ color: '#6b7280', fontSize: 14 }}>Segmento na URL (raw)</p>
+        <pre>{tokenRaw}</pre>
+        <p style={{ color: '#6b7280', fontSize: 14, marginTop: 12 }}>Após normalização (usado na query)</p>
+        <pre>{token || '(vazio)'}</pre>
+      </div>
+    );
+  }
+
+  if (!token) {
+    if (debugPayload) {
+      return (
+        <DebugNotFound
+          tokenRaw={tokenRaw}
+          tokenNorm={token}
+          hasAdminClient={!!getSupabaseAdmin()}
+          hasAnonClient={!!getSupabase()}
+        />
+      );
+    }
+    return (
+      <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+        <div style={{ textAlign: 'center', maxWidth: 560 }}>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório não encontrado</h1>
+          <p style={{ color: '#6b7280' }}>Link inválido ou token ausente. Verifique o endereço completo.</p>
+        </div>
+      </main>
+    );
   }
 
   let row: RelatorioRow | null = null;
@@ -140,11 +253,24 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
 
     if (!row) {
       console.warn('[fortsmart-reports] /r/[token] notFound: nenhum registro para token', token);
+      if (debugPayload) {
+        return (
+          <DebugNotFound
+            tokenRaw={tokenRaw}
+            tokenNorm={token}
+            hasAdminClient={!!getSupabaseAdmin()}
+            hasAnonClient={!!getSupabase()}
+          />
+        );
+      }
       return (
         <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
           <div style={{ textAlign: 'center', maxWidth: 560 }}>
             <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório não encontrado</h1>
             <p style={{ color: '#6b7280' }}>O relatório solicitado não está disponível. Verifique o link ou tente novamente mais tarde.</p>
+            <p style={{ color: '#9ca3af', fontSize: 13, marginTop: 16 }}>
+              Diagnóstico: adicione <code>?debug=payload</code> à URL para ver token normalizado e estado das variáveis Supabase (sem vazar segredos).
+            </p>
           </div>
         </main>
       );
