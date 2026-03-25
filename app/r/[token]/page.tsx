@@ -76,6 +76,16 @@ function normalizeShareToken(raw: string): string {
   return t;
 }
 
+/**
+ * Em produção, parâmetros ?debug=* na rota /r/[token] são ignorados (evita vazamento de payload e confusão com links salvos).
+ * Ative na Vercel: ALLOW_R_ROUTE_DEBUG=1. Em NODE_ENV=development continua sempre disponível.
+ */
+function isRRouteDebugEnabled(): boolean {
+  if (process.env.NODE_ENV === 'development') return true;
+  const v = String(process.env.ALLOW_R_ROUTE_DEBUG ?? '').trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes';
+}
+
 function DebugNotFound({
   tokenRaw,
   tokenNorm,
@@ -135,7 +145,7 @@ function DebugNotFound({
         <li>Coluna de payload: <code>dados</code>, <code>json_data</code> ou <code>dados_json</code> preenchida.</li>
       </ul>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 20 }}>
-        O modo <code>?debug=payload</code> só mostra o JSON <strong>depois</strong> de encontrar o registro. Com “não encontrado”, use esta página ou os logs da função no dashboard da Vercel.
+        Esta página só aparece com <code>ALLOW_R_ROUTE_DEBUG=1</code> (ou em dev). Em produção sem isso, remova <code>?debug=</code> da URL para ver o relatório normal.
       </p>
     </main>
   );
@@ -172,8 +182,11 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const token = normalizeShareToken(tokenRaw);
     const sp = props.searchParams ? await props.searchParams : {};
 
-  const debug = sp?.debug === '1' || sp?.debug === 'true';
-  const debugPayload = sp?.debug === '2' || sp?.debug === 'payload';
+  const dbg = sp?.debug;
+  const debugParam = Array.isArray(dbg) ? dbg[0] : dbg;
+  const debugEnabled = isRRouteDebugEnabled();
+  const debug = debugEnabled && (debugParam === '1' || debugParam === 'true');
+  const debugPayload = debugEnabled && (debugParam === '2' || debugParam === 'payload');
   console.log('[fortsmart-reports] /r/[token] token raw/normalizado:', { raw: tokenRaw, norm: token });
   if (debug) {
     return (
@@ -269,7 +282,8 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
             <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório não encontrado</h1>
             <p style={{ color: '#6b7280' }}>O relatório solicitado não está disponível. Verifique o link ou tente novamente mais tarde.</p>
             <p style={{ color: '#9ca3af', fontSize: 13, marginTop: 16 }}>
-              Diagnóstico: adicione <code>?debug=payload</code> à URL para ver token normalizado e estado das variáveis Supabase (sem vazar segredos).
+              Em produção o diagnóstico por URL fica desligado. Use os logs da função na Vercel ou defina{' '}
+              <code>ALLOW_R_ROUTE_DEBUG=1</code> temporariamente no projeto.
             </p>
           </div>
         </main>
