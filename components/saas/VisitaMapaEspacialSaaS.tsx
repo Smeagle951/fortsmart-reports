@@ -15,9 +15,10 @@ if (typeof window !== 'undefined') {
 }
 
 const MAPTILER_KEY = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_MAPTILER_KEY : undefined;
-const mapTilerUrl = MAPTILER_KEY
-  ? `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`
-  : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+/** Satélite real (MapTiler); sem chave: imagem de satélite Esri (mesmo padrão de uso offline no app). */
+const satelliteTileUrl = MAPTILER_KEY
+  ? `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_KEY}`
+  : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 
 export type VisitaMapaPonto = {
   index?: number;
@@ -51,7 +52,7 @@ export type VisitaEvolucaoQuadro = {
 };
 
 export type VisitaMapaEspacialPayload = {
-  /** Desenho vetorial do talhão (Flutter); usado no web como mapa esquemático quando não há geo. */
+  /** Metadados opcionais do app (PDF/outros); o relatório web usa só polígono + pontos geo. */
   path?: string;
   viewBox?: string;
   polygon?: number[][];
@@ -177,7 +178,7 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
     return (
       <section className="saas-section print:break-inside-avoid">
         <div className="mx-auto max-w-7xl">
-          <h2 className="saas-section-title">Mapa espacial, clusters e evolução</h2>
+          <h2 className="saas-section-title">Mapa do talhão (satélite)</h2>
           <div
             className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-500"
             style={{ minHeight: 380 }}
@@ -192,7 +193,7 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
   return (
     <section className="saas-section print:break-inside-avoid">
       <div className="mx-auto max-w-7xl">
-        <h2 className="saas-section-title">Mapa espacial, clusters e evolução</h2>
+        <h2 className="saas-section-title">Mapa do talhão (satélite)</h2>
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           {useTimeline && (
             <div className="px-4 pt-4 pb-2 border-b border-slate-100 bg-slate-50/80">
@@ -234,10 +235,10 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
               <TileLayer
                 attribution={
                   MAPTILER_KEY
-                    ? '&copy; MapTiler &copy; OpenStreetMap'
-                    : '&copy; OpenStreetMap contributors'
+                    ? '&copy; MapTiler · Esri, Maxar, Earthstar Geographics'
+                    : '&copy; Esri, Maxar, Earthstar Geographics & contributors'
                 }
-                url={mapTilerUrl}
+                url={satelliteTileUrl}
               />
               {polygonCoords && (
                 <Polygon

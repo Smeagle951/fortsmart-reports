@@ -16,7 +16,6 @@ import { asArray, asStringList } from '@/utils/arrayGuards';
 import { formatDecimal2, formatPercent2 } from '@/utils/format';
 
 const VisitaMapaEspacialSaaS = dynamic(() => import('./VisitaMapaEspacialSaaS'), { ssr: false });
-const VisitaMapaSchematicSaaS = dynamic(() => import('./VisitaMapaSchematicSaaS'), { ssr: false });
 
 /** Retorna número válido ou null (evita NaN no UI). */
 function safeNum(v: unknown): number | null {
@@ -447,13 +446,6 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
   const showMapaEspacial =
     mapaVisita != null &&
     ((Array.isArray(mapaVisita.polygon) && mapaVisita.polygon.length >= 3) || pontosGeo.length > 0);
-  const hasSchematicMap =
-    mapaVisita != null &&
-    typeof mapaVisita.path === 'string' &&
-    mapaVisita.path.trim().length > 0 &&
-    typeof mapaVisita.viewBox === 'string' &&
-    mapaVisita.viewBox.trim().length > 0;
-  const showMapaSchematic = !showMapaEspacial && hasSchematicMap;
   const mapaForLeaflet: VisitaMapaEspacialPayload | undefined =
     mapaVisita != null && showMapaEspacial ? { ...mapaVisita } : undefined;
 
@@ -522,26 +514,9 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
           <ImageGallerySaaS imagens={imagens} marcaDagua="FortSmart" />
         )}
         {showMapaEspacial && mapaForLeaflet != null && (
-          <SaasLeafletErrorBoundary
-            fallback={
-              hasSchematicMap && mapaVisita ? (
-                <VisitaMapaSchematicSaaS
-                  path={mapaVisita.path!}
-                  viewBox={mapaVisita.viewBox!}
-                  pontos={mapaVisita.pontos}
-                />
-              ) : undefined
-            }
-          >
+          <SaasLeafletErrorBoundary>
             <VisitaMapaEspacialSaaS mapa={mapaForLeaflet} />
           </SaasLeafletErrorBoundary>
-        )}
-        {showMapaSchematic && mapaVisita != null && (
-          <VisitaMapaSchematicSaaS
-            path={mapaVisita.path!}
-            viewBox={mapaVisita.viewBox!}
-            pontos={mapaVisita.pontos}
-          />
         )}
         {comparativo.length > 0 && (
           <ComparisonSection

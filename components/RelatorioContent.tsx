@@ -204,9 +204,17 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
         const poly = Array.isArray(m.polygon) ? m.polygon : [];
         const path = typeof m.path === 'string' && m.path.trim() ? m.path.trim() : undefined;
         const viewBox = typeof m.viewBox === 'string' && m.viewBox.trim() ? m.viewBox.trim() : undefined;
-        const hasSchematic = path != null && viewBox != null;
-        const hasGeo = pts.length > 0 || poly.length >= 3;
-        if (!hasSchematic && !hasGeo) return undefined;
+        const hasGeoPoly = poly.length >= 3;
+        const hasGeoPoint = pts.some((p: Record<string, unknown>) => {
+          const lat = p.lat ?? p.latitude;
+          const lng = p.lng ?? p.longitude;
+          if (lat == null || lng == null) return false;
+          const la = Number(lat);
+          const ln = Number(lng);
+          return Number.isFinite(la) && Number.isFinite(ln) && Math.abs(la) <= 90 && Math.abs(ln) <= 180;
+        });
+        // Só mapa satélite no SaaS: sem polígono nem lat/lng não enviamos bloco mapa (evita “desenho” vazio).
+        if (!hasGeoPoly && !hasGeoPoint) return undefined;
         return {
           path,
           viewBox,
