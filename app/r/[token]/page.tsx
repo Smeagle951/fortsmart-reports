@@ -321,11 +321,13 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
               <RelatorioAmostragemSoloContent payload={payloadSafe} shareToken={token} />
             </ErrorBoundary>
           ) : (
-            <RelatorioContent
-              relatorio={payloadSafe}
-              reportId={reportIdStr}
-              relatorioUuid={relatorioUuidStr}
-            />
+            <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório">
+              <RelatorioContent
+                relatorio={payloadSafe}
+                reportId={reportIdStr}
+                relatorioUuid={relatorioUuidStr}
+              />
+            </ErrorBoundary>
           )}
         </article>
       </>

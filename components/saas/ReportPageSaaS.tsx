@@ -13,6 +13,7 @@ import StatisticsSection, { type EstatisticaItem } from './StatisticsSection';
 import ApplicationsTable, { type AplicacaoRow } from './ApplicationsTable';
 import ImageGallerySaaS, { type ImagemItem } from './ImageGallerySaaS';
 import ComparisonSection, { type ComparativoItem } from './ComparisonSection';
+import { asArray } from '@/utils/arrayGuards';
 
 /** Retorna número válido ou null (evita NaN no UI). */
 function safeNum(v: unknown): number | null {
@@ -101,22 +102,27 @@ interface ReportPageSaaSProps {
   embedded?: boolean;
 }
 
+type SaaSAplicacao = NonNullable<ReportPageSaaSData['aplicacoes']>[number];
+type SaaSImagem = NonNullable<ReportPageSaaSData['imagens']>[number];
+type EstandeRegistro = NonNullable<NonNullable<ReportPageSaaSData['estande']>['registros']>[number];
+
 function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
   if (d.avaliacoes?.length) return d.avaliacoes;
 
   const plant = d.plantabilidade;
   const est = d.estande;
+  const estRegs = asArray<EstandeRegistro>(est?.registros);
   const fit = d.fitossanidade;
   const pop = d.populacao;
   const meta = d.meta?.dataGeracao || '';
 
   const cv = safeNum(plant?.cvPercentual);
-  const estandePlm = safeNum(pop?.plantasPorMetro) ?? (est?.registros?.[0] != null ? safeNum((est.registros[0] as any).plantasPorMetro) : null);
+  const estandePlm = safeNum(pop?.plantasPorMetro) ?? (estRegs[0] != null ? safeNum((estRegs[0] as any).plantasPorMetro) : null);
   const perdaPop = safeNum(pop?.perdaTotalPct);
   const perda =
     perdaPop ??
     (est?.perdaTotalPct != null ? safeNum(est.perdaTotalPct) : null) ??
-    (est?.registros?.[0] != null ? safeNum((est.registros[0] as any).perdaTotalPct) : null);
+    (estRegs[0] != null ? safeNum((estRegs[0] as any).perdaTotalPct) : null);
   const iat = safeNum(
     d.indiceAgronomicoTalhao?.valor ?? d.diagnosticoIntegrado?.spt ?? d.inteligenciaAgronomica?.score,
   );
@@ -191,7 +197,8 @@ function buildEstatisticas(d: ReportPageSaaSData): EstatisticaItem[] {
   const plant = d.plantabilidade;
   if (!plant) return [];
 
-  const n = plant.linha?.length ?? 14;
+  const linhaArr = asArray<{ tipo: string }>(plant.linha);
+  const n = linhaArr.length > 0 ? linhaArr.length : 14;
   const media = plant.espacamentoRealCm ?? 0;
   const cv = safeNum(plant.cvPercentual) ?? 0;
   const dp = (media * (cv / 100)).toFixed(1);
@@ -207,7 +214,7 @@ function buildEstatisticas(d: ReportPageSaaSData): EstatisticaItem[] {
 }
 
 function buildAplicacoes(d: ReportPageSaaSData): AplicacaoRow[] {
-  const apps = d.aplicacoes ?? [];
+  const apps = asArray<SaaSAplicacao>(d.aplicacoes);
   return apps.map((a, i) => ({
     id: `app-${i}`,
     data: a.data ?? '—',
@@ -221,7 +228,7 @@ function buildAplicacoes(d: ReportPageSaaSData): AplicacaoRow[] {
 }
 
 function buildImagens(d: ReportPageSaaSData): ImagemItem[] {
-  const imgs = d.imagens ?? [];
+  const imgs = asArray<SaaSImagem>(d.imagens);
   return imgs.map((img, i) => ({
     id: `img-${i}`,
     url: img.url ?? '',
@@ -233,7 +240,7 @@ function buildImagens(d: ReportPageSaaSData): ImagemItem[] {
 function buildComparativo(d: ReportPageSaaSData): ComparativoItem[] {
   const plant = d.plantabilidade;
   const est = d.estande;
-  const regs = est?.registros ?? [];
+  const regs = asArray<EstandeRegistro>(est?.registros);
 
   if (regs.length < 2) return [];
 
@@ -325,10 +332,10 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         sptValor != null && intel?.score != null && sptValor === intel.score && data.diagnosticoIntegrado?.spt == null && data.indiceAgronomicoTalhao?.valor == null
           ? 'Score agregado da visita (inteligência agronômica, 0–100)'
           : 'Índice de Saúde da Planta / talhão',
-      historico: data.estande?.registros?.map((r) => ({
+      historico: asArray<EstandeRegistro>(data.estande?.registros).map((r) => ({
         data: r.data ?? '',
         valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
-      })) ?? [],
+      })),
     },
     {
       id: 'cv',
@@ -346,10 +353,10 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
       classificacao: classifFromEstande(efPct, plmEstande),
       tendencia: 'neutral' as const,
       tooltip: 'Plantas por metro (avaliação de estande)',
-      historico: data.estande?.registros?.map((r) => ({
+      historico: asArray<EstandeRegistro>(data.estande?.registros).map((r) => ({
         data: r.data ?? '',
         valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
-      })) ?? [],
+      })),
     },
     {
       id: 'ipe',
@@ -440,8 +447,13 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         {comparativo.length > 0 && (
           <ComparisonSection
             items={comparativo}
-            labelAvaliacao1={data.estande?.registros?.[0]?.data}
-            labelAvaliacao2={data.estande?.registros?.[data.estande.registros.length - 1]?.data}
+            labelAvaliacao1={asArray<EstandeRegistro>(data.estande?.registros)[0]?.data}
+            labelAvaliacao2={
+              (() => {
+                const rr = asArray<EstandeRegistro>(data.estande?.registros);
+                return rr.length ? rr[rr.length - 1]?.data : undefined;
+              })()
+            }
           />
         )}
 

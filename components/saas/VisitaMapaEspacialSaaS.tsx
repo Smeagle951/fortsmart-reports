@@ -78,10 +78,22 @@ function clusterColor(sev?: string): { stroke: string; fill: string } {
   return { stroke: '#1565c0', fill: 'rgba(21, 101, 192, 0.12)' };
 }
 
+function asArrayGeneric<T>(v: unknown): T[] {
+  return Array.isArray(v) ? (v as T[]) : [];
+}
+
+function asPontos(v: unknown): VisitaMapaPonto[] {
+  return asArrayGeneric<VisitaMapaPonto>(v);
+}
+
+function asQuadros(v: unknown): VisitaEvolucaoQuadro[] {
+  return asArrayGeneric<VisitaEvolucaoQuadro>(v);
+}
+
 export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspacialPayload }) {
-  const pontosRaw = mapa.pontos ?? [];
+  const pontosRaw = asPontos(mapa.pontos);
   const polygonProp = mapa.polygon;
-  const quadros = mapa.evolucao_espacial?.quadros ?? [];
+  const quadros = asQuadros(mapa.evolucao_espacial?.quadros);
   const descEvolucao = mapa.evolucao_espacial?.descricao;
   const epsM = mapa.evolucao_espacial?.eps_m;
 
@@ -107,8 +119,9 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
   const activeQuadro = useTimeline ? quadros[Math.min(quadroIx, quadros.length - 1)] : null;
 
   const activeIndices = useMemo(() => {
-    if (useTimeline && activeQuadro?.indices?.length) {
-      return new Set(activeQuadro.indices.map((n) => Number(n)));
+    const idxArr = activeQuadro != null ? asArrayGeneric<number | string>((activeQuadro as { indices?: unknown }).indices) : [];
+    if (useTimeline && idxArr.length > 0) {
+      return new Set(idxArr.map((n) => Number(n)));
     }
     return new Set(allNormalized.map((p) => p._idx));
   }, [useTimeline, activeQuadro, allNormalized]);
@@ -119,10 +132,11 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
   );
 
   const activeClusters = useMemo(() => {
-    if (useTimeline && activeQuadro?.clusters?.length) {
-      return activeQuadro.clusters;
+    const fromQuadro = activeQuadro != null ? asArrayGeneric<VisitaMapaCluster>(activeQuadro.clusters) : [];
+    if (useTimeline && fromQuadro.length > 0) {
+      return fromQuadro;
     }
-    return mapa.clusters ?? [];
+    return asArrayGeneric<VisitaMapaCluster>(mapa.clusters);
   }, [useTimeline, activeQuadro, mapa.clusters]);
 
   const polygonCoords = useMemo((): [number, number][] | undefined => {
@@ -185,7 +199,7 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
           {!useTimeline && descEvolucao && quadros.length === 0 && (
             <p className="text-xs text-slate-500 px-4 pt-3">{descEvolucao}</p>
           )}
-          {!useTimeline && epsM != null && (mapa.clusters?.length ?? 0) > 0 && (
+          {!useTimeline && epsM != null && asArrayGeneric<VisitaMapaCluster>(mapa.clusters).length > 0 && (
             <p className="text-xs text-slate-400 px-4 pt-1">
               Círculos: focos geográficos (≤ {epsM} m). Clique nos marcadores para detalhes.
             </p>

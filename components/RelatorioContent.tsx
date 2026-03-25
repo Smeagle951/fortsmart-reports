@@ -7,6 +7,7 @@ import Galeria from './Galeria';
 import TabelaDados, { InfoGrid, situacaoCssClass, situacaoLabel } from './TabelaDados';
 import TabelaAplicacoes from './TabelaAplicacoes';
 import { formatDate, formatArea, formatNumber, formatPercent } from '@/utils/format';
+import { asArray } from '@/utils/arrayGuards';
 import ReportPageSaaS, { type ReportPageSaaSData } from './saas/ReportPageSaaS';
 
 export type RelatorioJson = {
@@ -40,16 +41,19 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
   const contextoSafra = relatorio.contextoSafra || {};
   const fenologia = relatorio.fenologia || {};
   const populacao = relatorio.populacao || {};
-  const aplicacoes = (relatorio.aplicacoes || []) as Array<Record<string, unknown>>;
-  const pragas = (relatorio.pragas || []) as Array<Record<string, unknown>>;
+  const aplicacoes = asArray<Record<string, unknown>>(relatorio.aplicacoes);
+  const pragas = asArray<Record<string, unknown>>(relatorio.pragas);
   const condicoes = relatorio.condicoes || {};
   const mapa = relatorio.mapa || {};
-  const imagens = relatorio.imagens || [];
+  const imagens = asArray<{ url?: string; path?: string; descricao?: string; data?: string }>(relatorio.imagens);
   const diagnostico = relatorio.diagnostico || {};
   const planoAcao = relatorio.planoAcao || {};
   const assinaturaTecnica = relatorio.assinaturaTecnica || {};
   const conclusao = relatorio.conclusao || '';
   const idForStorage = relatorioUuid || reportId || '';
+  const fenologiaHistorico = asArray<Record<string, unknown>>(fenologia.historico as unknown);
+  const planoAcaoAcoes = asArray<Record<string, unknown>>((planoAcao as { acoes?: unknown }).acoes);
+  const mapaPontos = asArray<Record<string, unknown>>((mapa as { pontos?: unknown }).pontos);
 
   const municipioUf = [prop.municipio, prop.estado].filter(Boolean).join(' / ');
 
@@ -159,7 +163,7 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
         responsavel: a.responsavel ?? '',
       })),
       imagens: (imagens as any[]).map((im: any) => ({ url: im.url ?? im.path ?? '', descricao: im.descricao ?? im.caption ?? '', data: im.data ?? undefined, categoria: im.categoria ?? undefined })),
-      pragas: (pragas as any[]).map((p: any) => ({ tipo: p.tipo, nome: p.nome, alvo: p.alvo, incidencia: p.incidencia, severidade: p.severidade, situacao: p.situacao, observacoes: p.observacoes })),
+      pragas: pragas.map((p: any) => ({ tipo: p.tipo, nome: p.nome, alvo: p.alvo, incidencia: p.incidencia, severidade: p.severidade, situacao: p.situacao, observacoes: p.observacoes })),
       desvios: Array.isArray((relatorio as any).desvios) ? ((relatorio as any).desvios as any[]).map((d: any) => ({ tipo: d.tipo, descricao: d.descricao, data: d.data, severidade: d.severidade, local: d.local, acaoRecomendada: d.acaoRecomendada })) : undefined,
       diagnostico: diagnostico && typeof diagnostico === 'object' ? { problemaPrincipal: (diagnostico as any).problemaPrincipal, causaProvavel: (diagnostico as any).causaProvavel, nivelRisco: (diagnostico as any).nivelRisco, urgenciaAcao: (diagnostico as any).urgenciaAcao, recomendacoes: Array.isArray((diagnostico as any).recomendacoes) ? (diagnostico as any).recomendacoes : undefined } : undefined,
       planoAcao: planoAcao && typeof planoAcao === 'object'
@@ -250,7 +254,7 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
         </section>
       )}
 
-      {(fenologia.estadio || (fenologia.historico as any[])?.length > 0) && (
+      {(fenologia.estadio || fenologiaHistorico.length > 0) && (
         <section className="section" id="section-fenologia" aria-labelledby="section-fenologia-title">
           <h2 id="section-fenologia-title" className="section-title">Fenologia</h2>
           <div className="fenologia-content">
@@ -266,7 +270,7 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
                 </tbody>
               </table>
             </div>
-            {(fenologia.historico as any[])?.length > 0 && (
+            {fenologiaHistorico.length > 0 && (
               <div className="fenologia-historico" style={{ marginTop: 20 }}>
                 <h3 className="fenologia-historico-title">Histórico</h3>
                 <table className="table fenologia-table">
@@ -278,7 +282,7 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
                     </tr>
                   </thead>
                   <tbody>
-                    {(fenologia.historico as any[]).map((h: any, i: number) => (
+                    {fenologiaHistorico.map((h: any, i: number) => (
                       <tr key={i}>
                         <td><strong>{h.estagio ?? '—'}</strong></td>
                         <td>{h.data ?? '—'}</td>
@@ -339,15 +343,17 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
 
       <MapaTalhao
         polygon={(mapa as any)?.polygon}
-        pontos={(mapa as any)?.pontos?.map((p: any) => ({
-          id: p.id ?? p.index,
-          latitude: p.lat ?? p.latitude ?? (typeof p.y === 'number' && Math.abs(p.y) <= 90 ? p.y : undefined) ?? 0,
-          longitude: p.lng ?? p.longitude ?? (typeof p.x === 'number' && Math.abs(p.x) <= 180 ? p.x : undefined) ?? 0,
-          titulo: p.titulo ?? p.label ?? (p.tipo ? `${p.tipo}` : undefined),
-          descricao: p.descricao ?? p.obs ?? undefined,
-          estagio: p.severidade ?? p.estagio ?? undefined,
-          data: p.data ?? undefined,
-        })).filter((p: any) => p.latitude !== 0 || p.longitude !== 0) || []}
+        pontos={mapaPontos
+          .map((p: any) => ({
+            id: p.id ?? p.index,
+            latitude: p.lat ?? p.latitude ?? (typeof p.y === 'number' && Math.abs(p.y) <= 90 ? p.y : undefined) ?? 0,
+            longitude: p.lng ?? p.longitude ?? (typeof p.x === 'number' && Math.abs(p.x) <= 180 ? p.x : undefined) ?? 0,
+            titulo: p.titulo ?? p.label ?? (p.tipo ? `${p.tipo}` : undefined),
+            descricao: p.descricao ?? p.obs ?? undefined,
+            estagio: p.severidade ?? p.estagio ?? undefined,
+            data: p.data ?? undefined,
+          }))
+          .filter((p: any) => p.latitude !== 0 || p.longitude !== 0)}
       />
 
       <Galeria imagens={imagens} relatorioId={idForStorage} />
@@ -364,17 +370,17 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
         />
       )}
 
-      {(planoAcao.objetivoManejo || (planoAcao.acoes && planoAcao.acoes.length > 0)) && (
+      {(planoAcao.objetivoManejo || planoAcaoAcoes.length > 0) && (
         <section className="section">
           <h2 className="section-title">Plano de ação</h2>
           {!!planoAcao.objetivoManejo && (
             <p className="plano-objetivo"><strong>Objetivo:</strong> {String(planoAcao.objetivoManejo)}</p>
           )}
-          {(planoAcao.acoes ?? []).length > 0 && (
+          {planoAcaoAcoes.length > 0 && (
             <TabelaDados
               title=""
               headers={['Prioridade', 'Ação', 'Prazo']}
-              rows={(planoAcao.acoes ?? []).map((a) => [a.prioridade ?? '—', a.acao ?? '—', a.prazo ?? '—'])}
+              rows={planoAcaoAcoes.map((a: any) => [a.prioridade ?? '—', a.acao ?? '—', a.prazo ?? '—'])}
             />
           )}
         </section>

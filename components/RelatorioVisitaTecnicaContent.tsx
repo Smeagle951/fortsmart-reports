@@ -6,6 +6,7 @@ import FortSmartLogo from '@/components/FortSmartLogo';
 import ModalImagem from '@/components/ModalImagem';
 import Mapa from '@/components/Mapa';
 import { formatDate } from '@/utils/format';
+import { asArray } from '@/utils/arrayGuards';
 import { buildShareUrl } from '@/utils/canonicalUrl';
 
 import TabelaTecnicaCampos from './visita_tecnica/TabelaTecnicaCampos';
@@ -135,7 +136,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const diagnostico = relatorio.diagnostico as Record<string, unknown> | undefined;
   const planoAcao = relatorio.planoAcao;
   const conclusao = relatorio.conclusao as string | undefined;
-  const pragas = (relatorio.pragas ?? []) as Record<string, unknown>[];
+  const pragas = asArray<Record<string, unknown>>(relatorio.pragas);
   const condicoes = (relatorio.condicoes ?? {}) as Record<string, unknown>;
   const amostragem =
     condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
@@ -150,7 +151,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
       ? (relatorio.produtividade as Record<string, unknown>)
       : undefined;
   const fenologia = (relatorio.fenologia ?? {}) as Record<string, unknown>;
-  const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
+  const imagens = asArray<{ url?: string; descricao?: string; categoria?: string; data?: string }>(relatorio.imagens);
   const imagensFenologia = imagens.filter((img) => (img.categoria ?? '').toLowerCase() === 'fenologia');
   const mapa = (relatorio.mapa ?? {}) as Record<string, unknown> & {
     viewBox?: string;
