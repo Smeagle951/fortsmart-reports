@@ -1,3 +1,5 @@
+ 'use client';
+
 import React from 'react';
 import { formatDate, formatArea } from '@/utils/format';
 import HeaderInstitucionalPlantio from './plantio/HeaderInstitucionalPlantio';
