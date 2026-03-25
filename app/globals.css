@@ -1669,6 +1669,57 @@ body {
   line-height: 1;
 }
 
+/* Material 3 — relatório visita técnica (SaaS web) */
+.report-m3-saas {
+  --m3-primary: #1b5e41;
+  --m3-on-surface: #1c1b1f;
+  --m3-on-surface-variant: #49454f;
+  --m3-surface-container: #f3f4f6;
+  font-family: 'Roboto', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  color: var(--m3-on-surface);
+  background: linear-gradient(165deg, #f4fbf6 0%, #eef2f7 42%, #f8fafc 100%);
+}
+
+.report-m3-saas .saas-section-title {
+  font-size: 1.375rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--m3-on-surface);
+  margin-bottom: 1.25rem;
+  line-height: 1.35;
+}
+
+.report-m3-saas .saas-section {
+  padding: 1.75rem 0;
+}
+
+.report-m3-saas .saas-kpi-card {
+  border-radius: 16px;
+  border-width: 0;
+  border-left-width: 4px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 4px 12px rgba(27, 94, 65, 0.07);
+}
+
+.report-m3-saas .overflow-x-auto.rounded-xl.border.border-slate-200.bg-white,
+.report-m3-saas .overflow-hidden.rounded-xl.border.border-slate-200.bg-white,
+.report-m3-saas .rounded-xl.border.border-slate-200.bg-white.shadow-sm {
+  border-radius: 20px;
+  border-color: rgb(226 232 240 / 0.85);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.report-m3-saas main {
+  padding-bottom: 3rem;
+}
+
+.m3-surface-card {
+  border-radius: 20px;
+}
+
 /* ── Relatório Avaliação Lado a Lado (SaaS) ────────────────────────────────── */
 .relatorio--lado-a-lado .sbs-report {
   max-width: 960px;

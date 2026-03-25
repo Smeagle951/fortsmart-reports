@@ -51,6 +51,9 @@ export type VisitaEvolucaoQuadro = {
 };
 
 export type VisitaMapaEspacialPayload = {
+  /** Desenho vetorial do talhão (Flutter); usado no web como mapa esquemático quando não há geo. */
+  path?: string;
+  viewBox?: string;
   polygon?: number[][];
   pontos?: VisitaMapaPonto[];
   clusters?: VisitaMapaCluster[];

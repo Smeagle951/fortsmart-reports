@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { formatDecimal2 } from '@/utils/format';
 
 type Tendencia = 'up' | 'neutral' | 'down';
 type Classificacao = 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico' | 'Sem dado';
@@ -30,12 +31,12 @@ const tendenciaIcon: Record<Tendencia, string> = {
   down: '↓',
 };
 
-/** Formata valor para exibição: evita floats longos (ex.: 2.5999999999999996 → 2.6). */
+/** Formata valor para exibição (números: 2 casas decimais pt-BR; strings já vêm formatadas). */
 function formatDisplayValor(v: string | number): string {
   if (typeof v === 'string') return v;
   const n = Number(v);
   if (!Number.isFinite(n)) return '—';
-  return n % 1 === 0 ? String(Math.round(n)) : Number(n.toFixed(2)).toString();
+  return formatDecimal2(n);
 }
 
 interface KpiCardsSectionProps {

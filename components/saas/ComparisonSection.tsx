@@ -1,5 +1,7 @@
 'use client';
 
+import { formatDecimal2 } from '@/utils/format';
+
 export interface ComparativoItem {
   metrica: string;
   avaliacao1: string | number;
@@ -21,7 +23,7 @@ export default function ComparisonSection({
   if (!items?.length) return null;
 
   const formatVal = (v: string | number): string => {
-    if (typeof v === 'number') return v.toFixed(1);
+    if (typeof v === 'number') return formatDecimal2(v);
     return String(v);
   };
 

@@ -13,14 +13,27 @@ import ComparisonSection, { type ComparativoItem } from './ComparisonSection';
 import SaasLeafletErrorBoundary from './SaasLeafletErrorBoundary';
 import type { VisitaMapaEspacialPayload } from './VisitaMapaEspacialSaaS';
 import { asArray, asStringList } from '@/utils/arrayGuards';
+import { formatDecimal2, formatPercent2 } from '@/utils/format';
 
 const VisitaMapaEspacialSaaS = dynamic(() => import('./VisitaMapaEspacialSaaS'), { ssr: false });
+const VisitaMapaSchematicSaaS = dynamic(() => import('./VisitaMapaSchematicSaaS'), { ssr: false });
 
 /** Retorna número válido ou null (evita NaN no UI). */
 function safeNum(v: unknown): number | null {
   if (v == null) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+function pontoTemCoordenadasGeo(p: unknown): boolean {
+  if (!p || typeof p !== 'object') return false;
+  const o = p as Record<string, unknown>;
+  const lat = o.lat ?? o.latitude;
+  const lng = o.lng ?? o.longitude;
+  if (lat == null || lng == null) return false;
+  const la = Number(lat);
+  const ln = Number(lng);
+  return Number.isFinite(la) && Number.isFinite(ln) && Math.abs(la) <= 90 && Math.abs(ln) <= 180;
 }
 
 export interface ReportPageSaaSData {
@@ -192,18 +205,21 @@ function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
       plantabilidade: plant
         ? {
           'Comprimento Amostrado': '5.0 m',
-          'Espaçamento Médio': `${plant.espacamentoRealCm ?? '—'} cm`,
-          'CV%': `${cv != null ? `${cv}%` : '—'}`,
-          Falhas: `${plant.falhasPct ?? 0}%`,
-          Duplas: plant.duplasPct ?? 0,
-          Triplas: plant.triplasPct ?? 0,
+          'Espaçamento Médio':
+            plant.espacamentoRealCm != null && Number.isFinite(Number(plant.espacamentoRealCm))
+              ? `${formatDecimal2(plant.espacamentoRealCm)} cm`
+              : '—',
+          'CV%': cv != null ? formatPercent2(cv) : '—',
+          Falhas: formatPercent2(plant.falhasPct ?? 0),
+          Duplas: plant.duplasPct != null ? formatDecimal2(plant.duplasPct) : 0,
+          Triplas: plant.triplasPct != null ? formatDecimal2(plant.triplasPct) : 0,
         }
         : undefined,
       estande: pop || est
         ? {
           'População Desejada': '62.000 pl/ha',
           'População Real': estandePlm != null ? String(Math.round(estandePlm * 10000)) : '—',
-          'Perda Total': `${perda ?? 0}%`,
+          'Perda Total': formatPercent2(perda ?? 0),
           'Impacto Produtividade': classificacao === 'Excelente' || classificacao === 'Bom' ? 'Baixo' : 'Moderado',
         }
         : undefined,
@@ -227,14 +243,14 @@ function buildEstatisticas(d: ReportPageSaaSData): EstatisticaItem[] {
   const n = linhaArr.length > 0 ? linhaArr.length : 14;
   const media = plant.espacamentoRealCm ?? 0;
   const cv = safeNum(plant.cvPercentual) ?? 0;
-  const dp = (media * (cv / 100)).toFixed(1);
-  const ic = (1.96 * parseFloat(dp) / Math.sqrt(n)).toFixed(2);
+  const dpNum = media * (cv / 100);
+  const icNum = (1.96 * dpNum) / Math.sqrt(n);
 
   return [
-    { metrica: 'Média Espaçamento', valor: `${media} cm` },
-    { metrica: 'Desvio Padrão', valor: `${dp} cm` },
-    { metrica: 'Coeficiente de Variação', valor: `${cv}%` },
-    { metrica: 'IC 95%', valor: `${media} ± ${ic}` },
+    { metrica: 'Média Espaçamento', valor: `${formatDecimal2(media)} cm` },
+    { metrica: 'Desvio Padrão', valor: `${formatDecimal2(dpNum)} cm` },
+    { metrica: 'Coeficiente de Variação', valor: formatPercent2(cv) },
+    { metrica: 'IC 95%', valor: `${formatDecimal2(media)} ± ${formatDecimal2(icNum)}` },
     { metrica: 'n (amostras)', valor: n },
   ];
 }
@@ -280,9 +296,9 @@ function buildComparativo(d: ReportPageSaaSData): ComparativoItem[] {
   const iat2 = 92;
 
   return [
-    { metrica: 'CV%', avaliacao1: `${cv1}%`, avaliacao2: `${cv2}%`, variacao: `${(cv1 - cv2).toFixed(1)}%` },
-    { metrica: 'Estande', avaliacao1: e1.toFixed(1), avaliacao2: e2.toFixed(1), variacao: `+${(e1 - e2).toFixed(1)}` },
-    { metrica: 'IAT', avaliacao1: String(iat1), avaliacao2: String(iat2), variacao: `+${iat1 - iat2}` },
+    { metrica: 'CV%', avaliacao1: formatPercent2(cv1), avaliacao2: formatPercent2(cv2), variacao: formatPercent2(cv1 - cv2) },
+    { metrica: 'Estande', avaliacao1: formatDecimal2(e1), avaliacao2: formatDecimal2(e2), variacao: `+${formatDecimal2(e1 - e2)}` },
+    { metrica: 'IAT', avaliacao1: formatDecimal2(iat1), avaliacao2: formatDecimal2(iat2), variacao: `+${formatDecimal2(iat1 - iat2)}` },
   ];
 }
 
@@ -361,7 +377,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
     {
       id: 'spt',
       indicador: 'SPT',
-      valor: sptValor ?? '—',
+      valor: sptValor != null ? formatDecimal2(sptValor) : '—',
       classificacao: classifFromScoreSpt(sptValor),
       tendencia: (sptValor != null && sptValor >= 70 ? 'up' : sptValor != null && sptValor < 50 ? 'down' : 'neutral') as 'up' | 'neutral' | 'down',
       tooltip:
@@ -370,13 +386,19 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
           : 'Índice de Saúde da Planta / talhão',
       historico: asArray<EstandeRegistro>(data.estande?.registros).map((r) => ({
         data: r.data ?? '',
-        valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
+        valor:
+          r.plantasPorMetro != null
+            ? (() => {
+                const v = safeNum(r.plantasPorMetro);
+                return v != null ? formatDecimal2(v) : '—';
+              })()
+            : '—',
       })),
     },
     {
       id: 'cv',
       indicador: 'CV%',
-      valor: cvNum != null ? `${cvNum}%` : '—',
+      valor: cvNum != null ? formatPercent2(cvNum) : '—',
       classificacao: classifFromCv(cvNum),
       tendencia: 'neutral' as const,
       tooltip: 'Coeficiente de variação do espaçamento (módulo plantio / plantabilidade)',
@@ -385,19 +407,25 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
     {
       id: 'estande',
       indicador: 'Estande',
-      valor: plmEstande ?? '—',
+      valor: plmEstande != null ? formatDecimal2(plmEstande) : '—',
       classificacao: classifFromEstande(efPct, plmEstande),
       tendencia: 'neutral' as const,
       tooltip: 'Plantas por metro (avaliação de estande)',
       historico: asArray<EstandeRegistro>(data.estande?.registros).map((r) => ({
         data: r.data ?? '',
-        valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
+        valor:
+          r.plantasPorMetro != null
+            ? (() => {
+                const v = safeNum(r.plantasPorMetro);
+                return v != null ? formatDecimal2(v) : '—';
+              })()
+            : '—',
       })),
     },
     {
       id: 'ipe',
       indicador: 'IPE',
-      valor: ipeNum ?? '—',
+      valor: ipeNum != null ? formatDecimal2(ipeNum) : '—',
       classificacao: classifFromIpe(ipeNum),
       tendencia: 'down' as const,
       tooltip: 'Índice de pressão de entomofauna (quando registrado na visita)',
@@ -412,10 +440,22 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
   const comparativo = buildComparativo(data);
 
   const mapaVisita = data.mapa;
+  const pontosGeo =
+    mapaVisita != null && Array.isArray(mapaVisita.pontos)
+      ? mapaVisita.pontos.filter(pontoTemCoordenadasGeo)
+      : [];
   const showMapaEspacial =
     mapaVisita != null &&
-    ((Array.isArray(mapaVisita.pontos) && mapaVisita.pontos.length > 0) ||
-      (Array.isArray(mapaVisita.polygon) && mapaVisita.polygon.length >= 3));
+    ((Array.isArray(mapaVisita.polygon) && mapaVisita.polygon.length >= 3) || pontosGeo.length > 0);
+  const hasSchematicMap =
+    mapaVisita != null &&
+    typeof mapaVisita.path === 'string' &&
+    mapaVisita.path.trim().length > 0 &&
+    typeof mapaVisita.viewBox === 'string' &&
+    mapaVisita.viewBox.trim().length > 0;
+  const showMapaSchematic = !showMapaEspacial && hasSchematicMap;
+  const mapaForLeaflet: VisitaMapaEspacialPayload | undefined =
+    mapaVisita != null && showMapaEspacial ? { ...mapaVisita } : undefined;
 
   const handleExportPdf = useCallback(() => {
     window.print();
@@ -442,7 +482,9 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
   }, [handleExportExcel]);
 
   return (
-    <div className={`min-h-screen bg-[#F8FAFC] ${embedded ? 'rounded-xl border border-slate-200' : ''}`}>
+    <div
+      className={`report-m3-saas min-h-screen ${embedded ? 'rounded-xl border border-slate-200' : ''}`}
+    >
       {!embedded && (
         <>
           <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
@@ -479,10 +521,27 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         {imagens.length > 0 && (
           <ImageGallerySaaS imagens={imagens} marcaDagua="FortSmart" />
         )}
-        {showMapaEspacial && (
-          <SaasLeafletErrorBoundary>
-            <VisitaMapaEspacialSaaS mapa={mapaVisita!} />
+        {showMapaEspacial && mapaForLeaflet != null && (
+          <SaasLeafletErrorBoundary
+            fallback={
+              hasSchematicMap && mapaVisita ? (
+                <VisitaMapaSchematicSaaS
+                  path={mapaVisita.path!}
+                  viewBox={mapaVisita.viewBox!}
+                  pontos={mapaVisita.pontos}
+                />
+              ) : undefined
+            }
+          >
+            <VisitaMapaEspacialSaaS mapa={mapaForLeaflet} />
           </SaasLeafletErrorBoundary>
+        )}
+        {showMapaSchematic && mapaVisita != null && (
+          <VisitaMapaSchematicSaaS
+            path={mapaVisita.path!}
+            viewBox={mapaVisita.viewBox!}
+            pontos={mapaVisita.pontos}
+          />
         )}
         {comparativo.length > 0 && (
           <ComparisonSection

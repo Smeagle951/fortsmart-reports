@@ -202,8 +202,14 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
         if (!m || typeof m !== 'object') return undefined;
         const pts = Array.isArray(m.pontos) ? m.pontos : [];
         const poly = Array.isArray(m.polygon) ? m.polygon : [];
-        if (pts.length === 0 && poly.length < 3) return undefined;
+        const path = typeof m.path === 'string' && m.path.trim() ? m.path.trim() : undefined;
+        const viewBox = typeof m.viewBox === 'string' && m.viewBox.trim() ? m.viewBox.trim() : undefined;
+        const hasSchematic = path != null && viewBox != null;
+        const hasGeo = pts.length > 0 || poly.length >= 3;
+        if (!hasSchematic && !hasGeo) return undefined;
         return {
+          path,
+          viewBox,
           polygon: poly,
           pontos: pts,
           clusters: Array.isArray(m.clusters) ? m.clusters : undefined,

@@ -1,6 +1,7 @@
 'use client';
 
 import type { AvaliacaoRow } from './EvaluationTable';
+import { formatDecimal2, formatPercent2 } from '@/utils/format';
 
 interface ExpandableRowProps {
   row: AvaliacaoRow;
@@ -10,7 +11,7 @@ interface ExpandableRowProps {
 
 function formatVal(v: unknown): string {
   if (v == null) return '—';
-  if (typeof v === 'number') return v.toFixed(1);
+  if (typeof v === 'number') return formatDecimal2(v);
   return String(v);
 }
 
@@ -67,12 +68,12 @@ export default function ExpandableRow({ row, expanded, onToggle }: ExpandableRow
         </td>
         <td className="saas-td font-medium">{row.data}</td>
         <td className="saas-td">{row.dae != null ? row.dae : '—'}</td>
-        <td className="saas-td">{row.cvPercent != null ? `${row.cvPercent}%` : '—'}</td>
+        <td className="saas-td">{row.cvPercent != null ? formatPercent2(row.cvPercent) : '—'}</td>
         <td className="saas-td">{row.classificacao}</td>
-        <td className="saas-td">{formatVal(row.estandePlm)}</td>
+        <td className="saas-td">{row.estandePlm != null ? formatDecimal2(row.estandePlm) : '—'}</td>
         <td className="saas-td">{row.fenologia}</td>
-        <td className="saas-td">{row.perdaPct != null ? `${row.perdaPct}%` : '—'}</td>
-        <td className="saas-td">{row.iat != null ? row.iat : '—'}</td>
+        <td className="saas-td">{row.perdaPct != null ? formatPercent2(row.perdaPct) : '—'}</td>
+        <td className="saas-td">{row.iat != null ? formatDecimal2(row.iat) : '—'}</td>
         <td className="saas-td">
           <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusColor}`}>
             {row.status}
