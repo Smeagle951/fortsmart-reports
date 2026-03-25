@@ -73,10 +73,8 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
   const isVisitaTecnica =
     tipoStr === 'visita_tecnica' ||
     (tipoStr !== 'plantio' && tipoStr !== 'avaliacao_lado_a_lado' && tipoStr !== 'monitoramento' && (hasVisitaKeys || hasVisitaBlocks));
-  // Para "visita técnica", o layout SaaS premium ainda não cobre todas as seções esperadas
-  // (ex.: data de plantio, fenologia/histórico, condições do momento e mapa).
-  // Por isso, renderizamos o layout completo (não-SaaS) para garantir que tudo apareça.
-  if (isVisitaTecnica && tipoStr !== 'visita_tecnica') {
+  // Inclui tipo explícito visita_tecnica: layout SaaS normaliza o payload e evita instabilidade do legado (Leaflet/client).
+  if (isVisitaTecnica) {
     const ctxDae = (contextoSafra as any)?.dae;
     const saasData: ReportPageSaaSData = {
       meta: {
