@@ -1,28 +1,20 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { normalizeCanonicalBaseUrl } from '@/utils/canonicalUrl';
 
-function trimTrailingSlash(s: string): string {
-  return s.endsWith('/') ? s.slice(0, -1) : s;
-}
-
-function getCanonicalOrigin(): string {
-  const raw = String(process.env.NEXT_PUBLIC_CANONICAL_URL ?? '').trim();
-  if (!raw) return '';
-  return trimTrailingSlash(raw);
-}
-
-function getHost(url: string): string {
+function getHostFromOrigin(origin: string): string {
   try {
-    return new URL(url).host;
+    return new URL(origin).host;
   } catch {
     return '';
   }
 }
 
 export function middleware(req: NextRequest) {
-  const canonicalOrigin = getCanonicalOrigin();
+  const raw = String(process.env.NEXT_PUBLIC_CANONICAL_URL ?? '').trim();
+  const canonicalOrigin = raw ? normalizeCanonicalBaseUrl(raw) : null;
   if (!canonicalOrigin) return NextResponse.next();
 
-  const canonicalHost = getHost(canonicalOrigin);
+  const canonicalHost = getHostFromOrigin(canonicalOrigin);
   if (!canonicalHost) return NextResponse.next();
 
   const hostname = req.nextUrl.hostname;
