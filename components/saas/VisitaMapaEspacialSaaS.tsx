@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Polygon, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -91,6 +91,11 @@ function asQuadros(v: unknown): VisitaEvolucaoQuadro[] {
 }
 
 export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspacialPayload }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const pontosRaw = asPontos(mapa.pontos);
   const polygonProp = mapa.polygon;
   const quadros = asQuadros(mapa.evolucao_espacial?.quadros);
@@ -165,6 +170,22 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
     return null;
   }
 
+  if (!mounted) {
+    return (
+      <section className="saas-section print:break-inside-avoid">
+        <div className="mx-auto max-w-7xl">
+          <h2 className="saas-section-title">Mapa espacial, clusters e evolução</h2>
+          <div
+            className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-500"
+            style={{ minHeight: 380 }}
+          >
+            Carregando mapa…
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="saas-section print:break-inside-avoid">
       <div className="mx-auto max-w-7xl">
@@ -221,14 +242,17 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
                   pathOptions={{ color: '#2e7d32', weight: 3, fillColor: '#e8f5e9', fillOpacity: 0.35 }}
                 />
               )}
-              {activeClusters.map((cl) => {
+              {activeClusters
+                .filter((cl) => Number.isFinite(cl.centroid_lat) && Number.isFinite(cl.centroid_lng))
+                .map((cl, clIx) => {
                 const { stroke, fill } = clusterColor(cl.severidade_max);
-                const r = Math.max(12, cl.raio_m || 15);
+                const rawR = Number(cl.raio_m);
+                const radiusM = Number.isFinite(rawR) && rawR > 0 ? Math.max(12, rawR) : 15;
                 return (
                   <Circle
-                    key={`cl-${cl.id}-${useTimeline ? activeQuadro?.data : 'all'}`}
+                    key={`cl-${cl.id ?? clIx}-${useTimeline ? activeQuadro?.data : 'all'}`}
                     center={[cl.centroid_lat, cl.centroid_lng]}
-                    radius={r}
+                    radius={radiusM}
                     pathOptions={{ color: stroke, fillColor: fill, weight: 2, fillOpacity: 0.35 }}
                   />
                 );

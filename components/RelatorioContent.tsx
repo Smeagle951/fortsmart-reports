@@ -82,7 +82,12 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
         tecnico: String(meta.tecnico ?? ''),
         tecnicoCrea: (meta as any).tecnicoCrea != null ? String((meta as any).tecnicoCrea) : undefined,
         id: (meta as any).id != null ? String((meta as any).id) : undefined,
-        versao: (meta as any).versao != null ? Number((meta as any).versao) : undefined,
+        versao: (() => {
+          const v = (meta as any).versao;
+          if (v == null || v === '') return undefined;
+          const n = Number(v);
+          return Number.isFinite(n) ? n : undefined;
+        })(),
         status: String((meta as any).status ?? 'Final'),
         safra: (meta as any).safra != null ? String((meta as any).safra) : undefined,
       },

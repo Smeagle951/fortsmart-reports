@@ -3,9 +3,6 @@
 import { useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import HeaderInstitucionalVisitaTecnica from '@/components/visita/HeaderInstitucionalVisitaTecnica';
-import type { VisitaMapaEspacialPayload } from './VisitaMapaEspacialSaaS';
-
-const VisitaMapaEspacialSaaS = dynamic(() => import('./VisitaMapaEspacialSaaS'), { ssr: false });
 import HeaderSection, { type StatusGeral } from './HeaderSection';
 import KpiCardsSection from './KpiCardsSection';
 import EvaluationTable, { type AvaliacaoRow } from './EvaluationTable';
@@ -13,7 +10,11 @@ import StatisticsSection, { type EstatisticaItem } from './StatisticsSection';
 import ApplicationsTable, { type AplicacaoRow } from './ApplicationsTable';
 import ImageGallerySaaS, { type ImagemItem } from './ImageGallerySaaS';
 import ComparisonSection, { type ComparativoItem } from './ComparisonSection';
+import SaasLeafletErrorBoundary from './SaasLeafletErrorBoundary';
+import type { VisitaMapaEspacialPayload } from './VisitaMapaEspacialSaaS';
 import { asArray, asStringList } from '@/utils/arrayGuards';
+
+const VisitaMapaEspacialSaaS = dynamic(() => import('./VisitaMapaEspacialSaaS'), { ssr: false });
 
 /** Retorna número válido ou null (evita NaN no UI). */
 function safeNum(v: unknown): number | null {
@@ -106,8 +107,33 @@ type SaaSAplicacao = NonNullable<ReportPageSaaSData['aplicacoes']>[number];
 type SaaSImagem = NonNullable<ReportPageSaaSData['imagens']>[number];
 type EstandeRegistro = NonNullable<NonNullable<ReportPageSaaSData['estande']>['registros']>[number];
 
+function isValidAvaliacaoRow(x: unknown): x is AvaliacaoRow {
+  if (x == null || typeof x !== 'object') return false;
+  const o = x as AvaliacaoRow;
+  return typeof o.id === 'string' && o.id.length > 0;
+}
+
+/** Normaliza campos numéricos vindos do JSON (strings/objetos quebram .toFixed / sort). */
+function normalizeAvaliacaoRow(row: AvaliacaoRow): AvaliacaoRow {
+  return {
+    ...row,
+    dae: safeNum(row.dae as unknown),
+    cvPercent: safeNum(row.cvPercent as unknown),
+    estandePlm: safeNum(row.estandePlm as unknown),
+    perdaPct: safeNum(row.perdaPct as unknown),
+    iat: safeNum(row.iat as unknown),
+    data: row.data != null ? String(row.data) : '—',
+    classificacao: row.classificacao != null ? String(row.classificacao) : 'Sem dado',
+    fenologia: row.fenologia != null ? String(row.fenologia) : '—',
+    status: row.status != null ? String(row.status) : 'OK',
+  };
+}
+
 function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
-  if (Array.isArray(d.avaliacoes) && d.avaliacoes.length > 0) return d.avaliacoes;
+  if (Array.isArray(d.avaliacoes) && d.avaliacoes.length > 0) {
+    const valid = d.avaliacoes.filter(isValidAvaliacaoRow).map(normalizeAvaliacaoRow);
+    if (valid.length > 0) return valid;
+  }
 
   const plant = d.plantabilidade;
   const est = d.estande;
@@ -309,9 +335,15 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
   const planoAcaoAcoes = asArray<NonNullable<NonNullable<ReportPageSaaSData['planoAcao']>['acoes']>[number]>(data.planoAcao?.acoes);
 
   const intel = data.inteligenciaAgronomica;
+  const rawTalhaoStatus = data.indiceAgronomicoTalhao?.status;
   const statusGeral: StatusGeral =
-    (data.indiceAgronomicoTalhao?.status as StatusGeral) ??
-    (intel?.status === 'Atenção' ? 'Atenção' : intel?.status === 'Crítico' ? 'Crítico' : 'Saudável');
+    rawTalhaoStatus === 'Atenção' || rawTalhaoStatus === 'Crítico' || rawTalhaoStatus === 'Saudável'
+      ? rawTalhaoStatus
+      : intel?.status === 'Atenção'
+        ? 'Atenção'
+        : intel?.status === 'Crítico'
+          ? 'Crítico'
+          : 'Saudável';
 
   const sptValor =
     safeNum(data.diagnosticoIntegrado?.spt ?? data.indiceAgronomicoTalhao?.valor ?? intel?.score);
@@ -447,7 +479,11 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         {imagens.length > 0 && (
           <ImageGallerySaaS imagens={imagens} marcaDagua="FortSmart" />
         )}
-        {showMapaEspacial && <VisitaMapaEspacialSaaS mapa={mapaVisita!} />}
+        {showMapaEspacial && (
+          <SaasLeafletErrorBoundary>
+            <VisitaMapaEspacialSaaS mapa={mapaVisita!} />
+          </SaasLeafletErrorBoundary>
+        )}
         {comparativo.length > 0 && (
           <ComparisonSection
             items={comparativo}

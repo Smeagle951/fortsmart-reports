@@ -50,8 +50,16 @@ export default function KpiCardsSection({ cards }: KpiCardsSectionProps) {
       <h2 className="saas-section-title">Resumo Executivo</h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {cards.map((card) => {
-          const colors = classColors[card.classificacao] || classColors.Moderado;
-          const tend = card.tendencia || 'neutral';
+          const clsKeys = classColors as Record<string, string>;
+          const classif =
+            card.classificacao != null && clsKeys[card.classificacao as Classificacao] != null
+              ? card.classificacao
+              : 'Sem dado';
+          const colors = classColors[classif as Classificacao] || classColors.Moderado;
+          const tend: Tendencia =
+            card.tendencia === 'up' || card.tendencia === 'down' || card.tendencia === 'neutral'
+              ? card.tendencia
+              : 'neutral';
           return (
             <button
               key={card.id}
@@ -67,7 +75,7 @@ export default function KpiCardsSection({ cards }: KpiCardsSectionProps) {
                 <span className="text-2xl font-bold">{formatDisplayValor(card.valor)}</span>
                 <span className="text-lg opacity-70">{tendenciaIcon[tend]}</span>
               </div>
-              <span className="mt-1 text-xs font-medium">{card.classificacao}</span>
+              <span className="mt-1 text-xs font-medium">{classif}</span>
               {card.historico && card.historico.length > 0 && (
                 <span className="mt-2 text-xs text-slate-500 group-hover:text-slate-700">
                   Clique para histórico

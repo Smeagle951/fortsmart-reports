@@ -58,7 +58,9 @@ export default function HeaderSection({
     }
   };
 
-  const sc = statusConfig[status] || statusConfig.Saudável;
+  const statusSafe: StatusGeral =
+    status === 'Atenção' || status === 'Crítico' || status === 'Saudável' ? status : 'Saudável';
+  const sc = statusConfig[statusSafe] || statusConfig.Saudável;
 
   if (variant === 'toolbar') {
     return (
