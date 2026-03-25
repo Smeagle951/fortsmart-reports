@@ -7,7 +7,7 @@ import Galeria from './Galeria';
 import TabelaDados, { InfoGrid, situacaoCssClass, situacaoLabel } from './TabelaDados';
 import TabelaAplicacoes from './TabelaAplicacoes';
 import { formatDate, formatArea, formatNumber, formatPercent } from '@/utils/format';
-import { asArray } from '@/utils/arrayGuards';
+import { asArray, asStringList } from '@/utils/arrayGuards';
 import ReportPageSaaS, { type ReportPageSaaSData } from './saas/ReportPageSaaS';
 
 export type RelatorioJson = {
@@ -165,7 +165,18 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
       imagens: (imagens as any[]).map((im: any) => ({ url: im.url ?? im.path ?? '', descricao: im.descricao ?? im.caption ?? '', data: im.data ?? undefined, categoria: im.categoria ?? undefined })),
       pragas: pragas.map((p: any) => ({ tipo: p.tipo, nome: p.nome, alvo: p.alvo, incidencia: p.incidencia, severidade: p.severidade, situacao: p.situacao, observacoes: p.observacoes })),
       desvios: Array.isArray((relatorio as any).desvios) ? ((relatorio as any).desvios as any[]).map((d: any) => ({ tipo: d.tipo, descricao: d.descricao, data: d.data, severidade: d.severidade, local: d.local, acaoRecomendada: d.acaoRecomendada })) : undefined,
-      diagnostico: diagnostico && typeof diagnostico === 'object' ? { problemaPrincipal: (diagnostico as any).problemaPrincipal, causaProvavel: (diagnostico as any).causaProvavel, nivelRisco: (diagnostico as any).nivelRisco, urgenciaAcao: (diagnostico as any).urgenciaAcao, recomendacoes: Array.isArray((diagnostico as any).recomendacoes) ? (diagnostico as any).recomendacoes : undefined } : undefined,
+      diagnostico: diagnostico && typeof diagnostico === 'object'
+        ? {
+            problemaPrincipal: (diagnostico as any).problemaPrincipal,
+            causaProvavel: (diagnostico as any).causaProvavel,
+            nivelRisco: (diagnostico as any).nivelRisco,
+            urgenciaAcao: (diagnostico as any).urgenciaAcao,
+            recomendacoes: (() => {
+              const list = asStringList((diagnostico as any).recomendacoes);
+              return list.length ? list : undefined;
+            })(),
+          }
+        : undefined,
       planoAcao: planoAcao && typeof planoAcao === 'object'
         ? {
             objetivoManejo: (planoAcao as any).objetivoManejo,

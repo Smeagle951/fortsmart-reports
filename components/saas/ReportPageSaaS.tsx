@@ -13,7 +13,7 @@ import StatisticsSection, { type EstatisticaItem } from './StatisticsSection';
 import ApplicationsTable, { type AplicacaoRow } from './ApplicationsTable';
 import ImageGallerySaaS, { type ImagemItem } from './ImageGallerySaaS';
 import ComparisonSection, { type ComparativoItem } from './ComparisonSection';
-import { asArray } from '@/utils/arrayGuards';
+import { asArray, asStringList } from '@/utils/arrayGuards';
 
 /** Retorna número válido ou null (evita NaN no UI). */
 function safeNum(v: unknown): number | null {
@@ -107,7 +107,7 @@ type SaaSImagem = NonNullable<ReportPageSaaSData['imagens']>[number];
 type EstandeRegistro = NonNullable<NonNullable<ReportPageSaaSData['estande']>['registros']>[number];
 
 function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
-  if (d.avaliacoes?.length) return d.avaliacoes;
+  if (Array.isArray(d.avaliacoes) && d.avaliacoes.length > 0) return d.avaliacoes;
 
   const plant = d.plantabilidade;
   const est = d.estande;
@@ -303,6 +303,10 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
   const meta = data.meta ?? {};
   const prop = data.propriedade ?? {};
   const talhao = data.talhao ?? {};
+  const pragasRows = asArray<NonNullable<ReportPageSaaSData['pragas']>[number]>(data.pragas);
+  const desviosRows = asArray<NonNullable<ReportPageSaaSData['desvios']>[number]>(data.desvios);
+  const recomendacoesList = asStringList(data.diagnostico?.recomendacoes);
+  const planoAcaoAcoes = asArray<NonNullable<NonNullable<ReportPageSaaSData['planoAcao']>['acoes']>[number]>(data.planoAcao?.acoes);
 
   const intel = data.inteligenciaAgronomica;
   const statusGeral: StatusGeral =
@@ -489,7 +493,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         )}
 
         {/* Pragas e doenças */}
-        {data.pragas != null && data.pragas.length > 0 && (
+        {pragasRows.length > 0 && (
           <section className="saas-section print:break-inside-avoid">
             <div className="mx-auto max-w-7xl">
               <h2 className="saas-section-title">Pragas e doenças observadas</h2>
@@ -506,7 +510,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
                     </tr>
                   </thead>
                   <tbody>
-                    {data.pragas.map((p, i) => (
+                    {pragasRows.map((p, i) => (
                       <tr key={i} className="border-b border-slate-100">
                         <td className="saas-td">{p.tipo ?? '—'}</td>
                         <td className="saas-td font-medium">{p.nome ?? p.alvo ?? '—'}</td>
@@ -524,7 +528,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         )}
 
         {/* Desvios */}
-        {data.desvios != null && data.desvios.length > 0 && (
+        {desviosRows.length > 0 && (
           <section className="saas-section print:break-inside-avoid">
             <div className="mx-auto max-w-7xl">
               <h2 className="saas-section-title">Desvios registrados</h2>
@@ -541,7 +545,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
                     </tr>
                   </thead>
                   <tbody>
-                    {data.desvios.map((d, i) => (
+                    {desviosRows.map((d, i) => (
                       <tr key={i} className="border-b border-slate-100">
                         <td className="saas-td">{d.data ?? '—'}</td>
                         <td className="saas-td font-medium">{d.tipo ?? '—'}</td>
@@ -559,7 +563,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         )}
 
         {/* Diagnóstico final */}
-        {data.diagnostico != null && (data.diagnostico.problemaPrincipal != null || data.diagnostico.causaProvavel != null || (data.diagnostico.recomendacoes?.length ?? 0) > 0) && (
+        {data.diagnostico != null && (data.diagnostico.problemaPrincipal != null || data.diagnostico.causaProvavel != null || recomendacoesList.length > 0) && (
           <section className="saas-section print:break-inside-avoid">
             <div className="mx-auto max-w-7xl">
               <h2 className="saas-section-title">Diagnóstico final</h2>
@@ -576,8 +580,8 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
                     {data.diagnostico.urgenciaAcao != null && <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Urgência de ação</p><p className="text-sm font-medium text-slate-800 mt-0.5">{data.diagnostico.urgenciaAcao}</p></div>}
                   </div>
                 )}
-                {(data.diagnostico.recomendacoes?.length ?? 0) > 0 && (
-                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Recomendações</p><ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">{data.diagnostico.recomendacoes!.map((r, i) => <li key={i}>{r}</li>)}</ul></div>
+                {recomendacoesList.length > 0 && (
+                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Recomendações</p><ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">{recomendacoesList.map((texto, i) => <li key={i}>{texto}</li>)}</ul></div>
                 )}
               </div>
             </div>
@@ -585,14 +589,14 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         )}
 
         {/* Plano de ação */}
-        {data.planoAcao != null && (data.planoAcao.objetivoManejo != null || (data.planoAcao.acoes?.length ?? 0) > 0) && (
+        {data.planoAcao != null && (data.planoAcao.objetivoManejo != null || planoAcaoAcoes.length > 0) && (
           <section className="saas-section print:break-inside-avoid">
             <div className="mx-auto max-w-7xl">
               <h2 className="saas-section-title">Plano de ação</h2>
               <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5 space-y-4">
                 {data.planoAcao.objetivoManejo != null && <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Objetivo de manejo</p><p className="text-sm text-slate-800 mt-1 whitespace-pre-wrap">{data.planoAcao.objetivoManejo}</p></div>}
-                {(data.planoAcao.acoes?.length ?? 0) > 0 && (
-                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Ações</p><ol className="list-decimal pl-5 space-y-2 text-sm text-slate-700">{data.planoAcao.acoes!.map((a, i) => <li key={i}><span className="font-medium">{a.acao ?? '—'}</span>{(a.prioridade != null || a.prazo != null) && <span className="text-slate-500 text-xs ml-2">{[a.prioridade != null && `Prioridade ${a.prioridade}`, a.prazo].filter(Boolean).join(' · ')}</span>}</li>)}</ol></div>
+                {planoAcaoAcoes.length > 0 && (
+                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Ações</p><ol className="list-decimal pl-5 space-y-2 text-sm text-slate-700">{planoAcaoAcoes.map((a, i) => <li key={i}><span className="font-medium">{a.acao ?? '—'}</span>{(a.prioridade != null || a.prazo != null) && <span className="text-slate-500 text-xs ml-2">{[a.prioridade != null && `Prioridade ${a.prioridade}`, a.prazo].filter(Boolean).join(' · ')}</span>}</li>)}</ol></div>
                 )}
               </div>
             </div>

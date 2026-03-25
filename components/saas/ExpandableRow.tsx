@@ -69,7 +69,7 @@ export default function ExpandableRow({ row, expanded, onToggle }: ExpandableRow
         <td className="saas-td">{row.dae != null ? row.dae : '—'}</td>
         <td className="saas-td">{row.cvPercent != null ? `${row.cvPercent}%` : '—'}</td>
         <td className="saas-td">{row.classificacao}</td>
-        <td className="saas-td">{row.estandePlm != null ? row.estandePlm.toFixed(1) : '—'}</td>
+        <td className="saas-td">{formatVal(row.estandePlm)}</td>
         <td className="saas-td">{row.fenologia}</td>
         <td className="saas-td">{row.perdaPct != null ? `${row.perdaPct}%` : '—'}</td>
         <td className="saas-td">{row.iat != null ? row.iat : '—'}</td>
