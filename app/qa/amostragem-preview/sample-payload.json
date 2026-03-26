@@ -1,0 +1,62 @@
+{
+  "tipo": "amostragem_solo",
+  "schemaVersion": 2,
+  "meta": {
+    "campaignName": "QA Mapa Solo",
+    "culture": "Soja",
+    "fazenda_nome": "Fazenda Demo",
+    "fator_pontos_ha": 1.5
+  },
+  "talhoes": [
+    { "id": "T1", "nome": "Talhão 01" },
+    { "id": "T2", "nome": "Talhão 02" }
+  ],
+  "observacoes": [
+    { "id": "1", "numero": 1, "lat": -15.8002, "lng": -47.901, "compactacao": 3.4, "classificacao": "Alta", "talhao_id": "T1", "talhao_nome": "Talhão 01", "profundidade": "0-10 cm" },
+    { "id": "2", "numero": 2, "lat": -15.8012, "lng": -47.902, "compactacao": 2.3, "classificacao": "Moderada", "talhao_id": "T1", "talhao_nome": "Talhão 01", "profundidade": "10-20 cm" },
+    { "id": "3", "numero": 3, "lat": -15.8052, "lng": -47.907, "compactacao": 1.4, "classificacao": "Baixa", "talhao_id": "T2", "talhao_nome": "Talhão 02", "profundidade": "0-10 cm" }
+  ],
+  "talhoes_geojson": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": { "talhao_id": "T1", "talhao_nome": "Talhão 01" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[-47.904,-15.802],[-47.899,-15.802],[-47.899,-15.798],[-47.904,-15.798],[-47.904,-15.802]]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "talhao_id": "T2", "talhao_nome": "Talhão 02" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[-47.909,-15.807],[-47.904,-15.807],[-47.904,-15.803],[-47.909,-15.803],[-47.909,-15.807]]]
+        }
+      }
+    ]
+  },
+  "rota_geojson": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": { "talhao_id": "T1" },
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [[-47.901,-15.8002],[-47.902,-15.8012]]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": { "talhao_id": "T2" },
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [[-47.907,-15.8052],[-47.906,-15.8042]]
+        }
+      }
+    ]
+  }
+}
+

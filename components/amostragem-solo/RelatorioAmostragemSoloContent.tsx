@@ -6,6 +6,8 @@ import {
   computeCompactacaoAnalytics,
   computeSamplingQuality,
 } from '@/lib/amostragem-solo/compactacaoAnalytics';
+import { simplifyFeatureCollection } from '@/lib/amostragem-solo/mapPerf';
+import { buildTalhaoRanking } from '@/lib/amostragem-solo/multiTalhao';
 import {
   buildCompactacaoDiagnostico,
   buildDiagnosticoAgronomicoBreve,
@@ -83,6 +85,24 @@ function escapeTooltipText(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function featureMatchesTalhao(
+  props: Record<string, unknown> | undefined,
+  selectedTalhao: string,
+): boolean {
+  if (!selectedTalhao) return true;
+  if (!props) return false;
+  const candidates = [
+    props.talhao_id,
+    props.talhaoId,
+    props.field_id,
+    props.fieldId,
+    props.id,
+  ]
+    .filter((v) => v != null)
+    .map((v) => String(v));
+  return candidates.includes(selectedTalhao);
+}
+
 export default function RelatorioAmostragemSoloContent({ payload, shareToken }: Props) {
   const p = payload as unknown as AmostragemSoloPayload;
   const meta = (p.meta ?? {}) as Record<string, unknown>;
@@ -147,6 +167,35 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
     return null;
   }, [p.rota_geojson]);
 
+  const filteredTalhoesFc = useMemo((): FeatureCollection | null => {
+    if (!talhoesFc) return null;
+    if (!selectedTalhao) return talhoesFc;
+    const features = talhoesFc.features.filter((f) =>
+      featureMatchesTalhao((f.properties ?? {}) as Record<string, unknown>, selectedTalhao),
+    );
+    if (features.length === 0) return talhoesFc;
+    return { type: 'FeatureCollection', features };
+  }, [talhoesFc, selectedTalhao]);
+
+  const filteredRotaFc = useMemo((): FeatureCollection | null => {
+    if (!rotaFc) return null;
+    if (!selectedTalhao) return rotaFc;
+    const features = rotaFc.features.filter((f) =>
+      featureMatchesTalhao((f.properties ?? {}) as Record<string, unknown>, selectedTalhao),
+    );
+    if (features.length === 0) return rotaFc;
+    return { type: 'FeatureCollection', features };
+  }, [rotaFc, selectedTalhao]);
+
+  const simplifiedTalhoesFc = useMemo(
+    () => simplifyFeatureCollection(filteredTalhoesFc, 0.000006),
+    [filteredTalhoesFc],
+  );
+  const simplifiedRotaFc = useMemo(
+    () => simplifyFeatureCollection(filteredRotaFc, 0.00001),
+    [filteredRotaFc],
+  );
+
   /** Todos os pontos com coordenadas válidas — centro e fit inicial por extensão real, não só o 1.º ponto. */
   const obsLatLngPoints = useMemo((): [number, number][] => {
     const pts: [number, number][] = [];
@@ -188,6 +237,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
   const diagnosticoBreve = useMemo(() => buildDiagnosticoAgronomicoBreve(analytics), [analytics]);
   const recomendacoes = useMemo(() => buildRecomendacoesCompactacao(analytics), [analytics]);
   const diagnosticoText = useMemo(() => buildCompactacaoDiagnostico(analyticsObs), [analyticsObs]);
+  const rankingTalhoes = useMemo(() => buildTalhaoRanking(observacoes), [observacoes]);
 
   const obsComFoto = useMemo(
     () => filteredObs.filter((o) => o.imagem_url && String(o.imagem_url).trim()),
@@ -229,7 +279,16 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       mapInstance.current = map;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const cluster = (L as any).markerClusterGroup({ maxClusterRadius: 40, spiderfyOnMaxZoom: true });
+      const cluster = (L as any).markerClusterGroup({
+        maxClusterRadius: (zoom: number) => {
+          if (zoom >= 17) return 14;
+          if (zoom >= 15) return 22;
+          if (zoom >= 13) return 30;
+          return 40;
+        },
+        spiderfyOnMaxZoom: true,
+        disableClusteringAtZoom: 18,
+      });
       cluster.addTo(map);
       clusterRef.current = cluster;
 
@@ -297,8 +356,8 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         isolineLayerRef.current = isoLayer;
       }
 
-      if (talhoesFc) {
-        const talhoesLayer = L.geoJSON(talhoesFc as unknown as GeoJsonObject, {
+      if (simplifiedTalhoesFc) {
+        const talhoesLayer = L.geoJSON(simplifiedTalhoesFc as unknown as GeoJsonObject, {
           style: {
             color: '#f8fafc',
             weight: 2,
@@ -312,7 +371,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
 
         if (showTalhaoLabels) {
           const labels = L.layerGroup();
-          for (const ft of talhoesFc.features) {
+          for (const ft of simplifiedTalhoesFc.features) {
             if (ft.geometry?.type !== 'Polygon') continue;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const rings = (ft.geometry as any).coordinates as number[][][];
@@ -342,8 +401,8 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         }
       }
 
-      if (rotaFc) {
-        const rotaLayer = L.geoJSON(rotaFc as unknown as GeoJsonObject, {
+      if (simplifiedRotaFc) {
+        const rotaLayer = L.geoJSON(simplifiedRotaFc as unknown as GeoJsonObject, {
           style: {
             color: '#60a5fa',
             weight: Math.min(6, 2 + Math.floor(filteredObs.length / 40)),
@@ -355,7 +414,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
 
         // Indicadores de direção: início/fim + setas ao longo da rota
         const dirLayer = L.layerGroup();
-        for (const ft of rotaFc.features) {
+        for (const ft of simplifiedRotaFc.features) {
           if (ft.geometry?.type !== 'LineString') continue;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const line = (ft.geometry as any).coordinates as number[][];
@@ -400,8 +459,8 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       }
 
       const bounds: import('leaflet').LatLngBoundsExpression = [];
-      if (talhoesFc) {
-        for (const ft of talhoesFc.features) {
+      if (simplifiedTalhoesFc) {
+        for (const ft of simplifiedTalhoesFc.features) {
           if (ft.geometry?.type === 'Polygon') {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const rings = (ft.geometry as any).coordinates as number[][][];
@@ -441,6 +500,21 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
           `Talhão: ${escapeTooltipText(talhaoStr)}`,
         ].join('<br/>');
         m.bindTooltip(tipHtml, { direction: 'top', opacity: 0.95 });
+        const popupHtml = [
+          `<div style="min-width:190px">`,
+          `<strong>Ponto ${num}</strong><br/>`,
+          `Talhão: ${escapeTooltipText(talhaoStr)}<br/>`,
+          `Profundidade: ${escapeTooltipText(profStr)}<br/>`,
+          `IC: ${escapeTooltipText(icStr)}<br/>`,
+          `Classe: ${escapeTooltipText(cls || '—')}<br/>`,
+          pr.sample_code ? `Código: ${escapeTooltipText(String(pr.sample_code))}<br/>` : '',
+          pr.point_name ? `Nome: ${escapeTooltipText(String(pr.point_name))}<br/>` : '',
+          Number.isFinite(Number(pr.lat)) && Number.isFinite(Number(pr.lng))
+            ? `Coord.: ${Number(pr.lat).toFixed(6)}, ${Number(pr.lng).toFixed(6)}`
+            : '',
+          `</div>`,
+        ].join('');
+        m.bindPopup(popupHtml);
         m.on('click', () => {
           const id = String(pr.id ?? '');
           const hit = observacoes.find((o) => String(o.id) === id);
@@ -475,7 +549,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         }
       }
     })();
-  }, [filteredFc, filteredObs, observacoes, showHeat, showIsolines, showTalhaoLabels, isolinesFc, talhoesFc, rotaFc]);
+  }, [filteredFc, filteredObs, observacoes, showHeat, showIsolines, showTalhaoLabels, isolinesFc, simplifiedTalhoesFc, simplifiedRotaFc]);
 
   const shpUrl = `/api/amostragem/export/shp?token=${encodeURIComponent(shareToken)}`;
 
@@ -797,7 +871,100 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         </div>
       </section>
 
+      {rankingTalhoes.length > 1 ? (
+        <section
+          style={{
+            margin: '0 22px 18px',
+            padding: '16px 18px',
+            borderRadius: 4,
+            background: ag.card,
+            border: `1px solid ${ag.border}`,
+            boxShadow: '0 4px 18px rgba(28,25,23,0.06)',
+          }}
+        >
+          <h2 style={{ margin: 0, fontFamily: ag.fontTitle, fontSize: '1.1rem', color: ag.forest }}>
+            Ranking consolidado multi-talhão
+          </h2>
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: ag.inkMuted }}>
+            Comparativo rápido entre talhões para priorização em reunião técnica.
+          </p>
+          <div style={{ marginTop: 10, fontSize: 13, lineHeight: 1.7 }}>
+            {(() => {
+              const critico = [...rankingTalhoes].sort((a, b) => b.pctAltaCritica - a.pctAltaCritica)[0];
+              const melhor = [...rankingTalhoes].sort((a, b) => (a.icMedio ?? 999) - (b.icMedio ?? 999))[0];
+              const baixaConf = [...rankingTalhoes].sort((a, b) => a.confiabilidade - b.confiabilidade)[0];
+              return (
+                <>
+                  <div>
+                    <strong>Talhão mais crítico:</strong> {critico?.talhaoNome ?? '—'} ({critico?.pctAltaCritica ?? 0}% alta+crítica)
+                  </div>
+                  <div>
+                    <strong>Talhão com melhor tendência:</strong> {melhor?.talhaoNome ?? '—'} (IC médio {melhor?.icMedio?.toFixed(2) ?? '—'} MPa)
+                  </div>
+                  <div>
+                    <strong>Baixa confiabilidade de amostragem:</strong> {baixaConf?.talhaoNome ?? '—'} (score {baixaConf?.confiabilidade ?? 0}%)
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+          <div style={{ overflowX: 'auto', marginTop: 10 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: ag.paper2 }}>
+                  <th style={{ textAlign: 'left', padding: 8 }}>Talhão</th>
+                  <th style={{ textAlign: 'left', padding: 8 }}>IC médio</th>
+                  <th style={{ textAlign: 'left', padding: 8 }}>% alta+crítica</th>
+                  <th style={{ textAlign: 'left', padding: 8 }}>Confiabilidade</th>
+                  <th style={{ textAlign: 'left', padding: 8 }}>Tendência</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rankingTalhoes
+                  .sort((a, b) => b.pctAltaCritica - a.pctAltaCritica)
+                  .map((r) => (
+                    <tr key={r.talhaoId} style={{ borderTop: `1px solid ${ag.border}` }}>
+                      <td style={{ padding: 8 }}>{r.talhaoNome}</td>
+                      <td style={{ padding: 8 }}>{r.icMedio != null ? `${r.icMedio.toFixed(2)} MPa` : '—'}</td>
+                      <td style={{ padding: 8 }}>{r.pctAltaCritica.toFixed(1)}%</td>
+                      <td style={{ padding: 8 }}>{r.confiabilidade.toFixed(1)}%</td>
+                      <td style={{ padding: 8 }}>
+                        {r.tendenciaSlope == null
+                          ? 'Sem série'
+                          : r.tendenciaSlope < 0
+                            ? 'Melhorando'
+                            : r.tendenciaSlope > 0
+                              ? 'Piorando'
+                              : 'Estável'}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
       <div style={{ position: 'relative', height: 'min(70vh, 640px)', margin: 18, boxShadow: '0 8px 28px rgba(28,25,23,0.08)' }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            left: 12,
+            zIndex: 500,
+            background: 'rgba(255,252,247,0.95)',
+            border: `1px solid ${ag.border}`,
+            borderRadius: 4,
+            padding: '6px 10px',
+            fontSize: 12,
+            color: ag.inkMuted,
+            boxShadow: '0 2px 10px rgba(28,25,23,0.08)',
+          }}
+        >
+          {selectedTalhao
+            ? `Visualização filtrada por talhão (${talhoesOptions.find((t) => t.id === selectedTalhao)?.nome ?? selectedTalhao})`
+            : 'Visualização consolidada de todos os talhões da campanha'}
+        </div>
         <div
           ref={mapRef}
           style={{
