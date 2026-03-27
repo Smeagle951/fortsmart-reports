@@ -16,30 +16,65 @@ export function depthKey(o: AmostragemObservacao): string {
 }
 
 /**
- * Pontos de campo distintos: prioriza `point_id` do app; senão agrupa por (lat,lng) com 5 casas;
- * último fallback: números de ordem únicos.
+ * Chave estável para agrupar camadas no mesmo ponto físico (mesmo critério da tabela e do mapa).
+ * Inclui `talhao_id` para não fundir pontos homônimos em talhões diferentes.
+ */
+export function fieldPointGroupKey(o: AmostragemObservacao): string {
+  const tid = String(o.talhao_id ?? '');
+  if (o.point_id != null && Number.isFinite(Number(o.point_id))) {
+    return `pid:${tid}:${Number(o.point_id)}`;
+  }
+  if (o.lat != null && o.lng != null && Number.isFinite(o.lat) && Number.isFinite(o.lng)) {
+    return `geo:${tid}:${o.lat.toFixed(5)},${o.lng.toFixed(5)}`;
+  }
+  const id = o.id != null && String(o.id).trim() !== '' ? String(o.id) : `n${o.numero ?? '?'}`;
+  return `row:${tid}:${id}`;
+}
+
+function depthSortKey(o: AmostragemObservacao): number {
+  if (o.depth_top_cm != null && Number.isFinite(Number(o.depth_top_cm))) return Number(o.depth_top_cm);
+  if (o.depth_id != null && Number.isFinite(Number(o.depth_id))) return Number(o.depth_id) * 1000;
+  const p = String(o.profundidade ?? '');
+  const m = /^(\d+)\s*-\s*\d+/.exec(p.trim());
+  if (m) return Number(m[1]);
+  return 9999;
+}
+
+/** Ordena camadas do superficial ao mais profundo. */
+export function compareObservacaoByDepth(a: AmostragemObservacao, b: AmostragemObservacao): number {
+  const da = depthSortKey(a);
+  const db = depthSortKey(b);
+  if (da !== db) return da - db;
+  return depthKey(a).localeCompare(depthKey(b), 'pt-BR');
+}
+
+export type FieldPointGroup = {
+  key: string;
+  layers: AmostragemObservacao[];
+};
+
+/** Agrupa observações (1 linha JSON por camada) em pontos de campo. */
+export function groupObservationsByFieldPoint(obs: AmostragemObservacao[]): FieldPointGroup[] {
+  const map = new Map<string, AmostragemObservacao[]>();
+  for (const o of obs) {
+    const k = fieldPointGroupKey(o);
+    const arr = map.get(k);
+    if (arr) arr.push(o);
+    else map.set(k, [o]);
+  }
+  for (const arr of map.values()) {
+    arr.sort(compareObservacaoByDepth);
+  }
+  return [...map.entries()].map(([key, layers]) => ({ key, layers }));
+}
+
+/**
+ * Pontos de campo distintos — alinhado a {@link fieldPointGroupKey} (camadas no mesmo GPS = 1 ponto).
  */
 export function countDistinctFieldPoints(obs: AmostragemObservacao[]): number {
-  const byPointId = new Set<number>();
-  let anyId = false;
-  for (const o of obs) {
-    if (o.point_id != null && Number.isFinite(Number(o.point_id))) {
-      byPointId.add(Number(o.point_id));
-      anyId = true;
-    }
-  }
-  if (anyId) return byPointId.size;
-
-  const byLoc = new Set<string>();
-  for (const o of obs) {
-    if (o.lat != null && o.lng != null && Number.isFinite(o.lat) && Number.isFinite(o.lng)) {
-      byLoc.add(`${o.lat.toFixed(5)},${o.lng.toFixed(5)}`);
-    }
-  }
-  if (byLoc.size > 0) return byLoc.size;
-
-  const nums = new Set(obs.map((o) => o.numero).filter((n): n is number => n != null && Number.isFinite(n)));
-  return nums.size > 0 ? nums.size : obs.length;
+  if (obs.length === 0) return 0;
+  const keys = new Set(obs.map(fieldPointGroupKey));
+  return keys.size;
 }
 
 function median(sorted: number[]): number | null {

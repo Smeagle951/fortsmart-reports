@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FeatureCollection, GeoJsonObject, Point } from 'geojson';
+import type { FeatureCollection, GeoJsonObject } from 'geojson';
 import {
   computeCompactacaoAnalytics,
   computeSamplingQuality,
+  groupObservationsByFieldPoint,
+  type FieldPointGroup,
 } from '@/lib/amostragem-solo/compactacaoAnalytics';
 import { simplifyFeatureCollection } from '@/lib/amostragem-solo/mapPerf';
 import { buildTalhaoRanking } from '@/lib/amostragem-solo/multiTalhao';
@@ -14,11 +16,7 @@ import {
   buildRecomendacoesCompactacao,
 } from '@/lib/amostragem-solo/diagnostics';
 import { IC_LEGEND_ROWS } from '@/lib/amostragem-solo/mpa';
-import {
-  getFeatureCollection,
-  type AmostragemObservacao,
-  type AmostragemSoloPayload,
-} from '@/lib/amostragem-solo/payload';
+import { type AmostragemObservacao, type AmostragemSoloPayload } from '@/lib/amostragem-solo/payload';
 
 type Props = {
   payload: Record<string, unknown>;
@@ -85,6 +83,60 @@ function escapeTooltipText(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+const CLASSE_PIOR_ORDEM = ['Crítica', 'Alta', 'Moderada', 'Baixa', 'Indefinido'] as const;
+
+function piorClasseEntreCamadas(layers: AmostragemObservacao[]): string {
+  let bestIdx = CLASSE_PIOR_ORDEM.length;
+  let pick = 'Indefinido';
+  for (const o of layers) {
+    const c = String(o.classificacao ?? 'Indefinido');
+    const i = CLASSE_PIOR_ORDEM.indexOf(c as (typeof CLASSE_PIOR_ORDEM)[number]);
+    const idx = i >= 0 ? i : CLASSE_PIOR_ORDEM.length;
+    if (idx < bestIdx) {
+      bestIdx = idx;
+      pick = c;
+    }
+  }
+  return pick;
+}
+
+function rotuloNumeroPonto(layers: AmostragemObservacao[]): string {
+  const nums = layers.map((o) => o.numero).filter((n): n is number => n != null && Number.isFinite(n));
+  if (nums.length === 0) return '—';
+  const u = new Set(nums);
+  return u.size === 1 ? String([...u][0]) : `${Math.min(...nums)}–${Math.max(...nums)}`;
+}
+
+function icMedioDoPonto(layers: AmostragemObservacao[]): number | null {
+  const vals = layers
+    .map((o) => o.compactacao)
+    .filter((v): v is number => v != null && Number.isFinite(Number(v)))
+    .map(Number);
+  if (vals.length === 0) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+function coordsRepresentativas(layers: AmostragemObservacao[]): { lat: number; lng: number } | null {
+  for (const o of layers) {
+    if (o.lat != null && o.lng != null && Number.isFinite(o.lat) && Number.isFinite(o.lng)) {
+      return { lat: o.lat, lng: o.lng };
+    }
+  }
+  return null;
+}
+
+function imagensDistintasDoPonto(layers: AmostragemObservacao[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const o of layers) {
+    const u = o.imagem_url && String(o.imagem_url).trim();
+    if (!u || seen.has(u)) continue;
+    seen.add(u);
+    out.push(u);
+  }
+  return out;
+}
+
 function featureMatchesTalhao(
   props: Record<string, unknown> | undefined,
   selectedTalhao: string,
@@ -97,12 +149,100 @@ function featureMatchesTalhao(
   return candidates.includes(selectedTalhao);
 }
 
+type AgTheme = typeof ag;
+
+function TabelaGruposPontos({
+  grupos,
+  tabelaTemFoto,
+  ag: theme,
+  onOpen,
+}: {
+  grupos: FieldPointGroup[];
+  tabelaTemFoto: boolean;
+  ag: AgTheme;
+  onOpen: (g: FieldPointGroup) => void;
+}) {
+  return (
+    <div
+      style={{
+        overflowX: 'auto',
+        borderRadius: 4,
+        border: `1px solid ${theme.border}`,
+        background: theme.card,
+      }}
+    >
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <thead>
+          <tr style={{ background: theme.paper2, color: theme.ink, fontWeight: 600 }}>
+            <th style={{ textAlign: 'left', padding: 10 }}>Ponto</th>
+            <th style={{ textAlign: 'left', padding: 10 }}>Camadas</th>
+            <th style={{ textAlign: 'left', padding: 10 }}>IC médio (ponto)</th>
+            <th style={{ textAlign: 'left', padding: 10 }}>Classe (pior)</th>
+            <th style={{ textAlign: 'left', padding: 10 }}>Talhão</th>
+            {tabelaTemFoto ? <th style={{ textAlign: 'left', padding: 10 }}>Foto</th> : null}
+          </tr>
+        </thead>
+        <tbody>
+          {grupos.map((g) => {
+            const layers = g.layers;
+            const numLabel = rotuloNumeroPonto(layers);
+            const icM = icMedioDoPonto(layers);
+            const pior = piorClasseEntreCamadas(layers);
+            const tal = layers[0]?.talhao_nome || layers[0]?.talhao_id || '—';
+            const resumoCamadas =
+              layers.length <= 3
+                ? layers.map((l) => l.profundidade ?? '—').join(' · ')
+                : `${layers.length} profundidades`;
+            const thumbs = imagensDistintasDoPonto(layers);
+            return (
+              <tr
+                key={g.key}
+                style={{ borderTop: `1px solid ${theme.border}`, cursor: 'pointer' }}
+                onClick={() => onOpen(g)}
+              >
+                <td style={{ padding: 10, fontWeight: 600 }}>{numLabel}</td>
+                <td style={{ padding: 10, fontSize: 12, color: theme.inkMuted }}>{resumoCamadas}</td>
+                <td style={{ padding: 10 }}>{icM != null ? icM.toFixed(2) : '—'}</td>
+                <td style={{ padding: 10 }}>{pior}</td>
+                <td style={{ padding: 10 }}>{tal}</td>
+                {tabelaTemFoto ? (
+                  <td style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
+                    {thumbs.length > 0 ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={thumbs[0]}
+                          alt=""
+                          style={{
+                            width: 44,
+                            height: 44,
+                            objectFit: 'cover',
+                            borderRadius: 4,
+                            border: `1px solid ${theme.border}`,
+                          }}
+                        />
+                        {thumbs.length > 1 ? (
+                          <span style={{ fontSize: 10, color: theme.inkMuted }}>+{thumbs.length - 1}</span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span style={{ color: theme.inkMuted }}>—</span>
+                    )}
+                  </td>
+                ) : null}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function RelatorioAmostragemSoloContent({ payload, shareToken }: Props) {
   const p = payload as unknown as AmostragemSoloPayload;
   const meta = (p.meta ?? {}) as Record<string, unknown>;
   const observacoes = useMemo(() => (Array.isArray(p.observacoes) ? p.observacoes : []) as AmostragemObservacao[], [p.observacoes]);
-  const fc = useMemo(() => getFeatureCollection(p), [p]);
-
   const isolinesFc = useMemo((): FeatureCollection | null => {
     const prem = p.premium as Record<string, unknown> | undefined;
     const gj = prem?.isolines_geojson as FeatureCollection | undefined;
@@ -116,7 +256,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
   const [showHeat, setShowHeat] = useState(false);
   const [showIsolines, setShowIsolines] = useState(true);
   const [showTalhaoLabels, setShowTalhaoLabels] = useState(true);
-  const [selected, setSelected] = useState<AmostragemObservacao | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<FieldPointGroup | null>(null);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<import('leaflet').Map | null>(null);
@@ -132,17 +272,6 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
     if (!selectedTalhao) return observacoes;
     return observacoes.filter((o) => (o.talhao_id ?? '') === selectedTalhao);
   }, [observacoes, selectedTalhao]);
-
-  const filteredFc: FeatureCollection = useMemo(() => {
-    const ids = new Set(filteredObs.map((o) => o.id).filter(Boolean));
-    return {
-      type: 'FeatureCollection',
-      features: fc.features.filter((f) => {
-        const id = (f.properties as Record<string, unknown>)?.id;
-        return ids.has(String(id));
-      }),
-    };
-  }, [fc.features, filteredObs]);
 
   const talhoesOptions = useMemo(() => {
     const t = (Array.isArray(p.talhoes) ? p.talhoes : []) as Array<{ id?: string; nome?: string }>;
@@ -233,11 +362,40 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
   const diagnosticoText = useMemo(() => buildCompactacaoDiagnostico(analyticsObs), [analyticsObs]);
   const rankingTalhoes = useMemo(() => buildTalhaoRanking(observacoes), [observacoes]);
 
-  const obsComFoto = useMemo(
-    () => filteredObs.filter((o) => o.imagem_url && String(o.imagem_url).trim()),
+  const gruposCampoFiltrados = useMemo(
+    () => groupObservationsByFieldPoint(filteredObs),
     [filteredObs],
   );
-  const tabelaTemFoto = useMemo(() => filteredObs.some((o) => o.imagem_url), [filteredObs]);
+
+  const gruposComFoto = useMemo(
+    () => gruposCampoFiltrados.filter((g) => imagensDistintasDoPonto(g.layers).length > 0),
+    [gruposCampoFiltrados],
+  );
+  const tabelaTemFoto = useMemo(
+    () => gruposCampoFiltrados.some((g) => imagensDistintasDoPonto(g.layers).length > 0),
+    [gruposCampoFiltrados],
+  );
+
+  const gruposPorTalhao = useMemo(() => {
+    const m = new Map<string, FieldPointGroup[]>();
+    for (const g of gruposCampoFiltrados) {
+      const tid = String(g.layers[0]?.talhao_id ?? '');
+      const arr = m.get(tid);
+      if (arr) arr.push(g);
+      else m.set(tid, [g]);
+    }
+    return m;
+  }, [gruposCampoFiltrados]);
+
+  const blocosTalhaoParaTabela = useMemo(() => {
+    const entries = [...gruposPorTalhao.entries()];
+    entries.sort((a, b) => {
+      const nomeA = String(a[1][0]?.layers[0]?.talhao_nome ?? a[0] ?? '');
+      const nomeB = String(b[1][0]?.layers[0]?.talhao_nome ?? b[0] ?? '');
+      return nomeA.localeCompare(nomeB, 'pt-BR');
+    });
+    return entries;
+  }, [gruposPorTalhao]);
 
   const comparacaoPlanejadoLabel = (() => {
     switch (samplingQ.comparacaoPlanejado) {
@@ -464,56 +622,65 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
           }
         }
       }
-      for (const f of filteredFc.features) {
-        if (f.geometry?.type !== 'Point') continue;
-        const coords = (f.geometry as Point).coordinates;
-        const lng = coords[0];
-        const lat = coords[1];
-        const pr = (f.properties ?? {}) as Record<string, unknown>;
-        const num = Number(pr.numero) || 0;
-        const cls = String(pr.classificacao ?? '');
+      for (const g of gruposCampoFiltrados) {
+        const crd = coordsRepresentativas(g.layers);
+        if (!crd) continue;
+        const { lat, lng } = crd;
+        const numLabel = rotuloNumeroPonto(g.layers);
+        const cls = piorClasseEntreCamadas(g.layers);
         const color = colorForClass(cls);
-        const depthColor = colorForDepth(String(pr.profundidade ?? ''));
+        const multiDepth = g.layers.length > 1;
+        const depthColor = multiDepth
+          ? '#64748b'
+          : colorForDepth(String(g.layers[0]?.profundidade ?? ''));
+        const displayOnPin = numLabel.length <= 3 ? numLabel : '·';
         const icon = L.divIcon({
           className: 'fs-soil-marker',
-          html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid ${depthColor};box-shadow:0 1px 4px rgba(0,0,0,.35);">${num}</div>`,
+          html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid ${depthColor};box-shadow:0 1px 4px rgba(0,0,0,.35);">${displayOnPin}</div>`,
           iconSize: [22, 22],
           iconAnchor: [11, 11],
         });
         const m = L.marker([lat, lng], { icon });
-        const profStr = String(pr.profundidade ?? '—');
-        const icStr =
-          pr.compactacao != null && Number.isFinite(Number(pr.compactacao))
-            ? `${Number(pr.compactacao).toFixed(2)} MPa`
-            : '—';
-        const talhaoStr = String(pr.talhao_nome ?? pr.talhao_id ?? '—');
+        const talhaoStr = String(g.layers[0]?.talhao_nome ?? g.layers[0]?.talhao_id ?? '—');
+        const icMed = icMedioDoPonto(g.layers);
         const tipHtml = [
-          `<strong>Ponto ${num}</strong>`,
-          `IC: ${escapeTooltipText(icStr)} (${escapeTooltipText(cls || '—')})`,
-          `Prof: ${escapeTooltipText(profStr)}`,
+          `<strong>Ponto ${escapeTooltipText(numLabel)}</strong>`,
+          `${g.layers.length} camada(s)`,
+          icMed != null ? `IC médio: ${escapeTooltipText(icMed.toFixed(2))} MPa` : '',
+          `Classe (pior): ${escapeTooltipText(cls)}`,
           `Talhão: ${escapeTooltipText(talhaoStr)}`,
-        ].join('<br/>');
+        ]
+          .filter(Boolean)
+          .join('<br/>');
         m.bindTooltip(tipHtml, { direction: 'top', opacity: 0.95 });
+        const popupRows = g.layers
+          .map((layer) => {
+            const prof = escapeTooltipText(String(layer.profundidade ?? '—'));
+            const icStr =
+              layer.compactacao != null && Number.isFinite(Number(layer.compactacao))
+                ? `${Number(layer.compactacao).toFixed(2)} MPa`
+                : '—';
+            const cl = escapeTooltipText(String(layer.classificacao ?? '—'));
+            return `<div style="margin:2px 0;padding:4px 0;border-bottom:1px solid #e7e5e4;font-size:12px;line-height:1.35"><strong>${prof}</strong><br/>IC: ${icStr} · ${cl}</div>`;
+          })
+          .join('');
+        const first = g.layers[0];
+        const coordLine =
+          first?.lat != null && first?.lng != null
+            ? `Coord.: ${Number(first.lat).toFixed(6)}, ${Number(first.lng).toFixed(6)}<br/>`
+            : '';
         const popupHtml = [
-          `<div style="min-width:190px">`,
-          `<strong>Ponto ${num}</strong><br/>`,
+          `<div style="min-width:200px;font-size:12px">`,
+          `<strong>Ponto ${escapeTooltipText(numLabel)}</strong><br/>`,
+          coordLine,
           `Talhão: ${escapeTooltipText(talhaoStr)}<br/>`,
-          `Profundidade: ${escapeTooltipText(profStr)}<br/>`,
-          `IC: ${escapeTooltipText(icStr)}<br/>`,
-          `Classe: ${escapeTooltipText(cls || '—')}<br/>`,
-          pr.sample_code ? `Código: ${escapeTooltipText(String(pr.sample_code))}<br/>` : '',
-          pr.point_name ? `Nome: ${escapeTooltipText(String(pr.point_name))}<br/>` : '',
-          Number.isFinite(Number(pr.lat)) && Number.isFinite(Number(pr.lng))
-            ? `Coord.: ${Number(pr.lat).toFixed(6)}, ${Number(pr.lng).toFixed(6)}`
-            : '',
+          icMed != null ? `IC médio (ponto): ${escapeTooltipText(icMed.toFixed(2))} MPa<br/>` : '',
+          `<div style="margin-top:6px;font-weight:600">Camadas</div>`,
+          popupRows,
           `</div>`,
         ].join('');
         m.bindPopup(popupHtml);
-        m.on('click', () => {
-          const id = String(pr.id ?? '');
-          const hit = observacoes.find((o) => String(o.id) === id);
-          setSelected(hit ?? null);
-        });
+        m.on('click', () => setSelectedGroup(g));
         cluster.addLayer(m);
         bounds.push([lat, lng]);
       }
@@ -543,7 +710,16 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         }
       }
     })();
-  }, [filteredFc, filteredObs, observacoes, showHeat, showIsolines, showTalhaoLabels, isolinesFc, simplifiedTalhoesFc, simplifiedRotaFc]);
+  }, [
+    gruposCampoFiltrados,
+    filteredObs,
+    showHeat,
+    showIsolines,
+    showTalhaoLabels,
+    isolinesFc,
+    simplifiedTalhoesFc,
+    simplifiedRotaFc,
+  ]);
 
   const shpUrl = `/api/amostragem/export/shp?token=${encodeURIComponent(shareToken)}`;
 
@@ -1016,40 +1192,53 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         <div
           style={{
             position: 'absolute',
-            bottom: 14,
-            left: 14,
-            background: 'rgba(255,252,247,0.97)',
-            padding: '11px 13px',
-            borderRadius: 4,
-            boxShadow: '0 4px 20px rgba(28,25,23,0.12)',
-            fontSize: 12,
+            bottom: 10,
+            left: 10,
+            background: 'rgba(255,252,247,0.88)',
+            padding: '6px 9px',
+            borderRadius: 3,
+            boxShadow: '0 2px 10px rgba(28,25,23,0.07)',
+            fontSize: 10,
             zIndex: 500,
-            lineHeight: 1.55,
+            lineHeight: 1.35,
             border: `1px solid ${ag.border}`,
             fontFamily: ag.fontBody,
-            maxWidth: 280,
+            maxWidth: 210,
+            color: ag.inkMuted,
           }}
         >
-          <strong style={{ display: 'block', marginBottom: 8, fontFamily: ag.fontTitle, color: ag.forest }}>
-            Legenda — índice de cone (IC)
-          </strong>
+          <div style={{ fontWeight: 700, fontSize: 9, letterSpacing: '0.04em', color: ag.forest, marginBottom: 4, opacity: 0.9 }}>
+            IC (índice de cone)
+          </div>
           {IC_LEGEND_ROWS.map((row) => (
-            <div key={row.classificacao}>
-              <span style={{ color: row.color }}>●</span> {row.descricao} ({row.faixaMpa})
+            <div key={row.classificacao} style={{ fontSize: 10 }}>
+              <span style={{ color: row.color }}>●</span>{' '}
+              <span style={{ color: ag.ink }}>{row.descricao}</span>{' '}
+              <span style={{ opacity: 0.85 }}>{row.faixaMpa}</span>
             </div>
           ))}
-          <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${ag.border}` }}>
-            <strong style={{ display: 'block', marginBottom: 4 }}>Borda do ponto por profundidade</strong>
-            <div><span style={{ color: '#38bdf8' }}>●</span> 0-10 cm</div>
-            <div><span style={{ color: '#22c55e' }}>●</span> 10-20 cm</div>
-            <div><span style={{ color: '#f59e0b' }}>●</span> 20-30 cm</div>
-            <div><span style={{ color: '#f97316' }}>●</span> 30-40 cm</div>
-            <div><span style={{ color: '#a855f7' }}>●</span> 40-50 cm</div>
-          </div>
-          <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${ag.border}` }}>
-            <div><span style={{ color: '#60a5fa' }}>━</span> Rota de coleta</div>
-            <div><span style={{ color: '#f8fafc' }}>▭</span> Limite de talhão (KML/GeoJSON)</div>
-          </div>
+          <details style={{ marginTop: 6, fontSize: 9 }}>
+            <summary style={{ cursor: 'pointer', userSelect: 'none', fontWeight: 600, color: ag.ink }}>
+              Mapa · profundidades e vetores
+            </summary>
+            <div style={{ marginTop: 6, paddingTop: 6, borderTop: `1px solid ${ag.border}` }}>
+              <div style={{ marginBottom: 4, fontWeight: 600, color: ag.ink }}>Borda = camada (1 ponto)</div>
+              <div><span style={{ color: '#38bdf8' }}>●</span> 0–10</div>
+              <div><span style={{ color: '#22c55e' }}>●</span> 10–20</div>
+              <div><span style={{ color: '#f59e0b' }}>●</span> 20–30</div>
+              <div><span style={{ color: '#f97316' }}>●</span> 30–40</div>
+              <div><span style={{ color: '#a855f7' }}>●</span> 40–50 cm</div>
+              <div style={{ marginTop: 6, fontSize: 9 }}>
+                <span style={{ color: '#64748b' }}>●</span> várias camadas no mesmo GPS
+              </div>
+              <div style={{ marginTop: 6 }}>
+                <span style={{ color: '#60a5fa' }}>━</span> Rota
+              </div>
+              <div>
+                <span style={{ color: '#f8fafc' }}>▭</span> Talhão
+              </div>
+            </div>
+          </details>
         </div>
       </div>
 
@@ -1104,68 +1293,78 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       ) : null}
 
       <section style={{ padding: '0 22px 18px' }}>
-        <h2 style={{ fontFamily: ag.fontTitle, fontSize: '1.15rem', color: ag.forest, marginBottom: 10 }}>
-          Registro de pontos ({filteredObs.length})
+        <h2 style={{ fontFamily: ag.fontTitle, fontSize: '1.15rem', color: ag.forest, marginBottom: 6 }}>
+          Registro de pontos ({gruposCampoFiltrados.length})
         </h2>
-        <div
-          style={{
-            overflowX: 'auto',
-            borderRadius: 4,
-            border: `1px solid ${ag.border}`,
-            background: ag.card,
-          }}
-        >
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: ag.paper2, color: ag.ink, fontWeight: 600 }}>
-                <th style={{ textAlign: 'left', padding: 10 }}>Ponto</th>
-                <th style={{ textAlign: 'left', padding: 10 }}>Profundidade (camada)</th>
-                <th style={{ textAlign: 'left', padding: 10 }}>IC médio (MPa)</th>
-                <th style={{ textAlign: 'left', padding: 10 }}>Classe de restrição</th>
-                <th style={{ textAlign: 'left', padding: 10 }}>Talhão</th>
-                {tabelaTemFoto ? (
-                  <th style={{ textAlign: 'left', padding: 10 }}>Foto</th>
-                ) : null}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredObs.map((o) => (
-                <tr
-                  key={String(o.id)}
-                  style={{ borderTop: `1px solid ${ag.border}`, cursor: 'pointer' }}
-                  onClick={() => setSelected(o)}
+        <p style={{ margin: '0 0 12px', fontSize: 12, color: ag.inkMuted, lineHeight: 1.5 }}>
+          Uma linha por ponto de GPS; profundidades e detalhes abrem ao clicar (pop-up). No recorte há{' '}
+          <strong>{filteredObs.length}</strong> registro(s) de camada.
+          {talhoesOptions.length > 1 && !selectedTalhao ? (
+            <>
+              {' '}
+              Talhões agrupados abaixo — expanda cada bloco para ver os pontos.
+            </>
+            ) : null}
+        </p>
+        {talhoesOptions.length > 1 && !selectedTalhao ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {blocosTalhaoParaTabela.map(([tid, gruposTal]) => {
+              const nomeTal =
+                gruposTal[0]?.layers[0]?.talhao_nome ??
+                talhoesOptions.find((t) => t.id === tid)?.nome ??
+                (tid ? tid : 'Sem talhão');
+              return (
+                <details
+                  key={tid || '_sem_talhao'}
+                  style={{
+                    borderRadius: 4,
+                    border: `1px solid ${ag.border}`,
+                    background: ag.card,
+                    overflow: 'hidden',
+                  }}
                 >
-                  <td style={{ padding: 10 }}>{o.numero}</td>
-                  <td style={{ padding: 10 }}>{o.profundidade ?? '—'}</td>
-                  <td style={{ padding: 10 }}>{o.compactacao != null ? o.compactacao.toFixed(2) : '—'}</td>
-                  <td style={{ padding: 10 }}>{o.classificacao}</td>
-                  <td style={{ padding: 10 }}>{o.talhao_nome || o.talhao_id || '—'}</td>
-                  {tabelaTemFoto ? (
-                    <td style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
-                      {o.imagem_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={o.imagem_url}
-                          alt=""
-                          style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4, border: `1px solid ${ag.border}` }}
-                        />
-                      ) : (
-                        <span style={{ color: ag.inkMuted }}>—</span>
-                      )}
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  <summary
+                    style={{
+                      padding: '12px 14px',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      fontSize: 14,
+                      color: ag.forest,
+                      listStyle: 'none',
+                    }}
+                  >
+                    {nomeTal} — {gruposTal.length} ponto(s)
+                  </summary>
+                  <div style={{ padding: '0 8px 12px' }}>
+                    <TabelaGruposPontos
+                      grupos={gruposTal}
+                      tabelaTemFoto={tabelaTemFoto}
+                      ag={ag}
+                      onOpen={(g) => setSelectedGroup(g)}
+                    />
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+        ) : (
+          <TabelaGruposPontos
+            grupos={gruposCampoFiltrados}
+            tabelaTemFoto={tabelaTemFoto}
+            ag={ag}
+            onOpen={(g) => setSelectedGroup(g)}
+          />
+        )}
       </section>
 
-      {obsComFoto.length > 0 ? (
+      {gruposComFoto.length > 0 ? (
         <section style={{ padding: '0 22px 22px' }}>
           <h2 style={{ fontFamily: ag.fontTitle, fontSize: '1.15rem', color: ag.forest, marginBottom: 10 }}>
-            Registros fotográficos ({obsComFoto.length})
+            Registros fotográficos ({gruposComFoto.length} ponto(s))
           </h2>
+          <p style={{ margin: '0 0 12px', fontSize: 12, color: ag.inkMuted }}>
+            Uma miniatura por ponto de campo; fotos repetidas entre camadas aparecem uma vez até abrir o detalhe.
+          </p>
           <div
             style={{
               display: 'grid',
@@ -1173,42 +1372,52 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               gap: 14,
             }}
           >
-            {obsComFoto.map((o) => (
-              <button
-                key={String(o.id)}
-                type="button"
-                onClick={() => setSelected(o)}
-                style={{
-                  textAlign: 'left',
-                  padding: 0,
-                  border: `1px solid ${ag.border}`,
-                  borderRadius: 4,
-                  overflow: 'hidden',
-                  background: ag.card,
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 10px rgba(28,25,23,0.06)',
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={o.imagem_url!}
-                  alt={`Ponto ${o.numero ?? ''}`}
-                  style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }}
-                />
-                <div style={{ padding: 10, fontSize: 12, lineHeight: 1.45 }}>
-                  <strong>Ponto {o.numero}</strong>
-                  {o.profundidade ? <div>{o.profundidade}</div> : null}
-                  {o.compactacao != null ? (
-                    <div style={{ color: ag.forest, fontWeight: 600 }}>
-                      IC {o.compactacao.toFixed(2)} MPa · {o.classificacao}
+            {gruposComFoto.map((g) => {
+              const layers = g.layers;
+              const thumbs = imagensDistintasDoPonto(layers);
+              const primary = thumbs[0]!;
+              const numLabel = rotuloNumeroPonto(layers);
+              const icM = icMedioDoPonto(layers);
+              return (
+                <button
+                  key={g.key}
+                  type="button"
+                  onClick={() => setSelectedGroup(g)}
+                  style={{
+                    textAlign: 'left',
+                    padding: 0,
+                    border: `1px solid ${ag.border}`,
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                    background: ag.card,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(28,25,23,0.06)',
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={primary}
+                    alt={`Ponto ${numLabel}`}
+                    style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }}
+                  />
+                  <div style={{ padding: 10, fontSize: 12, lineHeight: 1.45 }}>
+                    <strong>Ponto {numLabel}</strong>
+                    <div style={{ color: ag.inkMuted }}>
+                      {layers.length} camada(s)
+                      {thumbs.length > 1 ? ` · ${thumbs.length} foto(s) distinta(s)` : ''}
                     </div>
-                  ) : null}
-                  {(o.talhao_nome || o.talhao_id) && (
-                    <div style={{ color: ag.inkMuted }}>{o.talhao_nome || o.talhao_id}</div>
-                  )}
-                </div>
-              </button>
-            ))}
+                    {icM != null ? (
+                      <div style={{ color: ag.forest, fontWeight: 600 }}>
+                        IC médio {icM.toFixed(2)} MPa · {piorClasseEntreCamadas(layers)}
+                      </div>
+                    ) : null}
+                    {(layers[0]?.talhao_nome || layers[0]?.talhao_id) && (
+                      <div style={{ color: ag.inkMuted }}>{layers[0]?.talhao_nome || layers[0]?.talhao_id}</div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </section>
       ) : null}
@@ -1267,9 +1476,10 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         <p style={{ margin: '10px 0 0', fontSize: 13, lineHeight: 1.55, color: ag.ink }}>{diagnosticoText}</p>
       </section>
 
-      {selected && (
+      {selectedGroup && (
         <div
           role="dialog"
+          aria-modal="true"
           style={{
             position: 'fixed',
             inset: 0,
@@ -1280,12 +1490,12 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
             justifyContent: 'center',
             padding: 16,
           }}
-          onClick={() => setSelected(null)}
+          onClick={() => setSelectedGroup(null)}
         >
           <div
             style={{
               background: ag.card,
-              maxWidth: 440,
+              maxWidth: 520,
               width: '100%',
               borderRadius: 4,
               padding: 22,
@@ -1296,107 +1506,169 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginTop: 0, fontFamily: ag.fontTitle, color: ag.forest }}>Ponto de amostragem #{selected.numero}</h3>
-            {selected.point_name ? (
-              <p style={{ fontSize: 14, marginBottom: 4 }}>
-                <strong>Identificação no campo:</strong> {selected.point_name}
-              </p>
-            ) : null}
-            {(selected.talhao_nome || selected.talhao_id) && (
-              <p style={{ fontSize: 14 }}>
-                <strong>Talhão:</strong> {selected.talhao_nome || selected.talhao_id}
-              </p>
-            )}
-            <p style={{ fontSize: 13, color: ag.inkMuted }}>
-              <strong>Coordenadas (WGS84):</strong> {selected.lat?.toFixed(6)}, {selected.lng?.toFixed(6)}
-            </p>
-            {selected.altitude_m != null ? (
-              <p style={{ fontSize: 13, color: ag.inkMuted }}>
-                <strong>Cota ortométrica aprox.:</strong> {selected.altitude_m.toFixed(1)} m
-                {selected.gps_accuracy_m != null ? ` · precisão horizontal ±${selected.gps_accuracy_m.toFixed(1)} m` : ''}
-                {selected.gps_provider ? ` · fonte: ${selected.gps_provider}` : ''}
-              </p>
-            ) : null}
-            <p>
-              <strong>Profundidade da amostra / camada:</strong> {selected.profundidade ?? '—'}
-            </p>
-            {selected.sample_code ? (
-              <p>
-                <strong>Código da amostra:</strong> {selected.sample_code}
-              </p>
-            ) : null}
-            {selected.moisture_percent != null ? (
-              <p>
-                <strong>Teor de umidade (gravimétrico, %):</strong> {selected.moisture_percent.toFixed(1)}
-              </p>
-            ) : null}
-            {selected.bulk_density != null ? (
-              <p>
-                <strong>Densidade aparente:</strong> {selected.bulk_density.toFixed(3)} g/cm³
-              </p>
-            ) : null}
-            <p>
-              <strong>Índice de cone (IC) médio na camada:</strong>{' '}
-              {selected.compactacao != null ? `${selected.compactacao.toFixed(2)} MPa` : '—'}{' '}
-              <span style={{ color: ag.inkMuted }}>({selected.classificacao})</span>
-            </p>
-            {selected.quantidade != null ? (
-              <p>
-                <strong>Volume / massa coletada (registro de campo):</strong> {selected.quantidade}
-              </p>
-            ) : null}
-            {(selected.tipo_penetrometro ||
-              selected.peso_martelo_kg != null ||
-              selected.altura_queda_cm != null ||
-              selected.numero_impactos != null ||
-              selected.profundidade_atingida_cm != null) && (
-              <div style={{ fontSize: 13, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${ag.border}` }}>
-                <strong>Penetrômetro — parâmetros de ensaio</strong>
-                {selected.tipo_penetrometro ? (
-                  <div>Equipamento / modo: {selected.tipo_penetrometro}</div>
-                ) : null}
-                {selected.peso_martelo_kg != null ? (
-                  <div>Massa do martelo: {selected.peso_martelo_kg} kg</div>
-                ) : null}
-                {selected.altura_queda_cm != null ? (
-                  <div>Altura de queda: {selected.altura_queda_cm} cm</div>
-                ) : null}
-                {selected.numero_impactos != null ? (
-                  <div>Número de impactos: {selected.numero_impactos}</div>
-                ) : null}
-                {selected.profundidade_atingida_cm != null ? (
-                  <div>Profundidade máxima atingida: {selected.profundidade_atingida_cm} cm</div>
-                ) : null}
-              </div>
-            )}
-            {selected.leituras && selected.leituras.length > 0 ? (
-              <div style={{ marginTop: 12, fontSize: 13 }}>
-                <strong>Leituras brutas e IC por golpe ({selected.leituras.length})</strong>
-                <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
-                  {selected.leituras.map((L, i) => (
-                    <li key={i}>
-                      {L.raw_value != null ? `${L.raw_value} ${L.unit ?? ''}` : '—'}
-                      {L.ci_mpa != null && Number.isFinite(L.ci_mpa) ? ` → IC ${Number(L.ci_mpa).toFixed(2)} MPa` : ''}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-            {selected.obs ? (
-              <p>
-                <strong>Observações de campo:</strong> {selected.obs}
-              </p>
-            ) : null}
-            {selected.imagem_url ? (
-              <img
-                src={selected.imagem_url}
-                alt="Registro fotográfico da amostra"
-                style={{ width: '100%', borderRadius: 4, marginTop: 10, border: `1px solid ${ag.border}` }}
-              />
-            ) : null}
+            {(() => {
+              const layers = selectedGroup.layers;
+              const head = layers[0];
+              const numLabel = rotuloNumeroPonto(layers);
+              const icM = icMedioDoPonto(layers);
+              return (
+                <>
+                  <h3 style={{ marginTop: 0, fontFamily: ag.fontTitle, color: ag.forest }}>
+                    Ponto de amostragem {numLabel}
+                  </h3>
+                  {head?.point_name ? (
+                    <p style={{ fontSize: 14, marginBottom: 4 }}>
+                      <strong>Identificação no campo:</strong> {head.point_name}
+                    </p>
+                  ) : null}
+                  {(head?.talhao_nome || head?.talhao_id) && (
+                    <p style={{ fontSize: 14 }}>
+                      <strong>Talhão:</strong> {head?.talhao_nome || head?.talhao_id}
+                    </p>
+                  )}
+                  {head?.lat != null && head?.lng != null ? (
+                    <p style={{ fontSize: 13, color: ag.inkMuted }}>
+                      <strong>Coordenadas (WGS84):</strong> {head.lat.toFixed(6)}, {head.lng.toFixed(6)}
+                    </p>
+                  ) : null}
+                  {head?.altitude_m != null ? (
+                    <p style={{ fontSize: 13, color: ag.inkMuted }}>
+                      <strong>Cota ortométrica aprox.:</strong> {head.altitude_m.toFixed(1)} m
+                      {head.gps_accuracy_m != null ? ` · precisão horizontal ±${head.gps_accuracy_m.toFixed(1)} m` : ''}
+                      {head.gps_provider ? ` · fonte: ${head.gps_provider}` : ''}
+                    </p>
+                  ) : null}
+                  {icM != null ? (
+                    <p style={{ fontSize: 14, fontWeight: 600, color: ag.forest }}>
+                      IC médio no ponto: {icM.toFixed(2)} MPa ({piorClasseEntreCamadas(layers)})
+                    </p>
+                  ) : null}
+                  <p style={{ fontSize: 12, color: ag.inkMuted, marginBottom: 12 }}>
+                    {layers.length} camada(s) — expanda cada bloco para ver dados, leituras e foto por profundidade.
+                  </p>
+                </>
+              );
+            })()}
+            {(() => {
+              const indicePrimeiraPorUrl = new Map<string, number>();
+              selectedGroup.layers.forEach((layer, idx) => {
+                const u = layer.imagem_url && String(layer.imagem_url).trim();
+                if (u && !indicePrimeiraPorUrl.has(u)) indicePrimeiraPorUrl.set(u, idx);
+              });
+              return selectedGroup.layers.map((selected, i) => (
+              <details
+                key={String(selected.id ?? `${selectedGroup.key}-${i}`)}
+                style={{
+                  marginTop: 10,
+                  paddingTop: 10,
+                  borderTop: `1px solid ${ag.border}`,
+                }}
+              >
+                <summary
+                  style={{
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: 14,
+                    color: ag.forest,
+                  }}
+                >
+                  {selected.profundidade ?? 'Camada'}{' '}
+                  <span style={{ fontWeight: 500, color: ag.inkMuted }}>
+                    · IC{' '}
+                    {selected.compactacao != null ? `${selected.compactacao.toFixed(2)} MPa` : '—'} ·{' '}
+                    {selected.classificacao}
+                  </span>
+                </summary>
+                <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.55 }}>
+                  {selected.sample_code ? (
+                    <p style={{ margin: '6px 0' }}>
+                      <strong>Código da amostra:</strong> {selected.sample_code}
+                    </p>
+                  ) : null}
+                  {selected.moisture_percent != null ? (
+                    <p style={{ margin: '6px 0' }}>
+                      <strong>Teor de umidade (gravimétrico, %):</strong> {selected.moisture_percent.toFixed(1)}
+                    </p>
+                  ) : null}
+                  {selected.bulk_density != null ? (
+                    <p style={{ margin: '6px 0' }}>
+                      <strong>Densidade aparente:</strong> {selected.bulk_density.toFixed(3)} g/cm³
+                    </p>
+                  ) : null}
+                  {selected.quantidade != null ? (
+                    <p style={{ margin: '6px 0' }}>
+                      <strong>Volume / massa coletada (registro de campo):</strong> {selected.quantidade}
+                    </p>
+                  ) : null}
+                  {(selected.tipo_penetrometro ||
+                    selected.peso_martelo_kg != null ||
+                    selected.altura_queda_cm != null ||
+                    selected.numero_impactos != null ||
+                    selected.profundidade_atingida_cm != null) && (
+                    <div style={{ fontSize: 13, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${ag.border}` }}>
+                      <strong>Penetrômetro — parâmetros de ensaio</strong>
+                      {selected.tipo_penetrometro ? (
+                        <div>Equipamento / modo: {selected.tipo_penetrometro}</div>
+                      ) : null}
+                      {selected.peso_martelo_kg != null ? (
+                        <div>Massa do martelo: {selected.peso_martelo_kg} kg</div>
+                      ) : null}
+                      {selected.altura_queda_cm != null ? (
+                        <div>Altura de queda: {selected.altura_queda_cm} cm</div>
+                      ) : null}
+                      {selected.numero_impactos != null ? (
+                        <div>Número de impactos: {selected.numero_impactos}</div>
+                      ) : null}
+                      {selected.profundidade_atingida_cm != null ? (
+                        <div>Profundidade máxima atingida: {selected.profundidade_atingida_cm} cm</div>
+                      ) : null}
+                    </div>
+                  )}
+                  {selected.leituras && selected.leituras.length > 0 ? (
+                    <div style={{ marginTop: 12, fontSize: 13 }}>
+                      <strong>Leituras brutas e IC por golpe ({selected.leituras.length})</strong>
+                      <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                        {selected.leituras.map((L, j) => (
+                          <li key={j}>
+                            {L.raw_value != null ? `${L.raw_value} ${L.unit ?? ''}` : '—'}
+                            {L.ci_mpa != null && Number.isFinite(L.ci_mpa) ? ` → IC ${Number(L.ci_mpa).toFixed(2)} MPa` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {selected.obs ? (
+                    <p style={{ margin: '10px 0 0' }}>
+                      <strong>Observações de campo:</strong> {selected.obs}
+                    </p>
+                  ) : null}
+                  {selected.imagem_url ? (() => {
+                    const u = String(selected.imagem_url).trim();
+                    const primeiroIdx = indicePrimeiraPorUrl.get(u);
+                    if (primeiroIdx === i) {
+                      return (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={selected.imagem_url}
+                          alt={`Registro fotográfico — ${selected.profundidade ?? 'camada'}`}
+                          style={{ width: '100%', borderRadius: 4, marginTop: 10, border: `1px solid ${ag.border}` }}
+                        />
+                      );
+                    }
+                    const ref = primeiroIdx != null ? selectedGroup.layers[primeiroIdx] : null;
+                    return (
+                      <p style={{ marginTop: 10, fontSize: 12, color: ag.inkMuted, fontStyle: 'italic' }}>
+                        Mesma foto que em <strong>{ref?.profundidade ?? 'outra camada'}</strong> (URL repetida no envio).
+                      </p>
+                    );
+                  })() : null}
+                </div>
+              </details>
+            ));
+            })()}
             <button
               type="button"
-              onClick={() => setSelected(null)}
+              onClick={() => setSelectedGroup(null)}
               style={{
                 marginTop: 18,
                 padding: '10px 18px',

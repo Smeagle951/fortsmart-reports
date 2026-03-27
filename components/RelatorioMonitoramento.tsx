@@ -72,6 +72,23 @@ function CartaoDefensivoWeb({ nomeProduto, info }: { nomeProduto: string; info: 
   );
 }
 
+function motorV2TemConteudoVisivel(m: Record<string, unknown>): boolean {
+  const nut = Array.isArray(m.nutricaoBase) ? m.nutricaoBase.length : 0;
+  const adj = Array.isArray(m.ajusteNutricao) ? m.ajusteNutricao.length : 0;
+  const extras = Array.isArray(m.recomendacaoExtra) ? m.recomendacaoExtra.length : 0;
+  const base = m.recomendacaoFinalBase != null ? String(m.recomendacaoFinalBase) : '';
+  const obj = m.recomendacaoFinalObjetivo != null ? String(m.recomendacaoFinalObjetivo) : '';
+  const exp = m.recomendacaoFinalExplicacao != null ? String(m.recomendacaoFinalExplicacao) : '';
+  return (
+    nut > 0 ||
+    adj > 0 ||
+    extras > 0 ||
+    base.length > 0 ||
+    obj.length > 0 ||
+    exp.length > 0
+  );
+}
+
 function BlocoMotorV2Web({ m }: { m: Record<string, unknown> }) {
   const nut = Array.isArray(m.nutricaoBase) ? (m.nutricaoBase as Record<string, string>[]) : [];
   const adj = Array.isArray(m.ajusteNutricao) ? (m.ajusteNutricao as Record<string, string>[]) : [];
@@ -83,14 +100,7 @@ function BlocoMotorV2Web({ m }: { m: Record<string, unknown> }) {
   const estNome = m.estagioNome != null ? String(m.estagioNome) : '';
   const fallback = Boolean(m.estagioFallback);
 
-  const tem =
-    nut.length > 0 ||
-    adj.length > 0 ||
-    extras.length > 0 ||
-    base.length > 0 ||
-    obj.length > 0 ||
-    exp.length > 0;
-  if (!tem) return null;
+  if (!motorV2TemConteudoVisivel(m)) return null;
 
   return (
     <div className="rounded-xl border-[1.5px] border-amber-300/90 bg-gradient-to-br from-amber-50/90 to-white p-4 shadow-sm">
@@ -170,11 +180,11 @@ function RecomendacaoIaFortsmartMonitoramento({ ia }: { ia: FortsmartIaMonitoram
   const quim = ia.manejoQuimico ?? [];
   const bio = ia.manejoBiologico ?? [];
   const cult = ia.manejoCultural ?? [];
-  const motor = ia.motorV2 && typeof ia.motorV2 === 'object' ? ia.motorV2 : null;
+  const motor = ia.motorV2 && typeof ia.motorV2 === 'object' ? (ia.motorV2 as Record<string, unknown>) : null;
 
   const temDoses = entradasDoses.length > 0;
   const temManejo = quim.length + bio.length + cult.length > 0;
-  const temMotor = motor != null;
+  const temMotor = motor != null && motorV2TemConteudoVisivel(motor);
 
   if (!temDoses && !temManejo && !temMotor) return null;
 
@@ -214,7 +224,7 @@ function RecomendacaoIaFortsmartMonitoramento({ ia }: { ia: FortsmartIaMonitoram
         </div>
       )}
 
-      {temMotor && <BlocoMotorV2Web m={motor} />}
+      {temMotor && motor && <BlocoMotorV2Web m={motor} />}
     </div>
   );
 }
