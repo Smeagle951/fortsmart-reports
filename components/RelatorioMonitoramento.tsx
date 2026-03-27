@@ -9,6 +9,216 @@ import GaleriaOcorrencias from './GaleriaOcorrencias';
 
 const MapaInterativo = dynamic(() => import('./MapaInterativo'), { ssr: false });
 
+/** Payload espelhado do app (monitoring_card_data_service + motor v2). */
+export type FortsmartIaMonitoramento = {
+  dosesDefensivos?: Record<string, Record<string, unknown>>;
+  manejoQuimico?: string[];
+  manejoBiologico?: string[];
+  manejoCultural?: string[];
+  motorV2?: Record<string, unknown> | null;
+};
+
+function ListaManejo({ titulo, itens, icon }: { titulo: string; itens: string[]; icon: React.ReactNode }) {
+  if (!itens?.length) return null;
+  return (
+    <div className="rounded-lg border border-teal-200/80 bg-white/90 p-3 shadow-sm">
+      <div className="flex items-center gap-2 mb-2">
+        {icon}
+        <span className="text-[12px] font-black uppercase tracking-wider text-teal-900">{titulo}</span>
+      </div>
+      <ul className="list-disc pl-4 space-y-1 text-[12px] text-slate-700 leading-relaxed">
+        {itens.map((t, j) => (
+          <li key={j}>{t}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function CartaoDefensivoWeb({ nomeProduto, info }: { nomeProduto: string; info: Record<string, unknown> }) {
+  const rotulos: [string, string][] = [
+    ['dose', 'Dose'],
+    ['volume_calda', 'Volume de calda'],
+    ['intervalo_seguranca', 'Intervalo de segurança'],
+    ['epoca_aplicacao', 'Época'],
+    ['condicoes_climaticas', 'Condições'],
+    ['equipamento', 'Equipamento'],
+    ['adjuvante', 'Adjuvante'],
+    ['observacoes', 'Observações'],
+    ['fonte_publica', 'Fonte'],
+  ];
+  const linhas: { label: string; valor: string }[] = [];
+  for (const [key, label] of rotulos) {
+    const v = info[key];
+    if (v != null && String(v).trim() !== '') linhas.push({ label, valor: String(v) });
+  }
+  const titulo = nomeProduto.replace(/_/g, ' ').toUpperCase();
+  return (
+    <div className="rounded-xl border-[1.5px] border-[#1B5E20]/35 bg-white p-3.5 shadow-sm">
+      <h5 className="text-[13px] font-black text-[#1B5E20] tracking-tight mb-2">{titulo}</h5>
+      {linhas.length === 0 ? (
+        <p className="text-xs text-slate-500">Sem detalhes estruturados no catálogo.</p>
+      ) : (
+        <dl className="space-y-1.5 text-[12px]">
+          {linhas.map(({ label, valor }) => (
+            <div key={label} className="grid grid-cols-1 sm:grid-cols-[minmax(0,8rem)_1fr] gap-x-2 gap-y-0.5">
+              <dt className="font-bold text-slate-500">{label}</dt>
+              <dd className="text-slate-800 leading-snug">{valor}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+function BlocoMotorV2Web({ m }: { m: Record<string, unknown> }) {
+  const nut = Array.isArray(m.nutricaoBase) ? (m.nutricaoBase as Record<string, string>[]) : [];
+  const adj = Array.isArray(m.ajusteNutricao) ? (m.ajusteNutricao as Record<string, string>[]) : [];
+  const extras = Array.isArray(m.recomendacaoExtra) ? (m.recomendacaoExtra as string[]) : [];
+  const base = m.recomendacaoFinalBase != null ? String(m.recomendacaoFinalBase) : '';
+  const obj = m.recomendacaoFinalObjetivo != null ? String(m.recomendacaoFinalObjetivo) : '';
+  const exp = m.recomendacaoFinalExplicacao != null ? String(m.recomendacaoFinalExplicacao) : '';
+  const est = m.estagioCodigoUsado != null ? String(m.estagioCodigoUsado) : '';
+  const estNome = m.estagioNome != null ? String(m.estagioNome) : '';
+  const fallback = Boolean(m.estagioFallback);
+
+  const tem =
+    nut.length > 0 ||
+    adj.length > 0 ||
+    extras.length > 0 ||
+    base.length > 0 ||
+    obj.length > 0 ||
+    exp.length > 0;
+  if (!tem) return null;
+
+  return (
+    <div className="rounded-xl border-[1.5px] border-amber-300/90 bg-gradient-to-br from-amber-50/90 to-white p-4 shadow-sm">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-400/50 bg-amber-100 text-amber-900 text-sm">🌾</span>
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-widest text-amber-950/90">Nutrição da cultura</p>
+          <p className="text-[11px] text-amber-900/80">Motor FortSmart v2</p>
+        </div>
+      </div>
+      {(est || estNome) && (
+        <p className="text-[11px] font-semibold text-amber-950/80 mb-2">
+          Estágio {est}
+          {estNome ? ` — ${estNome}` : ''}
+          {fallback ? ' · estágio estimado se fenologia ausente' : ''}
+        </p>
+      )}
+      {base && (
+        <div className="mb-3">
+          <p className="text-[13px] font-black text-amber-950">Base sugerida: {base}</p>
+          {obj && <p className="text-[12px] text-slate-700 mt-0.5">{obj}</p>}
+          {exp && <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">{exp}</p>}
+        </div>
+      )}
+      {nut.length > 0 && (
+        <div className="mb-3">
+          <p className="text-[11px] font-black uppercase tracking-wider text-amber-950 mb-1.5">Micronutrientes / apoio ao estágio</p>
+          <ul className="list-disc pl-4 space-y-1 text-[12px] text-slate-800">
+            {nut.map((row, i) => {
+              const el = row.elemento ?? '';
+              const dose = row.dose ?? '';
+              const fn = row.funcao ?? '';
+              const s = [el, dose && `— ${dose}`, fn && `(${fn})`].filter(Boolean).join(' ');
+              return <li key={i}>{s}</li>;
+            })}
+          </ul>
+        </div>
+      )}
+      {adj.length > 0 && (
+        <div className="mb-3">
+          <p className="text-[11px] font-black uppercase tracking-wider text-amber-950 mb-1">Ajuste contextual</p>
+          {m.regraEtiqueta != null && String(m.regraEtiqueta).length > 0 && (
+            <p className="text-[10px] text-amber-900/75 mb-1">
+              Regra: {String(m.regraEtiqueta)}
+              {m.severidadeChaveUsada != null ? ` · severidade ${String(m.severidadeChaveUsada)}` : ''}
+            </p>
+          )}
+          <ul className="list-disc pl-4 space-y-1 text-[12px] text-slate-800">
+            {adj.map((row, i) => (
+              <li key={i}>
+                {row.elemento}
+                {row.dose ? `: ${row.dose}` : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {extras.length > 0 && (
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-wider text-amber-950 mb-1">Orientações do motor</p>
+          <ul className="list-disc pl-4 space-y-1 text-[12px] text-slate-800">
+            {extras.map((t, i) => (
+              <li key={i}>{t}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecomendacaoIaFortsmartMonitoramento({ ia }: { ia: FortsmartIaMonitoramento | null | undefined }) {
+  if (!ia || typeof ia !== 'object') return null;
+  const dosesRaw = ia.dosesDefensivos;
+  const entradasDoses =
+    dosesRaw && typeof dosesRaw === 'object' ? Object.entries(dosesRaw) : ([] as [string, Record<string, unknown>][]);
+  const quim = ia.manejoQuimico ?? [];
+  const bio = ia.manejoBiologico ?? [];
+  const cult = ia.manejoCultural ?? [];
+  const motor = ia.motorV2 && typeof ia.motorV2 === 'object' ? ia.motorV2 : null;
+
+  const temDoses = entradasDoses.length > 0;
+  const temManejo = quim.length + bio.length + cult.length > 0;
+  const temMotor = motor != null;
+
+  if (!temDoses && !temManejo && !temMotor) return null;
+
+  return (
+    <div className="mt-4 border-t border-green-100 pt-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1B5E20] text-white text-xs shadow-sm">IA</span>
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-widest text-[#1B5E20]">Recomendação IA FortSmart</p>
+          <p className="text-[10px] text-slate-500">Prescrição química, manejo integrado e nutrição (mesmo padrão do app)</p>
+        </div>
+      </div>
+
+      {temDoses && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-black uppercase tracking-wider text-[#1B5E20]/90">Prescrição química (defensivos)</p>
+          <div className="grid gap-2 sm:grid-cols-1">
+            {entradasDoses.map(([nome, raw]) => (
+              <CartaoDefensivoWeb key={nome} nomeProduto={nome} info={raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {temManejo && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-black uppercase tracking-wider text-teal-900">Manejo integrado (complemento)</p>
+          <div className="grid gap-2 md:grid-cols-1">
+            <ListaManejo
+              titulo="Químico (referência)"
+              itens={quim}
+              icon={<span className="text-teal-700 text-sm">⚗</span>}
+            />
+            <ListaManejo titulo="Biológico" itens={bio} icon={<span className="text-green-700 text-sm">🦋</span>} />
+            <ListaManejo titulo="Cultural" itens={cult} icon={<span className="text-amber-900/80 text-sm">🌱</span>} />
+          </div>
+        </div>
+      )}
+
+      {temMotor && <BlocoMotorV2Web m={motor} />}
+    </div>
+  );
+}
+
 export type MonitoramentoJson = {
   meta?: Record<string, unknown>;
   fazenda?: string;
@@ -225,10 +435,13 @@ export default function RelatorioMonitoramento({ relatorio, reportId }: { relato
       {/* Recomendacoes Agronômicas */}
       {recomendacoes.length > 0 && (
         <section className="mb-12 page-break-inside-avoid">
-          <h3 className="text-lg font-bold text-[#1B5E20] border-b-2 border-[#4CAF50] pb-2 mb-4 uppercase tracking-wider text-sm flex items-center">
+          <h3 className="text-lg font-bold text-[#1B5E20] border-b-2 border-[#4CAF50] pb-2 mb-1 uppercase tracking-wider text-sm flex items-center">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             Recomendações Agronômicas
           </h3>
+          <p className="text-[11px] text-slate-500 mb-4 font-medium leading-relaxed max-w-3xl">
+            Inclui resumo por organismo e, quando o app envia o pacote completo, prescrição química detalhada, manejo integrado e nutrição da cultura (motor FortSmart v2).
+          </p>
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 p-6 rounded-xl shadow-sm">
             <div className="space-y-4">
               {recomendacoes.map((r, i) => {
@@ -306,6 +519,8 @@ export default function RelatorioMonitoramento({ relatorio, reportId }: { relato
                           {acao}
                         </div>
                       )}
+
+                      <RecomendacaoIaFortsmartMonitoramento ia={rr.fortsmartIa as FortsmartIaMonitoramento | undefined} />
                     </div>
                   </div>
                 );
