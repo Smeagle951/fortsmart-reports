@@ -86,14 +86,14 @@ function escapeTooltipText(s: string): string {
 const CLASSE_PIOR_ORDEM = ['Crítica', 'Alta', 'Moderada', 'Baixa', 'Indefinido'] as const;
 
 function piorClasseEntreCamadas(layers: AmostragemObservacao[]): string {
-  let bestIdx = CLASSE_PIOR_ORDEM.length;
   let pick = 'Indefinido';
+  let bestRank = Number.POSITIVE_INFINITY;
   for (const o of layers) {
     const c = String(o.classificacao ?? 'Indefinido');
     const i = CLASSE_PIOR_ORDEM.indexOf(c as (typeof CLASSE_PIOR_ORDEM)[number]);
-    const idx = i >= 0 ? i : CLASSE_PIOR_ORDEM.length;
-    if (idx < bestIdx) {
-      bestIdx = idx;
+    const rank = i >= 0 ? i : CLASSE_PIOR_ORDEM.length;
+    if (rank < bestRank) {
+      bestRank = rank;
       pick = c;
     }
   }
