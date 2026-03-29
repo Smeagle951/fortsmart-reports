@@ -13,6 +13,7 @@ import {
   Recomendacao,
   TipoOrganismo,
 } from '@/lib/types/monitoring';
+import type { RelatorioRelacionadoLink } from './RelatorioLayoutEnterprise';
 import { calcularMetricasTalhao } from '@/lib/calculations';
 import { formatPercent2, formatDecimal2, formatDate } from '@/utils/format';
 import ModalImagem from './ModalImagem';
@@ -348,6 +349,123 @@ function severidadeColor(severidade: number): string {
   return '#C62828';
 }
 
+function pickFirstNonEmptyStr(...vals: unknown[]): string | undefined {
+  for (const v of vals) {
+    if (v == null) continue;
+    const s = String(v).trim();
+    if (s && s !== '—' && s.toLowerCase() !== 'null' && s.toLowerCase() !== 'undefined') return s;
+  }
+  return undefined;
+}
+
+function parseDateLooseMs(v: unknown): number | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const t = Date.parse(s);
+  if (!Number.isNaN(t)) return t;
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) {
+    const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+    const x = d.getTime();
+    return Number.isNaN(x) ? null : x;
+  }
+  return null;
+}
+
+/** Texto livre do técnico/agronomo — sem texto gerado fictício no lugar. */
+function extractResumoExecutivoText(relatorio: PayloadFitossanitario): string | null {
+  const r = relatorio as Record<string, unknown>;
+  const meta = r.meta as Record<string, unknown> | undefined;
+  const candidates: unknown[] = [
+    r.resumo_executivo,
+    r.resumoExecutivo,
+    r.sintese_tecnica,
+    r.sintese_visita,
+    r.sintese_tecnica_visita,
+    r.parecer_tecnico,
+    r.diagnostico_tecnico,
+    r.parecer_agronomico,
+    r.sintese_executiva,
+    meta?.resumoExecutivo,
+    meta?.resumo_executivo,
+    meta?.sintese_tecnica,
+    meta?.parecer_tecnico,
+  ];
+  for (const c of candidates) {
+    const s = c != null ? String(c).trim() : '';
+    if (s.length >= 24) return s;
+  }
+  const obs = r.observacoes != null ? String(r.observacoes).trim() : '';
+  if (obs.length >= 48) return obs;
+  return null;
+}
+
+function mergePlantioCampos(params: {
+  dp: DadosPlantioMonitoramento | null | undefined;
+  estandeRoot?: Record<string, unknown>;
+  fenologiaRoot?: Record<string, unknown>;
+  talhao?: Talhao;
+  dataVisitaRelatorio: string;
+}): {
+  data_plantio?: string;
+  data_emergencia?: string;
+  ultima_avaliacao_iso?: string;
+  estagio?: string;
+  dae?: number;
+  dap?: number;
+} {
+  const { dp, estandeRoot, fenologiaRoot, talhao, dataVisitaRelatorio } = params;
+  const data_plantio = pickFirstNonEmptyStr(
+    dp?.data_plantio,
+    estandeRoot?.dataPlantio,
+    estandeRoot?.data_plantio,
+  );
+  const data_emergencia = pickFirstNonEmptyStr(
+    dp?.data_emergencia,
+    estandeRoot?.dataEmergencia,
+    estandeRoot?.data_emergencia,
+    fenologiaRoot?.dataEmergencia,
+    fenologiaRoot?.data_emergencia,
+  );
+  const dates: number[] = [];
+  const pushD = (v: unknown) => {
+    const ms = parseDateLooseMs(v);
+    if (ms != null) dates.push(ms);
+  };
+  if (dp?.evolucao_fenologica) {
+    for (const ev of dp.evolucao_fenologica) pushD(ev.data);
+  }
+  pushD(estandeRoot?.dataAvaliacao);
+  pushD(estandeRoot?.data_avaliacao);
+  pushD(fenologiaRoot?.dataUltimoRegistro);
+  pushD(fenologiaRoot?.data_ultimo_registro);
+  pushD(dataVisitaRelatorio);
+  const ultima_avaliacao_iso =
+    dates.length > 0 ? new Date(Math.max(...dates)).toISOString() : undefined;
+  const estagio = pickFirstNonEmptyStr(
+    dp?.estagio_atual,
+    fenologiaRoot?.estadio,
+    fenologiaRoot?.estagio,
+    fenologiaRoot?.estagioFenologico,
+    talhao?.estagio,
+    estandeRoot?.estagioFenologico,
+    estandeRoot?.estagio_fenologico,
+  );
+  const daeFromDp = dp?.dae != null && Number.isFinite(Number(dp.dae)) ? Number(dp.dae) : undefined;
+  const daeFen =
+    fenologiaRoot?.dae != null && Number.isFinite(Number(fenologiaRoot.dae))
+      ? Number(fenologiaRoot.dae)
+      : undefined;
+  const daeTal = talhao?.dae;
+  const dae =
+    daeFromDp ??
+    (daeFen !== undefined && Number.isFinite(daeFen) ? daeFen : undefined) ??
+    (daeTal != null && Number.isFinite(daeTal) ? daeTal : undefined);
+  const dap = dp?.dap != null && Number.isFinite(Number(dp.dap)) ? Number(dp.dap) : dae;
+  return { data_plantio, data_emergencia, ultima_avaliacao_iso, estagio, dae, dap };
+}
+
 export default function RelatorioFitossanitarioContent({ relatorio, reportId, relatorioUuid }: RelatorioFitossanitarioContentProps) {
   const normalized = useMemo((): RelatorioMonitoramento => {
     const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? relatorio.propriedade as Record<string, unknown> : undefined;
@@ -433,6 +551,59 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     }
     return deriveDadosPlantioFromModuloPlantio((relatorio as any).modulo_plantio) ?? null;
   }, [relatorio.dados_plantio, (relatorio as any).modulo_plantio]);
+
+  const estandeRoot = relatorio.estande as Record<string, unknown> | undefined;
+  const fenologiaRootFlat = relatorio.fenologia as Record<string, unknown> | undefined;
+
+  const camposPlantioMesclados = useMemo(
+    () =>
+      mergePlantioCampos({
+        dp: dadosPlantioExibir ?? undefined,
+        estandeRoot,
+        fenologiaRoot: fenologiaRootFlat,
+        talhao: primeiroTalhao,
+        dataVisitaRelatorio: normalized.data,
+      }),
+    [dadosPlantioExibir, estandeRoot, fenologiaRootFlat, primeiroTalhao, normalized.data],
+  );
+
+  const resumoExecutivoTecnico = useMemo(() => extractResumoExecutivoText(relatorio), [relatorio]);
+
+  const relacionadosMesmaData = useMemo((): RelatorioRelacionadoLink[] => {
+    const raw =
+      (relatorio as any).relatorios_mesma_data ??
+      (relatorio as any).monitoramentos_mesma_data ??
+      (relatorio as any).outros_relatorios_mesma_data;
+    if (!Array.isArray(raw)) return [];
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const out: RelatorioRelacionadoLink[] = [];
+    for (const x of raw) {
+      if (x == null || typeof x !== 'object') continue;
+      const o = x as Record<string, unknown>;
+      const token = o.share_token ?? o.token ?? o.shareToken;
+      const urlAbs = o.url != null && String(o.url).trim() ? String(o.url).trim() : '';
+      const href = urlAbs || (token ? `${origin}/r/${String(token)}` : '');
+      if (!href) continue;
+      if (typeof window !== 'undefined') {
+        try {
+          const u = new URL(href, window.location.origin);
+          if (u.pathname === window.location.pathname && u.search === window.location.search) continue;
+        } catch {
+          /* ignore */
+        }
+      }
+      const label =
+        (o.label != null && String(o.label).trim()) ||
+        [o.talhao ?? o.talhao_nome, o.cultura]
+          .filter((v) => v != null && String(v).trim())
+          .map(String)
+          .join(' · ') ||
+        'Monitoramento';
+      out.push({ href, label });
+    }
+    return out;
+  }, [relatorio]);
+
   const metricasGlobais = relatorio.metricas as Record<string, unknown> | undefined;
   const fenologiaGlobal = (relatorio.fenologia ?? (primeiroTalhao && { estadio: primeiroTalhao.estagio, dae: primeiroTalhao.dae })) as Record<string, unknown> | undefined;
   const observacoes = (relatorio.observacoes ?? '') as string;
@@ -591,6 +762,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
   }, [pragasComRecomendacao]);
 
   const [galeriaModal, setGaleriaModal] = useState<{ url: string; descricao?: string } | null>(null);
+  const [zoomPlantabilidade, setZoomPlantabilidade] = useState(1);
   const [mapaLayers, setMapaLayers] = useState<MapaLayersVisible>({ ...defaultMapaLayers });
   const mapaApiRef = useRef<MapaInterativoRef | null>(null);
 
@@ -665,18 +837,6 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     return { plantabilidade, estande, sanidade, uniformidade, media, classificacao };
   }, [dadosPlantioExibir, riscoNum]);
 
-  /** Potencial produtivo estimado (faixa sc/ha) para o resumo executivo — fórmula aproximada a partir de população e eficiência. */
-  const potencialProdutivo = useMemo(() => {
-    const dp = dadosPlantioExibir as DadosPlantioMonitoramento | undefined;
-    if (dp?.populacao_real == null || dp.populacao_real < 10000) return null;
-    const base = Math.min(85, 45 + (dp.populacao_real / 10000) * 0.35);
-    const ef = (dp.eficiencia_estande_percent ?? 95) / 100;
-    const cv = (dp.cv_percent ?? 15) / 100;
-    const min = Math.round(base * ef * (1 - cv * 0.5));
-    const max = Math.round(base * ef * (1 + 0.05));
-    return { min: Math.max(30, min), max: Math.min(100, max) };
-  }, [dadosPlantioExibir]);
-
   if (!primeiroTalhao) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>
@@ -698,16 +858,28 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       crea={normalized.crea}
       reportId={reportId}
       onShare={handleShare}
-      farmLogoUrl={(relatorio as any).propriedade?.logo_url ?? (relatorio as any).perfil_fazenda?.logo_url ?? (relatorio as any).logo_fazenda ?? undefined}
+      headerSubtitle={`${primeiroTalhao.nome} — ${primeiroTalhao.cultura ?? '—'} — Monitoramento`}
+      relacionadosMesmaData={relacionadosMesmaData}
+      farmLogoUrl={
+        (relatorio as any).propriedade?.logo_url
+        ?? (relatorio as any).propriedade?.icone_url
+        ?? (relatorio as any).perfil_fazenda?.logo_url
+        ?? (relatorio as any).perfil_fazenda?.icone_url
+        ?? (relatorio as any).perfil_fazenda?.url_icone
+        ?? (relatorio as any).perfil_fazenda?.avatar_url
+        ?? (relatorio as any).logo_fazenda
+        ?? undefined
+      }
     >
-      {/* Barra técnica horizontal: Fazenda | Talhão | Cultura | Cultivar | Área | DAE */}
+      {/* Barra técnica horizontal: Fazenda | Talhão | Cultura | Cultivar | Área | Estágio | DAE */}
       <BarraTecnicaRelatorio
         fazenda={normalized.fazenda}
         talhao={primeiroTalhao.nome}
         cultura={primeiroTalhao.cultura ?? '—'}
         cultivar={primeiroTalhao.variedade}
         areaHa={primeiroTalhao.area_ha > 0 ? primeiroTalhao.area_ha : undefined}
-        dae={primeiroTalhao.dae ?? (fenologiaGlobal?.dae != null ? Number(fenologiaGlobal.dae) : undefined)}
+        estagio={camposPlantioMesclados.estagio}
+        dae={camposPlantioMesclados.dae ?? primeiroTalhao.dae ?? (fenologiaGlobal?.dae != null ? Number(fenologiaGlobal.dae) : undefined)}
         formatNum={formatDecimal2}
       />
 
@@ -723,7 +895,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
             <span className="meta-tag">🌾 {primeiroTalhao.cultura} — Safra {normalized.safra}</span>
             <span className="meta-tag">📍 {municipio && estado ? `${String(municipio)} · ${String(estado)}` : (municipio || estado || '—')}</span>
             <span className="meta-tag">📐 {primeiroTalhao.area_ha > 0 ? `${formatDecimal2(primeiroTalhao.area_ha)} ha` : '—'} · {primeiroTalhao.nome}</span>
-            <span className="meta-tag">🌱 {String(primeiroTalhao.estagio || (fenologiaGlobal?.estadio ?? '—'))} — {String((primeiroTalhao.dae ?? fenologiaGlobal?.dae) ?? '')} DAE</span>
+            <span className="meta-tag">🌱 {String(camposPlantioMesclados.estagio ?? primeiroTalhao.estagio ?? (fenologiaGlobal?.estadio ?? '—'))} — {String((camposPlantioMesclados.dae ?? primeiroTalhao.dae ?? fenologiaGlobal?.dae) ?? '—')} DAE</span>
             {primeiroTalhao.variedade && <span className="meta-tag">Híbrido: {primeiroTalhao.variedade}</span>}
           </div>
         </div>
@@ -797,18 +969,20 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       {/* #resumo-executivo — Resumo Executivo (cartão premium + recomendações) */}
       <div id="resumo-executivo" className="card resumo-executivo-card pdf-keep-together" style={{ marginTop: '1.25rem' }}>
         <div className="card-title resumo-executivo-title"><span className="card-title-icon">📌</span> Resumo Executivo</div>
-        <p className="resumo-executivo-text">
-          Síntese técnica da visita e pontos de atenção do talhão (dados gerais no cabeçalho).
-          {' '}Qualidade de plantio e estande constam na seção Avaliação do Plantio.
-          {' '}Risco agronômico atual: <strong>{riscoLabel}</strong> (score {riscoNum}).
-          {proximaVisita !== '—' && ` Próxima visita técnica recomendada: ${proximaVisita}.`}
-          {topPragas.length > 0 && ` Foram identificadas ${topPragas.length} praga(s)/doença(s) nos pontos amostrados; recomendações e plano de aplicação constam nas seções abaixo.`}
-          {potencialProdutivo && (
-            <>
-              {' '}
-              <strong>Potencial produtivo estimado:</strong> {potencialProdutivo.min} – {potencialProdutivo.max} sc/ha.
-            </>
-          )}
+        {resumoExecutivoTecnico ? (
+          <p className="resumo-executivo-text" style={{ whiteSpace: 'pre-wrap' }}>
+            {resumoExecutivoTecnico}
+          </p>
+        ) : (
+          <p className="resumo-executivo-text" style={{ color: 'var(--text-muted)' }}>
+            Nenhuma síntese ou parecer foi registrado pelo técnico neste relatório. Preencha no app os campos de resumo / observações gerais da visita para exibir aqui o texto oficial.
+            As seções <strong>Mapa do Talhão</strong>, <strong>Ocorrências</strong>, <strong>Avaliação do Plantio</strong> e <strong>Recomendações</strong> trazem os dados objetivos da visita.
+          </p>
+        )}
+        <p className="resumo-executivo-text" style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.75rem', marginBottom: 0, lineHeight: 1.5 }}>
+          Referência automática (não substitui o parecer do responsável): risco fitossanitário <strong>{riscoLabel}</strong> (score {riscoNum}).
+          {proximaVisita !== '—' ? ` Próxima visita sugerida: ${proximaVisita}.` : ''}
+          {topPragas.length > 0 ? ` ${topPragas.length} organismo(s) em destaque nos pontos — ver recomendações abaixo.` : ''}
         </p>
         {resumoRecomendacoes.length > 0 && (
           <div className="resumo-executivo-recomendacoes">
@@ -1050,11 +1224,11 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                 <tbody>
                   {dp.cultura != null && <tr><td>Cultura</td><td>{dp.cultura}</td></tr>}
                   {dp.hibrido != null && <tr><td>Híbrido/Variedade</td><td>{dp.hibrido}</td></tr>}
-                  <tr><td>Data de plantio</td><td>{dp.data_plantio ? formatDate(dp.data_plantio) : '—'}</td></tr>
-                  <tr><td>Data de emergência</td><td>{dp.data_emergencia ? formatDate(dp.data_emergencia) : '—'}</td></tr>
-                  <tr><td>Estágio da cultura</td><td style={dp.estagio_atual ? { fontWeight: 700, color: 'var(--primary)' } : undefined}>{dp.estagio_atual ?? '—'}</td></tr>
-                  <tr><td>DAE</td><td>{dp.dae != null ? `${dp.dae} dias` : '—'}</td></tr>
-                  <tr><td>DAP</td><td>{dp.dap != null ? `${dp.dap} dias` : '—'}</td></tr>
+                  <tr><td>Data de plantio</td><td>{(camposPlantioMesclados.data_plantio ?? dp.data_plantio) ? formatDate(camposPlantioMesclados.data_plantio ?? dp.data_plantio!) : '—'}</td></tr>
+                  <tr><td>Data de emergência</td><td>{(camposPlantioMesclados.data_emergencia ?? dp.data_emergencia) ? formatDate(camposPlantioMesclados.data_emergencia ?? dp.data_emergencia!) : '—'}</td></tr>
+                  <tr><td>Estágio da cultura</td><td style={(camposPlantioMesclados.estagio ?? dp.estagio_atual) ? { fontWeight: 700, color: 'var(--primary)' } : undefined}>{camposPlantioMesclados.estagio ?? dp.estagio_atual ?? '—'}</td></tr>
+                  <tr><td>DAE</td><td>{(camposPlantioMesclados.dae ?? dp.dae) != null ? `${camposPlantioMesclados.dae ?? dp.dae} dias` : '—'}</td></tr>
+                  <tr><td>DAP</td><td>{(camposPlantioMesclados.dap ?? dp.dap) != null ? `${camposPlantioMesclados.dap ?? dp.dap} dias` : '—'}</td></tr>
                   <tr><td>Espaçamento entre linhas</td><td>{dp.espacamento_entre_linhas_m != null ? `${fmt(dp.espacamento_entre_linhas_m)} m` : '—'}</td></tr>
                   <tr><td>Espaçamento médio entre plantas</td><td>{dp.espacamento_medio_cm != null ? `${fmt(dp.espacamento_medio_cm)} cm` : '—'}</td></tr>
                   <tr><td>População</td><td>{dp.populacao_real != null ? `${fmtInt(dp.populacao_real)} plantas/ha` : (dp.populacao_desejada != null ? `${fmtInt(dp.populacao_desejada)} (alvo)` : '—')}</td></tr>
@@ -1116,9 +1290,12 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
               const corDot = (t: string) => t === 'ok' ? '#22c55e' : t === 'dupla' ? '#eab308' : t === 'tripla' ? '#a855f7' : '#ef4444';
               const espacamentoIdeal = dp.espacamento_medio_cm ?? (lin.length > 0 ? lin.reduce((a, p) => a + p.espacamento_cm, 0) / lin.length : undefined);
               const comprimentoAvaliado = dp.metros_amostrados ?? (lin.length > 0 ? (lin.reduce((a, p) => a + p.espacamento_cm, 0) / 100) : undefined);
-              const sliceShow = Math.min(lin.length, 25);
-              const linShow = lin.slice(0, sliceShow);
-              const pxPerCm = 4;
+              const linShow = lin;
+              const cms = lin.map((p) => p.espacamento_cm);
+              const minCm = cms.length > 0 ? Math.min(...cms) : 0;
+              const maxCm = cms.length > 0 ? Math.max(...cms) : 0;
+              const medianaCm = cms.length > 0 ? cms.sort((a, b) => a - b)[Math.floor(cms.length / 2)] : 0;
+              const pxPerCm = 4 * zoomPlantabilidade;
               return (
                 <>
                   {/* Métricas da linha em tabela técnica (evita card extra) */}
@@ -1132,49 +1309,67 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                   {/* Visualização da qualidade do plantio: sulco com espaçamento real (módulo plantio / CV%) */}
                   <div className="card" style={{ marginBottom: '1rem' }}>
                     <div className="card-title"><span className="card-title-icon">📐</span> Visualização da qualidade do plantio</div>
+                    <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Zoom da régua (px/cm)</span>
+                      <button type="button" className="btn-action outline" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setZoomPlantabilidade((z) => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))}>−</button>
+                      <span style={{ fontSize: 12, fontWeight: 600 }}>{zoomPlantabilidade.toFixed(2)}×</span>
+                      <button type="button" className="btn-action outline" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setZoomPlantabilidade((z) => Math.min(3, Math.round((z + 0.25) * 100) / 100))}>+</button>
+                    </div>
                     <div style={{ overflowX: 'auto', padding: '12px 0' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>Sulco simulado — espaçamento real entre uma planta e outra (cm)</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>
+                        Sulco (trena) — cada trecho com largura proporcional ao espaçamento real medido entre plantas. Estatística: mín. {formatDecimal2(minCm)} cm · média/mediana {formatDecimal2(medianaCm)} cm · máx. {formatDecimal2(maxCm)} cm
+                        {espacamentoIdeal != null ? ` · referência média ${formatDecimal2(espacamentoIdeal)} cm` : ''}
+                      </div>
                       <div style={{ fontFamily: 'monospace', fontSize: '1rem', lineHeight: 1.8, overflowX: 'auto', padding: '10px 12px', background: 'var(--surface-muted)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 0, minWidth: 'max-content' }}>
-                          <span style={{ marginRight: 4 }}>|</span>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'nowrap', gap: 0, minWidth: 'max-content' }}>
+                          <span style={{ marginRight: 4, alignSelf: 'center' }}>|</span>
                           {linShow.map((p, i) => (
                             <React.Fragment key={i}>
                               {p.tipo === 'falha' ? (
                                 <span
                                   style={{
-                                    display: 'inline-block',
+                                    display: 'inline-flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
                                     minWidth: Math.max(12, p.espacamento_cm * pxPerCm),
                                     color: 'var(--text-muted)',
                                     textAlign: 'center',
                                   }}
-                                  title={`Falha — ${p.espacamento_cm.toFixed(1)} cm até próxima`}
+                                  title={`Falha — ${p.espacamento_cm.toFixed(1)} cm`}
                                 >
-                                  ⋯
+                                  <span>⋯</span>
+                                  <span style={{ fontSize: 9, lineHeight: 1 }}>{p.espacamento_cm.toFixed(0)}cm</span>
                                 </span>
                               ) : (
                                 <>
-                                  <span style={{ whiteSpace: 'nowrap' }}>
-                                    {p.tipo === 'ok' && '🌱'}
-                                    {p.tipo === 'dupla' && '🌱🌱'}
-                                    {p.tipo === 'tripla' && '🌱🌱🌱'}
+                                  <span style={{ whiteSpace: 'nowrap', display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <span>{p.tipo === 'ok' && '🌱'}{p.tipo === 'dupla' && '🌱🌱'}{p.tipo === 'tripla' && '🌱🌱🌱'}</span>
                                   </span>
                                   {i < linShow.length - 1 && (
                                     <span
                                       style={{
-                                        display: 'inline-block',
+                                        display: 'inline-flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'flex-end',
                                         minWidth: Math.max(8, p.espacamento_cm * pxPerCm),
                                         flexShrink: 0,
+                                        borderBottom: '2px solid rgba(15,23,42,0.15)',
+                                        marginBottom: 2,
                                       }}
-                                      aria-hidden
-                                    />
+                                      title={`${p.espacamento_cm.toFixed(1)} cm entre plantas`}
+                                    >
+                                      <span style={{ fontSize: 9, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1, userSelect: 'none' }}>{p.espacamento_cm.toFixed(0)}</span>
+                                    </span>
                                   )}
                                 </>
                               )}
                             </React.Fragment>
                           ))}
-                          <span style={{ marginLeft: 4 }}>|</span>
+                          <span style={{ marginLeft: 4, alignSelf: 'center' }}>|</span>
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>🌱 planta · espaço vazio = falha · distância entre plantas proporcional ao espaçamento real (cm)</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 6 }}>
+                          Legenda: número abaixo do traço = espaçamento em cm (dados da trena). 🌱 = planta simples; 🌱🌱 dupla; 🌱🌱🌱 tripla; ⋯ falha.
+                        </div>
                       </div>
                       {/* Legenda */}
                       <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
@@ -1210,10 +1405,13 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       {dadosPlantioExibir && (() => {
         const dp = dadosPlantioExibir as DadosPlantioMonitoramento;
         const temEvolucao = Array.isArray(dp.evolucao_fenologica) && dp.evolucao_fenologica.length > 0;
-        const temEstagio = !!dp.estagio_atual || (fenologiaGlobal?.estadio != null);
+        const temEstagio =
+          !!camposPlantioMesclados.estagio
+          || !!dp.estagio_atual
+          || (fenologiaGlobal?.estadio != null && String(fenologiaGlobal.estadio).trim() !== '');
         const temHistorico = Array.isArray(dp.historico_plantios) && dp.historico_plantios.length > 0;
         if (!temEvolucao && !temEstagio && !temHistorico) return null;
-        const currentStage = String(dp.estagio_atual ?? fenologiaGlobal?.estadio ?? '—');
+        const currentStage = String(camposPlantioMesclados.estagio ?? dp.estagio_atual ?? fenologiaGlobal?.estadio ?? '—');
         const stages = temEvolucao ? dp.evolucao_fenologica!.map((ev) => String(ev.estagio ?? '').trim()).filter(Boolean) : [];
         const uniqueStages = Array.from(new Set(stages));
         return (
@@ -1268,27 +1466,33 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                     </tr>
                     <tr>
                       <td>DAE</td>
-                      <td>{dp.dae != null ? `${dp.dae}` : '—'}</td>
+                      <td>{(camposPlantioMesclados.dae ?? dp.dae) != null ? `${camposPlantioMesclados.dae ?? dp.dae}` : '—'}</td>
                       <td style={{ display: 'none' }}>—</td>
                     </tr>
                     <tr>
                       <td>DAP</td>
-                      <td>{dp.dap != null ? `${dp.dap}` : '—'}</td>
+                      <td>{(camposPlantioMesclados.dap ?? dp.dap) != null ? `${camposPlantioMesclados.dap ?? dp.dap}` : '—'}</td>
                       <td style={{ display: 'none' }}>—</td>
                     </tr>
                     <tr>
                       <td>Data de plantio</td>
-                      <td>{dp.data_plantio ? formatDate(dp.data_plantio) : '—'}</td>
+                      <td>{(camposPlantioMesclados.data_plantio ?? dp.data_plantio) ? formatDate(camposPlantioMesclados.data_plantio ?? dp.data_plantio!) : '—'}</td>
                       <td style={{ display: 'none' }}>—</td>
                     </tr>
                     <tr>
                       <td>Data de emergência</td>
-                      <td>{dp.data_emergencia ? formatDate(dp.data_emergencia) : '—'}</td>
+                      <td>{(camposPlantioMesclados.data_emergencia ?? dp.data_emergencia) ? formatDate(camposPlantioMesclados.data_emergencia ?? dp.data_emergencia!) : '—'}</td>
                       <td style={{ display: 'none' }}>—</td>
                     </tr>
                     <tr>
                       <td>Última avaliação</td>
-                      <td>{temEvolucao ? (dp.evolucao_fenologica![dp.evolucao_fenologica!.length - 1].data ? formatDate(dp.evolucao_fenologica![dp.evolucao_fenologica!.length - 1].data) : '—') : '—'}</td>
+                      <td>
+                        {camposPlantioMesclados.ultima_avaliacao_iso
+                          ? formatDate(camposPlantioMesclados.ultima_avaliacao_iso)
+                          : (temEvolucao && dp.evolucao_fenologica![dp.evolucao_fenologica!.length - 1].data
+                            ? formatDate(dp.evolucao_fenologica![dp.evolucao_fenologica!.length - 1].data!)
+                            : '—')}
+                      </td>
                       <td style={{ display: 'none' }}>—</td>
                     </tr>
                   </tbody>
@@ -1330,12 +1534,22 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
               </div>
             )}
 
-            {/* Estágio atual (quando não houver evolução) */}
-            {!temEvolucao && currentStage !== '—' && (
+            {/* Estágio atual (quando não houver série fenológica) — prioriza plantio / estande / fenologia */}
+            {!temEvolucao && (
               <div className="card" style={{ marginBottom: '1rem' }}>
                 <div className="card-title"><span className="card-title-icon">🌱</span> Estágio atual</div>
-                <div className="info-row"><span className="info-label">Estágio</span><span className="info-value" style={{ color: 'var(--primary)', fontWeight: 800 }}>{currentStage}</span></div>
-                <div className="info-row"><span className="info-label">DAE / DAP</span><span className="info-value">{dp.dae != null ? `${dp.dae} dias` : '—'}</span></div>
+                <div className="info-row">
+                  <span className="info-label">Estágio</span>
+                  <span className="info-value" style={{ color: currentStage !== '—' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 800 }}>
+                    {currentStage !== '—' ? currentStage : 'Sem dados no sistema (cadastre evolução fenológica ou estande)'}
+                  </span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">DAE / DAP</span>
+                  <span className="info-value">
+                    {(camposPlantioMesclados.dae ?? dp.dae) != null ? `${camposPlantioMesclados.dae ?? dp.dae} dias` : '—'}
+                  </span>
+                </div>
               </div>
             )}
 

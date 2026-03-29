@@ -143,12 +143,14 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
     dap: dap ?? getNum(evolucaoCultura?.dap),
   };
 
+  const timelineRaw = (fenologia as UnknownRecord | undefined)?.timeline;
   const fenologiaNorm: UnknownRecord = {
     ...(typeof fenologia === 'object' && fenologia !== null ? fenologia : {}),
     estadio: estadio ?? getStr(fenologia?.estadio ?? (fenologia as UnknownRecord)?.estagio),
     estagio: getStr((fenologia as UnknownRecord)?.estagio_fenologico),
     dae: dae ?? getNum(fenologia?.dae),
     dap: dap ?? getNum(fenologia?.dap),
+    timeline: Array.isArray(timelineRaw) ? timelineRaw : [],
   };
 
   const linhaRaw = plantabilidade?.linha ?? (plantabilidade as UnknownRecord)?.linha;
@@ -209,5 +211,29 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
     plantabilidade: plantabilidadeNorm,
     estande: Object.keys(estandeNorm).length > 0 ? estandeNorm : rawMerged.estande,
     populacao: populacao ?? rawMerged.populacao,
+  };
+}
+
+/** Normaliza payload `plantio_multi`: cada item de `talhoes` passa pelo pipeline single. */
+export function normalizePlantioMultiPayload(raw: UnknownRecord): UnknownRecord {
+  const talhoesRaw = Array.isArray(raw.talhoes) ? (raw.talhoes as unknown[]) : [];
+  const talhoesNorm = talhoesRaw
+    .filter((t): t is UnknownRecord => t != null && typeof t === 'object' && !Array.isArray(t))
+    .map((t) => normalizeRelatorioPlantio(t));
+
+  const am = raw.analiticoMulti;
+  const analiticoMulti =
+    am != null && typeof am === 'object' && !Array.isArray(am)
+      ? (am as UnknownRecord)
+      : ({
+          nTalhoes: talhoesNorm.length,
+          ranking: [],
+          textoDiagnosticoGeral: '',
+        } as UnknownRecord);
+
+  return {
+    ...raw,
+    talhoes: talhoesNorm,
+    analiticoMulti,
   };
 }

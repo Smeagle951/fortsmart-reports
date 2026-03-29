@@ -17,7 +17,9 @@
         "dataGeracao": { "type": "string" },
         "safra": { "type": "string" },
         "tecnico": { "type": "string" },
-        "appVersion": { "type": "string" }
+        "appVersion": { "type": "string" },
+        "resumoExecutivo": { "type": "string", "description": "Síntese do técnico (prioridade no Resumo Executivo web)" },
+        "resumo_executivo": { "type": "string" }
       }
     },
     "propriedade": {
@@ -33,6 +35,38 @@
     "data": { "type": "string", "description": "Data formatada (ex: DD/MM/YYYY)" },
     "tecnico": { "type": "string" },
     "crea": { "type": "string" },
+    "resumo_executivo": {
+      "type": "string",
+      "description": "Texto livre do agrônomo para o Resumo Executivo (alternativas: sintese_tecnica, parecer_tecnico, meta.resumoExecutivo)"
+    },
+    "relatorios_mesma_data": {
+      "type": "array",
+      "description": "Outros monitoramentos do mesmo dia — menu no cabeçalho web (share_token ou url)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "share_token": { "type": "string" },
+          "token": { "type": "string" },
+          "url": { "type": "string" },
+          "label": { "type": "string" },
+          "talhao": { "type": "string" },
+          "talhao_nome": { "type": "string" },
+          "cultura": { "type": "string" }
+        }
+      }
+    },
+    "perfil_fazenda": {
+      "type": "object",
+      "description": "Perfil da fazenda — logo_url / icone_url na sidebar",
+      "properties": {
+        "nome": { "type": "string" },
+        "logo_url": { "type": "string" },
+        "icone_url": { "type": "string" },
+        "url_icone": { "type": "string" },
+        "municipio": { "type": "string" },
+        "estado": { "type": "string" }
+      }
+    },
     "talhoes": {
       "type": "array",
       "description": "Um item por talhão monitorado; multi-talhão suportado",
@@ -132,7 +166,14 @@
         "populacao": { "type": "number" },
         "plantasPorMetro": { "type": "number" },
         "eficienciaEstande": { "type": "number" },
-        "espacamento": { "type": "number" }
+        "espacamento": { "type": "number" },
+        "data_plantio": { "type": "string" },
+        "dataEmergencia": { "type": "string" },
+        "data_emergencia": { "type": "string" },
+        "dataAvaliacao": { "type": "string" },
+        "data_avaliacao": { "type": "string" },
+        "estagioFenologico": { "type": "string" },
+        "estagio_fenologico": { "type": "string" }
       }
     },
     "cv": {
@@ -146,7 +187,10 @@
       "type": "object",
       "properties": {
         "estadio": { "type": "string" },
-        "dae": { "type": "number" }
+        "estagio": { "type": "string" },
+        "dae": { "type": "number" },
+        "dataEmergencia": { "type": "string" },
+        "data_emergencia": { "type": "string" }
       }
     },
     "observacoes": { "type": "string" },

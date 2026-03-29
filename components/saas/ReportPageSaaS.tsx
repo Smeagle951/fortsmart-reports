@@ -52,7 +52,14 @@ export interface ReportPageSaaSData {
   fitossanidade?: { ipe?: number; ipeStatus?: string };
   diagnosticoIntegrado?: { spt?: number };
   indiceAgronomicoTalhao?: { valor?: number; status?: string };
-  populacao?: { plantasPorMetro?: number; eficienciaPct?: number };
+  populacao?: {
+    plantasPorMetro?: number;
+    eficienciaPct?: number;
+    perdaTotalPct?: number;
+    estagioFenologico?: string;
+  };
+  /** Score agregado do app (0–100); usado quando SPT/IAT específicos não vêm no payload. */
+  inteligenciaAgronomica?: { score?: number; status?: string };
   aplicacoes?: Array<{
     tipo?: string;
     classe?: string;
@@ -69,7 +76,18 @@ export interface ReportPageSaaSData {
   pragas?: Array<{ tipo?: string; nome?: string; alvo?: string; incidencia?: string; severidade?: string; situacao?: string; observacoes?: string }>;
   desvios?: Array<{ tipo?: string; descricao?: string; data?: string; severidade?: string; local?: string; acaoRecomendada?: string }>;
   diagnostico?: { problemaPrincipal?: string; causaProvavel?: string; nivelRisco?: string; urgenciaAcao?: string; recomendacoes?: string[] };
-  planoAcao?: { objetivoManejo?: string; acoes?: Array<{ prioridade?: string; acao?: string; prazo?: string }> };
+  planoAcao?: {
+    objetivoManejo?: string;
+    acoes?: Array<{
+      prioridade?: string;
+      acao?: string;
+      prazo?: string;
+      produto?: string;
+      dose?: string;
+      momento?: string;
+      objetivoTecnico?: string;
+    }>;
+  };
   conclusao?: string;
   /** Mapa Leaflet: polígono do talhão, pontos georreferenciados, clusters e time-lapse (evolução espacial). */
   mapa?: VisitaMapaEspacialPayload;
@@ -94,18 +112,38 @@ function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
 
   const cv = safeNum(plant?.cvPercentual);
   const estandePlm = safeNum(pop?.plantasPorMetro) ?? (est?.registros?.[0] != null ? safeNum((est.registros[0] as any).plantasPorMetro) : null);
-  const perda = est?.perdaTotalPct != null ? safeNum(est.perdaTotalPct) : (est?.registros?.[0] != null ? safeNum((est.registros[0] as any).perdaTotalPct) : null);
-  const iat = safeNum(d.indiceAgronomicoTalhao?.valor ?? d.diagnosticoIntegrado?.spt);
+  const perdaPop = safeNum(pop?.perdaTotalPct);
+  const perda =
+    perdaPop ??
+    (est?.perdaTotalPct != null ? safeNum(est.perdaTotalPct) : null) ??
+    (est?.registros?.[0] != null ? safeNum((est.registros[0] as any).perdaTotalPct) : null);
+  const iat = safeNum(
+    d.indiceAgronomicoTalhao?.valor ?? d.diagnosticoIntegrado?.spt ?? d.inteligenciaAgronomica?.score,
+  );
 
-  let classificacao = 'Moderado';
+  let classificacao = 'Sem dado';
   if (cv != null) {
-    if (cv <= 10) classificacao = 'Excelente';
-    else if (cv <= 15) classificacao = 'Bom';
-    else if (cv <= 25) classificacao = 'Moderado';
-    else classificacao = cv <= 35 ? 'Atenção' : 'Crítico';
+    classificacao =
+      cv <= 10 ? 'Excelente' : cv <= 15 ? 'Bom' : cv <= 25 ? 'Moderado' : cv <= 35 ? 'Atenção' : 'Crítico';
   }
 
-  const status = classificacao === 'Excelente' || classificacao === 'Bom' ? 'OK' : classificacao === 'Atenção' || classificacao === 'Crítico' ? 'Crítico' : 'Atenção';
+  const status =
+    cv != null
+      ? classificacao === 'Excelente' || classificacao === 'Bom'
+        ? 'OK'
+        : classificacao === 'Atenção' || classificacao === 'Crítico'
+          ? 'Crítico'
+          : 'Atenção'
+      : d.inteligenciaAgronomica?.status === 'Crítico'
+        ? 'Crítico'
+        : d.inteligenciaAgronomica?.status === 'Atenção'
+          ? 'Atenção'
+          : 'OK';
+
+  const fenologiaStr =
+    (d.fenologia?.estadio && String(d.fenologia.estadio).trim()) ||
+    (pop?.estagioFenologico && String(pop.estagioFenologico).trim()) ||
+    '—';
 
   const row: AvaliacaoRow = {
     id: '1',
@@ -114,7 +152,7 @@ function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
     cvPercent: cv,
     classificacao,
     estandePlm,
-    fenologia: d.fenologia?.estadio || '—',
+    fenologia: fenologiaStr,
     perdaPct: perda,
     iat,
     status,
@@ -215,22 +253,78 @@ function buildComparativo(d: ReportPageSaaSData): ComparativoItem[] {
   ];
 }
 
+function classifFromScoreSpt(score: number | null): 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico' | 'Sem dado' {
+  if (score == null) return 'Sem dado';
+  if (score >= 85) return 'Excelente';
+  if (score >= 70) return 'Bom';
+  if (score >= 50) return 'Moderado';
+  if (score >= 30) return 'Atenção';
+  return 'Crítico';
+}
+
+function classifFromCv(cv: number | null): 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico' | 'Sem dado' {
+  if (cv == null) return 'Sem dado';
+  if (cv <= 10) return 'Excelente';
+  if (cv <= 15) return 'Bom';
+  if (cv <= 25) return 'Moderado';
+  if (cv <= 35) return 'Atenção';
+  return 'Crítico';
+}
+
+function classifFromIpe(ipe: number | null): 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico' | 'Sem dado' {
+  if (ipe == null) return 'Sem dado';
+  if (ipe <= 0.5) return 'Excelente';
+  if (ipe <= 1.2) return 'Bom';
+  if (ipe <= 2.5) return 'Moderado';
+  if (ipe <= 4) return 'Atenção';
+  return 'Crítico';
+}
+
+function classifFromEstande(ef: number | null, plm: number | null): 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico' | 'Sem dado' {
+  if (ef == null && plm == null) return 'Sem dado';
+  if (ef != null) {
+    if (ef >= 95) return 'Excelente';
+    if (ef >= 85) return 'Bom';
+    if (ef >= 75) return 'Moderado';
+    if (ef >= 60) return 'Atenção';
+    return 'Crítico';
+  }
+  return 'Moderado';
+}
+
 export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded }: ReportPageSaaSProps) {
   const meta = data.meta ?? {};
   const prop = data.propriedade ?? {};
   const talhao = data.talhao ?? {};
 
+  const intel = data.inteligenciaAgronomica;
   const statusGeral: StatusGeral =
-    (data.indiceAgronomicoTalhao?.status as StatusGeral) ?? 'Saudável';
+    (data.indiceAgronomicoTalhao?.status as StatusGeral) ??
+    (intel?.status === 'Atenção' ? 'Atenção' : intel?.status === 'Crítico' ? 'Crítico' : 'Saudável');
+
+  const sptValor =
+    safeNum(data.diagnosticoIntegrado?.spt ?? data.indiceAgronomicoTalhao?.valor ?? intel?.score);
+  const cvNum =
+    data.plantabilidade?.cvPercentual != null && Number.isFinite(Number(data.plantabilidade.cvPercentual))
+      ? Number(data.plantabilidade.cvPercentual)
+      : null;
+  const ipeNum = safeNum(data.fitossanidade?.ipe);
+  const plmEstande = safeNum(data.populacao?.plantasPorMetro ?? data.estande?.registros?.[0]?.plantasPorMetro);
+  const efPct = data.populacao?.eficienciaPct != null && Number.isFinite(Number(data.populacao.eficienciaPct))
+    ? Number(data.populacao.eficienciaPct)
+    : null;
 
   const kpiCards = [
     {
       id: 'spt',
       indicador: 'SPT',
-      valor: safeNum(data.diagnosticoIntegrado?.spt ?? data.indiceAgronomicoTalhao?.valor) ?? '—',
-      classificacao: 'Excelente' as const,
-      tendencia: 'up' as const,
-      tooltip: 'Índice de Saúde da Planta',
+      valor: sptValor ?? '—',
+      classificacao: classifFromScoreSpt(sptValor),
+      tendencia: (sptValor != null && sptValor >= 70 ? 'up' : sptValor != null && sptValor < 50 ? 'down' : 'neutral') as 'up' | 'neutral' | 'down',
+      tooltip:
+        sptValor != null && intel?.score != null && sptValor === intel.score && data.diagnosticoIntegrado?.spt == null && data.indiceAgronomicoTalhao?.valor == null
+          ? 'Score agregado da visita (inteligência agronômica, 0–100)'
+          : 'Índice de Saúde da Planta / talhão',
       historico: data.estande?.registros?.map((r) => ({
         data: r.data ?? '',
         valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
@@ -239,19 +333,19 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
     {
       id: 'cv',
       indicador: 'CV%',
-      valor: data.plantabilidade?.cvPercentual != null && Number.isFinite(Number(data.plantabilidade.cvPercentual)) ? `${Number(data.plantabilidade.cvPercentual)}%` : '—',
-      classificacao: ((data.plantabilidade?.cvPercentual ?? 0) <= 10 ? 'Excelente' : (data.plantabilidade?.cvPercentual ?? 0) <= 15 ? 'Bom' : 'Moderado') as 'Excelente' | 'Bom' | 'Moderado',
+      valor: cvNum != null ? `${cvNum}%` : '—',
+      classificacao: classifFromCv(cvNum),
       tendencia: 'neutral' as const,
-      tooltip: 'Coeficiente de Variação do espaçamento',
+      tooltip: 'Coeficiente de variação do espaçamento (módulo plantio / plantabilidade)',
       historico: [],
     },
     {
       id: 'estande',
       indicador: 'Estande',
-      valor: safeNum(data.populacao?.plantasPorMetro ?? data.estande?.registros?.[0]?.plantasPorMetro) ?? '—',
-      classificacao: ((data.populacao?.eficienciaPct ?? 0) >= 95 ? 'Excelente' : 'Bom') as 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico',
+      valor: plmEstande ?? '—',
+      classificacao: classifFromEstande(efPct, plmEstande),
       tendencia: 'neutral' as const,
-      tooltip: 'Plantas por metro',
+      tooltip: 'Plantas por metro (avaliação de estande)',
       historico: data.estande?.registros?.map((r) => ({
         data: r.data ?? '',
         valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
@@ -260,10 +354,10 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
     {
       id: 'ipe',
       indicador: 'IPE',
-      valor: safeNum(data.fitossanidade?.ipe) ?? '—',
-      classificacao: ((data.fitossanidade?.ipe ?? 0) <= 0.5 ? 'Excelente' : 'Moderado') as 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico',
+      valor: ipeNum ?? '—',
+      classificacao: classifFromIpe(ipeNum),
       tendencia: 'down' as const,
-      tooltip: 'Índice de Pressão de Entomofauna',
+      tooltip: 'Índice de pressão de entomofauna (quando registrado na visita)',
       historico: [],
     },
   ];
@@ -318,6 +412,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
             />
           </div>
           <HeaderSection
+            variant="toolbar"
             cliente={prop.proprietario}
             fazenda={prop.fazenda}
             talhao={talhao.nome}

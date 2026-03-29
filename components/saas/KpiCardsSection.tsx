@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 type Tendencia = 'up' | 'neutral' | 'down';
-type Classificacao = 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico';
+type Classificacao = 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico' | 'Sem dado';
 
 interface KpiCard {
   id: string;
@@ -21,6 +21,7 @@ const classColors: Record<Classificacao, string> = {
   Moderado: 'border-amber-400 bg-amber-50 text-amber-800',
   Atenção: 'border-amber-500 bg-amber-50 text-amber-900',
   Crítico: 'border-red-500 bg-red-50 text-red-800',
+  'Sem dado': 'border-slate-300 bg-slate-100 text-slate-600',
 };
 
 const tendenciaIcon: Record<Tendencia, string> = {

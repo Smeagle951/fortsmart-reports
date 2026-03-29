@@ -12,6 +12,12 @@ export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao }: Diagno
 
     if (!hasDiagnostico && !hasPlanoAcao) return null;
 
+    const acoes = Array.isArray(planoAcao?.acoes) ? planoAcao!.acoes : [];
+    const showProduto = acoes.some((a) => (a as { produto?: string }).produto != null && String((a as { produto?: string }).produto).trim() !== '');
+    const showDose = acoes.some((a) => (a as { dose?: string }).dose != null && String((a as { dose?: string }).dose).trim() !== '');
+    const showMomento = acoes.some((a) => (a as { momento?: string }).momento != null && String((a as { momento?: string }).momento).trim() !== '');
+    const showObjetivo = acoes.some((a) => (a as { objetivoTecnico?: string }).objetivoTecnico != null && String((a as { objetivoTecnico?: string }).objetivoTecnico).trim() !== '');
+
     const riskColor = String(diagnostico?.nivelRisco || '').toLowerCase().includes('alto') || String(diagnostico?.nivelRisco || '').toLowerCase().includes('crítico') ? '#EF4444' : '#F59E0B';
 
     return (
@@ -55,7 +61,10 @@ export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao }: Diagno
                                 )}
                                 {Array.isArray(diagnostico!.recomendacoes) && diagnostico!.recomendacoes.length > 0 && (
                                     <div>
-                                        <div style={{ fontSize: 11, color: '#64748B', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Recomendações</div>
+                                        <div style={{ fontSize: 11, color: '#64748B', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>Recomendações técnicas</div>
+                                        <p style={{ fontSize: 12, color: '#64748B', margin: '0 0 10px', lineHeight: 1.45 }}>
+                                            Priorize itens com produto, dose, momento e objetivo técnico quando forem registrados no app — isso reforça rastreabilidade e execução de campo.
+                                        </p>
                                         <ul style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: '#334155', lineHeight: 1.6 }}>
                                             {(diagnostico!.recomendacoes as string[]).map((r, i) => (
                                                 <li key={i} style={{ marginBottom: 6 }}>{String(r)}</li>
@@ -85,17 +94,52 @@ export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao }: Diagno
                                     <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                                         <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: 12 }}>Prioridade</th>
                                         <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: 12 }}>Ação</th>
+                                        {showProduto && (
+                                            <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: 12 }}>Produto</th>
+                                        )}
+                                        {showDose && (
+                                            <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: 12 }}>Dose</th>
+                                        )}
+                                        {showMomento && (
+                                            <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: 12 }}>Momento</th>
+                                        )}
+                                        {showObjetivo && (
+                                            <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: 12 }}>Objetivo técnico</th>
+                                        )}
                                         <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: 12 }}>Prazo</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {planoAcao!.acoes.map((acao, i) => (
-                                        <tr key={i}>
-                                            <td style={{ padding: '10px 12px', borderBottom: '1px solid #e5e7eb', color: '#64748b', fontWeight: 600 }}>{String(acao.prioridade ?? '—')}</td>
-                                            <td style={{ padding: '10px 12px', borderBottom: '1px solid #e5e7eb', color: '#334155' }}>{String(acao.acao ?? '—')}</td>
-                                            <td style={{ padding: '10px 12px', borderBottom: '1px solid #e5e7eb', color: '#334155' }}>{String(acao.prazo ?? '—')}</td>
-                                        </tr>
-                                    ))}
+                                    {planoAcao!.acoes.map((acao, i) => {
+                                        const a = acao as {
+                                            prioridade?: string;
+                                            acao?: string;
+                                            prazo?: string;
+                                            produto?: string;
+                                            dose?: string;
+                                            momento?: string;
+                                            objetivoTecnico?: string;
+                                        };
+                                        return (
+                                            <tr key={i}>
+                                                <td style={{ padding: '10px 12px', borderBottom: '1px solid #e5e7eb', color: '#64748b', fontWeight: 600 }}>{String(a.prioridade ?? '—')}</td>
+                                                <td style={{ padding: '10px 12px', borderBottom: '1px solid #e5e7eb', color: '#334155' }}>{String(a.acao ?? '—')}</td>
+                                                {showProduto && (
+                                                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #e5e7eb', color: '#334155' }}>{a.produto != null ? String(a.produto) : '—'}</td>
+                                                )}
+                                                {showDose && (
+                                                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #e5e7eb', color: '#334155' }}>{a.dose != null ? String(a.dose) : '—'}</td>
+                                                )}
+                                                {showMomento && (
+                                                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #e5e7eb', color: '#334155' }}>{a.momento != null ? String(a.momento) : '—'}</td>
+                                                )}
+                                                {showObjetivo && (
+                                                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #e5e7eb', color: '#334155', fontSize: 13 }}>{a.objetivoTecnico != null ? String(a.objetivoTecnico) : '—'}</td>
+                                                )}
+                                                <td style={{ padding: '10px 12px', borderBottom: '1px solid #e5e7eb', color: '#334155' }}>{String(a.prazo ?? '—')}</td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         )}
