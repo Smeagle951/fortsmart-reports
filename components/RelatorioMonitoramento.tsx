@@ -72,7 +72,7 @@ function CartaoDefensivoWeb({ nomeProduto, info }: { nomeProduto: string; info: 
   );
 }
 
-function motorV2TemConteudoVisivel(m: Record<string, unknown>): boolean {
+export function motorV2TemConteudoVisivel(m: Record<string, unknown>): boolean {
   const nut = Array.isArray(m.nutricaoBase) ? m.nutricaoBase.length : 0;
   const adj = Array.isArray(m.ajusteNutricao) ? m.ajusteNutricao.length : 0;
   const extras = Array.isArray(m.recomendacaoExtra) ? m.recomendacaoExtra.length : 0;
@@ -89,7 +89,7 @@ function motorV2TemConteudoVisivel(m: Record<string, unknown>): boolean {
   );
 }
 
-function BlocoMotorV2Web({ m }: { m: Record<string, unknown> }) {
+export function BlocoMotorV2Web({ m }: { m: Record<string, unknown> }) {
   const nut = Array.isArray(m.nutricaoBase) ? (m.nutricaoBase as Record<string, string>[]) : [];
   const adj = Array.isArray(m.ajusteNutricao) ? (m.ajusteNutricao as Record<string, string>[]) : [];
   const extras = Array.isArray(m.recomendacaoExtra) ? (m.recomendacaoExtra as string[]) : [];
@@ -172,7 +172,22 @@ function BlocoMotorV2Web({ m }: { m: Record<string, unknown> }) {
   );
 }
 
-function RecomendacaoIaFortsmartMonitoramento({ ia }: { ia: FortsmartIaMonitoramento | null | undefined }) {
+export function fortsmartIaPayloadTemConteudo(ia: FortsmartIaMonitoramento | null | undefined): boolean {
+  if (!ia || typeof ia !== 'object') return false;
+  const dosesRaw = ia.dosesDefensivos;
+  const entradasDoses =
+    dosesRaw && typeof dosesRaw === 'object' ? Object.entries(dosesRaw) : ([] as [string, Record<string, unknown>][]);
+  const quim = ia.manejoQuimico ?? [];
+  const bio = ia.manejoBiologico ?? [];
+  const cult = ia.manejoCultural ?? [];
+  const motor = ia.motorV2 && typeof ia.motorV2 === 'object' ? (ia.motorV2 as Record<string, unknown>) : null;
+  const temDoses = entradasDoses.length > 0;
+  const temManejo = quim.length + bio.length + cult.length > 0;
+  const temMotor = motor != null && motorV2TemConteudoVisivel(motor);
+  return temDoses || temManejo || temMotor;
+}
+
+export function RecomendacaoIaFortsmartMonitoramento({ ia }: { ia: FortsmartIaMonitoramento | null | undefined }) {
   if (!ia || typeof ia !== 'object') return null;
   const dosesRaw = ia.dosesDefensivos;
   const entradasDoses =
