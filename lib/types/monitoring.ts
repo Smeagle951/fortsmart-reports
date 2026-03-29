@@ -86,6 +86,15 @@ export interface MetricasPonto {
     classificacao: NivelClassificacao;
 }
 
+/** Pacote espelhado do app (monitoring_card_data_service + motor v2). */
+export type FortsmartIaRelatorio = {
+    dosesDefensivos?: Record<string, Record<string, unknown>>;
+    manejoQuimico?: string[];
+    manejoBiologico?: string[];
+    manejoCultural?: string[];
+    motorV2?: Record<string, unknown> | null;
+};
+
 export interface Recomendacao {
     nivel: NivelRecomendacao;
     organismo: string;
@@ -95,4 +104,5 @@ export interface Recomendacao {
     acao: string;
     pontos: string[];  // quais pontos têm essa ocorrência
     severidade: number;
+    fortsmartIa?: FortsmartIaRelatorio;
 }

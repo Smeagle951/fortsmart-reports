@@ -20,6 +20,7 @@ import ModalImagem from './ModalImagem';
 import RelatorioLayoutEnterprise from './RelatorioLayoutEnterprise';
 import BarraTecnicaRelatorio from './BarraTecnicaRelatorio';
 import RelatorioSection from './RelatorioSection';
+import { RecomendacaoIaFortsmartMonitoramento, fortsmartIaPayloadTemConteudo } from './RelatorioMonitoramento';
 
 const MapaInterativo = dynamic(() => import('./MapaInterativo'), { ssr: false });
 
@@ -85,6 +86,12 @@ function safeNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function extractFortsmartIaDeRaw(x: Record<string, unknown>): Recomendacao['fortsmartIa'] {
+  const fi = x.fortsmartIa ?? x.fortsmart_ia;
+  if (fi == null || typeof fi !== 'object') return undefined;
+  return fi as Recomendacao['fortsmartIa'];
+}
+
 function normalizeTalhao(raw: Record<string, unknown>): Talhao {
   const pontosRaw = Array.isArray(raw.pontos) ? raw.pontos : [];
   const pontos: PontoMonitoramento[] = pontosRaw
@@ -131,10 +138,13 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
   const recRaw = (raw.recomendacoes ?? []) as Array<{ acao?: string; organismo?: string; produto?: string; dose?: string; nivel?: string } | Recomendacao>;
   const recomendacoes: Recomendacao[] = recRaw.map((r): Recomendacao => {
     if (r && typeof r === 'object' && 'nivel' in r && 'organismo' in r && (r.produto != null || r.dose != null) && String((r as Recomendacao).organismo ?? '').trim() !== '—') {
-      return r as Recomendacao;
+      const x = r as Record<string, unknown>;
+      const fi = extractFortsmartIaDeRaw(x);
+      return fi ? { ...(r as Recomendacao), fortsmartIa: fi } : (r as Recomendacao);
     }
     const x = r as Record<string, unknown>;
     const acaoVal = (typeof x.manejo === 'string' ? x.manejo.trim() : '') || (typeof x.acao === 'string' ? x.acao : '');
+    const fi = extractFortsmartIaDeRaw(x);
     return {
       nivel: (x.nivel as Recomendacao['nivel']) ?? 'MONITORAR',
       organismo: (x.organismo != null && String(x.organismo).trim()) ? String(x.organismo).trim() : '—',
@@ -144,6 +154,7 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
       acao: acaoVal || '—',
       pontos: Array.isArray(x.pontos) ? x.pontos : [],
       severidade: typeof x.severidade === 'number' ? x.severidade : 0,
+      ...(fi ? { fortsmartIa: fi } : {}),
     };
   });
 
@@ -707,6 +718,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     produto: string;
     dose: string;
     manejo: string;
+    fortsmartIa?: Recomendacao['fortsmartIa'];
   };
   const pragasComRecomendacao = useMemo((): PragaComRec[] => {
     const todasInfestacoes = primeiroTalhao?.pontos?.flatMap(p => p.infestacoes) ?? [];
@@ -730,6 +742,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         produto: (rec?.produto ?? '').trim() || '—',
         dose: (rec?.dose ?? '').trim() || '—',
         manejo,
+        fortsmartIa: rec?.fortsmartIa,
       };
     });
   }, [topPragas, recomendacoesTalhao, primeiroTalhao, organismosPayload]);
@@ -1730,6 +1743,26 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         </div>
       )}
 
+      {recomendacoesTalhao.some((r) => r.fortsmartIa && fortsmartIaPayloadTemConteudo(r.fortsmartIa)) ? (
+        <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+          <div className="card-title">
+            <span className="card-title-icon">🤖</span> Recomendação IA FortSmart
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0 0 1rem', lineHeight: 1.5 }}>
+            Prescrição química detalhada, manejo integrado e nutrição da cultura (motor FortSmart v2), no mesmo padrão do aplicativo.
+          </p>
+          {recomendacoesTalhao.map((r, i) => {
+            if (!r.fortsmartIa || !fortsmartIaPayloadTemConteudo(r.fortsmartIa)) return null;
+            return (
+              <div key={`${r.organismo}-${i}`} className="pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
+                <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', margin: '0 0 0.5rem' }}>{r.organismo}</p>
+                <RecomendacaoIaFortsmartMonitoramento ia={r.fortsmartIa} />
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
       {/* #pragas — Análise de Pragas */}
       <div id="pragas" className="pdf-keep-together">
         <div className="section-heading">🐛 Análise de Pragas</div>
@@ -1779,6 +1812,11 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                         <div className="action-deadline">{p.manejo}</div>
                       </div>
                     </div>
+                    {p.fortsmartIa && fortsmartIaPayloadTemConteudo(p.fortsmartIa) ? (
+                      <div className="pest-ia-fortsmart" style={{ marginTop: '0.75rem' }}>
+                        <RecomendacaoIaFortsmartMonitoramento ia={p.fortsmartIa} />
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
