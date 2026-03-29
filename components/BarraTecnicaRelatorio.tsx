@@ -8,6 +8,8 @@ export interface BarraTecnicaRelatorioProps {
   cultura: string;
   cultivar?: string;
   areaHa?: number;
+  /** Estágio fenológico mais atual (plantio / estande / fenologia). */
+  estagio?: string;
   dae?: number | string;
   /** Formatar número (ex.: área com 2 decimais). */
   formatNum?: (n: number) => string;
@@ -21,12 +23,14 @@ export default function BarraTecnicaRelatorio({
   cultura,
   cultivar,
   areaHa,
+  estagio,
   dae,
   formatNum = (n) => n.toFixed(2),
 }: BarraTecnicaRelatorioProps) {
   const areaStr = areaHa != null && areaHa > 0 ? `${formatNum(areaHa)} ha` : '—';
   const daeStr = dae != null ? (typeof dae === 'number' ? `${dae} DAE` : String(dae)) : '—';
   const cultivarStr = cultivar && cultivar.trim() ? cultivar.trim() : '—';
+  const estagioStr = estagio && estagio.trim() && estagio.trim() !== '—' ? estagio.trim() : '—';
 
   return (
     <div className="barra-tecnica-relatorio no-print" role="region" aria-label="Dados técnicos do relatório">
@@ -53,6 +57,11 @@ export default function BarraTecnicaRelatorio({
       <div className="barra-tecnica-inner">
         <span className="barra-tecnica-label">Área</span>
         <span className="barra-tecnica-val">{areaStr}</span>
+      </div>
+      <span className="barra-tecnica-sep" aria-hidden="true">{sep}</span>
+      <div className="barra-tecnica-inner">
+        <span className="barra-tecnica-label">Estágio</span>
+        <span className="barra-tecnica-val">{estagioStr}</span>
       </div>
       <span className="barra-tecnica-sep" aria-hidden="true">{sep}</span>
       <div className="barra-tecnica-inner">

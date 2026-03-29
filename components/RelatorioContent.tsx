@@ -72,7 +72,7 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
   );
   const isVisitaTecnica =
     tipoStr === 'visita_tecnica' ||
-    (tipoStr !== 'plantio' && tipoStr !== 'avaliacao_lado_a_lado' && tipoStr !== 'monitoramento' && (hasVisitaKeys || hasVisitaBlocks));
+    (tipoStr !== 'plantio' && tipoStr !== 'plantio_multi' && tipoStr !== 'avaliacao_lado_a_lado' && tipoStr !== 'monitoramento' && (hasVisitaKeys || hasVisitaBlocks));
   // Inclui tipo explícito visita_tecnica: layout SaaS normaliza o payload e evita instabilidade do legado (Leaflet/client).
   if (isVisitaTecnica) {
     const ctxDae = (contextoSafra as any)?.dae;

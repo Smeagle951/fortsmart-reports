@@ -5,6 +5,7 @@ import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitario
 import RelatorioResearchProContent from '@/components/research/RelatorioResearchProContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import RelatorioPlantio from '@/components/RelatorioPlantio';
+import RelatorioPlantioMultiContent from '@/components/plantio/RelatorioPlantioMultiContent';
 import RelatorioAmostragemSoloContent from '@/components/amostragem-solo/RelatorioAmostragemSoloContent';
 import PrintBar from '@/components/PrintBar';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -363,7 +364,10 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const tipoRelatorio = (relatorio.tipoRelatorio as string | undefined) ?? reportTypeV2;
 
     const isSideBySide = tipo === 'avaliacao_lado_a_lado';
-    const isPlantio = tipo === 'plantio' || tipoRelatorio === 'plantio';
+    const isPlantioMulti =
+      tipo === 'plantio_multi' || tipoRelatorio === 'plantio_multi';
+    const isPlantio =
+      !isPlantioMulti && (tipo === 'plantio' || tipoRelatorio === 'plantio');
     const isVisitaTecnica = tipo === 'visita_tecnica';
     const hasTalhoes = Array.isArray(relatorio.talhoes) && (relatorio.talhoes as unknown[]).length > 0;
     const talhoesArray = Array.isArray(relatorio.talhoes) ? relatorio.talhoes : (relatorio.talhao != null && typeof relatorio.talhao === 'object' ? [relatorio.talhao] : []);
@@ -393,7 +397,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       }
     }
 
-    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isSideBySide, isVisitaTecnica, isMonitoramento, isResearchPro, isAmostragemSolo, topKeys: Object.keys(relatorio).slice(0, 12) });
+    console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isPlantioMulti, isSideBySide, isVisitaTecnica, isMonitoramento, isResearchPro, isAmostragemSolo, topKeys: Object.keys(relatorio).slice(0, 12) });
 
     // relatorio já é clone serializável; usar como props para Client Components
     const payloadSafe: Record<string, unknown> = relatorio;
@@ -428,7 +432,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     return (
       <>
         <PrintBar />
-        <article className={`relatorio ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''}`} style={isMonitoramento ? { minHeight: '100vh', background: '#F1F5F9' } : undefined}>
+        <article className={`relatorio ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''} ${isPlantioMulti ? 'relatorio--plantio-multi' : ''}`} style={isMonitoramento ? { minHeight: '100vh', background: '#F1F5F9' } : undefined}>
           {isMonitoramento ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de monitoramento">
               <RelatorioFitossanitarioContent
@@ -449,6 +453,10 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
               data={payloadSafe as SideBySideReportData}
               reportId={reportIdStr}
             />
+          ) : isPlantioMulti ? (
+            <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de plantio multi-talhão">
+              <RelatorioPlantioMultiContent relatorio={payloadSafe} reportId={reportIdStr} />
+            </ErrorBoundary>
           ) : isPlantio ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de plantio">
               <RelatorioPlantio

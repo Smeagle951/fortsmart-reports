@@ -199,16 +199,47 @@ const MapaInterativo = forwardRef<MapaInterativoRef, MapaInterativoProps>(functi
       }
 
       const fotosLayer = L.layerGroup();
+      const esc = (s: string) =>
+        String(s ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/"/g, '&quot;');
       pontos.forEach((p) => {
-        const hasImage = p.infestacoes.some((i) => i.imagem);
-        if (!hasImage) return;
+        const comFoto = p.infestacoes.filter((i) => i.imagem && String(i.imagem).trim());
+        if (comFoto.length === 0) return;
         const icon = L.divIcon({
-          html: '<div style="width:22px;height:22px;border-radius:50%;background:#1E40AF;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:white;font-size:10px">📷</div>',
+          html: '<div style="width:22px;height:22px;border-radius:50%;background:#1E40AF;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:white;font-size:10px;cursor:pointer">📷</div>',
           className: '',
           iconSize: [22, 22],
           iconAnchor: [11, 11],
         });
-        L.marker([p.lat, p.lng], { icon }).addTo(fotosLayer);
+        const blocos = comFoto
+          .map((inf) => {
+            const tipoStr = inf.tipo === 'praga' ? 'Praga' : inf.tipo === 'doenca' ? 'Doença' : 'Daninha';
+            const qtd =
+              inf.quantidade != null && Number.isFinite(inf.quantidade)
+                ? ` · Qtde ${inf.quantidade}`
+                : '';
+            const sev = `${inf.severidade}%`;
+            const img = inf.imagem
+              ? `<img class="mapa-popup-img" src="${esc(inf.imagem)}" data-src="${esc(inf.imagem)}" data-caption="${esc(`${inf.nome} · ${sev}`)}" style="width:100%;max-height:56px;object-fit:cover;border-radius:6px;margin-top:6px;cursor:pointer" alt="${esc(inf.nome)}" />`
+              : '';
+            return `<div style="padding:8px 0;border-bottom:1px solid #E2E8F0;font-size:12px;line-height:1.35">
+              <div style="font-weight:700;color:#0f172a">${esc(inf.nome)}</div>
+              <div style="color:#64748B;font-size:11px;margin-top:2px">${tipoStr}${qtd} · Sev. ${sev}</div>
+              ${img}
+            </div>`;
+          })
+          .join('');
+        const popupHtml = `
+          <div style="font-family:system-ui,Segoe UI,sans-serif;min-width:200px;max-width:260px">
+            <div style="font-size:10px;color:#94A3B8;font-weight:600;margin-bottom:4px">FOTOS DO PONTO</div>
+            <div style="font-weight:700;font-size:13px;color:#1e3a5f;margin-bottom:6px">${esc(p.identificador)}</div>
+            <div style="max-height:200px;overflow-y:auto">${blocos}</div>
+          </div>`;
+        const popup = L.popup({ maxWidth: 280, className: 'mapa-popup-card' }).setContent(popupHtml);
+        const off = 0.000032;
+        L.marker([p.lat + off, p.lng + off], { icon, zIndexOffset: 400 }).bindPopup(popup).addTo(fotosLayer);
       });
       fotosLayerRef.current = fotosLayer;
       if (layersVisibleRef.current.fotos !== false) fotosLayer.addTo(map);
@@ -309,7 +340,7 @@ const MapaInterativo = forwardRef<MapaInterativoRef, MapaInterativoProps>(functi
             Polígono do talhão · Pontos georreferenciados
           </h3>
           <p className="no-print" style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>
-            Clique no alfinete para ver detalhes do ponto.
+            Clique no alfinete (número) ou no ícone 📷 para ver ocorrências e fotos do ponto.
           </p>
         </>
       )}

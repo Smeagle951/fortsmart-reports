@@ -3,6 +3,11 @@
 import React from 'react';
 import FortSmartLogo from './FortSmartLogo';
 
+export interface RelatorioRelacionadoLink {
+  href: string;
+  label: string;
+}
+
 interface RelatorioLayoutEnterpriseProps {
   /** Nome da fazenda para breadcrumb */
   fazenda: string;
@@ -16,8 +21,12 @@ interface RelatorioLayoutEnterpriseProps {
   reportId?: string;
   /** Callback ao clicar em Compartilhar (opcional) */
   onShare?: () => void;
-  /** URL do logo da fazenda para exibir na sidebar (opcional; sem valor mostra iniciais) */
+  /** URL do logo/ícone da fazenda (perfil fazenda); sem valor mostra iniciais */
   farmLogoUrl?: string | null;
+  /** Linha extra no topo do main (ex.: cultura · monitoramento) */
+  headerSubtitle?: string;
+  /** Outros relatórios de monitoramento na mesma data (links para /r/token ou URL absoluta) */
+  relacionadosMesmaData?: RelatorioRelacionadoLink[];
   /** Conteúdo principal (page-content) */
   children: React.ReactNode;
 }
@@ -37,6 +46,8 @@ export default function RelatorioLayoutEnterprise({
   reportId,
   onShare,
   farmLogoUrl,
+  headerSubtitle,
+  relacionadosMesmaData,
   children,
 }: RelatorioLayoutEnterpriseProps) {
   return (
@@ -59,9 +70,16 @@ export default function RelatorioLayoutEnterprise({
                 iniciais(fazenda)
               )}
             </div>
-            <div className="user-name">{fazenda}</div>
-            <div className="user-role">
-              {tecnico && tecnico.trim() ? (crea ? `${tecnico.trim()} · CREA ${crea}` : tecnico.trim()) : (crea ? `Eng. Agrônomo · CREA ${crea}` : 'Relatório Técnico')}
+            <div className="user-name">Fazenda: {fazenda}</div>
+            <div className="user-role" style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+              <span>
+                {tecnico && tecnico.trim()
+                  ? `Eng.: ${tecnico.trim()}`
+                  : 'Eng.: —'}
+              </span>
+              {crea && crea.trim() ? (
+                <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>CREA: {crea.trim()}</span>
+              ) : null}
             </div>
           </div>
           <nav className="sidebar-nav">
@@ -113,12 +131,37 @@ export default function RelatorioLayoutEnterprise({
                 <span className="breadcrumb-sep">›</span>
                 <span className="breadcrumb-current">Relatório Técnico</span>
               </nav>
+              {headerSubtitle && headerSubtitle.trim() ? (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>{headerSubtitle.trim()}</div>
+              ) : null}
               <span className="status-badge finalizado">
                 <span className="dot" /> Finalizado
               </span>
             </div>
             <div className="header-right no-print" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               {reportId && <span className="meta-tag">{reportId}</span>}
+              {relacionadosMesmaData != null && relacionadosMesmaData.length > 0 && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+                  <span style={{ whiteSpace: 'nowrap' }}>Mesma data</span>
+                  <select
+                    className="btn-action outline"
+                    style={{ padding: '6px 8px', fontSize: 12, cursor: 'pointer', maxWidth: 220 }}
+                    defaultValue=""
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v) window.location.href = v;
+                    }}
+                    aria-label="Abrir outro relatório de monitoramento da mesma data"
+                  >
+                    <option value="">Outros monitoramentos…</option>
+                    {relacionadosMesmaData.map((r) => (
+                      <option key={r.href} value={r.href}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {onShare != null && (
                 <button type="button" onClick={onShare} className="btn-action outline">
                   🔗 Compartilhar
