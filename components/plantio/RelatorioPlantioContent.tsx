@@ -6,15 +6,13 @@ import HeaderRelatorio from '@/components/HeaderRelatorio';
 import DashboardTalhao, { type RelatorioPlantioData } from './DashboardTalhao';
 import PlantabilidadeEstande from './PlantabilidadeEstande';
 import DiagnosticoIntegrado from './DiagnosticoIntegrado';
-import RelatorioTecnicoPdf from './RelatorioTecnicoPdf';
-import ReportPageSaaS, { type ReportPageSaaSData } from '@/components/saas/ReportPageSaaS';
-type TabId = 'dashboard' | 'plantabilidade' | 'diagnostico' | 'pdf';
+
+type TabId = 'dashboard' | 'plantabilidade' | 'diagnostico';
 
 const tabs: { id: TabId; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard Talhão' },
   { id: 'plantabilidade', label: 'Plantabilidade + Estande' },
   { id: 'diagnostico', label: 'Diagnóstico Integrado' },
-  { id: 'pdf', label: 'Relatório PDF' },
 ];
 
 interface RelatorioPlantioContentProps {
@@ -35,7 +33,6 @@ export default function RelatorioPlantioContent({
   const prop = (normalized.propriedade || {}) as { fazenda?: string; proprietario?: string; municipio?: string; estado?: string };
   const talhao = (normalized.talhao || {}) as { nome?: string; cultura?: string };
   const contextoSafra = (normalized.contextoSafra || {}) as { materialVariedade?: string; empresa?: string };
-  const assinaturaTecnica = (normalized.assinaturaTecnica || {}) as { nome?: string; crea?: string; dataAssinatura?: string; cidade?: string };
 
   return (
     <div className="relatorio-plantio">
@@ -75,31 +72,15 @@ export default function RelatorioPlantioContent({
         {activeTab === 'dashboard' && <DashboardTalhao data={data} relatorioId={relatorioUuid || reportId} />}
         {activeTab === 'plantabilidade' && <PlantabilidadeEstande data={data} />}
         {activeTab === 'diagnostico' && <DiagnosticoIntegrado data={data} />}
-
-        {activeTab === 'pdf' && (
-          <RelatorioTecnicoPdf
-            data={data}
-            meta={meta}
-            assinaturaTecnica={assinaturaTecnica}
-            relatorioId={relatorioUuid || reportId}
-          />
-        )}
       </div>
 
-      {/* Versão impressão: todas as seções */}
+      {/* Versão impressão: use Ctrl+P no navegador (PDF específico de plantio virá depois) */}
       <div className="hidden print:block">
         <DashboardTalhao data={data} relatorioId={relatorioUuid || reportId} />
         <div className="my-8 border-t-2 border-slate-300" />
         <PlantabilidadeEstande data={data} />
         <div className="my-8 border-t-2 border-slate-300" />
         <DiagnosticoIntegrado data={data} />
-        <div className="my-8 border-t-2 border-slate-300" />
-        <RelatorioTecnicoPdf
-          data={data}
-          meta={meta}
-          assinaturaTecnica={assinaturaTecnica}
-          relatorioId={relatorioUuid || reportId}
-        />
       </div>
     </div>
   );

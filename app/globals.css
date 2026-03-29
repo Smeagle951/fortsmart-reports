@@ -296,6 +296,18 @@ body {
   }
 }
 
+/* Plantio multi-talhão (mestre + modal editorial) */
+.relatorio.relatorio--plantio-multi {
+  max-width: 960px;
+}
+
+@media print {
+  .relatorio.relatorio--plantio-multi {
+    padding: 12px 16px 48px;
+    background: #fff;
+  }
+}
+
 .relatorio-plantio .relatorio-plantio-content {
   --plantio-card-bg: #ffffff;
   --plantio-border: #e2e8f0;

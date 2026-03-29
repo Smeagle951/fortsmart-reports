@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useRef, useMemo } from 'react';
-// BUILD: 2026-03-23T23:20:00Z | PIVO-05 data v3: COM VERANGO 5.6ha 61sc/ha | SEM VERANGO 4.08ha 68.73sc/ha
+// BUILD: 2026-03-27 | T-15 Verango 3.94/3.80 ha (peso→sc/60kg) | T-13 testem. 10.44 ha | T-11 testem. 10.43 ha | PIVO-06 NEO 771 I2X
 
 const INITIAL_HARVEST_DATA = [
   // T-15 (DM79K80 CE)
   { talhao: "T-15", variedade: "DM79K80 CE", produto: "NEM-OUT + ACTIVE + VERANGO", hectares: 30.29, media: 82.07, tipo: "tratamento", pa: "Bacillus + Fluopiram", classe: "Nematicida", categoria: "Misto", segmento: "Solo/TS", modo: "Bio + SDHI", composicao_custos: [{ produto: "NEM-OUT", valor: 110, moeda: "BRL", dose_ha: 1 }, { produto: "SOIL ACTIVE", valor: 40, moeda: "BRL", dose_ha: 1 }, { produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
   { talhao: "T-15", variedade: "DM79K80 CE", produto: "PADRAO FAZENDA / LALNIX RESIST + VERANGO", hectares: 33.46, media: 78.69, tipo: "testemunha", pa: "B. licheniformis + Fluopiram", classe: "Nematicida", categoria: "Misto", segmento: "Solo/TS", modo: "Bio + SDHI", composicao_custos: [{ produto: "LALNIX RESIST", valor: 475, moeda: "BRL", dose_ha: 0.1 }, { produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
   { talhao: "T-15", variedade: "DM79K80 CE", produto: "NEM-OUT + TRUST", hectares: 27.3, media: 78.44, tipo: "tratamento", pa: "Bacillus + Trichoderma", classe: "Nematicida", categoria: "Biológico", segmento: "Solo", modo: "Antagonismo", composicao_custos: [{ produto: "NEM-OUT", valor: 110, moeda: "BRL", dose_ha: 1 }, { produto: "TRUST", valor: 90, moeda: "BRL", dose_ha: 1 }] },
+  // T-15 — comparativo Verango isolado (subgrupo: uma única testemunha = sem Verango)
+  { talhao: "T-15", variedade: "DM79K80 CE (Verango)", produto: "COM VERANGO (PRIME)", hectares: 3.94, media: 76.78, tipo: "tratamento", pa: "Fluopiram", classe: "Nematicida", categoria: "Químico", segmento: "TS", modo: "SDHI", composicao_custos: [{ produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
+  { talhao: "T-15", variedade: "DM79K80 CE (Verango)", produto: "SEM VERANGO (Pad. Fazenda)", hectares: 3.8, media: 78.72, tipo: "testemunha", pa: "Padrão", classe: "Baseline", categoria: "Baseline", segmento: "-", modo: "-", composicao_custos: [] },
 
   // T-12 (BREV 5830 CE)
   { talhao: "T-12", variedade: "BREV 5830 CE", produto: "VERANGO", hectares: 3.43, media: 84.22, tipo: "testemunha", pa: "Fluopiram", classe: "Nematicida", categoria: "Químico", segmento: "TS", modo: "SDHI", composicao_custos: [{ produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
@@ -18,8 +21,8 @@ const INITIAL_HARVEST_DATA = [
   { talhao: "T-12", variedade: "NEO 810 I2X", produto: "VERANGO", hectares: 6.46, media: 67.95, tipo: "tratamento", pa: "Fluopiram", classe: "Nematicida", categoria: "Químico", segmento: "TS", modo: "SDHI", composicao_custos: [{ produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
   { talhao: "T-12", variedade: "NEO 810 I2X", produto: "ADUBO FOSFORO", hectares: 9.62, media: 64.08, tipo: "tratamento", pa: "P2O5 (Fósforo)", classe: "Fertilizante", categoria: "Químico", segmento: "Solo", modo: "Nutrição", composicao_custos: [{ produto: "ADUBO", valor: 200, moeda: "BRL", dose_ha: 1 }] },
 
-  // T-13 (BREV 5830 CE)
-  { talhao: "T-13", variedade: "BREV 5830 CE", produto: "PADRAO FAZENDA (1)", hectares: 11, media: 80.22, tipo: "testemunha", pa: "Padrão", classe: "Baseline", categoria: "Baseline", segmento: "-", modo: "-", composicao_custos: [] },
+  // T-13 (BREV 5830 CE) — testemunha real sem Verango: área corrigida; sc/ha recalculada (mesmo total de sacas que 11 ha × 80,22)
+  { talhao: "T-13", variedade: "BREV 5830 CE", produto: "PADRAO FAZENDA (1)", hectares: 10.44, media: 84.52, tipo: "testemunha", pa: "Padrão", classe: "Baseline", categoria: "Baseline", segmento: "-", modo: "-", composicao_custos: [] },
   { talhao: "T-13", variedade: "BREV 5830 CE", produto: "VERANGO", hectares: 11.15, media: 78.91, tipo: "tratamento", pa: "Fluopiram", classe: "Nematicida", categoria: "Químico", segmento: "TS", modo: "SDHI", composicao_custos: [{ produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
 
   // PIVO-02 (BALSAMO TMG)
@@ -37,7 +40,11 @@ const INITIAL_HARVEST_DATA = [
 
   // T-11 (BREV 5830 CE)
   { talhao: "T-11", variedade: "BREV 5830 CE", produto: "COM VERANGO", hectares: 110.28, media: 81.63, tipo: "tratamento", pa: "Fluopiram", classe: "Nematicida", categoria: "Químico", segmento: "TS", modo: "SDHI", composicao_custos: [{ produto: "VERANGO", valor: 84.25, moeda: "USD", dose_ha: 0.5 }] },
-  { talhao: "T-11", variedade: "BREV 5830 CE", produto: "PADRAO FAZENDA", hectares: 10.28, media: 77.34, tipo: "testemunha", pa: "Padrão", classe: "Baseline", categoria: "Baseline", segmento: "-", modo: "-", composicao_custos: [] },
+  { talhao: "T-11", variedade: "BREV 5830 CE", produto: "PADRAO FAZENDA", hectares: 10.43, media: 76.23, tipo: "testemunha", pa: "Padrão", classe: "Baseline", categoria: "Baseline", segmento: "-", modo: "-", composicao_custos: [] },
+
+  // PIVO-06 (NEO 771 I2X) — peso líq. → sc/ha @ 60 kg/sc
+  { talhao: "PIVO-06", variedade: "NEO 771 I2X", produto: "PADRAO FAZENDA", hectares: 60.5, media: 85.93, tipo: "testemunha", pa: "Padrão", classe: "Baseline", categoria: "Baseline", segmento: "-", modo: "-", composicao_custos: [] },
+  { talhao: "PIVO-06", variedade: "NEO 771 I2X", produto: "FÓSFORO NA LINHA", hectares: 24.2, media: 88.14, tipo: "tratamento", pa: "P2O5 (Fósforo)", classe: "Fertilizante", categoria: "Químico", segmento: "Solo", modo: "Nutrição", composicao_custos: [{ produto: "FOSFORO", valor: 200, moeda: "BRL", dose_ha: 1 }] },
 
   // T-16 Data
   { talhao: "T-16", variedade: "VICTRATO", produto: "VICTRATO", hectares: 1.77, media: 84.11, tipo: "tratamento", pa: "Tyclopyrazoflor", classe: "Nematicida", categoria: "Químico", segmento: "TS", modo: "Sistêmico", composicao_custos: [{ produto: "VIC TRATO", valor: 50.96, moeda: "USD", dose_ha: 1 }] },
@@ -50,7 +57,7 @@ const INITIAL_HARVEST_DATA = [
 ];
 
 /** Incrementar quando atualizar linhas do INITIAL_HARVEST_DATA — força fusão nos dados do localStorage (ex.: PIVO-05 / Verango). */
-const COLHEITA_SEED_REVISION = 6;
+const COLHEITA_SEED_REVISION = 7;
 const COLHEITA_SEED_REVISION_KEY = 'fortsmart_colheita_seed_revision';
 
 type HarvestRow = (typeof INITIAL_HARVEST_DATA)[number];
@@ -59,16 +66,26 @@ function harvestRowKey(r: { talhao: string; variedade: string; produto: string; 
   return `${r.talhao}|${r.variedade}|${r.produto}|${r.tipo}`;
 }
 
-/** Sobrescreve hectares, média e composição do seed nas linhas já salvas (mesmo talhão/variedade/produto/tipo). */
+/** Sobrescreve hectares, média e composição do seed nas linhas já salvas; acrescenta linhas novas do seed. */
 function mergeHarvestSeedIntoStored<T extends { talhao: string; variedade: string; produto: string; tipo: string }>(
   stored: T[],
   seed: T[],
 ): T[] {
   const seedByKey = new Map(seed.map((row) => [harvestRowKey(row), row]));
-  return stored.map((row) => {
+  const merged = stored.map((row) => {
     const s = seedByKey.get(harvestRowKey(row));
     return s ? { ...row, ...s } : row;
   });
+  const keys = new Set(merged.map((row) => harvestRowKey(row)));
+  const extra: T[] = [];
+  for (const row of seed) {
+    const k = harvestRowKey(row);
+    if (!keys.has(k)) {
+      extra.push(row);
+      keys.add(k);
+    }
+  }
+  return extra.length ? [...merged, ...extra] : merged;
 }
 
 const productInsights: Record<string, { alvo: string, proposta: string, bio: string }> = {
@@ -197,12 +214,69 @@ const productInsights: Record<string, { alvo: string, proposta: string, bio: str
     proposta: "Tratamento com fluopiram (SDHI) no sulco.",
     bio: "Mesma base técnica do VERANGO isolado; comparar sempre com a testemunha sem Verango do mesmo talhão."
   },
+  "COM VERANGO (PRIME)": {
+    alvo: "Nematoides de Galha e Cisto (Fitonematoides)",
+    proposta: "Tratamento com fluopiram (SDHI) no sulco — lote comparativo dedicado.",
+    bio: "Mesma base técnica do VERANGO isolado; comparar sempre com a testemunha sem Verango do mesmo talhão."
+  },
   "SEM VERANGO (Pad. Fazenda)": {
     alvo: "Linha de base do manejo da propriedade",
     proposta: "Testemunha sem aplicação de Verango.",
     bio: "Referência econômica e produtiva para calcular diferença e ROI do tratamento COM VERANGO na mesma área."
   }
 };
+
+// --- Motor econômico (colheita): fórmulas documentadas para o relatório ---
+/** Entre testemunhas do mesmo grupo, prioriza `Baseline`; senão a primeira testemunha. Sem testemunha, usa a 1ª linha (caso-limite). */
+function escolherTestemunhaReferencia<T extends { tipo: string; categoria?: string }>(grupo: T[]): T {
+  if (grupo.length === 0) throw new Error("Grupo talhão/variedade vazio.");
+  const ts = grupo.filter((r) => r.tipo === "testemunha");
+  if (ts.length === 0) return grupo[0];
+  return ts.find((r) => r.categoria === "Baseline") ?? ts[0];
+}
+
+/** Lucro incremental/ha = (Δ sc/ha × R$/sc) − (custo trat − custo testemunha). */
+function calcularLucroIncrementalHa(diffProdScHa: number, precoSaca: number, custoDiffHa: number): number {
+  return diffProdScHa * precoSaca - custoDiffHa;
+}
+
+/** ROI incremental (%): lucro incremental ÷ custo incremental; só quando custo extra > 0. */
+function roiIncrementalPct(lucroIncHa: number, custoDiffHa: number): number | null {
+  if (!(custoDiffHa > 0) || !Number.isFinite(lucroIncHa)) return null;
+  return (lucroIncHa / custoDiffHa) * 100;
+}
+
+/**
+ * ROI exibido no relatório: ROI incremental quando existe; senão ROI do lucro incremental sobre o custo total do tratamento
+ * (evita o indicador antigo que misturava Δ receita só com custo total).
+ */
+function roiExibicaoTratamento(
+  tipo: string,
+  roiInc: number | null,
+  lucroIncHa: number,
+  custoHa: number,
+): number | null {
+  if (tipo !== "tratamento") return null;
+  if (roiInc != null && Number.isFinite(roiInc)) return roiInc;
+  if (custoHa > 0 && Number.isFinite(lucroIncHa)) return (lucroIncHa / custoHa) * 100;
+  return null;
+}
+
+/** Custo/ha em “sacas equivalentes” ao preço R$/sc (referência de escala; não é payback temporal). */
+function custoEquivalenteScPorHa(custoHa: number, precoSaca: number): number | null {
+  if (!(precoSaca > 0) || !Number.isFinite(custoHa)) return null;
+  return custoHa / precoSaca;
+}
+
+/**
+ * Safras necessárias para a receita marginal/ha (Δ sc/ha × R$/sc) cobrir o custo extra/ha.
+ * Só definido se Δ produtividade > 0 e receita marginal > 0.
+ */
+function paybackCustoExtraEmSafras(custoDiffHa: number, diffProdScHa: number, precoSaca: number): number | null {
+  const revInc = diffProdScHa * precoSaca;
+  if (!(diffProdScHa > 0) || !(precoSaca > 0) || !(custoDiffHa > 0) || !(revInc > 0)) return null;
+  return custoDiffHa / revInc;
+}
 
 type InformativoSnapshot = {
   id: string;
@@ -395,32 +469,42 @@ export default function SoybeanHarvestDashboard() {
         }, 0);
       };
 
+      const groupKeys = Array.from(new Set(informativoData.map((i) => `${i.talhao} - ${i.variedade}`)));
+      const testemunhaPorGrupo = new Map<string, (typeof informativoData)[number]>();
+      for (const gk of groupKeys) {
+        const wg = informativoData.filter((h) => `${h.talhao} - ${h.variedade}` === gk);
+        testemunhaPorGrupo.set(gk, escolherTestemunhaReferencia(wg));
+      }
+
       const processedData = informativoData.map(item => {
         const key = `${item.talhao} - ${item.variedade}`;
-        const witnessGroup = informativoData.filter(h => `${h.talhao} - ${h.variedade}` === key);
-        const witness = witnessGroup.find(h => h.tipo === 'testemunha') || witnessGroup[0];
+        const witness = testemunhaPorGrupo.get(key)!;
         const witnessCustoHa = calcularCustoHa(witness);
         const custoHaBRL = calcularCustoHa(item);
 
-        const rec_sc_ha = item.media;
-        const rec_ha_rs = rec_sc_ha * precoSaca;
-        const rec_tot_rs = rec_sc_ha * precoSaca * item.hectares;
-        const custo_tot_rs = custoHaBRL * item.hectares;
+        const rec_sc_ha = Number(item.media) || 0;
+        const ha = Number(item.hectares) || 0;
+        const preco = Number(precoSaca) || 0;
+        const rec_ha_rs = rec_sc_ha * preco;
+        const rec_tot_rs = rec_sc_ha * preco * ha;
+        const custo_tot_rs = custoHaBRL * ha;
         const lucro_tot_rs = rec_tot_rs - custo_tot_rs;
         const margem_ha_rs = rec_ha_rs - custoHaBRL;
 
-        const diff_prod = item.media - witness.media;
-        const payback_sc = custoHaBRL / precoSaca;
+        const diff_prod = rec_sc_ha - (Number(witness.media) || 0);
 
-        // Incremental versus padrão do mesmo talhão/variedade
         const custoDiffHa = custoHaBRL - witnessCustoHa;
-        const lucroIncrementalHa = (diff_prod * precoSaca) - custoDiffHa;
-        const lucroIncrementalTot = lucroIncrementalHa * item.hectares;
-        const roi = custoHaBRL > 0 ? ((diff_prod * precoSaca - custoHaBRL) / custoHaBRL) * 100 : 0;
-        const roiIncremental = custoDiffHa > 0 ? (lucroIncrementalHa / custoDiffHa) * 100 : null;
+        const lucroIncrementalHa = calcularLucroIncrementalHa(diff_prod, preco, custoDiffHa);
+        const lucroIncrementalTot = lucroIncrementalHa * ha;
+        const roiIncremental = roiIncrementalPct(lucroIncrementalHa, custoDiffHa);
+        const roiExibicao = roiExibicaoTratamento(item.tipo, roiIncremental, lucroIncrementalHa, custoHaBRL);
+        const custoEquivScHa = custoEquivalenteScPorHa(custoHaBRL, preco);
+        const paybackCustoExtraSafras = paybackCustoExtraEmSafras(custoDiffHa, diff_prod, preco);
 
         return {
           ...item,
+          media: rec_sc_ha,
+          hectares: ha,
           groupKey: key,
           custoHa: custoHaBRL,
           witnessCustoHa,
@@ -430,12 +514,13 @@ export default function SoybeanHarvestDashboard() {
           recTot: rec_tot_rs,
           margemHa: margem_ha_rs,
           lucroTot: lucro_tot_rs,
-          roi,
           roiIncremental,
+          roiExibicao,
           diff_prod,
           lucroIncrementalHa,
           lucroIncrementalTot,
-          payback_sc,
+          custoEquivScHa,
+          paybackCustoExtraSafras,
           viaAplicacao: getViaAplicacao(item.classe),
           comparavel: item.classe === focoEnsaio
         };
@@ -483,8 +568,8 @@ export default function SoybeanHarvestDashboard() {
       const summary = {
         topProdutividade: [...filteredResults].sort((a, b) => b.media - a.media).slice(0, 3),
         topROI: [...filteredResults]
-          .filter(t => t.custoHa > 0)
-          .sort((a, b) => ((b.roiIncremental ?? b.roi) - (a.roiIncremental ?? a.roi)))
+          .filter((t) => t.roiExibicao != null && Number.isFinite(t.roiExibicao))
+          .sort((a, b) => (Number(b.roiExibicao) || 0) - (Number(a.roiExibicao) || 0))
           .slice(0, 3),
         topLucro: [...filteredResults]
           .sort((a, b) => (b.lucroIncrementalHa - a.lucroIncrementalHa))
@@ -596,6 +681,7 @@ export default function SoybeanHarvestDashboard() {
         margemHa: Number(r.margemHa ?? 0),
         lucroIncrementalHa: Number(r.lucroIncrementalHa ?? 0),
         roiIncremental: r.roiIncremental == null ? null : Number(r.roiIncremental),
+        roiExibicao: r.roiExibicao == null || !Number.isFinite(r.roiExibicao) ? null : Number(r.roiExibicao),
         diffProd: Number(r.diff_prod ?? 0),
         custoDiffHa: Number(r.custoDiffHa ?? 0),
       }))
@@ -604,7 +690,7 @@ export default function SoybeanHarvestDashboard() {
   }, [processedData]);
 
   const explainEconomicDecision = (r: any) => {
-    const roi = r.roiIncremental;
+    const roi = r.roiIncremental ?? r.roiExibicao;
     if (r.lucroIncrementalHa > 0 && (roi == null || roi >= 0)) {
       if (r.diffProd <= 0 && r.custoDiffHa < 0) {
         return { label: "Vale a pena", reason: "Mesmo sem ganho de produção, a economia de custo gerou retorno." };
@@ -639,7 +725,9 @@ export default function SoybeanHarvestDashboard() {
 
   const pareceresTecnicos = useMemo(() => {
     const topProd = [...resumoEconomico].sort((a, b) => b.diffProd - a.diffProd);
-    const topROI = [...resumoEconomico].sort((a, b) => (b.roiIncremental ?? 0) - (a.roiIncremental ?? 0));
+    const topROI = [...resumoEconomico].sort(
+      (a, b) => (Number(b.roiExibicao) || -Infinity) - (Number(a.roiExibicao) || -Infinity),
+    );
 
     return resumoEconomico.map((r: any) => {
       const isTop1Prod = topProd[0] && topProd[0].key === r.key;
@@ -1077,7 +1165,9 @@ export default function SoybeanHarvestDashboard() {
                         <span className="w-4 h-4 rounded-full bg-green-600 text-white text-[8px] flex items-center justify-center font-black">{idx + 1}º</span>
                         <span className="text-[10px] font-black uppercase truncate">{t.produto}</span>
                       </div>
-                      <span className="text-[9px] font-black text-green-700 ml-6">{Math.round(t.roiIncremental ?? t.roi)}% ROI</span>
+                      <span className="text-[9px] font-black text-green-700 ml-6">
+                        {t.roiExibicao != null && Number.isFinite(t.roiExibicao) ? `${Math.round(t.roiExibicao)}% ROI` : "—"}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -1431,8 +1521,7 @@ export default function SoybeanHarvestDashboard() {
           {Object.entries(groupedData as Record<string, any[]>).map(([groupKey, products]) => {
             const [talhao, variedade] = (groupKey as string).split(' - ');
             const typedProducts = products as any[];
-            const bestInGroup = typedProducts[0];
-            const witness = typedProducts.find((p: any) => p.tipo === 'testemunha') || typedProducts[typedProducts.length - 1];
+            const bestInGroup = typedProducts.find((p: any) => p.tipo !== "testemunha") ?? typedProducts[0];
 
             return (
               <div key={groupKey} className="bg-white border-y md:border border-slate-200 overflow-hidden shadow-sm break-inside-avoid">
@@ -1469,7 +1558,7 @@ export default function SoybeanHarvestDashboard() {
                         const isWinner = idx === 0;
                         const isWitness = item.tipo === 'testemunha';
                         const diff = item.diff_prod;
-                        const roiExibicao = item.roiIncremental ?? item.roi;
+                        const roiPct = item.roiExibicao;
 
                         return (
                           <tr key={idx} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${isWinner ? 'bg-green-50/20' : ''}`}>
@@ -1490,7 +1579,14 @@ export default function SoybeanHarvestDashboard() {
                               {!isWitness && (
                                 <>
                                   <p className={`text-xs font-black ${diff >= 0 ? 'text-green-700' : 'text-red-700'}`}>{diff >= 0 ? '+' : ''}{diff.toFixed(2)}</p>
-                                  <p className="text-[8px] text-slate-400 font-bold uppercase italic mt-1">Payback: {item.payback_sc.toFixed(1)}sc</p>
+                                  <p className="text-[8px] text-slate-400 font-bold uppercase italic mt-1">
+                                    Equiv. custo: {item.custoEquivScHa != null ? `${item.custoEquivScHa.toFixed(1)} sc/ha` : "—"}
+                                  </p>
+                                  {item.paybackCustoExtraSafras != null && (
+                                    <p className="text-[8px] text-slate-500 font-bold uppercase italic mt-0.5">
+                                      Payback custo extra: {item.paybackCustoExtraSafras.toFixed(2)} safra(s)
+                                    </p>
+                                  )}
                                 </>
                               )}
                               {isWitness && <span className="text-slate-200 font-black">-</span>}
@@ -1528,10 +1624,12 @@ export default function SoybeanHarvestDashboard() {
                             <td className="py-4 px-4 text-center">
                               {isWitness ? (
                                 <span className="text-slate-300 font-black">-</span>
-                              ) : (
-                                <div className={`text-xs font-black border-2 px-1 py-0.5 rounded ${roiExibicao >= 0 ? 'border-green-800 text-green-800' : 'border-red-700 text-red-700'}`}>
-                                  {Math.round(roiExibicao)}%
+                              ) : roiPct != null && Number.isFinite(roiPct) ? (
+                                <div className={`text-xs font-black border-2 px-1 py-0.5 rounded ${roiPct >= 0 ? 'border-green-800 text-green-800' : 'border-red-700 text-red-700'}`}>
+                                  {Math.round(roiPct)}%
                                 </div>
+                              ) : (
+                                <span className="text-slate-400 font-black text-xs">—</span>
                               )}
                             </td>
                           </tr>
@@ -1552,7 +1650,7 @@ export default function SoybeanHarvestDashboard() {
                     </div>
                     <div className="bg-slate-50 p-4 border border-slate-200 rounded-sm italic text-[11px] leading-relaxed text-slate-700 font-medium">
                       "Nesta área, a estratégia de manejo evidenciou que o {bestInGroup.lucroIncrementalHa > 0 ? 'investimento tecnológico superou a base econômica' : 'custo adicional não foi compensado pelo ganho produtivo'}.
-                      O tratamento {bestInGroup.produto} apresentou {bestInGroup.diff_prod > 0 ? `incremento de ${bestInGroup.diff_prod.toFixed(2)} sc/ha` : 'resultado estável'}, com {bestInGroup.roiIncremental != null ? `ROI incremental de ${Math.round(bestInGroup.roiIncremental)}%` : 'avaliação incremental por margem'}.
+                      O tratamento {bestInGroup.produto} apresentou {bestInGroup.diff_prod > 0 ? `incremento de ${bestInGroup.diff_prod.toFixed(2)} sc/ha` : 'resultado estável'}, com {bestInGroup.roiIncremental != null && Number.isFinite(bestInGroup.roiIncremental) ? `ROI incremental de ${Math.round(bestInGroup.roiIncremental)}%` : bestInGroup.roiExibicao != null && Number.isFinite(bestInGroup.roiExibicao) ? `ROI de ${Math.round(bestInGroup.roiExibicao)}% (margem vs custo do tratamento)` : 'avaliação incremental por margem'}.
                       Mesmo quando a produtividade cai, o modelo considera se a redução de custo manteve lucro incremental positivo para decidir se vale a pena."
                     </div>
                   </div>

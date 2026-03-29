@@ -14,6 +14,7 @@ import InteligenciaEstrategicaVisitaVT, {
   labelCiclo,
 } from './visita_tecnica/sections/InteligenciaEstrategicaVisitaVT';
 import DiagnosticoEPlanoAcao from './visita_tecnica/sections/DiagnosticoEPlanoAcao';
+import DecisaoAgronomicaVT from './visita_tecnica/sections/DecisaoAgronomicaVT';
 import AplicacoesRealizadasVT from './visita_tecnica/sections/AplicacoesRealizadasVT';
 import FotografiasEAutoriaVT from './visita_tecnica/sections/FotografiasEAutoriaVT';
 
@@ -58,7 +59,15 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
   diagnostico?: Record<string, unknown>;
   planoAcao?: {
     objetivoManejo?: string;
-    acoes?: Array<{ prioridade?: string; acao?: string; prazo?: string }>;
+    acoes?: Array<{
+      prioridade?: string;
+      acao?: string;
+      prazo?: string;
+      produto?: string;
+      dose?: string;
+      momento?: string;
+      objetivoTecnico?: string;
+    }>;
   };
   conclusao?: string;
   pragas?: Record<string, unknown>[];
@@ -202,6 +211,41 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  const decisaoInput = useMemo(
+    () => ({
+      pragas,
+      diagnostico,
+      fenologia,
+      populacao,
+      condicoes,
+    }),
+    [pragas, diagnostico, fenologia, populacao, condicoes],
+  );
+
+  const handleShare = useCallback(async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    try {
+      if (navigator.share && url) {
+        await navigator.share({
+          title: 'FortSmart — Relatório de visita técnica',
+          text: `Relatório técnico: ${fazenda}${talhao?.nome ? ` · ${String(talhao.nome)}` : ''}`,
+          url,
+        });
+        return;
+      }
+    } catch {
+      /* cancelado ou indisponível */
+    }
+    try {
+      if (url && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        alert('Link copiado para a área de transferência.');
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [fazenda, talhao]);
+
   const handleExportPDF = useCallback(async () => {
     const { default: html2pdf } = await import('html2pdf.js');
     const el = document.getElementById('relatorio-visita-tecnica-content');
@@ -245,23 +289,41 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           <FortSmartLogo size={36} />
           <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.95)' }}>Relatório de Visita Técnica</span>
         </div>
-        <button
-          type="button"
-          onClick={handleExportPDF}
-          style={{
-            padding: '12px 24px',
-            background: '#fff',
-            color: '#166534',
-            border: 'none',
-            borderRadius: 8,
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-          }}
-        >
-          Baixar PDF
-        </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={handleShare}
+            style={{
+              padding: '12px 20px',
+              background: 'rgba(255,255,255,0.15)',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.5)',
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Compartilhar link
+          </button>
+          <button
+            type="button"
+            onClick={handleExportPDF}
+            style={{
+              padding: '12px 24px',
+              background: '#fff',
+              color: '#166534',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            }}
+          >
+            Baixar PDF
+          </button>
+        </div>
       </div>
 
       <div id="relatorio-visita-tecnica-content" className="relatorio-editorial" style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px 0' }}>
@@ -272,9 +334,23 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
             Relatório Técnico de Visita
           </h1>
           <p style={{ fontSize: 13, color: '#64748b', marginTop: 8, marginBottom: 0 }}>
-            {fazenda}{talhao?.nome ? ` · ${String(talhao.nome)}` : ''}{safra ? ` · Safra ${safra}` : ''}
+            {fazenda}{talhao?.nome ? ` · ${String(talhao.nome)}` : ''}
+            {talhao?.cultura ? ` · ${String(talhao.cultura)}` : ''}
+            {safra ? ` · Safra ${safra}` : ''}
+            {data ? ` · ${formatDate(data) || data}` : ''}
+            {tecnico ? ` · Técnico: ${tecnico}` : ''}
           </p>
+          {(condicoes?.temperatura != null || condicoes?.umidade != null || condicoes?.vento != null) && (
+            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 10, marginBottom: 0 }}>
+              Clima no registro:
+              {condicoes?.temperatura != null && ` ${condicoes.temperatura} °C`}
+              {condicoes?.umidade != null && ` · Umidade ${condicoes.umidade}%`}
+              {condicoes?.vento != null && ` · Vento ${String(condicoes.vento)}`}
+            </p>
+          )}
         </header>
+
+        <DecisaoAgronomicaVT input={decisaoInput} />
 
         {/* 1. Dados da Propriedade — tabela técnica */}
         <section className="section-block">

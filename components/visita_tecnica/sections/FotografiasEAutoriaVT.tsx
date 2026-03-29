@@ -72,6 +72,11 @@ export default function FotografiasEAutoriaVT({ imagens, assinatura, conclusao, 
                                                 {img.descricao}
                                             </figcaption>
                                         )}
+                                        {(cat === 'praga' || cat === 'doença' || cat === 'doenca' || cat === 'daninha') && (
+                                            <div style={{ fontSize: 11, color: '#166534', marginTop: 6, padding: '0 4px', fontWeight: 600, lineHeight: 1.35 }}>
+                                                Contexto: registro fitossanitário — correlacionar com incidência, severidade e plano de ação desta visita.
+                                            </div>
+                                        )}
                                         {img.data && (
                                             <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>{img.data}</div>
                                         )}

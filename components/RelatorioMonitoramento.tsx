@@ -9,6 +9,226 @@ import GaleriaOcorrencias from './GaleriaOcorrencias';
 
 const MapaInterativo = dynamic(() => import('./MapaInterativo'), { ssr: false });
 
+/** Payload espelhado do app (monitoring_card_data_service + motor v2). */
+export type FortsmartIaMonitoramento = {
+  dosesDefensivos?: Record<string, Record<string, unknown>>;
+  manejoQuimico?: string[];
+  manejoBiologico?: string[];
+  manejoCultural?: string[];
+  motorV2?: Record<string, unknown> | null;
+};
+
+function ListaManejo({ titulo, itens, icon }: { titulo: string; itens: string[]; icon: React.ReactNode }) {
+  if (!itens?.length) return null;
+  return (
+    <div className="rounded-lg border border-teal-200/80 bg-white/90 p-3 shadow-sm">
+      <div className="flex items-center gap-2 mb-2">
+        {icon}
+        <span className="text-[12px] font-black uppercase tracking-wider text-teal-900">{titulo}</span>
+      </div>
+      <ul className="list-disc pl-4 space-y-1 text-[12px] text-slate-700 leading-relaxed">
+        {itens.map((t, j) => (
+          <li key={j}>{t}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function CartaoDefensivoWeb({ nomeProduto, info }: { nomeProduto: string; info: Record<string, unknown> }) {
+  const rotulos: [string, string][] = [
+    ['dose', 'Dose'],
+    ['volume_calda', 'Volume de calda'],
+    ['intervalo_seguranca', 'Intervalo de segurança'],
+    ['epoca_aplicacao', 'Época'],
+    ['condicoes_climaticas', 'Condições'],
+    ['equipamento', 'Equipamento'],
+    ['adjuvante', 'Adjuvante'],
+    ['observacoes', 'Observações'],
+    ['fonte_publica', 'Fonte'],
+  ];
+  const linhas: { label: string; valor: string }[] = [];
+  for (const [key, label] of rotulos) {
+    const v = info[key];
+    if (v != null && String(v).trim() !== '') linhas.push({ label, valor: String(v) });
+  }
+  const titulo = nomeProduto.replace(/_/g, ' ').toUpperCase();
+  return (
+    <div className="rounded-xl border-[1.5px] border-[#1B5E20]/35 bg-white p-3.5 shadow-sm">
+      <h5 className="text-[13px] font-black text-[#1B5E20] tracking-tight mb-2">{titulo}</h5>
+      {linhas.length === 0 ? (
+        <p className="text-xs text-slate-500">Sem detalhes estruturados no catálogo.</p>
+      ) : (
+        <dl className="space-y-1.5 text-[12px]">
+          {linhas.map(({ label, valor }) => (
+            <div key={label} className="grid grid-cols-1 sm:grid-cols-[minmax(0,8rem)_1fr] gap-x-2 gap-y-0.5">
+              <dt className="font-bold text-slate-500">{label}</dt>
+              <dd className="text-slate-800 leading-snug">{valor}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+function motorV2TemConteudoVisivel(m: Record<string, unknown>): boolean {
+  const nut = Array.isArray(m.nutricaoBase) ? m.nutricaoBase.length : 0;
+  const adj = Array.isArray(m.ajusteNutricao) ? m.ajusteNutricao.length : 0;
+  const extras = Array.isArray(m.recomendacaoExtra) ? m.recomendacaoExtra.length : 0;
+  const base = m.recomendacaoFinalBase != null ? String(m.recomendacaoFinalBase) : '';
+  const obj = m.recomendacaoFinalObjetivo != null ? String(m.recomendacaoFinalObjetivo) : '';
+  const exp = m.recomendacaoFinalExplicacao != null ? String(m.recomendacaoFinalExplicacao) : '';
+  return (
+    nut > 0 ||
+    adj > 0 ||
+    extras > 0 ||
+    base.length > 0 ||
+    obj.length > 0 ||
+    exp.length > 0
+  );
+}
+
+function BlocoMotorV2Web({ m }: { m: Record<string, unknown> }) {
+  const nut = Array.isArray(m.nutricaoBase) ? (m.nutricaoBase as Record<string, string>[]) : [];
+  const adj = Array.isArray(m.ajusteNutricao) ? (m.ajusteNutricao as Record<string, string>[]) : [];
+  const extras = Array.isArray(m.recomendacaoExtra) ? (m.recomendacaoExtra as string[]) : [];
+  const base = m.recomendacaoFinalBase != null ? String(m.recomendacaoFinalBase) : '';
+  const obj = m.recomendacaoFinalObjetivo != null ? String(m.recomendacaoFinalObjetivo) : '';
+  const exp = m.recomendacaoFinalExplicacao != null ? String(m.recomendacaoFinalExplicacao) : '';
+  const est = m.estagioCodigoUsado != null ? String(m.estagioCodigoUsado) : '';
+  const estNome = m.estagioNome != null ? String(m.estagioNome) : '';
+  const fallback = Boolean(m.estagioFallback);
+
+  if (!motorV2TemConteudoVisivel(m)) return null;
+
+  return (
+    <div className="rounded-xl border-[1.5px] border-amber-300/90 bg-gradient-to-br from-amber-50/90 to-white p-4 shadow-sm">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-400/50 bg-amber-100 text-amber-900 text-sm">🌾</span>
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-widest text-amber-950/90">Nutrição da cultura</p>
+          <p className="text-[11px] text-amber-900/80">Motor FortSmart v2</p>
+        </div>
+      </div>
+      {(est || estNome) && (
+        <p className="text-[11px] font-semibold text-amber-950/80 mb-2">
+          Estágio {est}
+          {estNome ? ` — ${estNome}` : ''}
+          {fallback ? ' · estágio estimado se fenologia ausente' : ''}
+        </p>
+      )}
+      {base && (
+        <div className="mb-3">
+          <p className="text-[13px] font-black text-amber-950">Base sugerida: {base}</p>
+          {obj && <p className="text-[12px] text-slate-700 mt-0.5">{obj}</p>}
+          {exp && <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">{exp}</p>}
+        </div>
+      )}
+      {nut.length > 0 && (
+        <div className="mb-3">
+          <p className="text-[11px] font-black uppercase tracking-wider text-amber-950 mb-1.5">Micronutrientes / apoio ao estágio</p>
+          <ul className="list-disc pl-4 space-y-1 text-[12px] text-slate-800">
+            {nut.map((row, i) => {
+              const el = row.elemento ?? '';
+              const dose = row.dose ?? '';
+              const fn = row.funcao ?? '';
+              const s = [el, dose && `— ${dose}`, fn && `(${fn})`].filter(Boolean).join(' ');
+              return <li key={i}>{s}</li>;
+            })}
+          </ul>
+        </div>
+      )}
+      {adj.length > 0 && (
+        <div className="mb-3">
+          <p className="text-[11px] font-black uppercase tracking-wider text-amber-950 mb-1">Ajuste contextual</p>
+          {m.regraEtiqueta != null && String(m.regraEtiqueta).length > 0 && (
+            <p className="text-[10px] text-amber-900/75 mb-1">
+              Regra: {String(m.regraEtiqueta)}
+              {m.severidadeChaveUsada != null ? ` · severidade ${String(m.severidadeChaveUsada)}` : ''}
+            </p>
+          )}
+          <ul className="list-disc pl-4 space-y-1 text-[12px] text-slate-800">
+            {adj.map((row, i) => (
+              <li key={i}>
+                {row.elemento}
+                {row.dose ? `: ${row.dose}` : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {extras.length > 0 && (
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-wider text-amber-950 mb-1">Orientações do motor</p>
+          <ul className="list-disc pl-4 space-y-1 text-[12px] text-slate-800">
+            {extras.map((t, i) => (
+              <li key={i}>{t}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecomendacaoIaFortsmartMonitoramento({ ia }: { ia: FortsmartIaMonitoramento | null | undefined }) {
+  if (!ia || typeof ia !== 'object') return null;
+  const dosesRaw = ia.dosesDefensivos;
+  const entradasDoses =
+    dosesRaw && typeof dosesRaw === 'object' ? Object.entries(dosesRaw) : ([] as [string, Record<string, unknown>][]);
+  const quim = ia.manejoQuimico ?? [];
+  const bio = ia.manejoBiologico ?? [];
+  const cult = ia.manejoCultural ?? [];
+  const motor = ia.motorV2 && typeof ia.motorV2 === 'object' ? (ia.motorV2 as Record<string, unknown>) : null;
+
+  const temDoses = entradasDoses.length > 0;
+  const temManejo = quim.length + bio.length + cult.length > 0;
+  const temMotor = motor != null && motorV2TemConteudoVisivel(motor);
+
+  if (!temDoses && !temManejo && !temMotor) return null;
+
+  return (
+    <div className="mt-4 border-t border-green-100 pt-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1B5E20] text-white text-xs shadow-sm">IA</span>
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-widest text-[#1B5E20]">Recomendação IA FortSmart</p>
+          <p className="text-[10px] text-slate-500">Prescrição química, manejo integrado e nutrição (mesmo padrão do app)</p>
+        </div>
+      </div>
+
+      {temDoses && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-black uppercase tracking-wider text-[#1B5E20]/90">Prescrição química (defensivos)</p>
+          <div className="grid gap-2 sm:grid-cols-1">
+            {entradasDoses.map(([nome, raw]) => (
+              <CartaoDefensivoWeb key={nome} nomeProduto={nome} info={raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {temManejo && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-black uppercase tracking-wider text-teal-900">Manejo integrado (complemento)</p>
+          <div className="grid gap-2 md:grid-cols-1">
+            <ListaManejo
+              titulo="Químico (referência)"
+              itens={quim}
+              icon={<span className="text-teal-700 text-sm">⚗</span>}
+            />
+            <ListaManejo titulo="Biológico" itens={bio} icon={<span className="text-green-700 text-sm">🦋</span>} />
+            <ListaManejo titulo="Cultural" itens={cult} icon={<span className="text-amber-900/80 text-sm">🌱</span>} />
+          </div>
+        </div>
+      )}
+
+      {temMotor && motor && <BlocoMotorV2Web m={motor} />}
+    </div>
+  );
+}
+
 export type MonitoramentoJson = {
   meta?: Record<string, unknown>;
   fazenda?: string;
@@ -38,7 +258,23 @@ export default function RelatorioMonitoramento({ relatorio, reportId }: { relato
 
   // Condicoes e Recomendacoes
   const condicoes = (principalTalhao.condicoes_climaticas as Record<string, unknown>) || {};
-  const recomendacoes = (principalTalhao.recomendacoes as Array<{ acao: string }>) || (relatorio as any).recomendacoes || [];
+  const recomendacoes: any[] = Array.isArray((principalTalhao as any).recomendacoes)
+    ? ((principalTalhao as any).recomendacoes as any[])
+    : (Array.isArray((relatorio as any).recomendacoes) ? (relatorio as any).recomendacoes : []);
+
+  function nivelChip(nivelRaw: unknown) {
+    const nivel = String(nivelRaw ?? '').toUpperCase();
+    const isCritico = nivel.includes('IMEDIATA') || nivel.includes('CRITICO') || nivel.includes('CRÍTICO');
+    const isAlto = nivel.includes('ALTO_RISCO') || nivel.includes('ALTO');
+    const isMedio = nivel.includes('MONITORAR') || nivel.includes('MÉDIO') || nivel.includes('MODERADO') || nivel.includes('MEDIO');
+    const isBaixo = nivel.includes('PREVENTIVO') || nivel.includes('BAIXO');
+
+    if (isCritico) return { label: 'CRÍTICO', bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.35)', text: '#DC2626' };
+    if (isAlto) return { label: 'ALTO', bg: 'rgba(249,115,22,0.10)', border: 'rgba(249,115,22,0.35)', text: '#C2410C' };
+    if (isMedio) return { label: 'MÉDIO', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.35)', text: '#B45309' };
+    if (isBaixo) return { label: 'BAIXO', bg: 'rgba(34,197,94,0.10)', border: 'rgba(34,197,94,0.35)', text: '#15803D' };
+    return { label: 'MONITORAR', bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.35)', text: '#64748B' };
+  }
 
   // Mapear pontos para o formato do MapaInterativo (PontoMonitoramento: id, identificador, lat, lng, infestacoes)
   const pontosMap = (principalTalhao.pontos as any[])?.map((p, i) => ({
@@ -209,24 +445,97 @@ export default function RelatorioMonitoramento({ relatorio, reportId }: { relato
       {/* Recomendacoes Agronômicas */}
       {recomendacoes.length > 0 && (
         <section className="mb-12 page-break-inside-avoid">
-          <h3 className="text-lg font-bold text-[#1B5E20] border-b-2 border-[#4CAF50] pb-2 mb-4 uppercase tracking-wider text-sm flex items-center">
+          <h3 className="text-lg font-bold text-[#1B5E20] border-b-2 border-[#4CAF50] pb-2 mb-1 uppercase tracking-wider text-sm flex items-center">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             Recomendações Agronômicas
           </h3>
+          <p className="text-[11px] text-slate-500 mb-4 font-medium leading-relaxed max-w-3xl">
+            Inclui resumo por organismo e, quando o app envia o pacote completo, prescrição química detalhada, manejo integrado e nutrição da cultura (motor FortSmart v2).
+          </p>
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 p-6 rounded-xl shadow-sm">
-            <ul className="space-y-4">
-              {recomendacoes.map((r, i) => (
-                <li key={i} className="flex gap-4">
-                  <div className="mt-0.5 flex-shrink-0 w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center font-black text-xs shadow-md">
-                    {i + 1}
+            <div className="space-y-4">
+              {recomendacoes.map((r, i) => {
+                if (typeof r === 'string') {
+                  return (
+                    <div
+                      key={i}
+                      className="flex gap-4 bg-white border border-green-100 p-4 rounded-xl shadow-sm"
+                    >
+                      <div className="mt-0.5 flex-shrink-0 w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center font-black text-xs shadow-md">
+                        {i + 1}
+                      </div>
+                      <div className="text-slate-800 font-semibold text-[14px] leading-relaxed whitespace-pre-wrap">
+                        {r}
+                      </div>
+                    </div>
+                  );
+                }
+
+                const rr = r as any;
+                const chip = nivelChip(rr.nivel);
+                const organismo = String(rr.organismo ?? '—');
+                const produto = String(rr.produto ?? '').trim();
+                const dose = String(rr.dose ?? '').trim();
+                const acao = String(rr.acao ?? '').trim();
+                const severidade = typeof rr.severidade === 'number' ? rr.severidade : undefined;
+
+                return (
+                  <div
+                    key={i}
+                    className="flex gap-4 bg-white border border-green-100 p-4 rounded-xl shadow-sm"
+                  >
+                    <div className="mt-0.5 flex-shrink-0 w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center font-black text-xs shadow-md">
+                      {i + 1}
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <span
+                            className="text-[11px] font-black px-3 py-1 rounded-full border"
+                            style={{ backgroundColor: chip.bg, borderColor: chip.border, color: chip.text }}
+                          >
+                            {chip.label}
+                          </span>
+
+                          <div>
+                            <div className="font-bold text-gray-900 text-[15px] leading-snug">
+                              {organismo}
+                            </div>
+                            {(produto || dose) && (
+                              <div className="text-sm text-gray-600 mt-0.5">
+                                {produto && <span className="font-semibold">{produto}</span>}
+                                {produto && dose && <span className="text-gray-400 mx-1">•</span>}
+                                {dose && <span className="font-mono">{dose}</span>}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {severidade != null && (
+                          <div className="text-right">
+                            <div className="text-xs font-semibold text-gray-600">
+                              Severidade
+                            </div>
+                            <div className="text-sm font-black text-slate-800">
+                              {Number(severidade).toFixed(0)}%
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {acao && (
+                        <div className="mt-2 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                          {acao}
+                        </div>
+                      )}
+
+                      <RecomendacaoIaFortsmartMonitoramento ia={rr.fortsmartIa as FortsmartIaMonitoramento | undefined} />
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-slate-800 font-semibold text-[15px] leading-relaxed block">{r.acao || (r as { nome?: string }).nome || String(r)}</span>
-                    {(r as any).justificativa && <span className="text-sm text-slate-500 mt-1 block">{(r as any).justificativa}</span>}
-                  </div>
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </div>
           </div>
         </section>
       )}
