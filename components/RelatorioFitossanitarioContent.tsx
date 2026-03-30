@@ -1746,10 +1746,10 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       {recomendacoesTalhao.some((r) => r.fortsmartIa && fortsmartIaPayloadTemConteudo(r.fortsmartIa)) ? (
         <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
           <div className="card-title">
-            <span className="card-title-icon">🤖</span> Recomendação IA FortSmart
+            <span className="card-title-icon">📌</span> Recomendações técnicas
           </div>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0 0 1rem', lineHeight: 1.5 }}>
-            Prescrição química detalhada, manejo integrado e nutrição da cultura (motor FortSmart v2), no mesmo padrão do aplicativo.
+            Prescrição detalhada, manejo integrado e nutrição da cultura.
           </p>
           {recomendacoesTalhao.map((r, i) => {
             if (!r.fortsmartIa || !fortsmartIaPayloadTemConteudo(r.fortsmartIa)) return null;
