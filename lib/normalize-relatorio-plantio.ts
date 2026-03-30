@@ -99,6 +99,16 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
     cultura: getStr(talhao?.cultura),
     area: getNum(talhao?.area),
     dataPlantio: getStr(talhao?.dataPlantio ?? (talhao as UnknownRecord)?.data_plantio),
+    dataEmergencia: getStr(
+      (talhao as UnknownRecord)?.dataEmergencia ?? (talhao as UnknownRecord)?.data_emergencia,
+    ),
+    dataGerminacao: getStr(
+      (talhao as UnknownRecord)?.dataGerminacao ?? (talhao as UnknownRecord)?.data_germinacao,
+    ),
+    dataAvaliacaoEstande: getStr(
+      (talhao as UnknownRecord)?.dataAvaliacaoEstande ??
+        (talhao as UnknownRecord)?.data_avaliacao_estande,
+    ),
   };
 
   const registrosEstande = Array.isArray(estande?.registros) ? estande.registros as UnknownRecord[] : [];
@@ -159,7 +169,12 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
     const o = p as UnknownRecord;
     const tipo = getStr(o.tipo);
     if (!tipo) return null;
-    return { tipo, posicao: getNum(o.posicao) } as unknown as { tipo: string; posicao?: number };
+    return {
+      tipo,
+      posicao: getNum(o.posicao),
+      cm: getNum(o.cm),
+      distancia: getNum(o.distancia ?? (o as UnknownRecord).distancia_cm),
+    } as unknown as { tipo: string; posicao?: number; cm?: number; distancia?: number };
   });
 
   const espacamentosRaw = plantabilidade?.espacamentosIndividuais ?? (plantabilidade as UnknownRecord)?.espacamentos_individuais;
@@ -168,7 +183,11 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
     const o = e as UnknownRecord;
     const tipo = getStr(o.tipo);
     if (!tipo) return null;
-    return { cm: getNum(o.cm), tipo } as unknown as { cm?: number; tipo: string };
+    return {
+      cm: getNum(o.cm),
+      tipo,
+      distancia: getNum(o.distancia ?? (o as UnknownRecord).distancia_cm),
+    } as unknown as { cm?: number; tipo: string; distancia?: number };
   });
 
   const plantabilidadeNorm: UnknownRecord = {

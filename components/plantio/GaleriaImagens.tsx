@@ -6,6 +6,8 @@ import { getStoragePublicUrl } from '@/lib/supabase';
 type ImagemItem = {
   url?: string;
   path?: string;
+  /** Caminho local/app (JSON FortSmart) — resolvido via storage quando há relatorioId */
+  localPath?: string;
   descricao?: string;
   data?: string;
   categoria?: string;
@@ -22,7 +24,8 @@ export default function GaleriaImagens({ imagens, relatorioId, variant = 'grid' 
 
   const resolveUrl = (img: ImagemItem) => {
     if (img.url) return img.url;
-    if (relatorioId && img.path) return getStoragePublicUrl(relatorioId, img.path);
+    const storagePath = img.path || img.localPath;
+    if (relatorioId && storagePath) return getStoragePublicUrl(relatorioId, storagePath);
     return '';
   };
 
