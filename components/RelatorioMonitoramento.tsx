@@ -108,7 +108,7 @@ export function BlocoMotorV2Web({ m }: { m: Record<string, unknown> }) {
         <span className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-400/50 bg-amber-100 text-amber-900 text-sm">🌾</span>
         <div>
           <p className="text-[11px] font-black uppercase tracking-widest text-amber-950/90">Nutrição da cultura</p>
-          <p className="text-[11px] text-amber-900/80">Motor FortSmart v2</p>
+          <p className="text-[11px] text-amber-900/80">Recomendação de nutrição</p>
         </div>
       </div>
       {(est || estNome) && (
@@ -160,7 +160,7 @@ export function BlocoMotorV2Web({ m }: { m: Record<string, unknown> }) {
       )}
       {extras.length > 0 && (
         <div>
-          <p className="text-[11px] font-black uppercase tracking-wider text-amber-950 mb-1">Orientações do motor</p>
+          <p className="text-[11px] font-black uppercase tracking-wider text-amber-950 mb-1">Orientações</p>
           <ul className="list-disc pl-4 space-y-1 text-[12px] text-slate-800">
             {extras.map((t, i) => (
               <li key={i}>{t}</li>
@@ -206,10 +206,10 @@ export function RecomendacaoIaFortsmartMonitoramento({ ia }: { ia: FortsmartIaMo
   return (
     <div className="mt-4 border-t border-green-100 pt-4 space-y-4">
       <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1B5E20] text-white text-xs shadow-sm">IA</span>
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1B5E20] text-white text-xs shadow-sm">✓</span>
         <div>
-          <p className="text-[11px] font-black uppercase tracking-widest text-[#1B5E20]">Recomendação IA FortSmart</p>
-          <p className="text-[10px] text-slate-500">Prescrição química, manejo integrado e nutrição (mesmo padrão do app)</p>
+          <p className="text-[11px] font-black uppercase tracking-widest text-[#1B5E20]">Recomendações técnicas</p>
+          <p className="text-[10px] text-slate-500">Prescrição, manejo integrado e nutrição</p>
         </div>
       </div>
 
@@ -465,7 +465,7 @@ export default function RelatorioMonitoramento({ relatorio, reportId }: { relato
             Recomendações Agronômicas
           </h3>
           <p className="text-[11px] text-slate-500 mb-4 font-medium leading-relaxed max-w-3xl">
-            Inclui resumo por organismo e, quando o app envia o pacote completo, prescrição química detalhada, manejo integrado e nutrição da cultura (motor FortSmart v2).
+            Inclui resumo por organismo e, quando disponível, prescrição detalhada, manejo integrado e nutrição da cultura.
           </p>
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 p-6 rounded-xl shadow-sm">
             <div className="space-y-4">
