@@ -141,6 +141,18 @@ function isNomeTalhaoGenerico(raw: string): boolean {
   return t === '' || t === 'talhão' || t === 'talhao';
 }
 
+/** Junta nome da parcela e cultura, sem ID; evita repetir cultura se já estiver no nome. */
+function joinNomeECultura(nomeTalhao: string, cultura: string): string {
+  const n = nomeTalhao.trim();
+  const c = cultura.trim();
+  if (!c) return n || 'Talhão';
+  if (!n || isNomeTalhaoGenerico(n)) return c;
+  const nLower = n.toLowerCase();
+  const cLower = c.toLowerCase();
+  if (nLower.includes(cLower)) return n;
+  return `${n} · ${c}`;
+}
+
 /** Nome estável para selects e colunas (V1/V2 e fallbacks). */
 export function nomeExibicaoTalhao(snap: UnknownRec, indexZeroBased: number): string {
   const th = (snap.talhao ?? {}) as UnknownRec;
@@ -155,7 +167,6 @@ export function nomeExibicaoTalhao(snap: UnknownRec, indexZeroBased: number): st
     str(core.talhaoNome),
     str(core.talhao_nome),
   ].filter((s) => s.length > 0);
-  const id = str(th.id) || str(core.talhaoId) || str(core.talhao_id);
   const cultura =
     str(th.cultura) ||
     str((th as UnknownRec).culturaNome) ||
@@ -163,18 +174,12 @@ export function nomeExibicaoTalhao(snap: UnknownRec, indexZeroBased: number): st
     str(core.cultura);
 
   const primeiro = cands.length ? cands[0]! : '';
-  if (primeiro && !isNomeTalhaoGenerico(primeiro)) return primeiro;
+  const base =
+    primeiro && !isNomeTalhaoGenerico(primeiro)
+      ? primeiro
+      : `Talhão ${indexZeroBased + 1}`;
 
-  const suffixo: string[] = [];
-  if (cultura) suffixo.push(cultura);
-  if (id) suffixo.push(id.length > 10 ? `${id.slice(0, 8)}…` : id);
-  if (suffixo.length > 0) {
-    return primeiro && isNomeTalhaoGenerico(primeiro)
-      ? `Talhão · ${suffixo.join(' · ')}`
-      : `${primeiro || 'Talhão'} · ${suffixo.join(' · ')}`;
-  }
-  if (id) return id.length > 12 ? `Talhão (${id.slice(0, 10)}…)` : `Talhão (${id})`;
-  return `Talhão ${indexZeroBased + 1}`;
+  return joinNomeECultura(base, cultura);
 }
 
 /** Primeira imagem HTTP ou via storage para cabeçalho visual do talhão. */
