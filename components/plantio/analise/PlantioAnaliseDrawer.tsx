@@ -269,12 +269,18 @@ export default function PlantioAnaliseDrawer({
               <p className={styles.sectionTitle}>Linha do tempo (DAE → estágio)</p>
               {timelineResumo.length > 0 ? (
                 <ul className={styles.timelineList}>
-                  {timelineResumo.map((row, i) => (
-                    <li key={i}>
-                      DAE {row.dae ?? '—'} → {str(row.estagio)}
-                      {row.dataRegistro ? ` · ${str(row.dataRegistro).slice(0, 10)}` : ''}
-                    </li>
-                  ))}
+                  {timelineResumo.map((row, i) => {
+                    const daeTxt =
+                      num(row.dae) != null ? String(num(row.dae)) : str(row.dae) || '—';
+                    const dataTxt = row.dataRegistro
+                      ? ` · ${str(row.dataRegistro).slice(0, 10)}`
+                      : '';
+                    return (
+                      <li key={i}>
+                        {`DAE ${daeTxt} → ${str(row.estagio)}${dataTxt}`}
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className={styles.prose}>Sem resumo; consulte a timeline completa no relatório.</p>
@@ -417,10 +423,10 @@ export default function PlantioAnaliseDrawer({
               </ul>
             ) : null}
             <div className={styles.motorScores}>
-              <span>Impl.: {sub.implantacao ?? '—'}</span>
-              <span>Fen.: {sub.fenologia ?? '—'}</span>
-              <span>Oper.: {sub.operacao ?? '—'}</span>
-              <span>Geral: {sub.geral ?? '—'}</span>
+              <span>Impl.: {str(sub.implantacao) || '—'}</span>
+              <span>Fen.: {str(sub.fenologia) || '—'}</span>
+              <span>Oper.: {str(sub.operacao) || '—'}</span>
+              <span>Geral: {str(sub.geral) || '—'}</span>
             </div>
           </div>
         </div>
