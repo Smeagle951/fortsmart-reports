@@ -236,12 +236,15 @@ export function metricasDoSnapshot(snapshot: UnknownRec): SnapshotMetricas {
   const plantab = (snapshot.plantabilidade || {}) as UnknownRec;
   const fen = (snapshot.fenologia || {}) as UnknownRec;
   const iqiB = (snapshot.indiceQualidadeImplantacao || {}) as UnknownRec;
+  const analise = (snapshot.analiseAgronomica || {}) as UnknownRec;
+  const impl = (analise.implantacao || {}) as UnknownRec;
   const ef = num(pop.eficienciaPct);
   const emergenciaStr = formatEficienciaEmergencia(ef);
   const iqiLabel = str(iqiB.label) || '—';
+  const cvPct = num(plantab.cvPercentual) ?? num(impl.cvPercentual);
   return {
     popReal: num(pop.estandeEfetivoPlHa),
-    cvPct: num(plantab.cvPercentual),
+    cvPct,
     emergenciaStr,
     estagio: str(fen.estadio ?? fen.estagio) || '—',
     iqi: num(iqiB.iqi),

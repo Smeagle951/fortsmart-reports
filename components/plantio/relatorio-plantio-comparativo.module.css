@@ -329,6 +329,77 @@
   color: #991b1b;
 }
 
+.plantabBlock {
+  margin-bottom: 2rem;
+  padding: 1.25rem 1rem 1.5rem;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: var(--cmp-shadow);
+}
+
+.plantabGrid {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .plantabGrid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.plantabCol {
+  min-width: 0;
+  padding: 0.75rem;
+  background: var(--cmp-paper2);
+  border-radius: 8px;
+  border: 1px solid var(--cmp-line);
+}
+
+.plantabColTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--cmp-col-c);
+  margin: 0 0 0.65rem;
+}
+
+.plantabDl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  margin: 0 0 0.75rem;
+}
+
+.plantabDl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.06);
+  padding-bottom: 0.25rem;
+}
+
+.plantabDl dt {
+  margin: 0;
+  color: var(--cmp-muted);
+  font-weight: 600;
+}
+
+.plantabDl dd {
+  margin: 0;
+  font-weight: 650;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.plantabHint {
+  font-size: 0.72rem;
+  color: var(--cmp-muted);
+  margin: 0;
+  line-height: 1.35;
+}
+
 .chartBlock {
   margin-bottom: 2rem;
   padding: 1.25rem 1rem 1.5rem;

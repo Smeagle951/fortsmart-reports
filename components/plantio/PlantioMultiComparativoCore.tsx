@@ -3,11 +3,11 @@
 import React from 'react';
 import { formatNumber } from '@/utils/format';
 import PlantioFenologiaComparativoChart, { type SerieFeno } from './PlantioFenologiaComparativoChart';
+import LinhaPlantioVisualizer from './LinhaPlantioVisualizer';
 import {
   heroUrlForSnapshot,
   metricasDoSnapshot,
   nomeExibicaoTalhao,
-  str,
   num,
   type UnknownRec,
 } from './plantio-comparativo-utils';
@@ -217,6 +217,117 @@ export default function PlantioMultiComparativoCore(props: MultiComparativoCoreP
           </tbody>
         </table>
       </div>
+
+      <section className={cmpStyles.plantabBlock}>
+        <h2 className={cmpStyles.chartTitle}>Plantabilidade, CV% e trena</h2>
+        <p className={cmpStyles.chartSub}>
+          Estande de plantas e cálculo de CV% (distribuição na linha com medições), no mesmo espírito do relatório web de
+          plantio / monitoramento.
+        </p>
+        <div
+          className={cmpStyles.plantabGrid}
+          style={{
+            gridTemplateColumns:
+              displayCount === 1 ? '1fr' : displayCount === 2 ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))',
+          }}
+        >
+          {activeSlotIndices.map((slotIdx, colIdx) => {
+            const snap = talhoes[slotIdx];
+            if (!snap) return null;
+            const plantab = (snap.plantabilidade || {}) as UnknownRec;
+            const est = (snap.estande || {}) as UnknownRec;
+            const regs = Array.isArray(est.registros) ? (est.registros as UnknownRec[]) : [];
+            const r0 = regs[0] ?? {};
+            const linha = (plantab.linha || []) as Array<{
+              tipo: 'ok' | 'dupla' | 'tripla' | 'falha';
+              posicao?: number;
+              cm?: number;
+              distancia?: number;
+            }>;
+            const espInd = (plantab.espacamentosIndividuais || []) as Array<{
+              cm?: number;
+              tipo: string;
+              distancia?: number;
+            }>;
+            const m = activeMetrics[colIdx];
+            const cvShow = num(plantab.cvPercentual) ?? m.cvPct;
+            const metros = num(r0.metrosLinearesMedidos as unknown as number);
+            const contadas = r0.plantasContadas;
+            return (
+              <div key={`pb-${colIdx}-${slotIdx}`} className={cmpStyles.plantabCol}>
+                <h3 className={cmpStyles.plantabColTitle}>{activeNames[colIdx]}</h3>
+                <dl className={cmpStyles.plantabDl}>
+                  <div>
+                    <dt>CV%</dt>
+                    <dd>{cvShow != null ? `${cvShow.toFixed(1)}%` : '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Eficiência emerg.</dt>
+                    <dd>{m.emergenciaStr ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Pop. real (estande)</dt>
+                    <dd>{m.popReal != null ? `${formatNumber(m.popReal)} pl/ha` : '—'}</dd>
+                  </div>
+                  {metros != null ? (
+                    <div>
+                      <dt>Metros avaliados</dt>
+                      <dd>{metros.toFixed(1)} m</dd>
+                    </div>
+                  ) : null}
+                  {contadas != null && String(contadas).trim() !== '' ? (
+                    <div>
+                      <dt>Plantas contadas</dt>
+                      <dd>{String(contadas)}</dd>
+                    </div>
+                  ) : null}
+                  {num(plantab.okPct) != null ? (
+                    <div>
+                      <dt>OK na linha</dt>
+                      <dd>{num(plantab.okPct)!.toFixed(0)}%</dd>
+                    </div>
+                  ) : null}
+                  {num(plantab.duplasPct) != null ? (
+                    <div>
+                      <dt>Duplas</dt>
+                      <dd>{num(plantab.duplasPct)!.toFixed(0)}%</dd>
+                    </div>
+                  ) : null}
+                  {num(plantab.triplasPct) != null ? (
+                    <div>
+                      <dt>Triplas</dt>
+                      <dd>{num(plantab.triplasPct)!.toFixed(0)}%</dd>
+                    </div>
+                  ) : null}
+                  {num(plantab.falhasPct) != null ? (
+                    <div>
+                      <dt>Falhas</dt>
+                      <dd>{num(plantab.falhasPct)!.toFixed(0)}%</dd>
+                    </div>
+                  ) : null}
+                </dl>
+                {linha.length > 0 ? (
+                  <LinhaPlantioVisualizer
+                    linha={linha}
+                    okPct={num(plantab.okPct) ?? undefined}
+                    duplasPct={num(plantab.duplasPct) ?? undefined}
+                    triplasPct={num(plantab.triplasPct) ?? undefined}
+                    falhasPct={num(plantab.falhasPct) ?? undefined}
+                    indicePlantabilidade={num(plantab.indicePlantabilidade) ?? undefined}
+                    espacamentosIndividuais={espInd}
+                    embedded
+                  />
+                ) : (
+                  <p className={cmpStyles.plantabHint}>
+                    Sem sequência de medições da trena neste snapshot. Com CV% registrado no app (distâncias entre
+                    sementes), a distribuição aparece aqui e no painel de análise.
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <section className={cmpStyles.chartBlock}>
         <h2 className={cmpStyles.chartTitle}>Evolução Fenológica</h2>
