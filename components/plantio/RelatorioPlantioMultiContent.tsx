@@ -1,32 +1,25 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { normalizePlantioMultiPayload } from '@/lib/normalize-relatorio-plantio';
-import { formatNumber } from '@/utils/format';
 import HeaderRelatorio from '@/components/HeaderRelatorio';
-import PlantioEditorialSnapshot from './PlantioEditorialSnapshot';
-import styles from './relatorio-plantio-editorial.module.css';
+import PlantioAnaliseDrawer from './analise/PlantioAnaliseDrawer';
+import PlantioCompareDrawer from './analise/PlantioCompareDrawer';
+import PlantioMultiComparativoCore from './PlantioMultiComparativoCore';
+import cmpStyles from './relatorio-plantio-comparativo.module.css';
+import editorialStyles from './relatorio-plantio-editorial.module.css';
+import {
+  classificarCvMedio,
+  classificarIqiMedio,
+  metricasDoSnapshot,
+  serieFenologia,
+  str,
+  num,
+  type UnknownRec,
+} from './plantio-comparativo-utils';
+import type { SerieFeno } from './PlantioFenologiaComparativoChart';
 
-type UnknownRec = Record<string, unknown>;
-
-function num(v: unknown): number | undefined {
-  if (typeof v === 'number' && Number.isFinite(v)) return v;
-  if (typeof v === 'string') {
-    const n = parseFloat(v);
-    return Number.isFinite(n) ? n : undefined;
-  }
-  return undefined;
-}
-
-function str(v: unknown): string {
-  if (v == null) return '';
-  return String(v).trim();
-}
-
-function snapshotIndexForRankingRow(
-  row: UnknownRec,
-  talhoes: UnknownRec[],
-): number {
+function snapshotIndexForRankingRow(row: UnknownRec, talhoes: UnknownRec[]): number {
   const id = str(row.talhaoId);
   if (id) {
     const i = talhoes.findIndex((t) => {
@@ -38,6 +31,30 @@ function snapshotIndexForRankingRow(
   const ord = num(row.ordem);
   if (ord != null && ord >= 1 && ord <= talhoes.length) return ord - 1;
   return 0;
+}
+
+const COL = {
+  a: '#2d6a4f',
+  b: '#1b7f7a',
+  c: '#1b4332',
+} as const;
+
+function defaultSlotsFromData(talhoes: UnknownRec[], ranking: UnknownRec[]): [number, number, number] {
+  const n = talhoes.length;
+  if (n === 0) return [0, 0, 0];
+  const fromRank =
+    ranking.length > 0
+      ? ranking.map((row) => snapshotIndexForRankingRow(row, talhoes))
+      : talhoes.map((_, i) => i);
+  const uniq: number[] = [];
+  for (const idx of fromRank) {
+    if (!uniq.includes(idx)) uniq.push(idx);
+  }
+  while (uniq.length < 3 && n > 0) {
+    uniq.push(uniq.length % n);
+  }
+  while (uniq.length < 3) uniq.push(0);
+  return [uniq[0] ?? 0, uniq[1] ?? uniq[0] ?? 0, uniq[2] ?? uniq[0] ?? 0];
 }
 
 export default function RelatorioPlantioMultiContent({
@@ -56,46 +73,119 @@ export default function RelatorioPlantioMultiContent({
   const analitico = (normalized.analiticoMulti || {}) as UnknownRec;
   const prop = (normalized.propriedade || {}) as UnknownRec;
   const meta = (normalized.meta || {}) as UnknownRec;
-  const ranking = Array.isArray(analitico.ranking)
-    ? (analitico.ranking as UnknownRec[])
-    : [];
+  const ranking = Array.isArray(analitico.ranking) ? (analitico.ranking as UnknownRec[]) : [];
 
-  const maxIqi = useMemo(() => {
-    let m = 0;
-    for (const r of ranking) {
-      const q = num(r.iqi);
-      if (q != null && q > m) m = q;
-    }
-    return m > 0 ? m : 100;
-  }, [ranking]);
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  const openAt = useCallback((i: number) => {
-    if (talhoes.length === 0) return;
-    setActiveIndex(Math.min(Math.max(0, i), talhoes.length - 1));
-    setModalOpen(true);
-  }, [talhoes.length]);
-
-  const goPrev = useCallback(() => {
-    setActiveIndex((i) => (i - 1 + talhoes.length) % talhoes.length);
-  }, [talhoes.length]);
-
-  const goNext = useCallback(() => {
-    setActiveIndex((i) => (i + 1) % talhoes.length);
-  }, [talhoes.length]);
-
-  const textoGeral = str(analitico.textoDiagnosticoGeral);
   const nTalhoes = talhoes.length;
-  const showAnaliticoBlock = nTalhoes > 1 && ranking.length > 0;
+  const textoGeral = str(analitico.textoDiagnosticoGeral);
+  const showAnalitico = nTalhoes > 1 && ranking.length > 0;
 
-  const activeSnapshot = talhoes[activeIndex];
-  const activeTalhao = (activeSnapshot?.talhao || {}) as UnknownRec;
+  const defaultSlots = useMemo(() => defaultSlotsFromData(talhoes, ranking), [talhoes, ranking]);
+
+  const [slots, setSlots] = useState<[number, number, number]>(defaultSlots);
+  useEffect(() => {
+    setSlots(defaultSlots);
+  }, [defaultSlots]);
+
+  const [modoAnalise, setModoAnalise] = useState(false);
+  const [analiseOpen, setAnaliseOpen] = useState(false);
+  const [analiseSlotIndex, setAnaliseSlotIndex] = useState(0);
+  const [compareOpen, setCompareOpen] = useState(false);
+
+  const openAnalise = useCallback((slotIdx: number) => {
+    if (slotIdx < 0 || slotIdx >= talhoes.length) return;
+    setAnaliseSlotIndex(slotIdx);
+    setAnaliseOpen(true);
+  }, [talhoes.length]);
+
+  const displayCount = nTalhoes === 1 ? 1 : 3;
+  const activeSlotIndices = Array.from({ length: displayCount }, (_, i) =>
+    nTalhoes === 1 ? slots[0] : slots[i],
+  );
+  const activeSnapshots = activeSlotIndices.map((i) => talhoes[i]).filter(Boolean) as UnknownRec[];
+  const activeNames = activeSlotIndices.map((i) => {
+    const th = talhoes[i]?.talhao as UnknownRec | undefined;
+    return str(th?.nome) || `Talhão ${i + 1}`;
+  });
+  const activeMetrics = activeSnapshots.map((snap) => metricasDoSnapshot(snap));
+
+  const keys = ['s0', 's1', 's2'] as const;
+  const colors = [COL.a, COL.b, COL.c] as const;
+  const seriesFeno: SerieFeno[] = activeSnapshots.map((snap, i) => ({
+    key: keys[i],
+    name: activeNames[i] || String(i + 1),
+    color: colors[i],
+    points: serieFenologia(snap),
+  }));
+
+  const iqiMedio = num(analitico.iqiMedio);
+  const cvMedio = num(analitico.cvPercentMedio);
+  const popMedia = num(analitico.populacaoRealMedia);
+  const resumoIqi = iqiMedio != null ? classificarIqiMedio(iqiMedio) : null;
+  const resumoCv = cvMedio != null ? classificarCvMedio(cvMedio) : null;
+
+  const melhorNome = str(analitico.melhorTalhaoNome) || str(analitico.melhorTalhaoId);
+  const melhorIqi = num(analitico.melhorIqi);
+
+  const analiseSnapshot = talhoes[analiseSlotIndex];
+  const metaSafra = str(meta.safra);
+
+  const coreProps = {
+    nTalhoes,
+    slots,
+    setSlots,
+    displayCount,
+    activeSlotIndices,
+    activeNames,
+    activeSnapshots,
+    activeMetrics,
+    seriesFeno,
+    showAnalitico,
+    iqiMedio,
+    cvMedio,
+    popMedia,
+    resumoIqi,
+    resumoCv,
+    melhorNome,
+    melhorIqi,
+    textoGeral,
+    talhoes,
+    reportId,
+    onOpenAnalise: openAnalise,
+  };
+
+  const listaTalhoes = useMemo(() => {
+    return talhoes.map((snap, idx) => {
+      const th = snap.talhao as UnknownRec | undefined;
+      const m = metricasDoSnapshot(snap);
+      const thId = str(th?.id);
+      let rank: number | null = null;
+      if (ranking.length > 0 && thId) {
+        const ri = ranking.findIndex((r) => str(r.talhaoId) === thId);
+        if (ri >= 0) rank = ri + 1;
+      }
+      return {
+        idx,
+        nome: str(th?.nome) || `Talhão ${idx + 1}`,
+        cultura: str(th?.cultura),
+        iqi: m.iqi,
+        label: m.iqiLabel,
+        rank,
+      };
+    });
+  }, [talhoes, ranking]);
+
+  if (nTalhoes === 0) {
+    return (
+      <div className={cmpStyles.page}>
+        <p>Nenhum talhão neste relatório.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className={`relatorio-plantio-multi ${styles.master}`}>
-      <HeaderRelatorio
+    <div className={cmpStyles.page}>
+      <div className={editorialStyles.noPrint}>
+        <HeaderRelatorio
           meta={meta as { dataGeracao?: string; safra?: string; tecnico?: string; id?: string }}
           propriedade={prop as { fazenda?: string; proprietario?: string; municipio?: string; estado?: string }}
           talhao={{
@@ -105,184 +195,96 @@ export default function RelatorioPlantioMultiContent({
           reportId={reportId}
           variant="plantio"
         />
+      </div>
 
-      <h1>Relatório de plantio — visão da propriedade</h1>
-      <p className={styles.masterLead}>
-        Comparativo de implantação entre {nTalhoes} talhão{nTalhoes === 1 ? '' : 'ões'}. Clique em uma linha para
-        abrir o relatório editorial do talhão (navegue com ← → no painel).
-      </p>
+      <div className={`${editorialStyles.noPrint}`} style={{ marginBottom: '1rem' }}>
+        <button
+          type="button"
+          className={cmpStyles.select}
+          style={{ cursor: 'pointer', fontWeight: 600 }}
+          onClick={() => setModoAnalise((v) => !v)}
+        >
+          {modoAnalise ? 'Ocultar modo análise' : 'Modo análise — lista de talhões'}
+        </button>
+        <button
+          type="button"
+          className={cmpStyles.select}
+          style={{ cursor: 'pointer', fontWeight: 600, marginLeft: 8 }}
+          onClick={() => setCompareOpen(true)}
+        >
+          Comparar talhões (painel expandido)
+        </button>
+      </div>
 
-      {showAnaliticoBlock ? (
-        <div className={styles.footerBlock} style={{ marginBottom: '1.25rem' }}>
-          <h2>Resumo executivo</h2>
-          <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.55 }}>
-            Melhor IQI:{' '}
-            <strong>{str(analitico.melhorTalhaoNome) || str(analitico.melhorTalhaoId)}</strong>
-            {num(analitico.melhorIqi) != null ? ` (${num(analitico.melhorIqi)!.toFixed(0)})` : ''}
-            {' · '}
-            Menor IQI:{' '}
-            <strong>{str(analitico.piorTalhaoNome) || str(analitico.piorTalhaoId)}</strong>
-            {num(analitico.piorIqi) != null ? ` (${num(analitico.piorIqi)!.toFixed(0)})` : ''}
-            {num(analitico.populacaoRealMedia) != null
-              ? ` · Pop. real média: ${formatNumber(num(analitico.populacaoRealMedia)!)} pl/ha`
-              : ''}
-            {num(analitico.cvPercentMedio) != null
-              ? ` · CV% médio: ${num(analitico.cvPercentMedio)!.toFixed(1)}%`
-              : ''}
+      {modoAnalise ? (
+        <section
+          className={cmpStyles.footerInsight}
+          style={{ marginBottom: '1.25rem' }}
+          aria-label="Lista para drill-down"
+        >
+          <p className={cmpStyles.summaryTitle} style={{ textAlign: 'left', marginBottom: '0.75rem' }}>
+            Talhões — painel lateral
           </p>
-        </div>
-      ) : null}
-
-      {ranking.length > 0 ? (
-        <table className={styles.rankTable}>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Talhão</th>
-              <th>Cultura</th>
-              <th>IQI</th>
-              <th>Classificação</th>
-              <th>Pop. real (pl/ha)</th>
-              <th>CV%</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ranking.map((row, i) => (
-              <tr
-                key={i}
-                role="button"
-                tabIndex={0}
-                onClick={() => openAt(snapshotIndexForRankingRow(row, talhoes))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    openAt(snapshotIndexForRankingRow(row, talhoes));
-                  }
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+            {listaTalhoes.map((row) => (
+              <li
+                key={row.idx}
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  padding: '0.55rem 0',
+                  borderBottom: '1px solid rgba(0,0,0,0.06)',
                 }}
               >
-                <td>{num(row.ordem) ?? i + 1}</td>
-                <td>{str(row.talhaoNome) || '—'}</td>
-                <td>{str(row.cultura) || '—'}</td>
-                <td>{num(row.iqi) != null ? num(row.iqi)!.toFixed(0) : '—'}</td>
-                <td>{str(row.classificacaoLabel) || '—'}</td>
-                <td>
-                  {num(row.populacaoReal) != null ? formatNumber(num(row.populacaoReal)!) : '—'}
-                </td>
-                <td>
-                  {num(row.cvPercent) != null ? `${num(row.cvPercent)!.toFixed(1)}%` : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <table className={styles.rankTable}>
-          <thead>
-            <tr>
-              <th>Talhão</th>
-              <th>Cultura</th>
-            </tr>
-          </thead>
-          <tbody>
-            {talhoes.map((t, i) => {
-              const th = t.talhao as UnknownRec | undefined;
-              return (
-                <tr
-                  key={i}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openAt(i)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      openAt(i);
-                    }
-                  }}
-                >
-                  <td>{str(th?.nome) || '—'}</td>
-                  <td>{str(th?.cultura) || '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-
-      {showAnaliticoBlock && (
-        <>
-          <h2 className={styles.sectionTitle} style={{ marginTop: '1.75rem', border: 'none', paddingBottom: 0 }}>
-            IQI por talhão
-          </h2>
-          <div className={styles.chartRow} aria-hidden>
-            {ranking.map((row, i) => {
-              const q = num(row.iqi);
-              const h = q != null && maxIqi > 0 ? Math.max(12, Math.round((q / maxIqi) * 120)) : 12;
-              return (
-                <div
-                  key={i}
-                  className={styles.chartBar}
-                  style={{ height: h }}
-                  title={`${str(row.talhaoNome)}: ${q?.toFixed(0) ?? '—'}`}
-                />
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {showAnaliticoBlock ? (
-        <div className={styles.footerBlock}>
-          <h2>Síntese técnica</h2>
-          {textoGeral ? <p style={{ margin: 0 }}>{textoGeral}</p> : null}
-          {num(analitico.iqiMedio) != null ? (
-            <p
-              style={{
-                margin: textoGeral ? '0.75rem 0 0' : 0,
-                color: '#5c5c5c',
-                fontSize: '0.88rem',
-              }}
-            >
-              IQI médio: {num(analitico.iqiMedio)!.toFixed(1)} · Desvio entre talhões:{' '}
-              {num(analitico.iqiDesvioEntreTalhoes) != null
-                ? num(analitico.iqiDesvioEntreTalhoes)!.toFixed(1)
-                : '—'}{' '}
-              · Variabilidade: {str(analitico.variabilidadeIqi) || '—'}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {modalOpen && activeSnapshot ? (
-        <div
-          className={styles.modalBackdrop}
-          role="presentation"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setModalOpen(false);
-          }}
-        >
-          <div className={styles.modalPanel} role="dialog" aria-modal aria-labelledby="modal-plantio-title">
-            <div className={`${styles.modalToolbar} ${styles.noPrint}`}>
-              <div className={styles.navHint}>
-                <span id="modal-plantio-title">
-                  {str(activeTalhao.nome)} · {activeIndex + 1}/{talhoes.length}
+                <span style={{ fontWeight: 600 }}>
+                  {row.rank != null ? `#${row.rank} ` : ''}
+                  {row.nome}
+                  <span style={{ fontWeight: 400, color: '#57534e', marginLeft: 6 }}>
+                    {row.cultura || '—'}
+                  </span>
                 </span>
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button type="button" onClick={goPrev} disabled={talhoes.length < 2}>
-                  ← Anterior
+                <span style={{ fontSize: '0.85rem' }}>
+                  IQI {row.iqi != null ? Math.round(row.iqi) : '—'} {row.label ? `· ${row.label}` : ''}
+                </span>
+                <button
+                  type="button"
+                  className={cmpStyles.select}
+                  style={{ cursor: 'pointer', fontSize: '0.8rem' }}
+                  onClick={() => openAnalise(row.idx)}
+                >
+                  Abrir painel
                 </button>
-                <button type="button" onClick={goNext} disabled={talhoes.length < 2}>
-                  Próximo →
-                </button>
-                <button type="button" className={styles.modalClose} onClick={() => setModalOpen(false)} aria-label="Fechar">
-                  ×
-                </button>
-              </div>
-            </div>
-            <PlantioEditorialSnapshot snapshot={activeSnapshot} />
-          </div>
-        </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
+
+      <header className={cmpStyles.titleBlock}>
+        <h1 className={cmpStyles.title}>Análise Comparativa dos Talhões de Plantio</h1>
+        <div className={cmpStyles.titleUnderline} aria-hidden />
+        <p className={cmpStyles.subtitle}>Comparação detalhada dos talhões selecionados</p>
+      </header>
+
+      <PlantioMultiComparativoCore {...coreProps} />
+
+      <PlantioAnaliseDrawer
+        open={analiseOpen && analiseSnapshot != null}
+        snapshot={analiseSnapshot ?? {}}
+        reportId={reportId}
+        metaSafra={metaSafra}
+        onClose={() => setAnaliseOpen(false)}
+        onComparar={() => {
+          setCompareOpen(true);
+        }}
+      />
+
+      <PlantioCompareDrawer open={compareOpen} onClose={() => setCompareOpen(false)}>
+        <PlantioMultiComparativoCore {...coreProps} hideSelectors />
+      </PlantioCompareDrawer>
     </div>
   );
 }
