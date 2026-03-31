@@ -699,6 +699,37 @@ body {
   color: var(--plantio-accent);
 }
 
+/* Comparativo multi-talhão: faixa superior e hierarquia visual */
+.relatorio-plantio .plantio-header-institucional--comparativo {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(27, 67, 50, 0.08);
+}
+
+.relatorio-plantio .plantio-header-institucional__accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2d6a4f, #1b7f7a, #1b4332);
+  pointer-events: none;
+}
+
+.relatorio-plantio .plantio-header-institucional__brandText {
+  flex: 1;
+  min-width: 0;
+}
+
+.relatorio-plantio .plantio-header-institucional__tagline {
+  margin: 0.45rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--plantio-muted);
+  line-height: 1.4;
+  max-width: 36rem;
+}
+
 @media (min-width: 640px) {
   .relatorio-plantio .plantio-header-institucional__grid {
     grid-template-columns: repeat(3, 1fr);

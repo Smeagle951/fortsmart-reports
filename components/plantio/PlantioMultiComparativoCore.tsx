@@ -6,6 +6,7 @@ import PlantioFenologiaComparativoChart, { type SerieFeno } from './PlantioFenol
 import {
   heroUrlForSnapshot,
   metricasDoSnapshot,
+  nomeExibicaoTalhao,
   str,
   num,
   type UnknownRec,
@@ -107,15 +108,11 @@ export default function PlantioMultiComparativoCore(props: MultiComparativoCoreP
                   });
                 }}
               >
-                {talhoes.map((t, i) => {
-                  const th = t.talhao as UnknownRec | undefined;
-                  const nome = str(th?.nome) || `Talhão ${i + 1}`;
-                  return (
-                    <option key={i} value={i}>
-                      {nome}
-                    </option>
-                  );
-                })}
+                {talhoes.map((t, i) => (
+                  <option key={i} value={i}>
+                    {nomeExibicaoTalhao(t, i)}
+                  </option>
+                ))}
               </select>
             </div>
           ))}
@@ -140,7 +137,10 @@ export default function PlantioMultiComparativoCore(props: MultiComparativoCoreP
                     <div className={cmpStyles.photoCap}>{nome}</div>
                   </>
                 ) : (
-                  <div className={cmpStyles.photoPlaceholder}>Sem foto de referência para este talhão</div>
+                  <div className={cmpStyles.photoPlaceholder}>
+                    Sem imagem pública para este talhão. Fotos do plantio, estande ou fenologia aparecem aqui quando
+                    o relatório é gerado com upload (Supabase) ou URL http no JSON.
+                  </div>
                 )}
               </div>
               {snap ? (

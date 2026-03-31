@@ -26,9 +26,22 @@ interface HeaderProps {
   contextoSafra?: ContextoSafra;
   reportId?: string;
   variant?: 'default' | 'plantio';
+  plantioComparativo?: boolean;
+  nTalhoesComparados?: number;
+  localizacaoTexto?: string;
 }
 
-export default function HeaderRelatorio({ meta, propriedade, talhao, contextoSafra, reportId, variant = 'default' }: HeaderProps) {
+export default function HeaderRelatorio({
+  meta,
+  propriedade,
+  talhao,
+  contextoSafra,
+  reportId,
+  variant = 'default',
+  plantioComparativo,
+  nTalhoesComparados,
+  localizacaoTexto,
+}: HeaderProps) {
   if (variant === 'plantio') {
     return (
       <HeaderInstitucionalPlantio
@@ -37,6 +50,9 @@ export default function HeaderRelatorio({ meta, propriedade, talhao, contextoSaf
         talhao={talhao}
         contextoSafra={contextoSafra}
         reportId={reportId}
+        modoComparativo={plantioComparativo}
+        nTalhoesComparados={nTalhoesComparados}
+        localizacaoTexto={localizacaoTexto}
       />
     );
   }

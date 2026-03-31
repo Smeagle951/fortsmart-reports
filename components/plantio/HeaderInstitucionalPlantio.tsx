@@ -37,6 +37,11 @@ interface HeaderInstitucionalPlantioProps {
   talhao: Talhao;
   contextoSafra?: ContextoSafra;
   reportId?: string;
+  /** Comparativo multi-talhão: título, faixa e escopo ajustados */
+  modoComparativo?: boolean;
+  nTalhoesComparados?: number;
+  /** Ex.: "Uberlândia / MG" */
+  localizacaoTexto?: string;
 }
 
 /** Cabeçalho institucional técnico obrigatório para relatórios RTV / Pesquisa / Multinacional */
@@ -46,20 +51,36 @@ export default function HeaderInstitucionalPlantio({
   talhao,
   contextoSafra = {},
   reportId,
+  modoComparativo = false,
+  nTalhoesComparados,
+  localizacaoTexto,
 }: HeaderInstitucionalPlantioProps) {
   const cliente = propriedade.proprietario;
   const culturaHibrido = [talhao.cultura, contextoSafra.materialVariedade].filter(Boolean).join(' / ');
   const status = meta.status || 'Final';
+  const n = nTalhoesComparados ?? 0;
 
   return (
-    <header className="plantio-header-institucional">
+    <header
+      className={`plantio-header-institucional${modoComparativo ? ' plantio-header-institucional--comparativo' : ''}`}
+    >
+      <div className="plantio-header-institucional__accent" aria-hidden />
       <div className="plantio-header-institucional__logo">
         <div className="plantio-header-institucional__logo-icon">
           <FortSmartLogo size={48} />
         </div>
-        <div>
+        <div className="plantio-header-institucional__brandText">
           <div className="plantio-header-institucional__empresa">FortSmart Agro</div>
-          <div className="plantio-header-institucional__tipo">Relatório Agronômico de Plantio</div>
+          <div className="plantio-header-institucional__tipo">
+            {modoComparativo
+              ? 'Relatório comparativo de plantio'
+              : 'Relatório agronômico de plantio'}
+          </div>
+          {modoComparativo && n > 0 ? (
+            <p className="plantio-header-institucional__tagline">
+              {n} talhão{n !== 1 ? 'ões' : ''} · IQI, fenologia e plantabilidade lado a lado
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -79,9 +100,19 @@ export default function HeaderInstitucionalPlantio({
           <span className="plantio-header-institucional__label">Fazenda</span>
           <span className="plantio-header-institucional__value">{propriedade.fazenda || '—'}</span>
         </div>
+        {localizacaoTexto ? (
+          <div className="plantio-header-institucional__item">
+            <span className="plantio-header-institucional__label">Localização</span>
+            <span className="plantio-header-institucional__value">{localizacaoTexto}</span>
+          </div>
+        ) : null}
         <div className="plantio-header-institucional__item">
-          <span className="plantio-header-institucional__label">Talhão</span>
-          <span className="plantio-header-institucional__value">{talhao.nome || '—'}</span>
+          <span className="plantio-header-institucional__label">{modoComparativo ? 'Escopo' : 'Talhão'}</span>
+          <span className="plantio-header-institucional__value">
+            {modoComparativo && n > 0
+              ? `${n} talhão${n !== 1 ? 'ões' : ''} neste relatório`
+              : talhao.nome || '—'}
+          </span>
         </div>
         <div className="plantio-header-institucional__item">
           <span className="plantio-header-institucional__label">Safra</span>

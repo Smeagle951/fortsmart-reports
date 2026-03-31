@@ -12,6 +12,7 @@ import {
   classificarCvMedio,
   classificarIqiMedio,
   metricasDoSnapshot,
+  nomeExibicaoTalhao,
   serieFenologia,
   str,
   num,
@@ -102,10 +103,7 @@ export default function RelatorioPlantioMultiContent({
     nTalhoes === 1 ? slots[0] : slots[i],
   );
   const activeSnapshots = activeSlotIndices.map((i) => talhoes[i]).filter(Boolean) as UnknownRec[];
-  const activeNames = activeSlotIndices.map((i) => {
-    const th = talhoes[i]?.talhao as UnknownRec | undefined;
-    return str(th?.nome) || `Talhão ${i + 1}`;
-  });
+  const activeNames = activeSlotIndices.map((i) => nomeExibicaoTalhao(talhoes[i] ?? {}, i));
   const activeMetrics = activeSnapshots.map((snap) => metricasDoSnapshot(snap));
 
   const keys = ['s0', 's1', 's2'] as const;
@@ -165,7 +163,7 @@ export default function RelatorioPlantioMultiContent({
       }
       return {
         idx,
-        nome: str(th?.nome) || `Talhão ${idx + 1}`,
+        nome: nomeExibicaoTalhao(snap, idx),
         cultura: str(th?.cultura),
         iqi: m.iqi,
         label: m.iqiLabel,
@@ -182,39 +180,56 @@ export default function RelatorioPlantioMultiContent({
     );
   }
 
-  return (
-    <div className={cmpStyles.page}>
-      <div className={editorialStyles.noPrint}>
-        <HeaderRelatorio
-          meta={meta as { dataGeracao?: string; safra?: string; tecnico?: string; id?: string }}
-          propriedade={prop as { fazenda?: string; proprietario?: string; municipio?: string; estado?: string }}
-          talhao={{
-            nome: nTalhoes === 1 ? str((talhoes[0]?.talhao as UnknownRec)?.nome) || 'Talhão' : `${nTalhoes} talhões`,
-            cultura: 'Plantio — comparativo',
-          }}
-          reportId={reportId}
-          variant="plantio"
-        />
-      </div>
+  const localizacaoTexto = [prop.municipio, prop.estado].filter(Boolean).join(' / ');
 
-      <div className={`${editorialStyles.noPrint}`} style={{ marginBottom: '1rem' }}>
-        <button
-          type="button"
-          className={cmpStyles.select}
-          style={{ cursor: 'pointer', fontWeight: 600 }}
-          onClick={() => setModoAnalise((v) => !v)}
-        >
-          {modoAnalise ? 'Ocultar modo análise' : 'Modo análise — lista de talhões'}
-        </button>
-        <button
-          type="button"
-          className={cmpStyles.select}
-          style={{ cursor: 'pointer', fontWeight: 600, marginLeft: 8 }}
-          onClick={() => setCompareOpen(true)}
-        >
-          Comparar talhões (painel expandido)
-        </button>
-      </div>
+  return (
+    <div className="relatorio-plantio">
+      <div className={cmpStyles.page}>
+        <div className={editorialStyles.noPrint}>
+          <HeaderRelatorio
+            meta={meta as { dataGeracao?: string; safra?: string; tecnico?: string; id?: string }}
+            propriedade={prop as { fazenda?: string; proprietario?: string; municipio?: string; estado?: string }}
+            talhao={{
+              nome:
+                nTalhoes === 1
+                  ? nomeExibicaoTalhao(talhoes[0] ?? {}, 0)
+                  : `${nTalhoes} talhões`,
+              cultura: 'Comparativo multi-talhão',
+            }}
+            reportId={reportId}
+            variant="plantio"
+            plantioComparativo={nTalhoes > 1}
+            nTalhoesComparados={nTalhoes}
+            localizacaoTexto={localizacaoTexto || undefined}
+          />
+        </div>
+
+        <div className={`${cmpStyles.actionToolbar} ${editorialStyles.noPrint}`}>
+          <div className={cmpStyles.actionToolbarInner}>
+            <span className={cmpStyles.actionToolbarLabel}>Ferramentas</span>
+            <div className={cmpStyles.actionBtnGroup}>
+              <button
+                type="button"
+                className={`${cmpStyles.actionBtn} ${modoAnalise ? cmpStyles.actionBtnActive : ''}`}
+                onClick={() => setModoAnalise((v) => !v)}
+                aria-pressed={modoAnalise}
+              >
+                <span className={cmpStyles.actionBtnTitle}>
+                  {modoAnalise ? 'Ocultar lista' : 'Lista de talhões'}
+                </span>
+                <span className={cmpStyles.actionBtnHint}>Abrir painel por talhão na página</span>
+              </button>
+              <button
+                type="button"
+                className={`${cmpStyles.actionBtn} ${cmpStyles.actionBtnPrimary}`}
+                onClick={() => setCompareOpen(true)}
+              >
+                <span className={cmpStyles.actionBtnTitle}>Painel expandido</span>
+                <span className={cmpStyles.actionBtnHint}>Comparar A/B/C em tela cheia</span>
+              </button>
+            </div>
+          </div>
+        </div>
 
       {modoAnalise ? (
         <section
@@ -282,9 +297,10 @@ export default function RelatorioPlantioMultiContent({
         }}
       />
 
-      <PlantioCompareDrawer open={compareOpen} onClose={() => setCompareOpen(false)}>
-        <PlantioMultiComparativoCore {...coreProps} hideSelectors />
-      </PlantioCompareDrawer>
+        <PlantioCompareDrawer open={compareOpen} onClose={() => setCompareOpen(false)}>
+          <PlantioMultiComparativoCore {...coreProps} hideSelectors />
+        </PlantioCompareDrawer>
+      </div>
     </div>
   );
 }
