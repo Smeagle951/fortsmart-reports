@@ -315,7 +315,10 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
             />
           ) : isPlantioMulti ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de plantio multi-talhão">
-              <RelatorioPlantioMultiContent relatorio={payloadSafe} reportId={reportIdStr} />
+              <RelatorioPlantioMultiContent
+                relatorio={payloadSafe}
+                reportId={relatorioUuidStr || reportIdStr}
+              />
             </ErrorBoundary>
           ) : isPlantio ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de plantio">

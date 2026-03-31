@@ -85,6 +85,12 @@ function safeNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function extractFortsmartIaDeRaw(x: Record<string, unknown>): Recomendacao['fortsmartIa'] {
+  const fi = x.fortsmartIa ?? x.fortsmart_ia;
+  if (fi == null || typeof fi !== 'object') return undefined;
+  return fi as Recomendacao['fortsmartIa'];
+}
+
 function normalizeTalhao(raw: Record<string, unknown>): Talhao {
   const pontosRaw = Array.isArray(raw.pontos) ? raw.pontos : [];
   const pontos: PontoMonitoramento[] = pontosRaw
@@ -131,10 +137,13 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
   const recRaw = (raw.recomendacoes ?? []) as Array<{ acao?: string; organismo?: string; produto?: string; dose?: string; nivel?: string } | Recomendacao>;
   const recomendacoes: Recomendacao[] = recRaw.map((r): Recomendacao => {
     if (r && typeof r === 'object' && 'nivel' in r && 'organismo' in r && (r.produto != null || r.dose != null) && String((r as Recomendacao).organismo ?? '').trim() !== '—') {
-      return r as Recomendacao;
+      const x = r as Record<string, unknown>;
+      const fi = extractFortsmartIaDeRaw(x);
+      return fi ? { ...(r as Recomendacao), fortsmartIa: fi } : (r as Recomendacao);
     }
     const x = r as Record<string, unknown>;
     const acaoVal = (typeof x.manejo === 'string' ? x.manejo.trim() : '') || (typeof x.acao === 'string' ? x.acao : '');
+    const fi = extractFortsmartIaDeRaw(x);
     return {
       nivel: (x.nivel as Recomendacao['nivel']) ?? 'MONITORAR',
       organismo: (x.organismo != null && String(x.organismo).trim()) ? String(x.organismo).trim() : '—',
@@ -144,6 +153,7 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
       acao: acaoVal || '—',
       pontos: Array.isArray(x.pontos) ? x.pontos : [],
       severidade: typeof x.severidade === 'number' ? x.severidade : 0,
+      ...(fi ? { fortsmartIa: fi } : {}),
     };
   });
 
@@ -471,7 +481,9 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? relatorio.propriedade as Record<string, unknown> : undefined;
     const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? relatorio.meta as Record<string, unknown> : undefined;
     const perfilFaz = (relatorio as any).perfil_fazenda ?? (relatorio as any).fazenda_perfil ?? (relatorio as any).perfilFazenda;
-    const fazendaNome = (perfilFaz && typeof perfilFaz === 'object' && (perfilFaz as any).nome) ?? (perfilFaz as any)?.fazenda;
+    const pfObj = perfilFaz != null && typeof perfilFaz === 'object' ? (perfilFaz as Record<string, unknown>) : undefined;
+    const pickStr = (v: unknown): string => (v != null && String(v).trim() ? String(v).trim() : '');
+    const fazendaNome = pfObj ? pickStr(pfObj.nome ?? pfObj.fazenda) : '';
     const fazenda = String(
       fazendaNome
       ?? relatorio.fazenda
@@ -494,7 +506,17 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       ?? (relatorio as any).dataVisita
       ?? '';
     const data = typeof dataRaw === 'string' ? dataRaw : (dataRaw != null ? String(dataRaw) : '');
-    const tecnico = String(
+    const tecnicoFromPerfil =
+      pickStr(pfObj?.responsavel_tecnico)
+      || pickStr(pfObj?.technical_responsible_name)
+      || pickStr(pfObj?.technicalResponsibleName)
+      || pickStr(pfObj?.nome_engenheiro)
+      || pickStr(pfObj?.engenheiro_agronomo)
+      || pickStr(pfObj?.engenheiro)
+      || pickStr(pfObj?.agronomo)
+      || pickStr(pfObj?.tecnico)
+      || pickStr(pfObj?.nome_tecnico);
+    const tecnico = pickStr(
       relatorio.tecnico
       ?? (relatorio as any).agronomo
       ?? (relatorio as any).nome_tecnico
@@ -503,13 +525,27 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       ?? prop?.tecnico
       ?? (prop as any)?.agronomo
       ?? (prop as any)?.nome_tecnico
+      ?? (prop as any)?.technical_responsible_name
+      ?? (prop as any)?.technicalResponsibleName
+      ?? (prop as any)?.responsavel_tecnico
       ?? meta?.tecnico
       ?? (meta as any)?.agronomo
       ?? (meta as any)?.nome_tecnico
-      ?? 'FortSmart Agro'
-    ).trim() || 'FortSmart Agro';
+      ?? tecnicoFromPerfil
+      ?? ''
+    );
     const crea = String(
-      relatorio.crea ?? relatorio.tecnico_crea ?? meta?.tecnicoCrea ?? meta?.crea ?? prop?.crea ?? ''
+      relatorio.crea
+      ?? relatorio.tecnico_crea
+      ?? meta?.tecnicoCrea
+      ?? meta?.crea
+      ?? prop?.crea
+      ?? (prop as any)?.technical_responsible_id
+      ?? (prop as any)?.technicalResponsibleId
+      ?? pfObj?.crea_rt
+      ?? pfObj?.technical_responsible_id
+      ?? pfObj?.technicalResponsibleId
+      ?? ''
     ).trim() || undefined;
     const talhoesRaw =
       Array.isArray(relatorio.talhoes) && relatorio.talhoes.length > 0
@@ -707,6 +743,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     produto: string;
     dose: string;
     manejo: string;
+    fortsmartIa?: Recomendacao['fortsmartIa'];
   };
   const pragasComRecomendacao = useMemo((): PragaComRec[] => {
     const todasInfestacoes = primeiroTalhao?.pontos?.flatMap(p => p.infestacoes) ?? [];
@@ -730,6 +767,7 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         produto: (rec?.produto ?? '').trim() || '—',
         dose: (rec?.dose ?? '').trim() || '—',
         manejo,
+        fortsmartIa: rec?.fortsmartIa,
       };
     });
   }, [topPragas, recomendacoesTalhao, primeiroTalhao, organismosPayload]);

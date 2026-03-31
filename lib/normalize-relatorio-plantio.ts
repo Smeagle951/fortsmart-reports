@@ -85,6 +85,8 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
 
   // ─── V1 path reads (unchanged) ────────────────────────────────
   const talhao = (rawMerged.talhao ?? rawMerged.talhão) as UnknownRecord | undefined;
+  const coreRef = (rawMerged.core ?? {}) as UnknownRecord;
+  const coreTalhao = (coreRef.talhao as UnknownRecord | undefined) ?? {};
   const contextoSafra = (rawMerged.contextoSafra ?? rawMerged.contexto_safra) as UnknownRecord | undefined;
   const evolucaoCultura = (rawMerged.evolucaoCultura ?? rawMerged.evolucao_cultura) as UnknownRecord | undefined;
   const fenologia = (rawMerged.fenologia) as UnknownRecord | undefined;
@@ -92,13 +94,37 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
   const plantabilidade = (rawMerged.plantabilidade) as UnknownRecord | undefined;
   const populacao = (rawMerged.populacao) as UnknownRecord | undefined;
 
+  const nomeTalhaoResolvido =
+    getStr(talhao?.nome) ??
+    getStr((talhao as UnknownRecord)?.nome_talhao) ??
+    getStr((talhao as UnknownRecord)?.nomeTalhao) ??
+    getStr((talhao as UnknownRecord)?.label) ??
+    getStr(coreTalhao.nome) ??
+    getStr(coreRef.talhaoNome) ??
+    getStr(coreRef.talhao_nome);
+  const idTalhaoResolvido =
+    getStr(talhao?.id) ??
+    getStr(coreTalhao.id) ??
+    getStr(coreRef.talhaoId) ??
+    getStr(coreRef.talhao_id);
+
   const talhaoNorm: UnknownRecord = {
     ...(typeof talhao === 'object' && talhao !== null ? talhao : {}),
-    id: getStr(talhao?.id),
-    nome: getStr(talhao?.nome),
-    cultura: getStr(talhao?.cultura),
+    id: idTalhaoResolvido,
+    nome: nomeTalhaoResolvido,
+    cultura: getStr(talhao?.cultura) ?? getStr(coreTalhao.cultura) ?? getStr(coreRef.culturaNome),
     area: getNum(talhao?.area),
     dataPlantio: getStr(talhao?.dataPlantio ?? (talhao as UnknownRecord)?.data_plantio),
+    dataEmergencia: getStr(
+      (talhao as UnknownRecord)?.dataEmergencia ?? (talhao as UnknownRecord)?.data_emergencia,
+    ),
+    dataGerminacao: getStr(
+      (talhao as UnknownRecord)?.dataGerminacao ?? (talhao as UnknownRecord)?.data_germinacao,
+    ),
+    dataAvaliacaoEstande: getStr(
+      (talhao as UnknownRecord)?.dataAvaliacaoEstande ??
+        (talhao as UnknownRecord)?.data_avaliacao_estande,
+    ),
   };
 
   const registrosEstande = Array.isArray(estande?.registros) ? estande.registros as UnknownRecord[] : [];
@@ -159,7 +185,12 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
     const o = p as UnknownRecord;
     const tipo = getStr(o.tipo);
     if (!tipo) return null;
-    return { tipo, posicao: getNum(o.posicao) } as unknown as { tipo: string; posicao?: number };
+    return {
+      tipo,
+      posicao: getNum(o.posicao),
+      cm: getNum(o.cm),
+      distancia: getNum(o.distancia ?? (o as UnknownRecord).distancia_cm),
+    } as unknown as { tipo: string; posicao?: number; cm?: number; distancia?: number };
   });
 
   const espacamentosRaw = plantabilidade?.espacamentosIndividuais ?? (plantabilidade as UnknownRecord)?.espacamentos_individuais;
@@ -168,7 +199,11 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
     const o = e as UnknownRecord;
     const tipo = getStr(o.tipo);
     if (!tipo) return null;
-    return { cm: getNum(o.cm), tipo } as unknown as { cm?: number; tipo: string };
+    return {
+      cm: getNum(o.cm),
+      tipo,
+      distancia: getNum(o.distancia ?? (o as UnknownRecord).distancia_cm),
+    } as unknown as { cm?: number; tipo: string; distancia?: number };
   });
 
   const plantabilidadeNorm: UnknownRecord = {

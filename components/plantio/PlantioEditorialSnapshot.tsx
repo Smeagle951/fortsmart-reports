@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { formatNumber, formatPercent } from '@/utils/format';
+import { getStoragePublicUrl } from '@/lib/supabase';
 import styles from './relatorio-plantio-editorial.module.css';
 
 type UnknownRec = Record<string, unknown>;
@@ -21,37 +22,103 @@ function num(v: unknown): number | undefined {
   return undefined;
 }
 
-function timelinePhotoUrls(fenologia: UnknownRec, max = 12): string[] {
-  const tl = Array.isArray(fenologia.timeline) ? (fenologia.timeline as UnknownRec[]) : [];
-  const out: string[] = [];
-  for (const row of tl) {
-    const fotos = Array.isArray(row.fotos) ? (row.fotos as UnknownRec[]) : [];
-    for (const f of fotos) {
-      const u = f.url;
-      if (typeof u === 'string' && u.startsWith('http') && out.length < max) out.push(u);
-    }
-  }
-  return out;
-}
-
-function firstHeroUrl(snapshot: UnknownRec): string | undefined {
-  const imgs = snapshot.imagens as Array<{ url?: string }> | undefined;
-  if (imgs?.length) {
-    const u = imgs.map((i) => i.url).find((x) => x && String(x).startsWith('http'));
+function resolvePlantioImage(
+  entry: { url?: string; path?: string; localPath?: string },
+  relatorioId?: string,
+): string | undefined {
+  if (entry.url && String(entry.url).startsWith('http')) return entry.url;
+  const p = (entry.path || entry.localPath || '').trim();
+  if (relatorioId && p) {
+    const u = getStoragePublicUrl(relatorioId, p);
     if (u) return u;
   }
+  return undefined;
+}
+
+function firstHeroUrl(snapshot: UnknownRec, relatorioId?: string): string | undefined {
+  const imgs = snapshot.imagens as Array<{ url?: string; path?: string; localPath?: string }> | undefined;
+  if (imgs?.length) {
+    for (const i of imgs) {
+      const u = resolvePlantioImage(i, relatorioId);
+      if (u) return u;
+    }
+  }
   const fen = snapshot.fenologia as UnknownRec | undefined;
-  const tl = fen?.timeline as Array<{ fotos?: Array<{ url?: string }> }> | undefined;
+  const tl = fen?.timeline as Array<{ fotos?: Array<{ url?: string; localPath?: string; path?: string }> }> | undefined;
   if (Array.isArray(tl)) {
     for (const row of tl) {
-      const f = row.fotos?.find((p) => p.url && String(p.url).startsWith('http'));
-      if (f?.url) return f.url;
+      for (const p of row.fotos ?? []) {
+        const u = resolvePlantioImage(
+          { url: p.url as string | undefined, localPath: p.localPath as string | undefined, path: p.path as string | undefined },
+          relatorioId,
+        );
+        if (u) return u;
+      }
     }
   }
   return undefined;
 }
 
-export default function PlantioEditorialSnapshot({ snapshot }: { snapshot: UnknownRec }) {
+type GalleryItem = { src: string; caption: string; subtitle?: string };
+
+function collectGalleryItems(snapshot: UnknownRec, relatorioId?: string, max = 28): GalleryItem[] {
+  const out: GalleryItem[] = [];
+  const seen = new Set<string>();
+  const push = (src: string, caption: string, subtitle?: string) => {
+    if (!src || seen.has(src)) return;
+    seen.add(src);
+    out.push({ src, caption, subtitle });
+  };
+
+  const imgs = snapshot.imagens as Array<{
+    url?: string;
+    path?: string;
+    localPath?: string;
+    descricao?: string;
+    categoria?: string;
+  }> | undefined;
+  if (imgs) {
+    for (const i of imgs) {
+      const src = resolvePlantioImage(i, relatorioId);
+      if (!src) continue;
+      const cap =
+        [i.descricao, i.categoria].filter((x) => x && String(x).trim()).join(' · ') ||
+        'Registro de campo';
+      push(src, cap);
+      if (out.length >= max) return out;
+    }
+  }
+
+  const fen = (snapshot.fenologia || {}) as UnknownRec;
+  const tl = Array.isArray(fen.timeline) ? (fen.timeline as UnknownRec[]) : [];
+  for (const row of tl) {
+    const est = str(row.estagio ?? row.descricaoEstagio);
+    const dae = num(row.dae);
+    const subtitle = dae != null ? `DAE ~${dae}` : undefined;
+    const fotos = Array.isArray(row.fotos) ? (row.fotos as UnknownRec[]) : [];
+    for (const f of fotos) {
+      const src =
+        (typeof f.url === 'string' && f.url.startsWith('http') ? f.url : undefined) ||
+        resolvePlantioImage(
+          { url: f.url as string | undefined, localPath: f.localPath as string | undefined, path: f.path as string | undefined },
+          relatorioId,
+        );
+      if (src) {
+        push(src, est !== '—' ? `Fenologia · ${est}` : 'Fenologia', subtitle);
+        if (out.length >= max) return out;
+      }
+    }
+  }
+  return out;
+}
+
+export default function PlantioEditorialSnapshot({
+  snapshot,
+  relatorioId,
+}: {
+  snapshot: UnknownRec;
+  relatorioId?: string;
+}) {
   const meta = (snapshot.meta || {}) as UnknownRec;
   const prop = (snapshot.propriedade || {}) as UnknownRec;
   const talhao = (snapshot.talhao || {}) as UnknownRec;
@@ -62,9 +129,11 @@ export default function PlantioEditorialSnapshot({ snapshot }: { snapshot: Unkno
   const iqiBlock = (snapshot.indiceQualidadeImplantacao || {}) as UnknownRec;
   const assinatura = (snapshot.assinaturaTecnica || {}) as UnknownRec;
   const estande = (snapshot.estande || {}) as UnknownRec;
+  const evolucaoCultura = (snapshot.evolucaoCultura || {}) as UnknownRec;
+  const contextoSafra = (snapshot.contextoSafra || {}) as UnknownRec;
   const conclusao = str(snapshot.conclusao);
-  const hero = firstHeroUrl(snapshot);
-  const timelinePhotos = timelinePhotoUrls(fenologia, 12);
+  const hero = firstHeroUrl(snapshot, relatorioId);
+  const galleryItems = collectGalleryItems(snapshot, relatorioId);
   const registrosEstande = Array.isArray(estande.registros)
     ? (estande.registros as UnknownRec[])
     : [];
@@ -87,6 +156,26 @@ export default function PlantioEditorialSnapshot({ snapshot }: { snapshot: Unkno
   const hipoteses = Array.isArray(diag.hipoteses) ? (diag.hipoteses as string[]) : [];
   const recs = Array.isArray(diag.recomendacoes) ? (diag.recomendacoes as string[]) : [];
 
+  const campoBits: string[] = [];
+  if (num(contextoSafra.dae) != null) campoBits.push(`DAE aproximado: ${num(contextoSafra.dae)}`);
+  if (num(contextoSafra.dap) != null) campoBits.push(`DAP: ${num(contextoSafra.dap)}`);
+  const estObs = str(fenologia.estadio ?? fenologia.estagio);
+  if (estObs !== '—') campoBits.push(`Estádio observado: ${estObs}`);
+  const estPrev = str(evolucaoCultura.estadioPrevisto);
+  if (estPrev !== '—') campoBits.push(`Estádio esperado para o ciclo: ${estPrev}`);
+  if (num(evolucaoCultura.atrasoFenologico) != null) {
+    campoBits.push(`Desvio fenológico (estágios): ${num(evolucaoCultura.atrasoFenologico)}`);
+  }
+  if (num(evolucaoCultura.somaTermica) != null) {
+    campoBits.push(
+      `Soma térmica acumulada: ${formatNumber(num(evolucaoCultura.somaTermica)!)} °C·dia`,
+    );
+  }
+  const campoNarrative =
+    campoBits.length > 0
+      ? campoBits.join(' · ')
+      : 'Preencha DAE, DAP e registros fenológicos no módulo Plantio para consolidar a linha do tempo deste talhão no relatório.';
+
   return (
     <div className={styles.root}>
       <header className={styles.hero}>
@@ -105,7 +194,7 @@ export default function PlantioEditorialSnapshot({ snapshot }: { snapshot: Unkno
         </div>
       </header>
 
-      <section className={styles.section} aria-labelledby="ed-id">
+      <section className={styles.sectionSoft} aria-labelledby="ed-id">
         <h2 id="ed-id" className={styles.sectionTitle}>
           Identificação
         </h2>
@@ -125,8 +214,42 @@ export default function PlantioEditorialSnapshot({ snapshot }: { snapshot: Unkno
         </dl>
       </section>
 
+      <section className={styles.sectionSoft} aria-labelledby="ed-campo">
+        <h2 id="ed-campo" className={styles.sectionTitle}>
+          Cultura em campo
+        </h2>
+        <p className={styles.narrative} style={{ margin: 0 }}>
+          {campoNarrative}
+        </p>
+      </section>
+
+      {galleryItems.length > 0 && (
+        <section className={styles.sectionSoft} aria-labelledby="ed-fotos">
+          <h2 id="ed-fotos" className={styles.sectionTitle}>
+            Registro visual
+          </h2>
+          <p className={styles.subtitle} style={{ marginBottom: '1rem' }}>
+            Imagens do plantio e da evolução fenológica capturadas no aplicativo.
+          </p>
+          <div className={styles.galleryMosaic}>
+            {galleryItems.map((g, i) => (
+              <figure key={`${g.src}-${i}`} className={styles.galleryFigure}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={g.src} alt={g.caption} className={styles.galleryImg} loading="lazy" />
+                <figcaption className={styles.galleryCap}>
+                  <span className={styles.galleryCapTitle}>{g.caption}</span>
+                  {g.subtitle ? (
+                    <span className={styles.galleryCapSub}>{g.subtitle}</span>
+                  ) : null}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
+
       {(diag.texto || hipoteses.length > 0) && (
-        <section className={styles.section} aria-labelledby="ed-diag">
+        <section className={styles.sectionSoft} aria-labelledby="ed-diag">
           <h2 id="ed-diag" className={styles.sectionTitle}>
             Diagnóstico integrado
           </h2>
@@ -158,60 +281,54 @@ export default function PlantioEditorialSnapshot({ snapshot }: { snapshot: Unkno
         </section>
       )}
 
-      <section className={styles.section} aria-labelledby="ed-ind">
+      <section className={styles.sectionSoft} aria-labelledby="ed-ind">
         <h2 id="ed-ind" className={styles.sectionTitle}>
-          Indicadores
+          Indicadores principais
         </h2>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Indicador</th>
-              <th>Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>População alvo (pl/ha)</td>
-              <td>{num(populacao.plantasHa) != null ? formatNumber(num(populacao.plantasHa)!) : '—'}</td>
-            </tr>
-            <tr>
-              <td>Estande efetivo (pl/ha)</td>
-              <td>
-                {num(populacao.estandeEfetivoPlHa) != null
-                  ? formatNumber(num(populacao.estandeEfetivoPlHa)!)
-                  : '—'}
-              </td>
-            </tr>
-            <tr>
-              <td>Eficiência</td>
-              <td>
-                {num(populacao.eficienciaPct) != null ? formatPercent(num(populacao.eficienciaPct)!) : '—'}
-              </td>
-            </tr>
-            <tr>
-              <td>CV% (plantabilidade)</td>
-              <td>
-                {num(plantab.cvPercentual) != null ? `${num(plantab.cvPercentual)!.toFixed(1)}%` : '—'}
-              </td>
-            </tr>
-            <tr>
-              <td>IQI (implantação)</td>
-              <td>
-                {num(iqiBlock.iqi) != null
-                  ? `${num(iqiBlock.iqi)!.toFixed(0)} — ${str(iqiBlock.label)}`
-                  : '—'}
-              </td>
-            </tr>
-            <tr>
-              <td>Estádio fenológico</td>
-              <td>{str(fenologia.estadio ?? fenologia.estagio)}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className={styles.metricsRail} role="list">
+          <div className={styles.metric} role="listitem">
+            <span className={styles.metricLabel}>População alvo</span>
+            <span className={styles.metricValue}>
+              {num(populacao.plantasHa) != null ? `${formatNumber(num(populacao.plantasHa)!)} pl/ha` : '—'}
+            </span>
+          </div>
+          <div className={styles.metric} role="listitem">
+            <span className={styles.metricLabel}>Estande efetivo</span>
+            <span className={styles.metricValue}>
+              {num(populacao.estandeEfetivoPlHa) != null
+                ? `${formatNumber(num(populacao.estandeEfetivoPlHa)!)} pl/ha`
+                : '—'}
+            </span>
+          </div>
+          <div className={styles.metric} role="listitem">
+            <span className={styles.metricLabel}>Eficiência</span>
+            <span className={styles.metricValue}>
+              {num(populacao.eficienciaPct) != null ? formatPercent(num(populacao.eficienciaPct)!) : '—'}
+            </span>
+          </div>
+          <div className={styles.metric} role="listitem">
+            <span className={styles.metricLabel}>CV% plantabilidade</span>
+            <span className={styles.metricValue}>
+              {num(plantab.cvPercentual) != null ? `${num(plantab.cvPercentual)!.toFixed(1)}%` : '—'}
+            </span>
+          </div>
+          <div className={styles.metric} role="listitem">
+            <span className={styles.metricLabel}>IQI implantação</span>
+            <span className={styles.metricValue}>
+              {num(iqiBlock.iqi) != null
+                ? `${num(iqiBlock.iqi)!.toFixed(0)} · ${str(iqiBlock.label)}`
+                : '—'}
+            </span>
+          </div>
+          <div className={styles.metric} role="listitem">
+            <span className={styles.metricLabel}>Estádio</span>
+            <span className={styles.metricValue}>{str(fenologia.estadio ?? fenologia.estagio)}</span>
+          </div>
+        </div>
       </section>
 
       {temPlantabDetalhe && (
-        <section className={styles.section} aria-labelledby="ed-planta">
+        <section className={styles.sectionSoft} aria-labelledby="ed-planta">
           <h2 id="ed-planta" className={styles.sectionTitle}>
             Plantabilidade (distribuição)
           </h2>
@@ -241,62 +358,51 @@ export default function PlantioEditorialSnapshot({ snapshot }: { snapshot: Unkno
       )}
 
       {registrosEstande.length > 0 && (
-        <section className={styles.section} aria-labelledby="ed-est">
+        <section className={styles.sectionSoft} aria-labelledby="ed-est">
           <h2 id="ed-est" className={styles.sectionTitle}>
             Estande
           </h2>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Plantas/m</th>
-                <th>Plantas/ha</th>
-              </tr>
-            </thead>
-            <tbody>
-              {registrosEstande.map((r, i) => (
-                <tr key={i}>
-                  <td>{str(r.data)}</td>
-                  <td>{num(r.plantasPorMetro) != null ? formatNumber(num(r.plantasPorMetro)!) : '—'}</td>
-                  <td>{num(r.plantasHa) != null ? formatNumber(num(r.plantasHa)!) : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className={styles.techList}>
+            {registrosEstande.map((r, i) => (
+              <div key={i} className={styles.techRow}>
+                <span className={styles.techName}>{str(r.data)}</span>
+                <span className={styles.techVal}>
+                  {num(r.plantasPorMetro) != null ? `${formatNumber(num(r.plantasPorMetro)!)} pl/m` : '—'}
+                  {' · '}
+                  {num(r.plantasHa) != null ? `${formatNumber(num(r.plantasHa)!)} pl/ha` : '—'}
+                </span>
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
       {itensTecnicos.length > 0 && (
-        <section className={styles.section} aria-labelledby="ed-itens">
+        <section className={styles.sectionSoft} aria-labelledby="ed-itens">
           <h2 id="ed-itens" className={styles.sectionTitle}>
             Itens técnicos avaliados
           </h2>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Variável</th>
-                <th>Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {itensTecnicos.map((item, i) => (
-                <tr key={i}>
-                  <td>{str(item.nome)}</td>
-                  <td>
-                    {str(item.valor)}
-                    {item.unidade != null && String(item.unidade).trim() !== ''
-                      ? ` ${str(item.unidade)}`
-                      : ''}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <p className={styles.subtitle} style={{ marginTop: '-0.5rem', marginBottom: '1rem' }}>
+            Variáveis registradas na sessão de evolução fenológica / avaliação técnica do plantio.
+          </p>
+          <div className={styles.techList}>
+            {itensTecnicos.map((item, i) => (
+              <div key={i} className={styles.techRow}>
+                <span className={styles.techName}>{str(item.nome)}</span>
+                <span className={styles.techVal}>
+                  {str(item.valor)}
+                  {item.unidade != null && String(item.unidade).trim() !== ''
+                    ? ` ${str(item.unidade)}`
+                    : ''}
+                </span>
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
       {timeline.length > 0 && maxAlt > 0 && (
-        <section className={styles.section} aria-labelledby="ed-evo">
+        <section className={styles.sectionSoft} aria-labelledby="ed-evo">
           <h2 id="ed-evo" className={styles.sectionTitle}>
             Evolução (altura por registro)
           </h2>
@@ -328,21 +434,13 @@ export default function PlantioEditorialSnapshot({ snapshot }: { snapshot: Unkno
             })}
           </div>
           <p className={styles.subtitle} style={{ marginTop: 8 }}>
-            Eixo inferior: DAE aproximado por registro na timeline.
+            Eixo inferior: DAE aproximado por registro. Fotos associadas aparecem em «Registro visual».
           </p>
-          {timelinePhotos.length > 0 ? (
-            <div className={styles.photoStrip} aria-label="Fotos da fenologia">
-              {timelinePhotos.map((url, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={url} alt="" width={72} height={72} loading="lazy" />
-              ))}
-            </div>
-          ) : null}
         </section>
       )}
 
       {conclusao !== '—' && (
-        <section className={styles.section} aria-labelledby="ed-conc">
+        <section className={styles.sectionSoft} aria-labelledby="ed-conc">
           <h2 id="ed-conc" className={styles.sectionTitle}>
             Conclusão
           </h2>
