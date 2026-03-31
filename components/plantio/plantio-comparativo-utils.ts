@@ -136,6 +136,11 @@ function collectImageQueue(snapshot: UnknownRec): Array<{ url?: string; path?: s
   return q;
 }
 
+function isNomeTalhaoGenerico(raw: string): boolean {
+  const t = raw.trim().toLowerCase();
+  return t === '' || t === 'talhão' || t === 'talhao';
+}
+
 /** Nome estável para selects e colunas (V1/V2 e fallbacks). */
 export function nomeExibicaoTalhao(snap: UnknownRec, indexZeroBased: number): string {
   const th = (snap.talhao ?? {}) as UnknownRec;
@@ -150,8 +155,24 @@ export function nomeExibicaoTalhao(snap: UnknownRec, indexZeroBased: number): st
     str(core.talhaoNome),
     str(core.talhao_nome),
   ].filter((s) => s.length > 0);
-  if (cands.length) return cands[0]!;
   const id = str(th.id) || str(core.talhaoId) || str(core.talhao_id);
+  const cultura =
+    str(th.cultura) ||
+    str((th as UnknownRec).culturaNome) ||
+    str(core.culturaNome) ||
+    str(core.cultura);
+
+  const primeiro = cands.length ? cands[0]! : '';
+  if (primeiro && !isNomeTalhaoGenerico(primeiro)) return primeiro;
+
+  const suffixo: string[] = [];
+  if (cultura) suffixo.push(cultura);
+  if (id) suffixo.push(id.length > 10 ? `${id.slice(0, 8)}…` : id);
+  if (suffixo.length > 0) {
+    return primeiro && isNomeTalhaoGenerico(primeiro)
+      ? `Talhão · ${suffixo.join(' · ')}`
+      : `${primeiro || 'Talhão'} · ${suffixo.join(' · ')}`;
+  }
   if (id) return id.length > 12 ? `Talhão (${id.slice(0, 10)}…)` : `Talhão (${id})`;
   return `Talhão ${indexZeroBased + 1}`;
 }
