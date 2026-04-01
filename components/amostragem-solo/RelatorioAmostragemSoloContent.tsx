@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FeatureCollection, GeoJsonObject } from 'geojson';
+import type { Feature, FeatureCollection, GeoJsonObject } from 'geojson';
 import {
   computeCompactacaoAnalytics,
   computeSamplingQuality,
@@ -149,6 +149,42 @@ function featureMatchesTalhao(
   return candidates.includes(selectedTalhao);
 }
 
+/** Anéis exteriores [lat,lng][] para polyline (fecha o anel se o GeoJSON vier aberto). */
+function outerRingsAsLatLngArrays(ft: Feature): [number, number][][] {
+  const g = ft.geometry;
+  if (!g) return [];
+  if (g.type === 'Polygon') {
+    const outer = g.coordinates[0];
+    if (!Array.isArray(outer) || outer.length === 0) return [];
+    return [ringLngLatToLatLngClosed(outer)];
+  }
+  if (g.type === 'MultiPolygon') {
+    const out: [number, number][][] = [];
+    for (const poly of g.coordinates) {
+      const outer = poly[0];
+      if (!Array.isArray(outer) || outer.length === 0) continue;
+      out.push(ringLngLatToLatLngClosed(outer));
+    }
+    return out;
+  }
+  return [];
+}
+
+function ringLngLatToLatLngClosed(ring: number[][]): [number, number][] {
+  const pts: [number, number][] = [];
+  for (const c of ring) {
+    if (!Array.isArray(c) || c.length < 2) continue;
+    const lng = Number(c[0]);
+    const lat = Number(c[1]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) pts.push([lat, lng]);
+  }
+  if (pts.length < 2) return pts;
+  const [fLat, fLng] = pts[0];
+  const [lLat, lLng] = pts[pts.length - 1];
+  if (fLat !== lLat || fLng !== lLng) pts.push([fLat, fLng]);
+  return pts;
+}
+
 type AgTheme = typeof ag;
 
 function TabelaGruposPontos({
@@ -264,6 +300,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
   const heatRef = useRef<import('leaflet').Layer | null>(null);
   const isolineLayerRef = useRef<import('leaflet').Layer | null>(null);
   const talhoesLayerRef = useRef<import('leaflet').Layer | null>(null);
+  const talhaoOutlineLayerRef = useRef<import('leaflet').Layer | null>(null);
   const rotaLayerRef = useRef<import('leaflet').Layer | null>(null);
   const talhaoLabelLayerRef = useRef<import('leaflet').Layer | null>(null);
   const rotaDirectionLayerRef = useRef<import('leaflet').Layer | null>(null);
@@ -457,6 +494,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       heatRef.current = null;
       isolineLayerRef.current = null;
       talhoesLayerRef.current = null;
+      talhaoOutlineLayerRef.current = null;
       rotaLayerRef.current = null;
       talhaoLabelLayerRef.current = null;
       rotaDirectionLayerRef.current = null;
@@ -479,6 +517,10 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       if (talhoesLayerRef.current) {
         map.removeLayer(talhoesLayerRef.current);
         talhoesLayerRef.current = null;
+      }
+      if (talhaoOutlineLayerRef.current) {
+        map.removeLayer(talhaoOutlineLayerRef.current);
+        talhaoOutlineLayerRef.current = null;
       }
       if (rotaLayerRef.current) {
         map.removeLayer(rotaLayerRef.current);
@@ -520,6 +562,25 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         });
         talhoesLayer.addTo(map);
         talhoesLayerRef.current = talhoesLayer;
+
+        const outlineGroup = L.layerGroup();
+        for (const ft of simplifiedTalhoesFc.features) {
+          for (const ring of outerRingsAsLatLngArrays(ft as Feature)) {
+            if (ring.length < 2) continue;
+            outlineGroup.addLayer(
+              L.polyline(ring, {
+                color: '#22c55e',
+                weight: 4,
+                opacity: 0.98,
+                lineJoin: 'round',
+                lineCap: 'round',
+                interactive: false,
+              }),
+            );
+          }
+        }
+        outlineGroup.addTo(map);
+        talhaoOutlineLayerRef.current = outlineGroup;
 
         if (showTalhaoLabels) {
           const labels = L.layerGroup();
