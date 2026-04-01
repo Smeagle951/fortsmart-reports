@@ -257,6 +257,7 @@ export default function PlantioAnaliseDrawer({
                     falhasPct={num(plantab.falhasPct)}
                     indicePlantabilidade={num(plantab.indicePlantabilidade)}
                     espacamentosIndividuais={espInd}
+                    espacamentoIdealCm={num(plantab.espacamentoIdealCm) ?? undefined}
                     embedded
                   />
                 </>

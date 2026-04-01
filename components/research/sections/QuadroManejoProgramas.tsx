@@ -1,9 +1,5 @@
 import React from 'react';
-import {
-  ResearchProReportPayload,
-  ResearchProReportProgramaManejo,
-  ResearchProReportProgramaAplicacao,
-} from '../../../types/research-report';
+import { ResearchProReportPayload, ResearchProReportProgramaManejo, ResearchProReportProgramaAplicacao } from '../../../types/research-report';
 
 type Props = {
   relatorio: ResearchProReportPayload;
@@ -44,10 +40,7 @@ export default function QuadroManejoProgramas({ relatorio }: Props) {
     );
   }
 
-  const getAplicacaoPorDae = (
-    p: ResearchProReportProgramaManejo,
-    dae: number,
-  ): ResearchProReportProgramaAplicacao | undefined => {
+  const getAplicacaoPorDae = (p: ResearchProReportProgramaManejo, dae: number): ResearchProReportProgramaAplicacao | undefined => {
     return (p.aplicacoes ?? []).find((a) => a.dae === dae);
   };
 
@@ -80,22 +73,11 @@ export default function QuadroManejoProgramas({ relatorio }: Props) {
                 Tratamentos
               </th>
               {daeColumns.map((dae) => {
-                const dt = plantioDate
-                  ? new Date(plantioDate.getTime() + dae * 24 * 60 * 60 * 1000)
-                  : null;
+                const dt = plantioDate ? new Date(plantioDate.getTime() + dae * 24 * 60 * 60 * 1000) : null;
                 return (
-                  <th
-                    key={dae}
-                    className="px-3 py-3 text-center font-bold text-gray-900 border-r border-gray-200"
-                  >
+                  <th key={dae} className="px-3 py-3 text-center font-bold text-gray-900 border-r border-gray-200">
                     <div>DAE {dae}</div>
-                    {dt ? (
-                      <div className="text-[10px] font-semibold text-gray-500 mt-0.5">
-                        {formatDateBR(dt)}
-                      </div>
-                    ) : (
-                      <div className="text-[10px] text-gray-400 mt-0.5">—</div>
-                    )}
+                    {dt ? <div className="text-[10px] font-semibold text-gray-500 mt-0.5">{formatDateBR(dt)}</div> : <div className="text-[10px] text-gray-400 mt-0.5">—</div>}
                   </th>
                 );
               })}
@@ -122,25 +104,16 @@ export default function QuadroManejoProgramas({ relatorio }: Props) {
                     const app = getAplicacaoPorDae(p, dae);
                     const produtos = app?.produtos ?? [];
                     return (
-                      <td
-                        key={`${p.id}-${dae}`}
-                        className="px-3 py-3 text-center border-r border-gray-200 align-top"
-                      >
+                      <td key={`${p.id}-${dae}`} className="px-3 py-3 text-center border-r border-gray-200 align-top">
                         {produtos.length === 0 ? (
                           <span className="text-gray-300">—</span>
                         ) : (
                           <div className="space-y-1">
                             {produtos.slice(0, 3).map((prod, i) => (
-                              <div
-                                key={i}
-                                className="bg-white border border-gray-200 rounded px-2 py-1 shadow-sm"
-                              >
+                              <div key={i} className="bg-white border border-gray-200 rounded px-2 py-1 shadow-sm">
                                 <div className="font-semibold text-gray-900 truncate">{prod.nome}</div>
                                 <div className="text-gray-600">
-                                  {Number.isFinite(prod.dose)
-                                    ? `${prod.dose.toFixed(2)}`.replace('.', ',')
-                                    : prod.dose}{' '}
-                                  {prod.unidade}
+                                  {Number.isFinite(prod.dose) ? prod.dose.toFixed(2).replace('.', ',') : prod.dose} {prod.unidade}
                                 </div>
                               </div>
                             ))}

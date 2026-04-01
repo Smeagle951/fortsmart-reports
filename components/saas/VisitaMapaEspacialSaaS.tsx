@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Polygon, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -15,10 +15,9 @@ if (typeof window !== 'undefined') {
 }
 
 const MAPTILER_KEY = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_MAPTILER_KEY : undefined;
-/** Satélite real (MapTiler); sem chave: imagem de satélite Esri (mesmo padrão de uso offline no app). */
-const satelliteTileUrl = MAPTILER_KEY
-  ? `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_KEY}`
-  : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const mapTilerUrl = MAPTILER_KEY
+  ? `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`
+  : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 export type VisitaMapaPonto = {
   index?: number;
@@ -52,9 +51,6 @@ export type VisitaEvolucaoQuadro = {
 };
 
 export type VisitaMapaEspacialPayload = {
-  /** Metadados opcionais do app (PDF/outros); o relatório web usa só polígono + pontos geo. */
-  path?: string;
-  viewBox?: string;
   polygon?: number[][];
   pontos?: VisitaMapaPonto[];
   clusters?: VisitaMapaCluster[];
@@ -82,27 +78,10 @@ function clusterColor(sev?: string): { stroke: string; fill: string } {
   return { stroke: '#1565c0', fill: 'rgba(21, 101, 192, 0.12)' };
 }
 
-function asArrayGeneric<T>(v: unknown): T[] {
-  return Array.isArray(v) ? (v as T[]) : [];
-}
-
-function asPontos(v: unknown): VisitaMapaPonto[] {
-  return asArrayGeneric<VisitaMapaPonto>(v);
-}
-
-function asQuadros(v: unknown): VisitaEvolucaoQuadro[] {
-  return asArrayGeneric<VisitaEvolucaoQuadro>(v);
-}
-
 export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspacialPayload }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const pontosRaw = asPontos(mapa.pontos);
+  const pontosRaw = mapa.pontos ?? [];
   const polygonProp = mapa.polygon;
-  const quadros = asQuadros(mapa.evolucao_espacial?.quadros);
+  const quadros = mapa.evolucao_espacial?.quadros ?? [];
   const descEvolucao = mapa.evolucao_espacial?.descricao;
   const epsM = mapa.evolucao_espacial?.eps_m;
 
@@ -128,9 +107,8 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
   const activeQuadro = useTimeline ? quadros[Math.min(quadroIx, quadros.length - 1)] : null;
 
   const activeIndices = useMemo(() => {
-    const idxArr = activeQuadro != null ? asArrayGeneric<number | string>((activeQuadro as { indices?: unknown }).indices) : [];
-    if (useTimeline && idxArr.length > 0) {
-      return new Set(idxArr.map((n) => Number(n)));
+    if (useTimeline && activeQuadro?.indices?.length) {
+      return new Set(activeQuadro.indices.map((n) => Number(n)));
     }
     return new Set(allNormalized.map((p) => p._idx));
   }, [useTimeline, activeQuadro, allNormalized]);
@@ -141,11 +119,10 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
   );
 
   const activeClusters = useMemo(() => {
-    const fromQuadro = activeQuadro != null ? asArrayGeneric<VisitaMapaCluster>(activeQuadro.clusters) : [];
-    if (useTimeline && fromQuadro.length > 0) {
-      return fromQuadro;
+    if (useTimeline && activeQuadro?.clusters?.length) {
+      return activeQuadro.clusters;
     }
-    return asArrayGeneric<VisitaMapaCluster>(mapa.clusters);
+    return mapa.clusters ?? [];
   }, [useTimeline, activeQuadro, mapa.clusters]);
 
   const polygonCoords = useMemo((): [number, number][] | undefined => {
@@ -174,26 +151,10 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
     return null;
   }
 
-  if (!mounted) {
-    return (
-      <section className="saas-section print:break-inside-avoid">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="saas-section-title">Mapa do talhão (satélite)</h2>
-          <div
-            className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-500"
-            style={{ minHeight: 380 }}
-          >
-            Carregando mapa…
-          </div>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section className="saas-section print:break-inside-avoid">
       <div className="mx-auto max-w-7xl">
-        <h2 className="saas-section-title">Mapa do talhão (satélite)</h2>
+        <h2 className="saas-section-title">Mapa espacial, clusters e evolução</h2>
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           {useTimeline && (
             <div className="px-4 pt-4 pb-2 border-b border-slate-100 bg-slate-50/80">
@@ -224,7 +185,7 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
           {!useTimeline && descEvolucao && quadros.length === 0 && (
             <p className="text-xs text-slate-500 px-4 pt-3">{descEvolucao}</p>
           )}
-          {!useTimeline && epsM != null && asArrayGeneric<VisitaMapaCluster>(mapa.clusters).length > 0 && (
+          {!useTimeline && epsM != null && (mapa.clusters?.length ?? 0) > 0 && (
             <p className="text-xs text-slate-400 px-4 pt-1">
               Círculos: focos geográficos (≤ {epsM} m). Clique nos marcadores para detalhes.
             </p>
@@ -235,10 +196,10 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
               <TileLayer
                 attribution={
                   MAPTILER_KEY
-                    ? '&copy; MapTiler · Esri, Maxar, Earthstar Geographics'
-                    : '&copy; Esri, Maxar, Earthstar Geographics & contributors'
+                    ? '&copy; MapTiler &copy; OpenStreetMap'
+                    : '&copy; OpenStreetMap contributors'
                 }
-                url={satelliteTileUrl}
+                url={mapTilerUrl}
               />
               {polygonCoords && (
                 <Polygon
@@ -246,17 +207,14 @@ export default function VisitaMapaEspacialSaaS({ mapa }: { mapa: VisitaMapaEspac
                   pathOptions={{ color: '#2e7d32', weight: 3, fillColor: '#e8f5e9', fillOpacity: 0.35 }}
                 />
               )}
-              {activeClusters
-                .filter((cl) => Number.isFinite(cl.centroid_lat) && Number.isFinite(cl.centroid_lng))
-                .map((cl, clIx) => {
+              {activeClusters.map((cl) => {
                 const { stroke, fill } = clusterColor(cl.severidade_max);
-                const rawR = Number(cl.raio_m);
-                const radiusM = Number.isFinite(rawR) && rawR > 0 ? Math.max(12, rawR) : 15;
+                const r = Math.max(12, cl.raio_m || 15);
                 return (
                   <Circle
-                    key={`cl-${cl.id ?? clIx}-${useTimeline ? activeQuadro?.data : 'all'}`}
+                    key={`cl-${cl.id}-${useTimeline ? activeQuadro?.data : 'all'}`}
                     center={[cl.centroid_lat, cl.centroid_lng]}
-                    radius={radiusM}
+                    radius={r}
                     pathOptions={{ color: stroke, fillColor: fill, weight: 2, fillOpacity: 0.35 }}
                   />
                 );

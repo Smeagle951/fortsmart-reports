@@ -122,8 +122,9 @@ type SideData = {
 interface SideBySideReportContentProps {
   data: SideBySideReportData;
   reportId?: string;
+  shareToken?: string;
 }
 
-export default function SideBySideReportContent({ data, reportId }: SideBySideReportContentProps) {
-  return <RelatorioLadoALadoDashboard data={data} reportId={reportId} />;
+export default function SideBySideReportContent({ data, reportId, shareToken }: SideBySideReportContentProps) {
+  return <RelatorioLadoALadoDashboard data={data} reportId={reportId} shareToken={shareToken} />;
 }

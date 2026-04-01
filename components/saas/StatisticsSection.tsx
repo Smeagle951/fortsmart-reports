@@ -1,7 +1,5 @@
 'use client';
 
-import { formatDecimal2 } from '@/utils/format';
-
 export interface EstatisticaItem {
   metrica: string;
   valor: string | number;
@@ -32,7 +30,7 @@ export default function StatisticsSection({ items, title = 'Estatística Avança
                 <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
                   <td className="saas-td font-medium text-slate-700">{item.metrica}</td>
                   <td className="saas-td">
-                    {typeof item.valor === 'number' ? formatDecimal2(item.valor) : item.valor}
+                    {typeof item.valor === 'number' ? item.valor.toFixed(2) : item.valor}
                   </td>
                 </tr>
               ))}

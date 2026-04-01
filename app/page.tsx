@@ -45,6 +45,7 @@ function HomeContent() {
     const { default: html2pdf } = await import('html2pdf.js');
     const element = document.getElementById('relatorio-content');
     if (!element) return;
+
     // Garante que imagens dentro do relatório tenham terminado de carregar
     // antes de capturar o DOM (evita "perder" fotos no PDF).
     const waitForImages = async () => {

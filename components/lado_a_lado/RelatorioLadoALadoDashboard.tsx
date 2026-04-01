@@ -18,15 +18,17 @@ import {
 import { formatDate, formatNumber, formatPercent, situacaoLabel } from '@/utils/format';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import FortSmartLogo from '@/components/FortSmartLogo';
+import { postReportAnalytics } from '@/lib/report-analytics-client';
 
 type SideData = NonNullable<SideBySideReportData['sideA']>;
 
 interface RelatorioLadoALadoDashboardProps {
   data: SideBySideReportData;
   reportId?: string;
+  shareToken?: string;
 }
 
-export default function RelatorioLadoALadoDashboard({ data, reportId }: RelatorioLadoALadoDashboardProps) {
+export default function RelatorioLadoALadoDashboard({ data, reportId, shareToken }: RelatorioLadoALadoDashboardProps) {
   const meta = data.meta || {};
   const farm = data.farm || {};
   const coleta = data.coleta;
@@ -102,11 +104,31 @@ export default function RelatorioLadoALadoDashboard({ data, reportId }: Relatori
   }));
 
   const handlePrint = () => window.print();
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
+    const el = document.getElementById('relatorio-lado-a-lado-content');
+    if (!el) {
+      window.print();
+      return;
+    }
     try {
-      const html2pdf = require('html2pdf.js');
-      const el = document.getElementById('relatorio-lado-a-lado-content');
-      if (el) html2pdf().set({ margin: 10, filename: `relatorio-lado-a-lado-${meta.reportId || 'report'}.pdf` }).from(el).save();
+      const { default: html2pdf } = await import('html2pdf.js');
+      await html2pdf()
+        .set({
+          margin: 10,
+          filename: `relatorio-lado-a-lado-${meta.reportId || reportId || 'report'}.pdf`,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        })
+        .from(el)
+        .save();
+      if (shareToken?.trim()) {
+        void postReportAnalytics({
+          shareToken: shareToken.trim(),
+          eventType: 'download',
+          module: 'avaliacao_lado_a_lado',
+        });
+      }
     } catch {
       window.print();
     }

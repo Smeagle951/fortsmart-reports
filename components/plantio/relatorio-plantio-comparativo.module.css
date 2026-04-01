@@ -93,15 +93,15 @@
 }
 
 .page {
-  --cmp-ink: #1a2e1f;
+  --cmp-ink: #1a1a2e;
   --cmp-muted: #5c6d62;
-  --cmp-paper: #ebe8e2;
-  --cmp-paper2: #f3f1ec;
-  --cmp-col-a: #2d6a4f;
-  --cmp-col-b: #1b7f7a;
-  --cmp-col-c: #1b4332;
-  --cmp-line: rgba(26, 46, 31, 0.12);
-  --cmp-card: #f7f6f3;
+  --cmp-paper: #e8e8f2;
+  --cmp-paper2: #f2f2f2;
+  --cmp-col-a: #4f2d6a;
+  --cmp-col-b: #7a1b7f;
+  --cmp-col-c: #411b43;
+  --cmp-line: rgba(46, 31, 31, 0.12);
+  --cmp-card: #f2f2f2;
   --cmp-shadow: 0 2px 14px rgba(27, 67, 50, 0.08);
 
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -148,6 +148,12 @@
   font-size: 0.95rem;
   color: var(--cmp-muted);
   font-weight: 450;
+}
+
+.subtitleMeta {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--cmp-muted);
 }
 
 .selectorGrid {
@@ -233,6 +239,113 @@
   padding: 0.75rem;
 }
 
+.photoThumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.photoThumb {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  width: 52px;
+  height: 40px;
+  cursor: pointer;
+  background: #e7e5e4;
+  opacity: 0.82;
+}
+
+.photoThumb:hover {
+  opacity: 1;
+}
+
+.photoThumbActive {
+  border-color: var(--cmp-col-a);
+  opacity: 1;
+  box-shadow: 0 0 0 1px rgba(45, 106, 79, 0.35);
+}
+
+.photoThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.filterContextBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem 1.5rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  background: linear-gradient(180deg, #fafaf9 0%, #fff 100%);
+  border: 1px solid var(--cmp-line);
+  border-radius: 10px;
+  box-shadow: var(--cmp-shadow);
+}
+
+.filterContextField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: min(100%, 280px);
+}
+
+.filterContextLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--cmp-muted);
+}
+
+.filterContextHint {
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--cmp-muted);
+}
+
+.viewModeToggle {
+  display: inline-flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--cmp-line);
+  box-shadow: var(--cmp-shadow);
+}
+
+.viewModeBtn {
+  border: none;
+  background: #fff;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cmp-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.viewModeBtn:hover {
+  background: var(--cmp-paper2);
+  color: var(--cmp-ink);
+}
+
+.viewModeBtnActive {
+  background: var(--cmp-col-a);
+  color: #fff;
+}
+
+.viewModeBtnActive:hover {
+  background: #245a42;
+  color: #fff;
+}
+
 .photoCap {
   position: absolute;
   bottom: 0;
@@ -286,9 +399,11 @@
 .headColA {
   background: var(--cmp-col-a);
 }
+
 .headColB {
   background: var(--cmp-col-b);
 }
+
 .headColC {
   background: var(--cmp-col-c);
 }

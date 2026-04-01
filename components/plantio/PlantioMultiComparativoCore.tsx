@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { formatNumber } from '@/utils/format';
 import PlantioFenologiaComparativoChart, { type SerieFeno } from './PlantioFenologiaComparativoChart';
 import LinhaPlantioVisualizer from './LinhaPlantioVisualizer';
 import {
-  heroUrlForSnapshot,
+  listResolvedImageUrlsForSnapshot,
   metricasDoSnapshot,
   nomeExibicaoTalhao,
   num,
@@ -57,6 +57,10 @@ export interface MultiComparativoCoreProps {
   reportId?: string;
   onOpenAnalise: (talhaoSlotIndex: number) => void;
   hideSelectors?: boolean;
+  /** Um seletor (plantio/talhão) ou três colunas A/B/C */
+  selectorMode?: 'single' | 'triple';
+  singleTalhaoIndex?: number;
+  setSingleTalhaoIndex?: (idx: number) => void;
 }
 
 export default function PlantioMultiComparativoCore(props: MultiComparativoCoreProps) {
@@ -82,11 +86,45 @@ export default function PlantioMultiComparativoCore(props: MultiComparativoCoreP
     reportId,
     onOpenAnalise,
     hideSelectors,
+    selectorMode = 'triple',
+    singleTalhaoIndex = 0,
+    setSingleTalhaoIndex,
   } = props;
+
+  const [photoIdxByCol, setPhotoIdxByCol] = useState<Record<number, number>>({});
 
   return (
     <>
-      {!hideSelectors && nTalhoes > 1 ? (
+      {!hideSelectors && nTalhoes > 1 && selectorMode === 'single' && setSingleTalhaoIndex ? (
+        <div className={`${cmpStyles.filterContextBar} ${editorialStyles.noPrint}`}>
+          <div className={cmpStyles.filterContextField}>
+            <span className={cmpStyles.filterContextLabel} id="lbl-plantio-unico">
+              Talhão e plantio
+            </span>
+            <select
+              className={cmpStyles.select}
+              aria-labelledby="lbl-plantio-unico"
+              value={singleTalhaoIndex}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                if (!Number.isFinite(v)) return;
+                setSingleTalhaoIndex(Math.min(Math.max(0, v), nTalhoes - 1));
+              }}
+            >
+              {talhoes.map((t, i) => (
+                <option key={i} value={i}>
+                  {nomeExibicaoTalhao(t, i)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className={cmpStyles.filterContextHint}>
+            Relatório focado em um único plantio. Use &quot;Comparativo A/B/C&quot; para colocar até três lado a lado.
+          </p>
+        </div>
+      ) : null}
+
+      {!hideSelectors && nTalhoes > 1 && selectorMode === 'triple' ? (
         <div className={`${cmpStyles.selectorGrid} ${editorialStyles.noPrint}`}>
           {(['A', 'B', 'C'] as const).map((letter, idx) => (
             <div key={letter} className={cmpStyles.selectorCol}>
@@ -125,7 +163,10 @@ export default function PlantioMultiComparativoCore(props: MultiComparativoCoreP
       >
         {activeSlotIndices.map((slotIdx, colIdx) => {
           const snap = talhoes[slotIdx];
-          const url = snap ? heroUrlForSnapshot(snap, reportId) : undefined;
+          const urls = snap ? listResolvedImageUrlsForSnapshot(snap, reportId) : [];
+          const pick = photoIdxByCol[colIdx] ?? 0;
+          const safePick = urls.length ? Math.min(Math.max(0, pick), urls.length - 1) : 0;
+          const url = urls[safePick];
           const nome = activeNames[colIdx];
           return (
             <div key={`${colIdx}-${slotIdx}`} className={cmpStyles.photoCol}>
@@ -133,16 +174,33 @@ export default function PlantioMultiComparativoCore(props: MultiComparativoCoreP
                 {url ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className={cmpStyles.photoImg} src={url} alt="" />
+                    <img className={cmpStyles.photoImg} src={url} alt={`Registro visual — ${nome}`} />
                     <div className={cmpStyles.photoCap}>{nome}</div>
                   </>
                 ) : (
                   <div className={cmpStyles.photoPlaceholder}>
-                    Sem imagem pública para este talhão. Fotos do plantio, estande ou fenologia aparecem aqui quando
-                    o relatório é gerado com upload (Supabase) ou URL http no JSON.
+                    Nenhuma foto com URL pública neste plantio. Ao publicar pelo app com upload (Supabase), as imagens de
+                    plantio, fenologia e estande passam a aparecer aqui automaticamente.
                   </div>
                 )}
               </div>
+              {urls.length > 1 ? (
+                <div className={`${cmpStyles.photoThumbs} ${editorialStyles.noPrint}`} role="tablist" aria-label={`Miniaturas ${nome}`}>
+                  {urls.map((u, ti) => (
+                    <button
+                      key={`${u}-${ti}`}
+                      type="button"
+                      role="tab"
+                      aria-selected={ti === safePick}
+                      className={`${cmpStyles.photoThumb} ${ti === safePick ? cmpStyles.photoThumbActive : ''}`}
+                      onClick={() => setPhotoIdxByCol((prev) => ({ ...prev, [colIdx]: ti }))}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={u} alt="" />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               {snap ? (
                 <div className={`${cmpStyles.linkDetail} ${editorialStyles.noPrint}`}>
                   <button type="button" onClick={() => onOpenAnalise(slotIdx)}>
@@ -315,6 +373,7 @@ export default function PlantioMultiComparativoCore(props: MultiComparativoCoreP
                     falhasPct={num(plantab.falhasPct) ?? undefined}
                     indicePlantabilidade={num(plantab.indicePlantabilidade) ?? undefined}
                     espacamentosIndividuais={espInd}
+                    espacamentoIdealCm={num(plantab.espacamentoIdealCm) ?? undefined}
                     embedded
                   />
                 ) : (

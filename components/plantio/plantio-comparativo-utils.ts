@@ -83,6 +83,12 @@ function collectImageQueue(snapshot: UnknownRec): Array<{ url?: string; path?: s
     for (const i of imgs) pushImageCandidates(q, i);
   }
 
+  const core = snapshot.core as UnknownRec | undefined;
+  const coreImgs = core?.imagens as unknown;
+  if (Array.isArray(coreImgs)) {
+    for (const i of coreImgs) pushImageCandidates(q, i);
+  }
+
   const mod = snapshot.modulos as UnknownRec | undefined;
   const mp = mod?.plantio as UnknownRec | undefined;
   if (mp && typeof mp === 'object') {
@@ -134,6 +140,23 @@ function collectImageQueue(snapshot: UnknownRec): Array<{ url?: string; path?: s
   }
 
   return q;
+}
+
+/** Todas as URLs públicas resolvidas para o snapshot (ordem: plantio → módulos → fenologia → evidências). Sem duplicatas. */
+export function listResolvedImageUrlsForSnapshot(
+  snapshot: UnknownRec,
+  relatorioId?: string,
+): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const entry of collectImageQueue(snapshot)) {
+    const u = resolvePlantioAssetUrl(entry, relatorioId)?.trim();
+    if (u && u.startsWith('http') && !seen.has(u)) {
+      seen.add(u);
+      out.push(u);
+    }
+  }
+  return out;
 }
 
 function isNomeTalhaoGenerico(raw: string): boolean {

@@ -54,6 +54,22 @@ function labelModoColeta(raw: unknown): string {
   return s || '';
 }
 
+/** Profundidades planejadas na campanha (`meta.desired_depths` do app, schema ≥ 2). */
+function formatMetaDesiredDepths(raw: unknown): string | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const parts: string[] = [];
+  for (const e of raw) {
+    if (!e || typeof e !== 'object') continue;
+    const o = e as Record<string, unknown>;
+    const top = o.top;
+    const bottom = o.bottom;
+    const t = typeof top === 'number' ? top : Number(top);
+    const b = typeof bottom === 'number' ? bottom : Number(bottom);
+    if (Number.isFinite(t) && Number.isFinite(b)) parts.push(`${t}–${b} cm`);
+  }
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 function colorForClass(c: string | undefined): string {
   switch (c) {
     case 'Crítica':
@@ -367,23 +383,47 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
     return pts;
   }, [observacoes]);
 
+  /** Contorno do(s) talhão(ões) no payload — enquadramento inicial quando ainda não há pontos. */
+  const talhaoOutlineLatLngPoints = useMemo((): [number, number][] => {
+    const pts: [number, number][] = [];
+    if (!talhoesFc?.features) return pts;
+    for (const f of talhoesFc.features) {
+      if (f.geometry?.type !== 'Polygon') continue;
+      const coords = (f.geometry as { type: 'Polygon'; coordinates: number[][][] }).coordinates;
+      const ring = coords[0];
+      if (!Array.isArray(ring)) continue;
+      for (const c of ring) {
+        if (!Array.isArray(c) || c.length < 2) continue;
+        const lng = Number(c[0]);
+        const lat = Number(c[1]);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) pts.push([lat, lng]);
+      }
+    }
+    return pts;
+  }, [talhoesFc]);
+
+  const mapViewLatLngPoints = useMemo((): [number, number][] => {
+    if (obsLatLngPoints.length > 0) return obsLatLngPoints;
+    return talhaoOutlineLatLngPoints;
+  }, [obsLatLngPoints, talhaoOutlineLatLngPoints]);
+
   const centerLat = useMemo(() => {
-    if (obsLatLngPoints.length === 0) return -14.235;
+    if (mapViewLatLngPoints.length === 0) return -14.235;
     let s = 0;
-    for (const [lat] of obsLatLngPoints) s += lat;
-    return s / obsLatLngPoints.length;
-  }, [obsLatLngPoints]);
+    for (const [lat] of mapViewLatLngPoints) s += lat;
+    return s / mapViewLatLngPoints.length;
+  }, [mapViewLatLngPoints]);
 
   const centerLng = useMemo(() => {
-    if (obsLatLngPoints.length === 0) return -51.9253;
+    if (mapViewLatLngPoints.length === 0) return -51.9253;
     let s = 0;
-    for (const [, lng] of obsLatLngPoints) s += lng;
-    return s / obsLatLngPoints.length;
-  }, [obsLatLngPoints]);
+    for (const [, lng] of mapViewLatLngPoints) s += lng;
+    return s / mapViewLatLngPoints.length;
+  }, [mapViewLatLngPoints]);
 
   const initialZoom = useMemo(() => {
-    return obsLatLngPoints.length > 0 ? 14 : 4;
-  }, [obsLatLngPoints]);
+    return mapViewLatLngPoints.length > 0 ? 14 : 4;
+  }, [mapViewLatLngPoints]);
 
   const isLegacyPayload = !p.schemaVersion || Number(p.schemaVersion) < 2;
 
@@ -481,8 +521,8 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       cluster.addTo(map);
       clusterRef.current = cluster;
 
-      if (obsLatLngPoints.length > 0) {
-        map.fitBounds(obsLatLngPoints, { padding: [40, 40], maxZoom: 17 });
+      if (mapViewLatLngPoints.length > 0) {
+        map.fitBounds(mapViewLatLngPoints, { padding: [40, 40], maxZoom: 17 });
       }
     })();
 
@@ -499,7 +539,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       talhaoLabelLayerRef.current = null;
       rotaDirectionLayerRef.current = null;
     };
-  }, [centerLat, centerLng, initialZoom, obsLatLngPoints]);
+  }, [centerLat, centerLng, initialZoom, mapViewLatLngPoints]);
 
   useEffect(() => {
     const map = mapInstance.current;
@@ -788,6 +828,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
   const nomeCampanha = (meta.campaignName as string) || '';
   const nomeFazenda = (meta.fazenda_nome as string) || '';
   const talhoesTexto = talhoesOptions.map((t) => t.nome ?? t.id).join(' · ');
+  const profundidadesPlanejadas = formatMetaDesiredDepths(meta.desired_depths);
 
   return (
     <div
@@ -853,7 +894,8 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               meta.tipo ||
               meta.fazenda_nome ||
               meta.empresa_id ||
-              meta.usuario_coleta_id
+              meta.usuario_coleta_id ||
+              profundidadesPlanejadas
           ) && (
             <details style={{ marginTop: 12, fontSize: 13, opacity: 0.94, maxWidth: 640 }}>
               <summary style={{ cursor: 'pointer', userSelect: 'none', fontWeight: 600 }}>
@@ -889,6 +931,11 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
                 {meta.modo_coleta ? (
                   <div>
                     <strong>Modo de coleta:</strong> {labelModoColeta(meta.modo_coleta)}
+                  </div>
+                ) : null}
+                {profundidadesPlanejadas ? (
+                  <div>
+                    <strong>Profundidades planejadas (campanha):</strong> {profundidadesPlanejadas}
                   </div>
                 ) : null}
                 {meta.tipo_layout ? (

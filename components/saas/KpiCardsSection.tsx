@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { formatDecimal2 } from '@/utils/format';
 
 type Tendencia = 'up' | 'neutral' | 'down';
 type Classificacao = 'Excelente' | 'Bom' | 'Moderado' | 'Atenção' | 'Crítico' | 'Sem dado';
@@ -31,12 +30,12 @@ const tendenciaIcon: Record<Tendencia, string> = {
   down: '↓',
 };
 
-/** Formata valor para exibição (números: 2 casas decimais pt-BR; strings já vêm formatadas). */
+/** Formata valor para exibição: evita floats longos (ex.: 2.5999999999999996 → 2.6). */
 function formatDisplayValor(v: string | number): string {
   if (typeof v === 'string') return v;
   const n = Number(v);
   if (!Number.isFinite(n)) return '—';
-  return formatDecimal2(n);
+  return n % 1 === 0 ? String(Math.round(n)) : Number(n.toFixed(2)).toString();
 }
 
 interface KpiCardsSectionProps {
@@ -51,16 +50,8 @@ export default function KpiCardsSection({ cards }: KpiCardsSectionProps) {
       <h2 className="saas-section-title">Resumo Executivo</h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {cards.map((card) => {
-          const clsKeys = classColors as Record<string, string>;
-          const classif =
-            card.classificacao != null && clsKeys[card.classificacao as Classificacao] != null
-              ? card.classificacao
-              : 'Sem dado';
-          const colors = classColors[classif as Classificacao] || classColors.Moderado;
-          const tend: Tendencia =
-            card.tendencia === 'up' || card.tendencia === 'down' || card.tendencia === 'neutral'
-              ? card.tendencia
-              : 'neutral';
+          const colors = classColors[card.classificacao] || classColors.Moderado;
+          const tend = card.tendencia || 'neutral';
           return (
             <button
               key={card.id}
@@ -76,7 +67,7 @@ export default function KpiCardsSection({ cards }: KpiCardsSectionProps) {
                 <span className="text-2xl font-bold">{formatDisplayValor(card.valor)}</span>
                 <span className="text-lg opacity-70">{tendenciaIcon[tend]}</span>
               </div>
-              <span className="mt-1 text-xs font-medium">{classif}</span>
+              <span className="mt-1 text-xs font-medium">{card.classificacao}</span>
               {card.historico && card.historico.length > 0 && (
                 <span className="mt-2 text-xs text-slate-500 group-hover:text-slate-700">
                   Clique para histórico

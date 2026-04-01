@@ -48,44 +48,32 @@ export type RelatorioRow = {
 export async function getRelatorioByShareToken(token: string): Promise<RelatorioRow | null> {
   const serviceClient = getSupabaseService();
   const anonClient = getSupabase();
-  const clients: Array<{ name: string; client: NonNullable<typeof serviceClient> }> = [];
-  if (serviceClient) clients.push({ name: 'service', client: serviceClient });
-  if (anonClient) clients.push({ name: 'anon', client: anonClient });
-
-  if (clients.length === 0) {
+  const client = serviceClient ?? anonClient;
+  if (!client) {
     console.error('[fortsmart-reports] getRelatorioByShareToken: nenhum cliente Supabase. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel.');
     return null;
   }
+  const { data, error } = await client
+    .from('relatorios')
+    .select('*')
+    .eq('share_token', token)
+    .maybeSingle();
 
-  // Se service_role estiver apontando para outra instância/DB, a query pode falhar
-  // (ex.: "relation relatorios does not exist"). Nesse caso, fazemos fallback para anon.
-  for (const { name, client } of clients) {
-    const { data, error } = await client
-      .from('relatorios')
-      .select('*')
-      .eq('share_token', token)
-      .maybeSingle();
-
-    if (error) {
-      console.error(`[fortsmart-reports] getRelatorioByShareToken (${name}):`, error.message, 'token=', (token || '').slice(0, 8) + '…');
-      continue;
-    }
-    if (!data) {
-      console.warn(`[fortsmart-reports] getRelatorioByShareToken (${name}): nenhum registro para token`, (token || '').slice(0, 8) + '…');
-      continue;
-    }
-
-    const rowData = data as any;
-    if (rowData.is_public === false) return null;
-    if (rowData.share_expires_at && new Date(rowData.share_expires_at) < new Date()) return null;
-
-    // Compatível com colunas: dados, json_data, dados_json (schema variável)
-    const row = data as RelatorioRow & { json_data?: Record<string, unknown>; dados_json?: Record<string, unknown> };
-    if (!row.dados) row.dados = row.json_data ?? row.dados_json ?? {};
-    return row;
+  if (error) {
+    console.error('[fortsmart-reports] getRelatorioByShareToken:', error.message, 'token=', (token || '').slice(0, 8) + '…');
+    return null;
   }
-
-  return null;
+  if (!data) {
+    console.warn('[fortsmart-reports] getRelatorioByShareToken: nenhum registro para token', (token || '').slice(0, 8) + '…');
+    return null;
+  }
+  const rowData = data as any;
+  if (rowData.is_public === false) return null;
+  if (rowData.share_expires_at && new Date(rowData.share_expires_at) < new Date()) return null;
+  // Compatível com colunas: dados, json_data, dados_json (schema variável)
+  const row = data as RelatorioRow & { json_data?: Record<string, unknown>; dados_json?: Record<string, unknown> };
+  if (!row.dados) row.dados = row.json_data ?? row.dados_json ?? {};
+  return row;
 }
 
 /**

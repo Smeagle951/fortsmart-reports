@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import FortSmartLogo from '@/components/FortSmartLogo';
-import { buildShareUrl } from '@/utils/canonicalUrl';
 
 export type StatusGeral = 'Saudável' | 'Atenção' | 'Crítico';
 
@@ -42,25 +41,34 @@ export default function HeaderSection({
 }: HeaderSectionProps) {
   const [copied, setCopied] = useState(false);
 
-  const handleShare = () => {
-    const shareUrl = buildShareUrl(window.location.pathname + window.location.search + window.location.hash);
-    if (navigator.share) {
-      navigator.share({
-        title: `Relatório Agronômico - ${talhao}`,
-        url: shareUrl || window.location.href,
-        text: `Relatório ${talhao} - ${cultura}`,
-      }).catch(() => onCompartilhar?.());
-    } else {
-      navigator.clipboard.writeText(shareUrl || window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      onCompartilhar?.();
+  const handleShare = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    try {
+      if (navigator.share && url) {
+        await navigator.share({
+          title: `Relatório Agronômico - ${talhao}`,
+          url,
+          text: `Relatório ${talhao} - ${cultura}`,
+        });
+        onCompartilhar?.();
+        return;
+      }
+    } catch {
+      /* cancelado ou indisponível */
+    }
+    try {
+      if (url && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        onCompartilhar?.();
+      }
+    } catch {
+      /* ignore */
     }
   };
 
-  const statusSafe: StatusGeral =
-    status === 'Atenção' || status === 'Crítico' || status === 'Saudável' ? status : 'Saudável';
-  const sc = statusConfig[statusSafe] || statusConfig.Saudável;
+  const sc = statusConfig[status] || statusConfig.Saudável;
 
   if (variant === 'toolbar') {
     return (

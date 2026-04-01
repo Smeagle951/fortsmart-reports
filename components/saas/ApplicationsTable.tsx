@@ -29,9 +29,7 @@ export default function ApplicationsTable({ rows, mostrarApenasNomeProduto = tru
   const filteredRows = useMemo(() => {
     if (tipoFiltro === 'todos') return rows;
     return rows.filter((r) =>
-      String(r.classe ?? '')
-        .toLowerCase()
-        .includes(tipoFiltro.toLowerCase())
+      r.classe.toLowerCase().includes(tipoFiltro.toLowerCase())
     );
   }, [rows, tipoFiltro]);
 

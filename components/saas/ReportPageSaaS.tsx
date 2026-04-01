@@ -1,8 +1,12 @@
 'use client';
 
 import { useCallback } from 'react';
+import { postReportAnalytics } from '@/lib/report-analytics-client';
 import dynamic from 'next/dynamic';
 import HeaderInstitucionalVisitaTecnica from '@/components/visita/HeaderInstitucionalVisitaTecnica';
+import type { VisitaMapaEspacialPayload } from './VisitaMapaEspacialSaaS';
+
+const VisitaMapaEspacialSaaS = dynamic(() => import('./VisitaMapaEspacialSaaS'), { ssr: false });
 import HeaderSection, { type StatusGeral } from './HeaderSection';
 import KpiCardsSection from './KpiCardsSection';
 import EvaluationTable, { type AvaliacaoRow } from './EvaluationTable';
@@ -10,29 +14,12 @@ import StatisticsSection, { type EstatisticaItem } from './StatisticsSection';
 import ApplicationsTable, { type AplicacaoRow } from './ApplicationsTable';
 import ImageGallerySaaS, { type ImagemItem } from './ImageGallerySaaS';
 import ComparisonSection, { type ComparativoItem } from './ComparisonSection';
-import SaasLeafletErrorBoundary from './SaasLeafletErrorBoundary';
-import type { VisitaMapaEspacialPayload } from './VisitaMapaEspacialSaaS';
-import { asArray, asStringList } from '@/utils/arrayGuards';
-import { formatDecimal2, formatPercent2 } from '@/utils/format';
-
-const VisitaMapaEspacialSaaS = dynamic(() => import('./VisitaMapaEspacialSaaS'), { ssr: false });
 
 /** Retorna número válido ou null (evita NaN no UI). */
 function safeNum(v: unknown): number | null {
   if (v == null) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
-}
-
-function pontoTemCoordenadasGeo(p: unknown): boolean {
-  if (!p || typeof p !== 'object') return false;
-  const o = p as Record<string, unknown>;
-  const lat = o.lat ?? o.latitude;
-  const lng = o.lng ?? o.longitude;
-  if (lat == null || lng == null) return false;
-  const la = Number(lat);
-  const ln = Number(lng);
-  return Number.isFinite(la) && Number.isFinite(ln) && Math.abs(la) <= 90 && Math.abs(ln) <= 180;
 }
 
 export interface ReportPageSaaSData {
@@ -113,54 +100,26 @@ interface ReportPageSaaSProps {
   relatorioUuid?: string;
   /** Quando true, não exibe o header (evita duplicação em abas) */
   embedded?: boolean;
-}
-
-type SaaSAplicacao = NonNullable<ReportPageSaaSData['aplicacoes']>[number];
-type SaaSImagem = NonNullable<ReportPageSaaSData['imagens']>[number];
-type EstandeRegistro = NonNullable<NonNullable<ReportPageSaaSData['estande']>['registros']>[number];
-
-function isValidAvaliacaoRow(x: unknown): x is AvaliacaoRow {
-  if (x == null || typeof x !== 'object') return false;
-  const o = x as AvaliacaoRow;
-  return typeof o.id === 'string' && o.id.length > 0;
-}
-
-/** Normaliza campos numéricos vindos do JSON (strings/objetos quebram .toFixed / sort). */
-function normalizeAvaliacaoRow(row: AvaliacaoRow): AvaliacaoRow {
-  return {
-    ...row,
-    dae: safeNum(row.dae as unknown),
-    cvPercent: safeNum(row.cvPercent as unknown),
-    estandePlm: safeNum(row.estandePlm as unknown),
-    perdaPct: safeNum(row.perdaPct as unknown),
-    iat: safeNum(row.iat as unknown),
-    data: row.data != null ? String(row.data) : '—',
-    classificacao: row.classificacao != null ? String(row.classificacao) : 'Sem dado',
-    fenologia: row.fenologia != null ? String(row.fenologia) : '—',
-    status: row.status != null ? String(row.status) : 'OK',
-  };
+  /** Token público — métricas ao usar PDF (impressão) e compartilhar. */
+  shareToken?: string;
 }
 
 function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
-  if (Array.isArray(d.avaliacoes) && d.avaliacoes.length > 0) {
-    const valid = d.avaliacoes.filter(isValidAvaliacaoRow).map(normalizeAvaliacaoRow);
-    if (valid.length > 0) return valid;
-  }
+  if (d.avaliacoes?.length) return d.avaliacoes;
 
   const plant = d.plantabilidade;
   const est = d.estande;
-  const estRegs = asArray<EstandeRegistro>(est?.registros);
   const fit = d.fitossanidade;
   const pop = d.populacao;
   const meta = d.meta?.dataGeracao || '';
 
   const cv = safeNum(plant?.cvPercentual);
-  const estandePlm = safeNum(pop?.plantasPorMetro) ?? (estRegs[0] != null ? safeNum((estRegs[0] as any).plantasPorMetro) : null);
+  const estandePlm = safeNum(pop?.plantasPorMetro) ?? (est?.registros?.[0] != null ? safeNum((est.registros[0] as any).plantasPorMetro) : null);
   const perdaPop = safeNum(pop?.perdaTotalPct);
   const perda =
     perdaPop ??
     (est?.perdaTotalPct != null ? safeNum(est.perdaTotalPct) : null) ??
-    (estRegs[0] != null ? safeNum((estRegs[0] as any).perdaTotalPct) : null);
+    (est?.registros?.[0] != null ? safeNum((est.registros[0] as any).perdaTotalPct) : null);
   const iat = safeNum(
     d.indiceAgronomicoTalhao?.valor ?? d.diagnosticoIntegrado?.spt ?? d.inteligenciaAgronomica?.score,
   );
@@ -204,21 +163,18 @@ function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
       plantabilidade: plant
         ? {
           'Comprimento Amostrado': '5.0 m',
-          'Espaçamento Médio':
-            plant.espacamentoRealCm != null && Number.isFinite(Number(plant.espacamentoRealCm))
-              ? `${formatDecimal2(plant.espacamentoRealCm)} cm`
-              : '—',
-          'CV%': cv != null ? formatPercent2(cv) : '—',
-          Falhas: formatPercent2(plant.falhasPct ?? 0),
-          Duplas: plant.duplasPct != null ? formatDecimal2(plant.duplasPct) : 0,
-          Triplas: plant.triplasPct != null ? formatDecimal2(plant.triplasPct) : 0,
+          'Espaçamento Médio': `${plant.espacamentoRealCm ?? '—'} cm`,
+          'CV%': `${cv != null ? `${cv}%` : '—'}`,
+          Falhas: `${plant.falhasPct ?? 0}%`,
+          Duplas: plant.duplasPct ?? 0,
+          Triplas: plant.triplasPct ?? 0,
         }
         : undefined,
       estande: pop || est
         ? {
           'População Desejada': '62.000 pl/ha',
           'População Real': estandePlm != null ? String(Math.round(estandePlm * 10000)) : '—',
-          'Perda Total': formatPercent2(perda ?? 0),
+          'Perda Total': `${perda ?? 0}%`,
           'Impacto Produtividade': classificacao === 'Excelente' || classificacao === 'Bom' ? 'Baixo' : 'Moderado',
         }
         : undefined,
@@ -238,24 +194,23 @@ function buildEstatisticas(d: ReportPageSaaSData): EstatisticaItem[] {
   const plant = d.plantabilidade;
   if (!plant) return [];
 
-  const linhaArr = asArray<{ tipo: string }>(plant.linha);
-  const n = linhaArr.length > 0 ? linhaArr.length : 14;
+  const n = plant.linha?.length ?? 14;
   const media = plant.espacamentoRealCm ?? 0;
   const cv = safeNum(plant.cvPercentual) ?? 0;
-  const dpNum = media * (cv / 100);
-  const icNum = (1.96 * dpNum) / Math.sqrt(n);
+  const dp = (media * (cv / 100)).toFixed(1);
+  const ic = (1.96 * parseFloat(dp) / Math.sqrt(n)).toFixed(2);
 
   return [
-    { metrica: 'Média Espaçamento', valor: `${formatDecimal2(media)} cm` },
-    { metrica: 'Desvio Padrão', valor: `${formatDecimal2(dpNum)} cm` },
-    { metrica: 'Coeficiente de Variação', valor: formatPercent2(cv) },
-    { metrica: 'IC 95%', valor: `${formatDecimal2(media)} ± ${formatDecimal2(icNum)}` },
+    { metrica: 'Média Espaçamento', valor: `${media} cm` },
+    { metrica: 'Desvio Padrão', valor: `${dp} cm` },
+    { metrica: 'Coeficiente de Variação', valor: `${cv}%` },
+    { metrica: 'IC 95%', valor: `${media} ± ${ic}` },
     { metrica: 'n (amostras)', valor: n },
   ];
 }
 
 function buildAplicacoes(d: ReportPageSaaSData): AplicacaoRow[] {
-  const apps = asArray<SaaSAplicacao>(d.aplicacoes);
+  const apps = d.aplicacoes ?? [];
   return apps.map((a, i) => ({
     id: `app-${i}`,
     data: a.data ?? '—',
@@ -269,7 +224,7 @@ function buildAplicacoes(d: ReportPageSaaSData): AplicacaoRow[] {
 }
 
 function buildImagens(d: ReportPageSaaSData): ImagemItem[] {
-  const imgs = asArray<SaaSImagem>(d.imagens);
+  const imgs = d.imagens ?? [];
   return imgs.map((img, i) => ({
     id: `img-${i}`,
     url: img.url ?? '',
@@ -281,7 +236,7 @@ function buildImagens(d: ReportPageSaaSData): ImagemItem[] {
 function buildComparativo(d: ReportPageSaaSData): ComparativoItem[] {
   const plant = d.plantabilidade;
   const est = d.estande;
-  const regs = asArray<EstandeRegistro>(est?.registros);
+  const regs = est?.registros ?? [];
 
   if (regs.length < 2) return [];
 
@@ -295,9 +250,9 @@ function buildComparativo(d: ReportPageSaaSData): ComparativoItem[] {
   const iat2 = 92;
 
   return [
-    { metrica: 'CV%', avaliacao1: formatPercent2(cv1), avaliacao2: formatPercent2(cv2), variacao: formatPercent2(cv1 - cv2) },
-    { metrica: 'Estande', avaliacao1: formatDecimal2(e1), avaliacao2: formatDecimal2(e2), variacao: `+${formatDecimal2(e1 - e2)}` },
-    { metrica: 'IAT', avaliacao1: formatDecimal2(iat1), avaliacao2: formatDecimal2(iat2), variacao: `+${formatDecimal2(iat1 - iat2)}` },
+    { metrica: 'CV%', avaliacao1: `${cv1}%`, avaliacao2: `${cv2}%`, variacao: `${(cv1 - cv2).toFixed(1)}%` },
+    { metrica: 'Estande', avaliacao1: e1.toFixed(1), avaliacao2: e2.toFixed(1), variacao: `+${(e1 - e2).toFixed(1)}` },
+    { metrica: 'IAT', avaliacao1: String(iat1), avaliacao2: String(iat2), variacao: `+${iat1 - iat2}` },
   ];
 }
 
@@ -340,25 +295,15 @@ function classifFromEstande(ef: number | null, plm: number | null): 'Excelente' 
   return 'Moderado';
 }
 
-export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded }: ReportPageSaaSProps) {
+export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded, shareToken }: ReportPageSaaSProps) {
   const meta = data.meta ?? {};
   const prop = data.propriedade ?? {};
   const talhao = data.talhao ?? {};
-  const pragasRows = asArray<NonNullable<ReportPageSaaSData['pragas']>[number]>(data.pragas);
-  const desviosRows = asArray<NonNullable<ReportPageSaaSData['desvios']>[number]>(data.desvios);
-  const recomendacoesList = asStringList(data.diagnostico?.recomendacoes);
-  const planoAcaoAcoes = asArray<NonNullable<NonNullable<ReportPageSaaSData['planoAcao']>['acoes']>[number]>(data.planoAcao?.acoes);
 
   const intel = data.inteligenciaAgronomica;
-  const rawTalhaoStatus = data.indiceAgronomicoTalhao?.status;
   const statusGeral: StatusGeral =
-    rawTalhaoStatus === 'Atenção' || rawTalhaoStatus === 'Crítico' || rawTalhaoStatus === 'Saudável'
-      ? rawTalhaoStatus
-      : intel?.status === 'Atenção'
-        ? 'Atenção'
-        : intel?.status === 'Crítico'
-          ? 'Crítico'
-          : 'Saudável';
+    (data.indiceAgronomicoTalhao?.status as StatusGeral) ??
+    (intel?.status === 'Atenção' ? 'Atenção' : intel?.status === 'Crítico' ? 'Crítico' : 'Saudável');
 
   const sptValor =
     safeNum(data.diagnosticoIntegrado?.spt ?? data.indiceAgronomicoTalhao?.valor ?? intel?.score);
@@ -376,28 +321,22 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
     {
       id: 'spt',
       indicador: 'SPT',
-      valor: sptValor != null ? formatDecimal2(sptValor) : '—',
+      valor: sptValor ?? '—',
       classificacao: classifFromScoreSpt(sptValor),
       tendencia: (sptValor != null && sptValor >= 70 ? 'up' : sptValor != null && sptValor < 50 ? 'down' : 'neutral') as 'up' | 'neutral' | 'down',
       tooltip:
         sptValor != null && intel?.score != null && sptValor === intel.score && data.diagnosticoIntegrado?.spt == null && data.indiceAgronomicoTalhao?.valor == null
           ? 'Score agregado da visita (inteligência agronômica, 0–100)'
           : 'Índice de Saúde da Planta / talhão',
-      historico: asArray<EstandeRegistro>(data.estande?.registros).map((r) => ({
+      historico: data.estande?.registros?.map((r) => ({
         data: r.data ?? '',
-        valor:
-          r.plantasPorMetro != null
-            ? (() => {
-                const v = safeNum(r.plantasPorMetro);
-                return v != null ? formatDecimal2(v) : '—';
-              })()
-            : '—',
-      })),
+        valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
+      })) ?? [],
     },
     {
       id: 'cv',
       indicador: 'CV%',
-      valor: cvNum != null ? formatPercent2(cvNum) : '—',
+      valor: cvNum != null ? `${cvNum}%` : '—',
       classificacao: classifFromCv(cvNum),
       tendencia: 'neutral' as const,
       tooltip: 'Coeficiente de variação do espaçamento (módulo plantio / plantabilidade)',
@@ -406,25 +345,19 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
     {
       id: 'estande',
       indicador: 'Estande',
-      valor: plmEstande != null ? formatDecimal2(plmEstande) : '—',
+      valor: plmEstande ?? '—',
       classificacao: classifFromEstande(efPct, plmEstande),
       tendencia: 'neutral' as const,
       tooltip: 'Plantas por metro (avaliação de estande)',
-      historico: asArray<EstandeRegistro>(data.estande?.registros).map((r) => ({
+      historico: data.estande?.registros?.map((r) => ({
         data: r.data ?? '',
-        valor:
-          r.plantasPorMetro != null
-            ? (() => {
-                const v = safeNum(r.plantasPorMetro);
-                return v != null ? formatDecimal2(v) : '—';
-              })()
-            : '—',
-      })),
+        valor: r.plantasPorMetro != null ? safeNum(r.plantasPorMetro) ?? '—' : '—',
+      })) ?? [],
     },
     {
       id: 'ipe',
       indicador: 'IPE',
-      valor: ipeNum != null ? formatDecimal2(ipeNum) : '—',
+      valor: ipeNum ?? '—',
       classificacao: classifFromIpe(ipeNum),
       tendencia: 'down' as const,
       tooltip: 'Índice de pressão de entomofauna (quando registrado na visita)',
@@ -439,19 +372,33 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
   const comparativo = buildComparativo(data);
 
   const mapaVisita = data.mapa;
-  const pontosGeo =
-    mapaVisita != null && Array.isArray(mapaVisita.pontos)
-      ? mapaVisita.pontos.filter(pontoTemCoordenadasGeo)
-      : [];
   const showMapaEspacial =
     mapaVisita != null &&
-    ((Array.isArray(mapaVisita.polygon) && mapaVisita.polygon.length >= 3) || pontosGeo.length > 0);
-  const mapaForLeaflet: VisitaMapaEspacialPayload | undefined =
-    mapaVisita != null && showMapaEspacial ? { ...mapaVisita } : undefined;
+    ((Array.isArray(mapaVisita.pontos) && mapaVisita.pontos.length > 0) ||
+      (Array.isArray(mapaVisita.polygon) && mapaVisita.polygon.length >= 3));
 
   const handleExportPdf = useCallback(() => {
     window.print();
-  }, []);
+    const t = shareToken?.trim();
+    if (t) {
+      void postReportAnalytics({
+        shareToken: t,
+        eventType: 'download',
+        module: 'visita_tecnica_saas',
+      });
+    }
+  }, [shareToken]);
+
+  const handleCompartilharMetric = useCallback(() => {
+    const t = shareToken?.trim();
+    if (t) {
+      void postReportAnalytics({
+        shareToken: t,
+        eventType: 'share',
+        module: 'visita_tecnica_saas',
+      });
+    }
+  }, [shareToken]);
 
   const handleExportExcel = useCallback(() => {
     const csv = [
@@ -474,9 +421,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
   }, [handleExportExcel]);
 
   return (
-    <div
-      className={`report-m3-saas min-h-screen ${embedded ? 'rounded-xl border border-slate-200' : ''}`}
-    >
+    <div className={`min-h-screen bg-[#F8FAFC] ${embedded ? 'rounded-xl border border-slate-200' : ''}`}>
       {!embedded && (
         <>
           <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
@@ -498,7 +443,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
             responsavel={meta.tecnico}
             status={statusGeral}
             onExportPdf={handleExportPdf}
-            onCompartilhar={() => {}}
+            onCompartilhar={handleCompartilharMetric}
           />
         </>
       )}
@@ -513,21 +458,12 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         {imagens.length > 0 && (
           <ImageGallerySaaS imagens={imagens} marcaDagua="FortSmart" />
         )}
-        {showMapaEspacial && mapaForLeaflet != null && (
-          <SaasLeafletErrorBoundary>
-            <VisitaMapaEspacialSaaS mapa={mapaForLeaflet} />
-          </SaasLeafletErrorBoundary>
-        )}
+        {showMapaEspacial && <VisitaMapaEspacialSaaS mapa={mapaVisita!} />}
         {comparativo.length > 0 && (
           <ComparisonSection
             items={comparativo}
-            labelAvaliacao1={asArray<EstandeRegistro>(data.estande?.registros)[0]?.data}
-            labelAvaliacao2={
-              (() => {
-                const rr = asArray<EstandeRegistro>(data.estande?.registros);
-                return rr.length ? rr[rr.length - 1]?.data : undefined;
-              })()
-            }
+            labelAvaliacao1={data.estande?.registros?.[0]?.data}
+            labelAvaliacao2={data.estande?.registros?.[data.estande.registros.length - 1]?.data}
           />
         )}
 
@@ -563,7 +499,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         )}
 
         {/* Pragas e doenças */}
-        {pragasRows.length > 0 && (
+        {data.pragas != null && data.pragas.length > 0 && (
           <section className="saas-section print:break-inside-avoid">
             <div className="mx-auto max-w-7xl">
               <h2 className="saas-section-title">Pragas e doenças observadas</h2>
@@ -580,7 +516,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
                     </tr>
                   </thead>
                   <tbody>
-                    {pragasRows.map((p, i) => (
+                    {data.pragas.map((p, i) => (
                       <tr key={i} className="border-b border-slate-100">
                         <td className="saas-td">{p.tipo ?? '—'}</td>
                         <td className="saas-td font-medium">{p.nome ?? p.alvo ?? '—'}</td>
@@ -598,7 +534,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         )}
 
         {/* Desvios */}
-        {desviosRows.length > 0 && (
+        {data.desvios != null && data.desvios.length > 0 && (
           <section className="saas-section print:break-inside-avoid">
             <div className="mx-auto max-w-7xl">
               <h2 className="saas-section-title">Desvios registrados</h2>
@@ -615,7 +551,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
                     </tr>
                   </thead>
                   <tbody>
-                    {desviosRows.map((d, i) => (
+                    {data.desvios.map((d, i) => (
                       <tr key={i} className="border-b border-slate-100">
                         <td className="saas-td">{d.data ?? '—'}</td>
                         <td className="saas-td font-medium">{d.tipo ?? '—'}</td>
@@ -633,7 +569,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         )}
 
         {/* Diagnóstico final */}
-        {data.diagnostico != null && (data.diagnostico.problemaPrincipal != null || data.diagnostico.causaProvavel != null || recomendacoesList.length > 0) && (
+        {data.diagnostico != null && (data.diagnostico.problemaPrincipal != null || data.diagnostico.causaProvavel != null || (data.diagnostico.recomendacoes?.length ?? 0) > 0) && (
           <section className="saas-section print:break-inside-avoid">
             <div className="mx-auto max-w-7xl">
               <h2 className="saas-section-title">Diagnóstico final</h2>
@@ -650,8 +586,8 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
                     {data.diagnostico.urgenciaAcao != null && <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Urgência de ação</p><p className="text-sm font-medium text-slate-800 mt-0.5">{data.diagnostico.urgenciaAcao}</p></div>}
                   </div>
                 )}
-                {recomendacoesList.length > 0 && (
-                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Recomendações</p><ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">{recomendacoesList.map((texto, i) => <li key={i}>{texto}</li>)}</ul></div>
+                {(data.diagnostico.recomendacoes?.length ?? 0) > 0 && (
+                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Recomendações</p><ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">{data.diagnostico.recomendacoes!.map((r, i) => <li key={i}>{r}</li>)}</ul></div>
                 )}
               </div>
             </div>
@@ -659,14 +595,14 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
         )}
 
         {/* Plano de ação */}
-        {data.planoAcao != null && (data.planoAcao.objetivoManejo != null || planoAcaoAcoes.length > 0) && (
+        {data.planoAcao != null && (data.planoAcao.objetivoManejo != null || (data.planoAcao.acoes?.length ?? 0) > 0) && (
           <section className="saas-section print:break-inside-avoid">
             <div className="mx-auto max-w-7xl">
               <h2 className="saas-section-title">Plano de ação</h2>
               <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5 space-y-4">
                 {data.planoAcao.objetivoManejo != null && <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Objetivo de manejo</p><p className="text-sm text-slate-800 mt-1 whitespace-pre-wrap">{data.planoAcao.objetivoManejo}</p></div>}
-                {planoAcaoAcoes.length > 0 && (
-                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Ações</p><ol className="list-decimal pl-5 space-y-2 text-sm text-slate-700">{planoAcaoAcoes.map((a, i) => <li key={i}><span className="font-medium">{a.acao ?? '—'}</span>{(a.prioridade != null || a.prazo != null) && <span className="text-slate-500 text-xs ml-2">{[a.prioridade != null && `Prioridade ${a.prioridade}`, a.prazo].filter(Boolean).join(' · ')}</span>}</li>)}</ol></div>
+                {(data.planoAcao.acoes?.length ?? 0) > 0 && (
+                  <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Ações</p><ol className="list-decimal pl-5 space-y-2 text-sm text-slate-700">{data.planoAcao.acoes!.map((a, i) => <li key={i}><span className="font-medium">{a.acao ?? '—'}</span>{(a.prioridade != null || a.prazo != null) && <span className="text-slate-500 text-xs ml-2">{[a.prioridade != null && `Prioridade ${a.prioridade}`, a.prazo].filter(Boolean).join(' · ')}</span>}</li>)}</ol></div>
                 )}
               </div>
             </div>

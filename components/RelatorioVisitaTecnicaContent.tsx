@@ -6,9 +6,8 @@ import FortSmartLogo from '@/components/FortSmartLogo';
 import ModalImagem from '@/components/ModalImagem';
 import Mapa from '@/components/Mapa';
 import { formatDate } from '@/utils/format';
-import { asArray } from '@/utils/arrayGuards';
-import { buildShareUrl } from '@/utils/canonicalUrl';
 
+import { postReportAnalytics } from '@/lib/report-analytics-client';
 import TabelaTecnicaCampos from './visita_tecnica/TabelaTecnicaCampos';
 import OcorrenciasPragasVT from './visita_tecnica/sections/OcorrenciasPragasVT';
 import InteligenciaEstrategicaVisitaVT, {
@@ -88,9 +87,11 @@ interface RelatorioVisitaTecnicaContentProps {
   relatorio: PayloadVisitaTecnica;
   reportId?: string;
   relatorioUuid?: string;
+  /** Token da rota `/r/[token]` — métricas `download` / `share` em `ai_report_events`. */
+  shareToken?: string;
 }
 
-export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, relatorioUuid }: RelatorioVisitaTecnicaContentProps) {
+export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, relatorioUuid, shareToken }: RelatorioVisitaTecnicaContentProps) {
   const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? (relatorio.meta as Record<string, unknown>) : {};
   const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? (relatorio.propriedade as Record<string, unknown>) : {};
   const talhao = (relatorio.talhao != null && typeof relatorio.talhao === 'object') ? (relatorio.talhao as Record<string, unknown>) : {};
@@ -136,7 +137,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const diagnostico = relatorio.diagnostico as Record<string, unknown> | undefined;
   const planoAcao = relatorio.planoAcao;
   const conclusao = relatorio.conclusao as string | undefined;
-  const pragas = asArray<Record<string, unknown>>(relatorio.pragas);
+  const pragas = (relatorio.pragas ?? []) as Record<string, unknown>[];
   const condicoes = (relatorio.condicoes ?? {}) as Record<string, unknown>;
   const amostragem =
     condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
@@ -151,7 +152,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
       ? (relatorio.produtividade as Record<string, unknown>)
       : undefined;
   const fenologia = (relatorio.fenologia ?? {}) as Record<string, unknown>;
-  const imagens = asArray<{ url?: string; descricao?: string; categoria?: string; data?: string }>(relatorio.imagens);
+  const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
   const imagensFenologia = imagens.filter((img) => (img.categoria ?? '').toLowerCase() === 'fenologia');
   const mapa = (relatorio.mapa ?? {}) as Record<string, unknown> & {
     viewBox?: string;
@@ -225,10 +226,16 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   );
 
   const handleShare = useCallback(async () => {
-    const url =
-      typeof window !== 'undefined'
-        ? (buildShareUrl(window.location.pathname + window.location.search + window.location.hash) || window.location.href)
-        : '';
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    const fireShareMetric = () => {
+      if (shareToken?.trim()) {
+        void postReportAnalytics({
+          shareToken: shareToken.trim(),
+          eventType: 'share',
+          module: 'visita_tecnica',
+        });
+      }
+    };
     try {
       if (navigator.share && url) {
         await navigator.share({
@@ -236,6 +243,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           text: `Relatório técnico: ${fazenda}${talhao?.nome ? ` · ${String(talhao.nome)}` : ''}`,
           url,
         });
+        fireShareMetric();
         return;
       }
     } catch {
@@ -245,11 +253,12 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
       if (url && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);
         alert('Link copiado para a área de transferência.');
+        fireShareMetric();
       }
     } catch {
       /* ignore */
     }
-  }, [fazenda, talhao]);
+  }, [fazenda, talhao, shareToken]);
 
   const handleExportPDF = useCallback(async () => {
     const { default: html2pdf } = await import('html2pdf.js');
@@ -258,14 +267,26 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
     setLightboxIndex(null);
     const safeFazenda = (fazenda || 'Relatorio').replace(/\s/g, '_');
     const safeData = (data || '').replace(/\//g, '-').replace(/\s/g, '_') || 'data';
-    html2pdf().set({
-      margin: [10, 10, 10, 10],
-      filename: `FortSmart_Visita_Tecnica_${safeFazenda}_${safeData}.pdf`,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    }).from(el).save();
-  }, [fazenda, data]);
+    document.body.classList.add('exporting-pdf');
+    try {
+      await html2pdf().set({
+        margin: [10, 10, 10, 10],
+        filename: `FortSmart_Visita_Tecnica_${safeFazenda}_${safeData}.pdf`,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      }).from(el).save();
+      if (shareToken?.trim()) {
+        void postReportAnalytics({
+          shareToken: shareToken.trim(),
+          eventType: 'download',
+          module: 'visita_tecnica',
+        });
+      }
+    } finally {
+      document.body.classList.remove('exporting-pdf');
+    }
+  }, [fazenda, data, shareToken]);
 
   const lightboxImg = lightboxIndex !== null && imagens[lightboxIndex]?.url
     ? imagens[lightboxIndex]

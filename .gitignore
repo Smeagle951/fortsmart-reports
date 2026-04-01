@@ -25,13 +25,6 @@ playwright-report/
 # misc
 .DS_Store
 *.pem
-*.bak
-full_build_output.txt
-build_output.txt
-debug_crash.js
-check_db.js
-check_db2.js
-fetch_db.js
 
 # debug
 npm-debug.log*

@@ -1,5 +1,7 @@
 'use client';
 
+import React, { useMemo, useState } from 'react';
+
 interface LinhaPonto {
   tipo: 'ok' | 'dupla' | 'tripla' | 'falha';
   posicao?: number;
@@ -17,6 +19,8 @@ interface LinhaPlantioVisualizerProps {
   embedded?: boolean;
   /** Espaçamento em cm por semente (ex.: [{ cm: 31, tipo: 'ok' }, ...]) */
   espacamentosIndividuais?: Array<{ cm?: number; tipo: string; distancia?: number }>;
+  /** Espaçamento alvo (cm) — exibido na régua e no painel técnico */
+  espacamentoIdealCm?: number;
 }
 
 const tipoStyles: Record<string, string> = {
@@ -73,6 +77,38 @@ function TrenaGrupo({
   );
 }
 
+function buildGapSequence(linha: LinhaPonto[]): { gapCm: number; ponto: LinhaPonto }[] {
+  const hasCm = linha.some((p) => p.cm != null && p.cm > 0);
+  if (!hasCm && linha.some((p) => (p.distancia ?? 0) > 0)) {
+    const out: { gapCm: number; ponto: LinhaPonto }[] = [];
+    let pos = 0;
+    for (const p of linha) {
+      const gapCm = Math.max(0.15, p.distancia ?? 0);
+      pos += gapCm;
+      out.push({ gapCm, ponto: { ...p, cm: pos } });
+    }
+    return out;
+  }
+
+  const sorted = [...linha].sort((a, b) => (a.cm ?? 0) - (b.cm ?? 0));
+  const out: { gapCm: number; ponto: LinhaPonto }[] = [];
+  let prevCm = 0;
+  for (const p of sorted) {
+    const cm = p.cm ?? prevCm + (p.distancia ?? 0);
+    const gapCm = Math.max(0.15, cm - prevCm);
+    out.push({ gapCm, ponto: { ...p, cm } });
+    prevCm = cm;
+  }
+  return out;
+}
+
+function totalCmFromLinha(linha: LinhaPonto[]): number {
+  const seq = buildGapSequence(linha);
+  if (seq.length === 0) return 1;
+  const last = seq[seq.length - 1]!;
+  return Math.max(last.ponto.cm ?? seq.reduce((s, x) => s + x.gapCm, 0), 0.5);
+}
+
 function sampleLinha(linha: LinhaPonto[], max: number): LinhaPonto[] {
   if (linha.length <= max) return linha;
   const step = linha.length / max;
@@ -115,12 +151,42 @@ export default function LinhaPlantioVisualizer({
   indicePlantabilidade,
   embedded = false,
   espacamentosIndividuais,
+  espacamentoIdealCm,
 }: LinhaPlantioVisualizerProps) {
+  const [zoom, setZoom] = useState(100);
   const hasLinha = linha.length > 0;
   const hasResumo = okPct != null || duplasPct != null || triplasPct != null || falhasPct != null;
   const pontosParaTrena = hasLinha ? linha.slice(0, 80) : (hasResumo ? buildLinhaFromPct(okPct, duplasPct, triplasPct, falhasPct) : []);
 
+  const gapSeq = useMemo(() => (hasLinha ? buildGapSequence(linha) : []), [hasLinha, linha]);
+  const totalCm = useMemo(() => (hasLinha ? totalCmFromLinha(linha) : 0), [hasLinha, linha]);
+  const trackBasePx = useMemo(() => Math.round(380 * (zoom / 100)), [zoom]);
+  const showProportional = hasLinha && gapSeq.length > 0 && totalCm > 0;
+
   if (pontosParaTrena.length === 0 && !hasResumo) return null;
+
+  const legendRow = (
+    <div className="plantio-trena-legend-bar" aria-hidden="false">
+      <span className="plantio-trena-legend-title">Legenda</span>
+      <ul className="plantio-trena-legend-chips">
+        <li>
+          <span className="plantio-trena-chip plantio-trena-chip--ok" /> OK
+        </li>
+        <li>
+          <span className="plantio-trena-chip plantio-trena-chip--dupla" /> Dupla
+        </li>
+        <li>
+          <span className="plantio-trena-chip plantio-trena-chip--tripla" /> Tripla
+        </li>
+        <li>
+          <span className="plantio-trena-chip plantio-trena-chip--falha" /> Falha
+        </li>
+      </ul>
+      {espacamentoIdealCm != null && espacamentoIdealCm > 0 ? (
+        <span className="plantio-trena-ideal-pill">Alvo {espacamentoIdealCm.toFixed(0)} cm</span>
+      ) : null}
+    </div>
+  );
 
   const content = (
     <>
@@ -130,12 +196,84 @@ export default function LinhaPlantioVisualizer({
         </h4>
       )}
 
+      {showProportional && (
+        <figure className="plantio-figure plantio-figure--linha plantio-figure--linha-pro">
+          <div className="plantio-trena-pro-header">
+            <div>
+              <h4 className="plantio-trena-pro-title">Distribuição na linha (escala real)</h4>
+              <p className="plantio-trena-pro-sub">
+                Largura de cada trecho é proporcional ao espaçamento entre sementes ({totalCm.toFixed(1)} cm de trecho medido).
+                Use o zoom para inspecionar detalhes.
+              </p>
+            </div>
+            <label className="plantio-trena-zoom">
+              <span className="plantio-trena-zoom-label">Zoom</span>
+              <input
+                type="range"
+                min={60}
+                max={220}
+                step={10}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                aria-valuetext={`${zoom} por cento`}
+              />
+              <span className="plantio-trena-zoom-val">{zoom}%</span>
+            </label>
+          </div>
+          {legendRow}
+          <div
+            className="plantio-trena plantio-trena--proportional"
+            role="img"
+            aria-label={`Trena em escala: ${gapSeq.length} sementes ao longo de ${totalCm.toFixed(1)} centímetros.`}
+          >
+            <div className="plantio-trena-pro-track" style={{ width: trackBasePx, minWidth: '100%' }}>
+              {gapSeq.map(({ gapCm, ponto }, i) => {
+                const w = Math.max(6, (gapCm / totalCm) * trackBasePx);
+                return (
+                  <React.Fragment key={i}>
+                    <div
+                      className="plantio-trena-segment"
+                      style={{ width: w }}
+                      title={`${gapCm.toFixed(1)} cm`}
+                    >
+                      <span className="plantio-trena-segment-rail" />
+                      <span className="plantio-trena-segment-cm">{gapCm.toFixed(1)}</span>
+                    </div>
+                    <TrenaGrupo
+                      ponto={ponto}
+                      index={i}
+                      tipoStyles={tipoStyles}
+                      tipoLabels={tipoLabels}
+                      mini={false}
+                    />
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+          <div className="plantio-trena-ruler" aria-hidden>
+            <span>0</span>
+            <span>{(totalCm * 0.25).toFixed(0)} cm</span>
+            <span>{(totalCm * 0.5).toFixed(0)} cm</span>
+            <span>{(totalCm * 0.75).toFixed(0)} cm</span>
+            <span>{totalCm.toFixed(0)} cm</span>
+          </div>
+          <figcaption className="plantio-figcaption plantio-figcaption--stats">
+            Escala proporcional aos espaçamentos registrados na trena (submódulo CV%). Números nos trechos = centímetros entre
+            sementes consecutivas.
+          </figcaption>
+        </figure>
+      )}
+
       {pontosParaTrena.length > 0 && (
         <figure className="plantio-figure plantio-figure--linha">
-          <h4 className="text-sm font-semibold text-slate-700 mb-1">Visualização da qualidade do plantio</h4>
+          <h4 className="text-sm font-semibold text-slate-700 mb-1">
+            {showProportional ? 'Visão compacta (sequência)' : 'Visualização da qualidade do plantio'}
+          </h4>
           <p className="text-xs text-slate-500 mb-2">
-            Cada ponto representa uma semente na linha; bolinhas verdes = OK, amarelas = duplas, roxas = triplas, lacuna = falha.
+            Cada marca é uma posição na linha; verde = OK, amarelo = dupla, roxo = tripla, lacuna = falha.
           </p>
+          {!showProportional ? legendRow : null}
           <div
             className="plantio-trena"
             role="img"
@@ -151,7 +289,7 @@ export default function LinhaPlantioVisualizer({
             )}
           </div>
           <figcaption className="plantio-figcaption">
-            Bolinhas = sementes (verde OK, amarelo dupla, roxo tripla, lacuna falha). Rolagem horizontal.
+            Rolagem horizontal quando houver muitos pontos.
           </figcaption>
         </figure>
       )}
