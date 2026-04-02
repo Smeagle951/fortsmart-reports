@@ -10,6 +10,20 @@ function getHostFromOrigin(origin: string): string {
 }
 
 export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Painel interno /admin (dataset AgroIntelige) — não exposto na UI pública
+  if (pathname.startsWith('/admin')) {
+    if (!pathname.startsWith('/admin/login')) {
+      const ok = req.cookies.get('fs_admin')?.value === '1';
+      if (!ok) {
+        const login = new URL('/admin/login', req.url);
+        login.searchParams.set('next', pathname);
+        return NextResponse.redirect(login);
+      }
+    }
+  }
+
   const raw = String(process.env.NEXT_PUBLIC_CANONICAL_URL ?? '').trim();
   const canonicalOrigin = raw ? normalizeCanonicalBaseUrl(raw) : null;
   if (!canonicalOrigin) return NextResponse.next();
