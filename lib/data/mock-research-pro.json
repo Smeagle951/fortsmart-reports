@@ -157,6 +157,26 @@
       "gps": { "lat": -15.55, "lon": -54.29 }
     }
   ],
+  "diagnosticos_parcela": [
+    {
+      "data_avaliacao": "2026-02-20",
+      "dae": 42,
+      "parcela": "B1P2",
+      "causa_provavel": "Lesões compatíveis com ferrugem asiática; umidade foliar favorável no estágio reprodutivo.",
+      "resultado_acao_codigo": "parcial",
+      "resultado_acao": "Parcial",
+      "diagnostico_tipo_codigo": "suspeita",
+      "diagnostico_tipo": "Suspeita",
+      "natureza": "biologico",
+      "distribuicao": "mancha",
+      "severidade": "media",
+      "sintomas_resumo": "Pustulas na face abaxial, progressão em manchas ao longo da fileira.",
+      "recomendacao_resumo": "Considerar fungicida sistêmico + protetor conforme threshold regional; monitorar parcelas adjacentes.",
+      "agente_causador_tipo": "doenca",
+      "agente_causador_label": "Doença",
+      "agente_causador_detalhe": "Ferrugem asiática (suspeita)"
+    }
+  ],
   "conclusao": {
     "texto": "O programa Programa Premium 1 apresentou superioridade estatística na produtividade quando comparado à testemunha, e ligeiro ganho numérico sobre o padrão Programa Padrão, com alta proteção contra fungos foliares e ferrugem asiática.",
     "recomendacao": "Indicado para regiões com alta pressão de ferrugem asiática."

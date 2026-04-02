@@ -14,9 +14,11 @@ import CroquiExperimental from './sections/CroquiExperimental';
 import QuadroManejoProgramas from './sections/QuadroManejoProgramas';
 import HistoricoAplicacoes from './sections/HistoricoAplicacoes';
 import AvaliacoesTecnicas from './sections/AvaliacoesTecnicas';
+import DiagnosticoParcelaCampo from './sections/DiagnosticoParcelaCampo';
 import EstatisticaAvancada from './sections/EstatisticaAvancada';
 import GaleriaCientifica from './sections/GaleriaCientifica';
 import ConclusaoAssinatura from './sections/ConclusaoAssinatura';
+import InteligenciaAgronomicaPanel from '@/components/InteligenciaAgronomicaPanel';
 
 type Props = {
     relatorio: ResearchProReportPayload;
@@ -105,6 +107,11 @@ export default function RelatorioResearchProContent({ relatorio, reportId, share
             {/* Conteudo Principal */}
             <main className="flex-1 lg:ml-[260px] p-4 lg:p-8 max-w-[1200px] overflow-hidden">
 
+                <InteligenciaAgronomicaPanel
+                    relatorio={relatorio as unknown as Record<string, unknown>}
+                    variant="default"
+                />
+
                 <div id="visao-geral" className="scroll-mt-6">
                     <HeaderExecutivo
                         data={relatorio.cabecalho}
@@ -146,6 +153,11 @@ export default function RelatorioResearchProContent({ relatorio, reportId, share
                 <section id="avaliacoes" className="mt-8 scroll-mt-6">
                     <h2 className="text-xl font-bold text-[#0D2438] mb-4">Avaliações Técnicas em Campo</h2>
                     <AvaliacoesTecnicas data={relatorio.avaliacoes} />
+                </section>
+
+                <section id="diagnostico-parcela" className="mt-8 scroll-mt-6">
+                    <h2 className="text-xl font-bold text-[#0D2438] mb-4">Diagnóstico agronômico (parcela)</h2>
+                    <DiagnosticoParcelaCampo itens={relatorio.diagnosticos_parcela ?? []} />
                 </section>
 
                 <section id="estatistica" className="mt-8 scroll-mt-6">

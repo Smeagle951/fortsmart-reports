@@ -150,6 +150,26 @@ export type ResearchProReportConclusao = {
     recomendacao: string;
 };
 
+/** Linha de diagnóstico por parcela (Nova Avaliação / Research Pro no app). */
+export type ResearchProReportDiagnosticoParcela = {
+    data_avaliacao: string;
+    dae?: number;
+    parcela: string;
+    causa_provavel: string;
+    resultado_acao: string;
+    resultado_acao_codigo?: string;
+    diagnostico_tipo?: string;
+    diagnostico_tipo_codigo?: string;
+    natureza?: string;
+    distribuicao?: string;
+    severidade?: string;
+    sintomas_resumo?: string;
+    recomendacao_resumo?: string;
+    agente_causador_tipo?: string;
+    agente_causador_label?: string;
+    agente_causador_detalhe?: string;
+};
+
 export type ResearchProReportAssinatura = {
     responsavel: string;
     registro: string;
@@ -168,6 +188,8 @@ export type ResearchProReportPayload = {
     estatistica: ResearchProReportEstatistica;
     croqui: ResearchProReportCroqui;
     galeria: ResearchProReportGaleriaItem[];
+    /** Opcional: diagnósticos estruturados salvos no app (causa provável + resultado pós-ação). */
+    diagnosticos_parcela?: ResearchProReportDiagnosticoParcela[];
     conclusao: ResearchProReportConclusao;
     assinatura: ResearchProReportAssinatura;
 };
