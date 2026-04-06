@@ -1,0 +1,44 @@
+
+> fortsmart-reports@1.0.0 build
+> next build
+
+  Γû▓ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/12) ...
+ΓÜá∩╕Å fortsmart_agro.db n├úo encontrado. Usando dados mock.
+   Generating static pages (3/12) 
+   Generating static pages (6/12) 
+   Generating static pages (9/12) 
+ Γ£ô Generating static pages (12/12)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+Γöî Γùï /                                    2.84 kB         217 kB
+Γö£ Γùï /_not-found                          876 B            89 kB
+Γö£ Γùï /api/health                          0 B                0 B
+Γö£ Γùï /api/relatorio                       0 B                0 B
+Γö£ ╞Æ /api/relatorio-public                0 B                0 B
+Γö£ ╞Æ /api/relatorio/[id]                  0 B                0 B
+Γö£ Γùï /api/supabase-status                 0 B                0 B
+Γö£ Γùï /colheita-dashboard                  17.3 kB         105 kB
+Γö£ Γùï /monitoramento/preview               5.22 kB         219 kB
+Γö£ ╞Æ /produtos/[slug]                     1.2 kB         89.3 kB
+Γö£ ╞Æ /r/[token]                           345 kB          611 kB
+Γö£ ╞Æ /relatorio/[id]                      202 B           154 kB
+Γöö Γùï /research-pro/preview                1.76 kB         103 kB
++ First Load JS shared by all            88.1 kB
+  Γö£ chunks/117-2c8307eea4958ed6.js       31.9 kB
+  Γö£ chunks/fd9d1056-7583b3646e05f53f.js  53.6 kB
+  Γöö other shared chunks (total)          2.59 kB
+
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+
