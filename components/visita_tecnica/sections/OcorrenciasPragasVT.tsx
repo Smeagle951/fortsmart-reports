@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { labelCausa } from './InteligenciaEstrategicaVisitaVT';
+import { labelCausa } from '@/lib/visita-tecnica/label-utils';
 
 interface OcorrenciasPragasVTProps {
     pragas: Record<string, unknown>[];

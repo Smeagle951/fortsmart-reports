@@ -1,51 +1,10 @@
 import React from 'react';
-
-function labelMetodoAmostragem(v: unknown): string {
-  const s = String(v ?? '').trim();
-  const map: Record<string, string> = {
-    aleatorio: 'Aleatório',
-    zigue_zague: 'Zigue-zague',
-    ponto_fixo: 'Ponto fixo',
-    grid: 'Grid',
-  };
-  return map[s] || s || '—';
-}
-
-function labelTendencia(t: unknown): string {
-  const s = String(t ?? '');
-  const map: Record<string, string> = {
-    crescimento_acelerado: 'Crescimento acelerado',
-    crescimento: 'Em alta',
-    queda: 'Em queda',
-    estavel: 'Estável',
-    severidade_apenas: 'Severidade (ordinal)',
-    sem_historico: 'Primeiro registro',
-  };
-  return map[s] || s || '—';
-}
-
-function labelCausa(c: unknown): string {
-  const s = String(c ?? '').trim();
-  const map: Record<string, string> = {
-    clima: 'Clima',
-    manejo: 'Manejo',
-    solo: 'Solo',
-    genetica: 'Genética',
-    operacional: 'Operacional',
-    desconhecido: 'Desconhecido',
-  };
-  return map[s] || s || '—';
-}
-
-function labelCiclo(c: unknown): string {
-  const s = String(c ?? '').trim();
-  const map: Record<string, string> = {
-    precoce: 'Precoce',
-    medio: 'Médio',
-    tardio: 'Tardio',
-  };
-  return map[s] || s || '—';
-}
+import {
+  labelMetodoAmostragem,
+  labelTendencia,
+  labelCausa,
+  labelCiclo,
+} from '@/lib/visita-tecnica/label-utils';
 
 function simNaoTri(v: unknown): string {
   if (v === true || v === 1 || v === '1') return 'Sim';

@@ -10,10 +10,8 @@ import { formatDate } from '@/utils/format';
 import { postReportAnalytics } from '@/lib/report-analytics-client';
 import TabelaTecnicaCampos from './visita_tecnica/TabelaTecnicaCampos';
 import OcorrenciasPragasVT from './visita_tecnica/sections/OcorrenciasPragasVT';
-import InteligenciaEstrategicaVisitaVT, {
-  labelMetodoAmostragem,
-  labelCiclo,
-} from './visita_tecnica/sections/InteligenciaEstrategicaVisitaVT';
+import InteligenciaEstrategicaVisitaVT from './visita_tecnica/sections/InteligenciaEstrategicaVisitaVT';
+import { labelMetodoAmostragem, labelCiclo } from '@/lib/visita-tecnica/label-utils';
 import DiagnosticoEPlanoAcao from './visita_tecnica/sections/DiagnosticoEPlanoAcao';
 import DecisaoAgronomicaVT from './visita_tecnica/sections/DecisaoAgronomicaVT';
 import AplicacoesRealizadasVT from './visita_tecnica/sections/AplicacoesRealizadasVT';
