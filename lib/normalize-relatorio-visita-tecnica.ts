@@ -16,6 +16,15 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
     const mapaV2 = (raw.mapa ?? {}) as UnknownRecord;
 
     const isV2 = Object.keys(core).length > 0 || Object.keys(modVT).length > 0;
+
+    // ─── Normalização crítica: garantir talhoes como array ─────────────────────
+    // Se vier talhao (objeto singular) mas não talhoes (array), converter
+    if (!isV2 && raw.talhao && !raw.talhoes) {
+        const normalized = { ...raw };
+        normalized.talhoes = [raw.talhao];
+        return normalized;
+    }
+
     if (!isV2) return raw; // V1 passthrough — sem modificação
 
     // modulos.visitaTecnica sub-objects
@@ -55,17 +64,40 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
         data: img.data,
     }));
 
+    // ─── Normalização crítica para V2: garantir arrays ───────────────────────────
+    const normalizedV2 = { ...raw };
+
+    // Garantir talhoes como array (se vier talhao singular)
+    if (!normalizedV2.talhoes && normalizedV2.talhao) {
+        normalizedV2.talhoes = [normalizedV2.talhao];
+    }
+
+    // Garantir imagens como array
+    if (!Array.isArray(normalizedV2.imagens) && normalizedV2.imagens) {
+        normalizedV2.imagens = [];
+    }
+
+    // Garantir pragas como array
+    if (!Array.isArray(normalizedV2.pragas) && normalizedV2.pragas) {
+        normalizedV2.pragas = [];
+    }
+
+    // Garantir aplicacoes como array
+    if (!Array.isArray(normalizedV2.aplicacoes) && normalizedV2.aplicacoes) {
+        normalizedV2.aplicacoes = [];
+    }
+
     return {
-        // Preserve all raw V2 fields
-        ...raw,
+        // Preserve all normalized V2 fields
+        ...normalizedV2,
 
         // ── meta fields ──
-        meta: raw.meta ?? {
+        meta: normalizedV2.meta ?? {
             id: core.reportId,
             dataGeracao: core.createdAt ?? core.publishedAt,
             tecnico: (core.generatedBy as UnknownRecord)?.nome,
             tecnicoCrea: (core.generatedBy as UnknownRecord)?.crea,
-            safra: (raw.talhao as UnknownRecord)?.safra ?? (raw.contextoSafra as UnknownRecord)?.safra,
+            safra: (normalizedV2.talhao as UnknownRecord)?.safra ?? (normalizedV2.contextoSafra as UnknownRecord)?.safra,
             versao: core.version ?? 2,
             status: core.status ?? 'published',
         },
