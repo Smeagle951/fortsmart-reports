@@ -284,6 +284,8 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           module: 'visita_tecnica',
         });
       }
+    } catch {
+    /* ignore */
     } finally {
       document.body.classList.remove('exporting-pdf');
     }
@@ -522,7 +524,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
               ) : (
                 <Mapa
                   mapa={{
-                    viewBox: Array.isArray(mapa.viewBo)x  mapa.pontos :? '0 0 400 300',
+                      viewBox: mapa.viewBox ?? '0 0 400 300',
                     path: mapa.path ?? undefined,
                     pontos: (mapa.pontos ?? []).map((p: any, i: number) => ({
                       x: p.x ?? 0,
