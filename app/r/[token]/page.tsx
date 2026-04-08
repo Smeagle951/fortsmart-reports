@@ -187,6 +187,10 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       );
     }
     if (debugPayload) {
+      // Aplica normalização para visita técnica também no debug
+      const relatorio = (tipo === 'visita_tecnica')
+        ? normalizeRelatorioVisitaTecnica(payloadSafe)
+        : payloadSafe;
       const tipo = relatorio?.tipo;
       const tipoRelatorio = relatorio?.tipoRelatorio;
       const hasTalhoes = Array.isArray(relatorio?.talhoes) && (relatorio?.talhoes?.length ?? 0) > 0;
