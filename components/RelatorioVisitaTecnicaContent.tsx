@@ -135,7 +135,8 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const diagnostico = relatorio.diagnostico as Record<string, unknown> | undefined;
   const planoAcao = relatorio.planoAcao;
   const conclusao = relatorio.conclusao as string | undefined;
-  const pragas = (relatorio.pragas ?? []) as Record<string, unknown>[];
+  const pragasRaw = relatorio.pragas ?? [];
+  const pragas = (Array.isArray(pragasRaw) ? pragasRaw : []) as Record<string, unknown>[];
   const condicoes = (relatorio.condicoes ?? {}) as Record<string, unknown>;
   const amostragem =
     condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
@@ -150,7 +151,8 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
       ? (relatorio.produtividade as Record<string, unknown>)
       : undefined;
   const fenologia = (relatorio.fenologia ?? {}) as Record<string, unknown>;
-  const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
+  const imagensRaw = relatorio.imagens ?? [];
+  const imagens = (Array.isArray(imagensRaw) ? imagensRaw : []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
   const imagensFenologia = imagens.filter((img) => (img.categoria ?? '').toLowerCase() === 'fenologia');
   const mapa = (relatorio.mapa ?? {}) as Record<string, unknown> & {
     viewBox?: string;
@@ -185,8 +187,9 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   }, [mapa.polygon]);
   type PontoMapa = { latitude: number; longitude: number; id?: string; titulo?: string; descricao?: string; estagio?: string; data?: string };
   const pontosForMap = useMemo((): PontoMapa[] => {
-    const pts = mapa.pontos ?? [];
-    if (!Array.isArray(pts)) return [];
+    const ptsRaw = mapa.pontos ?? [];
+    const pts = Array.isArray(ptsRaw) ? ptsRaw : [];
+    if (pts.length === 0) return [];
     const mapped = pts.map((p: Record<string, unknown>) => {
       const lat = (p.latitude ?? p.lat) as number | undefined;
       const lng = (p.longitude ?? p.lng) as number | undefined;
@@ -519,7 +522,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
               ) : (
                 <Mapa
                   mapa={{
-                    viewBox: mapa.viewBox ?? '0 0 400 300',
+                    viewBox: Array.isArray(mapa.viewBo)x  mapa.pontos :? '0 0 400 300',
                     path: mapa.path ?? undefined,
                     pontos: (mapa.pontos ?? []).map((p: any, i: number) => ({
                       x: p.x ?? 0,
