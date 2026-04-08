@@ -137,6 +137,19 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const conclusao = relatorio.conclusao as string | undefined;
   const pragasRaw = relatorio.pragas ?? [];
   const pragas = (Array.isArray(pragasRaw) ? pragasRaw : []) as Record<string, unknown>[];
+
+  // Debug: Verificar campos suspeitos
+  if (typeof window !== 'undefined') {
+    console.log('=== DEBUG RELATORIO ===');
+    console.log('pragas:', { type: typeof pragasRaw, isArray: Array.isArray(pragasRaw), value: pragasRaw });
+    console.log('imagens:', { type: typeof relatorio.imagens, isArray: Array.isArray(relatorio.imagens), value: relatorio.imagens });
+    console.log('mapa.pontos:', {
+      type: typeof relatorio.mapa?.pontos,
+      isArray: Array.isArray(relatorio.mapa?.pontos),
+      value: relatorio.mapa?.pontos
+    });
+    console.log('=== FIM DEBUG ===');
+  }
   const condicoes = (relatorio.condicoes ?? {}) as Record<string, unknown>;
   const amostragem =
     condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
