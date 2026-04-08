@@ -188,13 +188,13 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     }
     if (debugPayload) {
       // Aplica normalização para visita técnica também no debug
-      const tipoOriginal = payloadSafe?.tipo;
-      const relatorio = (tipoOriginal === 'visita_tecnica')
-        ? normalizeRelatorioVisitaTecnica(payloadSafe)
-        : payloadSafe;
-      const tipo = relatorio?.tipo;
-      const tipoRelatorio = relatorio?.tipoRelatorio;
-      const hasTalhoes = Array.isArray(relatorio?.talhoes) && (relatorio?.talhoes?.length ?? 0) > 0;
+      const tipoOriginal = relatorio?.tipo;
+      const relatorioNormalizado = (tipoOriginal === 'visita_tecnica')
+        ? normalizeRelatorioVisitaTecnica(relatorio)
+        : relatorio;
+      const tipo = relatorioNormalizado?.tipo;
+      const tipoRelatorio = relatorioNormalizado?.tipoRelatorio;
+      const hasTalhoes = Array.isArray(relatorioNormalizado?.talhoes) && (relatorioNormalizado?.talhoes?.length ?? 0) > 0;
       return (
         <main style={{ padding: 20, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
           <h1 style={{ fontSize: 18, marginBottom: 12 }}>Debug payload</h1>
