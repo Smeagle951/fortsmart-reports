@@ -135,6 +135,20 @@ function impactoFromEconomia(m: InteligenciaAgronomicaPayload): { perda_estimada
 
 /** Garante contrato canónico (slug + score + resumo + recomendacao + impacto + economia). */
 export function normalizeInteligenciaPayload(raw: Record<string, unknown>): InteligenciaAgronomicaPayload {
+  let padraoNorm: string[] | undefined;
+  const padRaw = raw.padrao;
+  if (padRaw == null) {
+    padraoNorm = undefined;
+  } else if (Array.isArray(padRaw)) {
+    padraoNorm = padRaw.map((x) => (typeof x === 'string' ? x : JSON.stringify(x)));
+  } else if (typeof padRaw === 'object') {
+    padraoNorm = Object.values(padRaw as Record<string, unknown>).map((x) =>
+      typeof x === 'string' ? x : JSON.stringify(x),
+    );
+  } else {
+    padraoNorm = [String(padRaw)];
+  }
+
   const out: InteligenciaAgronomicaPayload = {
     situacao: normalizeSituacaoSlug(raw.situacao as string | undefined),
     risco: normalizeRiscoSlug(raw.risco as string | undefined),
@@ -145,7 +159,7 @@ export function normalizeInteligenciaPayload(raw: Record<string, unknown>): Inte
         ? raw.confianca_score
         : undefined,
     evolucao: raw.evolucao as InteligenciaAgronomicaPayload['evolucao'],
-    padrao: raw.padrao as string[] | undefined,
+    padrao: padraoNorm,
     economia: raw.economia as InteligenciaAgronomicaPayload['economia'],
     resumo: raw.resumo as string | undefined,
     recomendacao: raw.recomendacao as InteligenciaAgronomicaPayload['recomendacao'],

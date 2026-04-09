@@ -249,12 +249,12 @@ export default function InteligenciaAgronomicaPanel({ relatorio, variant = 'defa
           </div>
         )}
 
-        {data.padrao && data.padrao.length > 0 && (
+        {Array.isArray(data.padrao) && data.padrao.length > 0 && (
           <div>
             <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 12, opacity: 0.9 }}>Padrão identificado</div>
             <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: 13, lineHeight: 1.5, opacity: 0.95 }}>
               {data.padrao.map((line, i) => (
-                <li key={i}>{line}</li>
+                <li key={i}>{String(line)}</li>
               ))}
             </ul>
           </div>

@@ -4,6 +4,8 @@
  * um objeto flat compatível com RelatorioVisitaTecnicaContent.
  */
 
+import { sanitizeVisitaTecnicaPayload } from '@/lib/visita-tecnica/coerceVisitaPayload';
+
 type UnknownRecord = Record<string, unknown>;
 
 export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownRecord {
@@ -22,10 +24,10 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
     if (!isV2 && raw.talhao && !raw.talhoes) {
         const normalized = { ...raw };
         normalized.talhoes = [raw.talhao];
-        return normalized;
+        return sanitizeVisitaTecnicaPayload(normalized);
     }
 
-    if (!isV2) return raw; // V1 passthrough — sem modificação
+    if (!isV2) return sanitizeVisitaTecnicaPayload(raw);
 
     // modulos.visitaTecnica sub-objects
     const evolFeno = (modVT.evolucaoFenologica ?? {}) as UnknownRecord;
@@ -64,31 +66,13 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
         data: img.data,
     }));
 
-    // ─── Normalização crítica para V2: garantir arrays ───────────────────────────
     const normalizedV2 = { ...raw };
 
-    // Garantir talhoes como array (se vier talhao singular)
     if (!normalizedV2.talhoes && normalizedV2.talhao) {
         normalizedV2.talhoes = [normalizedV2.talhao];
     }
 
-    // Garantir imagens como array
-    if (!Array.isArray(normalizedV2.imagens) && normalizedV2.imagens) {
-        normalizedV2.imagens = [];
-    }
-
-    // Garantir pragas como array
-    if (!Array.isArray(normalizedV2.pragas) && normalizedV2.pragas) {
-        normalizedV2.pragas = [];
-    }
-
-    // Garantir aplicacoes como array
-    if (!Array.isArray(normalizedV2.aplicacoes) && normalizedV2.aplicacoes) {
-        normalizedV2.aplicacoes = [];
-    }
-
-    return {
-        // Preserve all normalized V2 fields
+    const merged: UnknownRecord = {
         ...normalizedV2,
 
         // ── meta fields ──
@@ -170,4 +154,6 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
             itens: Array.isArray(indicadores.itemsIAT) ? indicadores.itemsIAT : [],
         } : undefined),
     };
+
+    return sanitizeVisitaTecnicaPayload(merged as UnknownRecord);
 }
