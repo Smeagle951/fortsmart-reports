@@ -8,6 +8,7 @@ import Mapa from '@/components/Mapa';
 import { formatDate } from '@/utils/format';
 
 import { postReportAnalytics } from '@/lib/report-analytics-client';
+import { coerceVisitaObjectArray } from '@/lib/visita-tecnica/coerceVisitaPayload';
 import TabelaTecnicaCampos from './visita_tecnica/TabelaTecnicaCampos';
 import OcorrenciasPragasVT from './visita_tecnica/sections/OcorrenciasPragasVT';
 import InteligenciaEstrategicaVisitaVT from './visita_tecnica/sections/InteligenciaEstrategicaVisitaVT';
@@ -135,7 +136,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const diagnostico = relatorio.diagnostico as Record<string, unknown> | undefined;
   const planoAcao = relatorio.planoAcao;
   const conclusao = relatorio.conclusao as string | undefined;
-  const pragas = (relatorio.pragas ?? []) as Record<string, unknown>[];
+  const pragas = coerceVisitaObjectArray(relatorio.pragas);
   const condicoes = (relatorio.condicoes ?? {}) as Record<string, unknown>;
   const amostragem =
     condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
@@ -150,7 +151,12 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
       ? (relatorio.produtividade as Record<string, unknown>)
       : undefined;
   const fenologia = (relatorio.fenologia ?? {}) as Record<string, unknown>;
-  const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
+  const imagens = coerceVisitaObjectArray(relatorio.imagens) as Array<{
+    url?: string;
+    descricao?: string;
+    categoria?: string;
+    data?: string;
+  }>;
   const imagensFenologia = imagens.filter((img) => (img.categoria ?? '').toLowerCase() === 'fenologia');
   const mapa = (relatorio.mapa ?? {}) as Record<string, unknown> & {
     viewBox?: string;
@@ -521,7 +527,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                   mapa={{
                       viewBox: mapa.viewBox ?? '0 0 400 300',
                     path: mapa.path ?? undefined,
-                    pontos: (mapa.pontos ?? []).map((p: any, i: number) => ({
+                    pontos: (Array.isArray(mapa.pontos) ? mapa.pontos : []).map((p: any, i: number) => ({
                       x: p.x ?? 0,
                       y: p.y ?? 0,
                       index: p.index ?? i + 1,

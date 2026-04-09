@@ -305,10 +305,14 @@ function collectPragasLike(relatorio: Record<string, unknown>): Array<Record<str
       }
     }
   }
-  const rootPragas = relatorio.pragas as unknown[] | undefined;
+  const rootPragas = relatorio.pragas as unknown;
   if (Array.isArray(rootPragas)) {
     for (const p of rootPragas) {
       if (p && typeof p === 'object') out.push(p as Record<string, unknown>);
+    }
+  } else if (rootPragas != null && typeof rootPragas === 'object' && !Array.isArray(rootPragas)) {
+    for (const p of Object.values(rootPragas as Record<string, unknown>)) {
+      if (p && typeof p === 'object' && !Array.isArray(p)) out.push(p as Record<string, unknown>);
     }
   }
   return out;

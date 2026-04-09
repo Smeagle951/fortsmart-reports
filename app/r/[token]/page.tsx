@@ -14,6 +14,9 @@ import PrintBar from '@/components/PrintBar';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import type { ResearchProReportPayload } from '@/types/research-report';
 import { calcularEstatisticaFromAvaliacoes } from '@/lib/research-pro/anova-tukey';
+import { extractTalhaoChave, parseAiSnapshotFromRelatorio } from '@/lib/ai-intelligence-snapshot';
+import { buildAiTemporalViewerPayload } from '@/lib/inteligencia-temporal';
+import { fetchPreviousRelatorioForTemporal } from '@/lib/server/fetch-previous-relatorio-temporal';
 
 // Disable Vercel's SSR cache so the latest Supabase data is always served
 export const dynamic = 'force-dynamic';
@@ -187,14 +190,11 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       );
     }
     if (debugPayload) {
-      // Aplica normalização para visita técnica também no debug
-      const tipoOriginal = relatorio?.tipo;
-      const relatorioNormalizado = (tipoOriginal === 'visita_tecnica')
-        ? normalizeRelatorioVisitaTecnica(relatorio)
-        : relatorio;
-      const tipo = relatorioNormalizado?.tipo;
-      const tipoRelatorio = relatorioNormalizado?.tipoRelatorio;
-      const hasTalhoes = Array.isArray(relatorioNormalizado?.talhoes) && (relatorioNormalizado?.talhoes?.length ?? 0) > 0;
+      const tipo = relatorio?.tipo;
+      const tipoRelatorio = relatorio?.tipoRelatorio;
+      const hasTalhoes = Array.isArray(relatorio?.talhoes) && (relatorio?.talhoes?.length ?? 0) > 0;
+      const hasTalhaoSingular =
+        relatorio?.talhao != null && typeof relatorio.talhao === 'object';
       return (
         <main style={{ padding: 20, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
           <h1 style={{ fontSize: 18, marginBottom: 12 }}>Debug payload</h1>
@@ -207,7 +207,11 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
             <div><strong>payload ok</strong></div><div>{String(!!relatorio)}</div>
             <div><strong>tipo</strong></div><div>{String(tipo ?? '')}</div>
             <div><strong>tipoRelatorio</strong></div><div>{String(tipoRelatorio ?? '')}</div>
-            <div><strong>hasTalhoes</strong></div><div>{String(hasTalhoes)}</div>
+            <div><strong>hasTalhoes (array)</strong></div><div>{String(hasTalhoes)}</div>
+            <div><strong>hasTalhao (objeto único)</strong></div><div>{String(hasTalhaoSingular)}</div>
+            <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#64748b', marginTop: 4 }}>
+              Visita técnica usa <code>talhao</code> no singular — <code>hasTalhoes</code> false é normal.
+            </div>
             <div><strong>topKeys</strong></div><div>{relatorio ? Object.keys(relatorio).slice(0, 25).join(', ') : '—'}</div>
           </div>
           <h2 style={{ fontSize: 14, marginTop: 16 }}>rawPayload (primeiros 2000 chars)</h2>
@@ -270,6 +274,16 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     // relatorio já é clone serializável; usar como props para Client Components
     const payloadSafe: Record<string, unknown> = relatorio;
 
+    const sampleRaw = sp?.sample;
+    const highlightSampleCode =
+      typeof sampleRaw === 'string'
+        ? sampleRaw
+        : Array.isArray(sampleRaw)
+          ? typeof sampleRaw[0] === 'string'
+            ? sampleRaw[0]
+            : undefined
+          : undefined;
+
     if (!payloadSafe || typeof payloadSafe !== 'object' || Array.isArray(payloadSafe)) {
       console.warn('[fortsmart-reports] /r/[token] payloadSafe inválido antes do render');
       return (
@@ -294,6 +308,40 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       } catch {
         reportIdStr = '';
         relatorioUuidStr = '';
+      }
+    }
+
+    const adminTemporal = getSupabaseAdmin();
+    const ownerUidTemporal = (row.owner_firebase_uid ?? '').trim();
+    if (adminTemporal && ownerUidTemporal && relatorioUuidStr.length > 0) {
+      try {
+        const prevRow = await fetchPreviousRelatorioForTemporal(adminTemporal, {
+          currentId: relatorioUuidStr,
+          ownerUid: ownerUidTemporal,
+          preferTipo: typeof tipo === 'string' ? tipo : undefined,
+          preferTalhaoKey: extractTalhaoChave(payloadSafe),
+        });
+        if (prevRow) {
+          const currSnap = parseAiSnapshotFromRelatorio(payloadSafe);
+          const prevSnap = parseAiSnapshotFromRelatorio(prevRow.dados);
+          if (currSnap && prevSnap) {
+            const rowUpdated = row as { updated_at?: string | null };
+            const temporal = buildAiTemporalViewerPayload({
+              currentSnapshot: currSnap,
+              previousSnapshot: prevSnap,
+              previousReportAt: prevRow.updated_at || null,
+              currentReportAt: rowUpdated.updated_at != null ? String(rowUpdated.updated_at) : null,
+              currentRelatorio: payloadSafe,
+              previousRelatorio: prevRow.dados,
+            });
+            const sanitizedTemporal = sanitizeForRSC(temporal);
+            if (sanitizedTemporal != null && typeof sanitizedTemporal === 'object' && !Array.isArray(sanitizedTemporal)) {
+              payloadSafe.ai_temporal_viewer = sanitizedTemporal as Record<string, unknown>;
+            }
+          }
+        }
+      } catch (tempErr) {
+        console.warn('[fortsmart-reports] /r/[token] inteligência temporal:', tempErr);
       }
     }
 
@@ -365,7 +413,11 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
             </ErrorBoundary>
           ) : isAmostragemSolo ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar amostragem de solos">
-              <RelatorioAmostragemSoloContent payload={payloadSafe} shareToken={token} />
+              <RelatorioAmostragemSoloContent
+                payload={payloadSafe}
+                shareToken={token}
+                highlightSampleCode={highlightSampleCode}
+              />
             </ErrorBoundary>
           ) : (
             <RelatorioContent
