@@ -195,6 +195,18 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       const hasTalhoes = Array.isArray(relatorio?.talhoes) && (relatorio?.talhoes?.length ?? 0) > 0;
       const hasTalhaoSingular =
         relatorio?.talhao != null && typeof relatorio.talhao === 'object';
+      let vtNormalized: Record<string, unknown> | null = null;
+      if (tipo === 'visita_tecnica') {
+        try {
+          vtNormalized = normalizeRelatorioVisitaTecnica(relatorio as Record<string, unknown>) as Record<string, unknown>;
+        } catch {
+          vtNormalized = null;
+        }
+      }
+      const hasTalhoesAfterVt =
+        vtNormalized != null &&
+        Array.isArray(vtNormalized.talhoes) &&
+        (vtNormalized.talhoes as unknown[]).length > 0;
       return (
         <main style={{ padding: 20, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
           <h1 style={{ fontSize: 18, marginBottom: 12 }}>Debug payload</h1>
@@ -210,8 +222,22 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
             <div><strong>hasTalhoes (array)</strong></div><div>{String(hasTalhoes)}</div>
             <div><strong>hasTalhao (objeto único)</strong></div><div>{String(hasTalhaoSingular)}</div>
             <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#64748b', marginTop: 4 }}>
-              Visita técnica usa <code>talhao</code> no singular — <code>hasTalhoes</code> false é normal.
+              Acima: objeto como veio do DB (após <code>sanitizeForRSC</code>). Visita técnica V1 costuma ter só <code>talhao</code> — <code>hasTalhoes</code> false é normal.
             </div>
+            {tipo === 'visita_tecnica' ? (
+              <>
+                <div><strong>hasTalhoes após normalizeRelatorioVisitaTecnica</strong></div>
+                <div>
+                  {vtNormalized ? String(hasTalhoesAfterVt) : 'erro ao normalizar'}
+                  {vtNormalized && Array.isArray(vtNormalized.talhoes)
+                    ? ` (length=${(vtNormalized.talhoes as unknown[]).length})`
+                    : ''}
+                </div>
+                <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#64748b' }}>
+                  O componente <code>RelatorioVisitaTecnicaContent</code> recebe este objeto normalizado (talhao → talhoes[]).
+                </div>
+              </>
+            ) : null}
             <div><strong>topKeys</strong></div><div>{relatorio ? Object.keys(relatorio).slice(0, 25).join(', ') : '—'}</div>
           </div>
           <h2 style={{ fontSize: 14, marginTop: 16 }}>rawPayload (primeiros 2000 chars)</h2>
