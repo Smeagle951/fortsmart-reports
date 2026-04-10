@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { insertReportViewEvent } from '@/lib/log-report-view-event';
 import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
 import RelatorioContent from '@/components/RelatorioContent';
 import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitarioContent';
@@ -7,10 +8,15 @@ import SideBySideReportContent, { type SideBySideReportData } from '@/components
 import RelatorioPlantio from '@/components/RelatorioPlantio';
 import RelatorioPlantioMultiContent from '@/components/plantio/RelatorioPlantioMultiContent';
 import RelatorioAmostragemSoloContent from '@/components/amostragem-solo/RelatorioAmostragemSoloContent';
+import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaContent';
+import { normalizeRelatorioVisitaTecnica } from '@/lib/normalize-relatorio-visita-tecnica';
 import PrintBar from '@/components/PrintBar';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import type { ResearchProReportPayload } from '@/types/research-report';
 import { calcularEstatisticaFromAvaliacoes } from '@/lib/research-pro/anova-tukey';
+import { extractTalhaoChave, parseAiSnapshotFromRelatorio } from '@/lib/ai-intelligence-snapshot';
+import { buildAiTemporalViewerPayload } from '@/lib/inteligencia-temporal';
+import { fetchPreviousRelatorioForTemporal } from '@/lib/server/fetch-previous-relatorio-temporal';
 
 // Disable Vercel's SSR cache so the latest Supabase data is always served
 export const dynamic = 'force-dynamic';
@@ -187,6 +193,20 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       const tipo = relatorio?.tipo;
       const tipoRelatorio = relatorio?.tipoRelatorio;
       const hasTalhoes = Array.isArray(relatorio?.talhoes) && (relatorio?.talhoes?.length ?? 0) > 0;
+      const hasTalhaoSingular =
+        relatorio?.talhao != null && typeof relatorio.talhao === 'object';
+      let vtNormalized: Record<string, unknown> | null = null;
+      if (tipo === 'visita_tecnica') {
+        try {
+          vtNormalized = normalizeRelatorioVisitaTecnica(relatorio as Record<string, unknown>) as Record<string, unknown>;
+        } catch {
+          vtNormalized = null;
+        }
+      }
+      const hasTalhoesAfterVt =
+        vtNormalized != null &&
+        Array.isArray(vtNormalized.talhoes) &&
+        (vtNormalized.talhoes as unknown[]).length > 0;
       return (
         <main style={{ padding: 20, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
           <h1 style={{ fontSize: 18, marginBottom: 12 }}>Debug payload</h1>
@@ -199,7 +219,25 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
             <div><strong>payload ok</strong></div><div>{String(!!relatorio)}</div>
             <div><strong>tipo</strong></div><div>{String(tipo ?? '')}</div>
             <div><strong>tipoRelatorio</strong></div><div>{String(tipoRelatorio ?? '')}</div>
-            <div><strong>hasTalhoes</strong></div><div>{String(hasTalhoes)}</div>
+            <div><strong>hasTalhoes (array)</strong></div><div>{String(hasTalhoes)}</div>
+            <div><strong>hasTalhao (objeto único)</strong></div><div>{String(hasTalhaoSingular)}</div>
+            <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#64748b', marginTop: 4 }}>
+              Acima: objeto como veio do DB (após <code>sanitizeForRSC</code>). Visita técnica V1 costuma ter só <code>talhao</code> — <code>hasTalhoes</code> false é normal.
+            </div>
+            {tipo === 'visita_tecnica' ? (
+              <>
+                <div><strong>hasTalhoes após normalizeRelatorioVisitaTecnica</strong></div>
+                <div>
+                  {vtNormalized ? String(hasTalhoesAfterVt) : 'erro ao normalizar'}
+                  {vtNormalized && Array.isArray(vtNormalized.talhoes)
+                    ? ` (length=${(vtNormalized.talhoes as unknown[]).length})`
+                    : ''}
+                </div>
+                <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#64748b' }}>
+                  O componente <code>RelatorioVisitaTecnicaContent</code> recebe este objeto normalizado (talhao → talhoes[]).
+                </div>
+              </>
+            ) : null}
             <div><strong>topKeys</strong></div><div>{relatorio ? Object.keys(relatorio).slice(0, 25).join(', ') : '—'}</div>
           </div>
           <h2 style={{ fontSize: 14, marginTop: 16 }}>rawPayload (primeiros 2000 chars)</h2>
@@ -262,6 +300,16 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     // relatorio já é clone serializável; usar como props para Client Components
     const payloadSafe: Record<string, unknown> = relatorio;
 
+    const sampleRaw = sp?.sample;
+    const highlightSampleCode =
+      typeof sampleRaw === 'string'
+        ? sampleRaw
+        : Array.isArray(sampleRaw)
+          ? typeof sampleRaw[0] === 'string'
+            ? sampleRaw[0]
+            : undefined
+          : undefined;
+
     if (!payloadSafe || typeof payloadSafe !== 'object' || Array.isArray(payloadSafe)) {
       console.warn('[fortsmart-reports] /r/[token] payloadSafe inválido antes do render');
       return (
@@ -289,6 +337,54 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       }
     }
 
+    const adminTemporal = getSupabaseAdmin();
+    const ownerUidTemporal = (row.owner_firebase_uid ?? '').trim();
+    if (adminTemporal && ownerUidTemporal && relatorioUuidStr.length > 0) {
+      try {
+        const prevRow = await fetchPreviousRelatorioForTemporal(adminTemporal, {
+          currentId: relatorioUuidStr,
+          ownerUid: ownerUidTemporal,
+          preferTipo: typeof tipo === 'string' ? tipo : undefined,
+          preferTalhaoKey: extractTalhaoChave(payloadSafe),
+        });
+        if (prevRow) {
+          const currSnap = parseAiSnapshotFromRelatorio(payloadSafe);
+          const prevSnap = parseAiSnapshotFromRelatorio(prevRow.dados);
+          if (currSnap && prevSnap) {
+            const rowUpdated = row as { updated_at?: string | null };
+            const temporal = buildAiTemporalViewerPayload({
+              currentSnapshot: currSnap,
+              previousSnapshot: prevSnap,
+              previousReportAt: prevRow.updated_at || null,
+              currentReportAt: rowUpdated.updated_at != null ? String(rowUpdated.updated_at) : null,
+              currentRelatorio: payloadSafe,
+              previousRelatorio: prevRow.dados,
+            });
+            const sanitizedTemporal = sanitizeForRSC(temporal);
+            if (sanitizedTemporal != null && typeof sanitizedTemporal === 'object' && !Array.isArray(sanitizedTemporal)) {
+              payloadSafe.ai_temporal_viewer = sanitizedTemporal as Record<string, unknown>;
+            }
+          }
+        }
+      } catch (tempErr) {
+        console.warn('[fortsmart-reports] /r/[token] inteligência temporal:', tempErr);
+      }
+    }
+
+    const supabaseAdminForMetric = getSupabaseAdmin();
+    if (supabaseAdminForMetric && relatorioUuidStr.length > 0) {
+      const ownerUid = (row.owner_firebase_uid ?? '').trim();
+      const metricUserId = ownerUid.length > 0 ? ownerUid : 'anonymous_viewer';
+      const moduleMetric =
+        typeof tipo === 'string' && tipo.length > 0 ? tipo : 'relatorio_web';
+      await insertReportViewEvent({
+        client: supabaseAdminForMetric,
+        reportId: relatorioUuidStr,
+        userId: metricUserId,
+        module: moduleMetric,
+      });
+    }
+
     return (
       <>
         <PrintBar />
@@ -299,6 +395,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
                 relatorio={payloadSafe as import('@/components/RelatorioFitossanitarioContent').PayloadFitossanitario}
                 reportId={reportIdStr}
                 relatorioUuid={relatorioUuidStr}
+                shareToken={token}
               />
             </ErrorBoundary>
           ) : isResearchPro ? (
@@ -306,16 +403,21 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
               <RelatorioResearchProContent
                 relatorio={payloadSafe as ResearchProReportPayload}
                 reportId={reportIdStr}
+                shareToken={token}
               />
             </ErrorBoundary>
           ) : isSideBySide ? (
             <SideBySideReportContent
               data={payloadSafe as SideBySideReportData}
               reportId={reportIdStr}
+              shareToken={token}
             />
           ) : isPlantioMulti ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de plantio multi-talhão">
-              <RelatorioPlantioMultiContent relatorio={payloadSafe} reportId={reportIdStr} />
+              <RelatorioPlantioMultiContent
+                relatorio={payloadSafe}
+                reportId={relatorioUuidStr || reportIdStr}
+              />
             </ErrorBoundary>
           ) : isPlantio ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de plantio">
@@ -324,15 +426,31 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
                 reportId={reportIdStr}
               />
             </ErrorBoundary>
+          ) : isVisitaTecnica ? (
+            <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de visita técnica">
+              <RelatorioVisitaTecnicaContent
+                relatorio={
+                  normalizeRelatorioVisitaTecnica(payloadSafe) as import('@/components/RelatorioVisitaTecnicaContent').PayloadVisitaTecnica
+                }
+                reportId={reportIdStr}
+                relatorioUuid={relatorioUuidStr}
+                shareToken={token}
+              />
+            </ErrorBoundary>
           ) : isAmostragemSolo ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar amostragem de solos">
-              <RelatorioAmostragemSoloContent payload={payloadSafe} shareToken={token} />
+              <RelatorioAmostragemSoloContent
+                payload={payloadSafe}
+                shareToken={token}
+                highlightSampleCode={highlightSampleCode}
+              />
             </ErrorBoundary>
           ) : (
             <RelatorioContent
               relatorio={payloadSafe}
               reportId={reportIdStr}
               relatorioUuid={relatorioUuidStr}
+              shareToken={token}
             />
           )}
         </article>
