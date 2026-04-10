@@ -46,11 +46,31 @@ function coerceStringArrayLoose(v: unknown): string[] {
 }
 
 /**
+ * Garante `talhoes: Record[]` e remove `talhao` singular (legado V1).
+ * Evita payload com os dois campos e priorização errada no React.
+ */
+function normalizeTalhoesRemoveLegacy(raw: Record<string, unknown>, out: Record<string, unknown>): void {
+  const singular = raw.talhao;
+  const hasSingular = singular != null && typeof singular === 'object' && !Array.isArray(singular);
+  let arr = raw.talhoes;
+  if (!Array.isArray(arr) || arr.length === 0) {
+    arr = hasSingular ? [singular as Record<string, unknown>] : [];
+  }
+  out.talhoes = (arr as unknown[]).filter(
+    (x): x is Record<string, unknown> =>
+      x != null && typeof x === 'object' && !Array.isArray(x),
+  );
+  delete out.talhao;
+}
+
+/**
  * Última camada antes do React: corrige formatos que o app/DB enviam como objeto
  * ou tipos mistos (evita crash em .map, .trim, for..of).
  */
 export function sanitizeVisitaTecnicaPayload(raw: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...raw };
+
+  normalizeTalhoesRemoveLegacy(raw, out);
 
   out.pragas = coerceVisitaObjectArray(raw.pragas);
   out.imagens = coerceVisitaObjectArray(raw.imagens);

@@ -235,7 +235,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
             <div><strong>hasTalhoes (array)</strong></div><div>{String(hasTalhoes)}</div>
             <div><strong>hasTalhao (objeto único)</strong></div><div>{String(hasTalhaoSingular)}</div>
             <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#64748b', marginTop: 4 }}>
-              Acima: objeto como veio do DB (após <code>sanitizeForRSC</code>). Visita técnica V1 costuma ter só <code>talhao</code> — <code>hasTalhoes</code> false é normal.
+              Acima: objeto como veio do DB (após <code>sanitizeForRSC</code>). Visita técnica V1 costuma ter só <code>talhao</code> — <code>hasTalhoes</code> false é normal antes do normalize.
             </div>
             {tipo === 'visita_tecnica' ? (
               <>
@@ -247,7 +247,9 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
                     : ''}
                 </div>
                 <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#64748b' }}>
-                  O componente <code>RelatorioVisitaTecnicaContent</code> recebe este objeto normalizado (talhao → talhoes[]).
+                  Após <code>normalizeRelatorioVisitaTecnica</code> + <code>sanitizeVisitaTecnicaPayload</code>:{' '}
+                  <code>talhoes[]</code> preenchido e <code>talhao</code> removido.
+                  {vtNormalized && 'talhao' in vtNormalized ? ' (aviso: talhao ainda presente no objeto)' : ''}
                 </div>
               </>
             ) : null}

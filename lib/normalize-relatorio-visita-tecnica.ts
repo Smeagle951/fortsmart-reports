@@ -19,15 +19,10 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
 
     const isV2 = Object.keys(core).length > 0 || Object.keys(modVT).length > 0;
 
-    // ─── Normalização crítica: garantir talhoes como array ─────────────────────
-    // Se vier talhao (objeto singular) mas não talhoes (array), converter
-    if (!isV2 && raw.talhao && !raw.talhoes) {
-        const normalized = { ...raw };
-        normalized.talhoes = [raw.talhao];
-        return sanitizeVisitaTecnicaPayload(normalized);
+    // V1 flat: sanitize já faz talhao → talhoes[] e remove o campo legado
+    if (!isV2) {
+        return sanitizeVisitaTecnicaPayload({ ...raw });
     }
-
-    if (!isV2) return sanitizeVisitaTecnicaPayload(raw);
 
     // modulos.visitaTecnica sub-objects
     const evolFeno = (modVT.evolucaoFenologica ?? {}) as UnknownRecord;
@@ -68,9 +63,14 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
 
     const normalizedV2 = { ...raw };
 
-    if (!normalizedV2.talhoes && normalizedV2.talhao) {
-        normalizedV2.talhoes = [normalizedV2.talhao];
+    const talhoesArr = Array.isArray(normalizedV2.talhoes) ? (normalizedV2.talhoes as unknown[]) : [];
+    if (talhoesArr.length === 0 && normalizedV2.talhao) {
+        talhoesArr.push(normalizedV2.talhao);
     }
+    normalizedV2.talhoes = talhoesArr;
+    const firstTalhaoV2 = (talhoesArr[0] != null && typeof talhoesArr[0] === 'object' && !Array.isArray(talhoesArr[0])
+        ? talhoesArr[0]
+        : {}) as UnknownRecord;
 
     const merged: UnknownRecord = {
         ...normalizedV2,
@@ -81,7 +81,7 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
             dataGeracao: core.createdAt ?? core.publishedAt,
             tecnico: (core.generatedBy as UnknownRecord)?.nome,
             tecnicoCrea: (core.generatedBy as UnknownRecord)?.crea,
-            safra: (normalizedV2.talhao as UnknownRecord)?.safra ?? (normalizedV2.contextoSafra as UnknownRecord)?.safra,
+            safra: firstTalhaoV2.safra ?? (normalizedV2.contextoSafra as UnknownRecord)?.safra,
             versao: core.version ?? 2,
             status: core.status ?? 'published',
         },

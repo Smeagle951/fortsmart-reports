@@ -28,7 +28,9 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
   tipo?: string;
   meta?: Record<string, unknown>;
   propriedade?: Record<string, unknown>;
+  /** Legado V1; após normalize/sanitize use só `talhoes`. Mantido como fallback defensivo. */
   talhao?: Record<string, unknown>;
+  talhoes?: Record<string, unknown>[];
   contextoSafra?: Record<string, unknown>;
   populacao?: Record<string, unknown>;
   fazenda?: string;
@@ -108,8 +110,9 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
     talhoesList[0] != null && typeof talhoesList[0] === 'object' && !Array.isArray(talhoesList[0])
       ? (talhoesList[0] as Record<string, unknown>)
       : {};
+  /** Preferir sempre `talhoes[0]`; `talhao` na raiz só se não houver array (payload sem normalizar). */
   const talhao =
-    Object.keys(talhaoFromRoot).length > 0 ? talhaoFromRoot : primeiroTalhao;
+    Object.keys(primeiroTalhao).length > 0 ? primeiroTalhao : talhaoFromRoot;
   const contextoSafra = (relatorio.contextoSafra != null && typeof relatorio.contextoSafra === 'object') ? (relatorio.contextoSafra as Record<string, unknown>) : undefined;
   const populacao = (relatorio.populacao != null && typeof relatorio.populacao === 'object') ? (relatorio.populacao as Record<string, unknown>) : undefined;
   const assinatura = (relatorio.assinaturaTecnica != null && typeof relatorio.assinaturaTecnica === 'object') ? (relatorio.assinaturaTecnica as Record<string, unknown>) : undefined;
