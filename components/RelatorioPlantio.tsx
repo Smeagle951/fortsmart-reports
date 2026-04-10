@@ -6,6 +6,7 @@ import { InfoGrid } from './TabelaDados';
 import TabelaDados from './TabelaDados';
 import Galeria from './Galeria';
 import dynamic from 'next/dynamic';
+import InteligenciaAgronomicaPanel from '@/components/InteligenciaAgronomicaPanel';
 
 const MapaTalhao = dynamic(() => import('./MapaTalhao'), { ssr: false });
 
@@ -66,6 +67,8 @@ export default function RelatorioPlantio({ relatorio, reportId }: { relatorio: P
                     <span className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200">{talhao.cultura as string || 'Cultura'}</span>
                 </div>
             </div>
+
+            <InteligenciaAgronomicaPanel relatorio={{ ...relatorio, tipo: 'plantio' } as Record<string, unknown>} variant="default" />
 
             <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent my-8 opacity-60"></div>
 

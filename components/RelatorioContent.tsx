@@ -8,6 +8,8 @@ import TabelaDados, { InfoGrid, situacaoCssClass, situacaoLabel } from './Tabela
 import TabelaAplicacoes from './TabelaAplicacoes';
 import { formatDate, formatArea, formatNumber, formatPercent } from '@/utils/format';
 import ReportPageSaaS, { type ReportPageSaaSData } from './saas/ReportPageSaaS';
+import InteligenciaAgronomicaPanel from './InteligenciaAgronomicaPanel';
+import { computeInteligenciaAgronomicaFromRelatorio, intelToLegacySaaSFields } from '@/lib/inteligencia-agronomica';
 
 export type RelatorioJson = {
   meta?: Record<string, unknown>;
@@ -31,9 +33,11 @@ interface RelatorioContentProps {
   relatorio: RelatorioJson;
   reportId?: string;
   relatorioUuid?: string;
+  /** Token `/r/[token]` para métricas de partilha/impressão no layout SaaS. */
+  shareToken?: string;
 }
 
-export default function RelatorioContent({ relatorio, reportId, relatorioUuid }: RelatorioContentProps) {
+export default function RelatorioContent({ relatorio, reportId, relatorioUuid, shareToken }: RelatorioContentProps) {
   const meta = relatorio.meta || {};
   const prop = relatorio.propriedade || {};
   const talhao = relatorio.talhao || {};
@@ -137,15 +141,9 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
       })(),
       indiceAgronomicoTalhao: (relatorio as any).indiceAgronomicoTalhao ?? undefined,
       inteligenciaAgronomica: (() => {
-        const ia = (relatorio as any).inteligencia_agronomica;
-        if (!ia || typeof ia !== 'object') return undefined;
-        const score = ia.score != null ? Number(ia.score) : undefined;
-        const status = ia.status != null ? String(ia.status) : undefined;
-        if ((score == null || !Number.isFinite(score)) && !status) return undefined;
-        return {
-          score: score != null && Number.isFinite(score) ? score : undefined,
-          status: status || undefined,
-        };
+        const canon = computeInteligenciaAgronomicaFromRelatorio(relatorio as unknown as Record<string, unknown>);
+        const leg = intelToLegacySaaSFields(canon);
+        return { score: leg.score, status: leg.status };
       })(),
       aplicacoes: aplicacoes.map((a: any) => ({
         tipo: a.tipo ?? a.classe ?? '',
@@ -194,7 +192,15 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
       })(),
     };
 
-    return <ReportPageSaaS data={saasData} reportId={reportId} relatorioUuid={relatorioUuid} />;
+    return (
+      <ReportPageSaaS
+        data={saasData}
+        reportId={reportId}
+        relatorioUuid={relatorioUuid}
+        shareToken={shareToken}
+        relatorioParaInteligencia={relatorio as unknown as Record<string, unknown>}
+      />
+    );
   }
 
   return (
@@ -215,6 +221,8 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
           {String(prop.fazenda || '')} • {String(talhao.nome || '')} • {String(talhao.cultura || '')} • Safra {String(meta.safra || '')}
         </p>
       </div>
+
+      <InteligenciaAgronomicaPanel relatorio={relatorio as unknown as Record<string, unknown>} variant="default" />
 
       {(contextoSafra.materialVariedade || contextoSafra.dae != null || contextoSafra.dap != null || contextoSafra.espacamentoCm != null) && (
         <section className="section contextoSafra-section">

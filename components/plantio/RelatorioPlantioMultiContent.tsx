@@ -19,6 +19,7 @@ import {
   type UnknownRec,
 } from './plantio-comparativo-utils';
 import type { SerieFeno } from './PlantioFenologiaComparativoChart';
+import InteligenciaAgronomicaPanel from '@/components/InteligenciaAgronomicaPanel';
 
 function snapshotIndexForRankingRow(row: UnknownRec, talhoes: UnknownRec[]): number {
   const id = str(row.talhaoId);
@@ -87,6 +88,18 @@ export default function RelatorioPlantioMultiContent({
     setSlots(defaultSlots);
   }, [defaultSlots]);
 
+  const [viewMode, setViewMode] = useState<'detalhe' | 'comparativo'>(() =>
+    nTalhoes > 1 ? 'detalhe' : 'comparativo',
+  );
+  const [singleIdx, setSingleIdx] = useState(0);
+  useEffect(() => {
+    if (singleIdx >= nTalhoes) setSingleIdx(0);
+  }, [nTalhoes, singleIdx]);
+
+  useEffect(() => {
+    if (nTalhoes <= 1) setViewMode('comparativo');
+  }, [nTalhoes]);
+
   const [modoAnalise, setModoAnalise] = useState(false);
   const [analiseOpen, setAnaliseOpen] = useState(false);
   const [analiseSlotIndex, setAnaliseSlotIndex] = useState(0);
@@ -98,10 +111,12 @@ export default function RelatorioPlantioMultiContent({
     setAnaliseOpen(true);
   }, [talhoes.length]);
 
-  const displayCount = nTalhoes === 1 ? 1 : 3;
-  const activeSlotIndices = Array.from({ length: displayCount }, (_, i) =>
-    nTalhoes === 1 ? slots[0] : slots[i],
-  );
+  const displayCount = nTalhoes === 1 ? 1 : viewMode === 'detalhe' ? 1 : 3;
+  const activeSlotIndices = useMemo(() => {
+    if (nTalhoes === 1) return [0];
+    if (viewMode === 'detalhe') return [singleIdx];
+    return [slots[0]!, slots[1]!, slots[2]!];
+  }, [nTalhoes, viewMode, singleIdx, slots]);
   const activeSnapshots = activeSlotIndices.map((i) => talhoes[i]).filter(Boolean) as UnknownRec[];
   const activeNames = activeSlotIndices.map((i) => nomeExibicaoTalhao(talhoes[i] ?? {}, i));
   const activeMetrics = activeSnapshots.map((snap) => metricasDoSnapshot(snap));
@@ -127,6 +142,61 @@ export default function RelatorioPlantioMultiContent({
   const analiseSnapshot = talhoes[analiseSlotIndex];
   const metaSafra = str(meta.safra);
 
+  const compareCoreProps = useMemo(() => {
+    const idxs = [slots[0]!, slots[1]!, slots[2]!];
+    const snaps = idxs.map((i) => talhoes[i]).filter(Boolean) as UnknownRec[];
+    const names = idxs.map((i) => nomeExibicaoTalhao(talhoes[i] ?? {}, i));
+    const metrics = snaps.map((snap) => metricasDoSnapshot(snap));
+    const keys = ['s0', 's1', 's2'] as const;
+    const colors = [COL.a, COL.b, COL.c] as const;
+    const seriesCompare: SerieFeno[] = snaps.map((snap, i) => ({
+      key: keys[i],
+      name: names[i] || String(i + 1),
+      color: colors[i],
+      points: serieFenologia(snap),
+    }));
+    return {
+      nTalhoes,
+      slots,
+      setSlots,
+      displayCount: 3,
+      activeSlotIndices: idxs,
+      activeNames: names,
+      activeSnapshots: snaps,
+      activeMetrics: metrics,
+      seriesFeno: seriesCompare,
+      showAnalitico,
+      iqiMedio,
+      cvMedio,
+      popMedia,
+      resumoIqi,
+      resumoCv,
+      melhorNome,
+      melhorIqi,
+      textoGeral,
+      talhoes,
+      reportId,
+      onOpenAnalise: openAnalise,
+      hideSelectors: true,
+      selectorMode: 'triple' as const,
+    };
+  }, [
+    nTalhoes,
+    slots,
+    talhoes,
+    reportId,
+    showAnalitico,
+    iqiMedio,
+    cvMedio,
+    popMedia,
+    resumoIqi,
+    resumoCv,
+    melhorNome,
+    melhorIqi,
+    textoGeral,
+    openAnalise,
+  ]);
+
   const coreProps = {
     nTalhoes,
     slots,
@@ -149,6 +219,9 @@ export default function RelatorioPlantioMultiContent({
     talhoes,
     reportId,
     onOpenAnalise: openAnalise,
+    selectorMode: (nTalhoes > 1 && viewMode === 'detalhe' ? 'single' : 'triple') as 'single' | 'triple',
+    singleTalhaoIndex: singleIdx,
+    setSingleTalhaoIndex: setSingleIdx,
   };
 
   const listaTalhoes = useMemo(() => {
@@ -193,20 +266,51 @@ export default function RelatorioPlantioMultiContent({
               nome:
                 nTalhoes === 1
                   ? nomeExibicaoTalhao(talhoes[0] ?? {}, 0)
-                  : `${nTalhoes} talhões`,
-              cultura: 'Comparativo multi-talhão',
+                  : viewMode === 'detalhe'
+                    ? nomeExibicaoTalhao(talhoes[singleIdx] ?? {}, singleIdx)
+                    : `${nTalhoes} talhões`,
+              cultura:
+                nTalhoes === 1
+                  ? str((talhoes[0]?.talhao as UnknownRec | undefined)?.cultura) || 'Plantio'
+                  : viewMode === 'detalhe'
+                    ? str((talhoes[singleIdx]?.talhao as UnknownRec | undefined)?.cultura) || 'Plantio'
+                    : 'Comparativo multi-talhão',
             }}
             reportId={reportId}
             variant="plantio"
-            plantioComparativo={nTalhoes > 1}
-            nTalhoesComparados={nTalhoes}
+            plantioComparativo={nTalhoes > 1 && viewMode === 'comparativo'}
+            nTalhoesComparados={viewMode === 'comparativo' ? nTalhoes : 1}
             localizacaoTexto={localizacaoTexto || undefined}
           />
+        </div>
+
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 12px' }}>
+          <InteligenciaAgronomicaPanel relatorio={relatorio as Record<string, unknown>} variant="default" />
         </div>
 
         <div className={`${cmpStyles.actionToolbar} ${editorialStyles.noPrint}`}>
           <div className={cmpStyles.actionToolbarInner}>
             <span className={cmpStyles.actionToolbarLabel}>Ferramentas</span>
+            {nTalhoes > 1 ? (
+              <div className={cmpStyles.viewModeToggle} role="group" aria-label="Modo de visualização">
+                <button
+                  type="button"
+                  className={`${cmpStyles.viewModeBtn} ${viewMode === 'detalhe' ? cmpStyles.viewModeBtnActive : ''}`}
+                  aria-pressed={viewMode === 'detalhe'}
+                  onClick={() => setViewMode('detalhe')}
+                >
+                  Plantio único
+                </button>
+                <button
+                  type="button"
+                  className={`${cmpStyles.viewModeBtn} ${viewMode === 'comparativo' ? cmpStyles.viewModeBtnActive : ''}`}
+                  aria-pressed={viewMode === 'comparativo'}
+                  onClick={() => setViewMode('comparativo')}
+                >
+                  Comparativo A/B/C
+                </button>
+              </div>
+            ) : null}
             <div className={cmpStyles.actionBtnGroup}>
               <button
                 type="button"
@@ -279,9 +383,24 @@ export default function RelatorioPlantioMultiContent({
       ) : null}
 
       <header className={cmpStyles.titleBlock}>
-        <h1 className={cmpStyles.title}>Análise Comparativa dos Talhões de Plantio</h1>
+        <h1 className={cmpStyles.title}>
+          {nTalhoes === 1 || viewMode === 'detalhe'
+            ? 'Relatório de plantio'
+            : 'Análise comparativa dos talhões de plantio'}
+        </h1>
         <div className={cmpStyles.titleUnderline} aria-hidden />
-        <p className={cmpStyles.subtitle}>Comparação detalhada dos talhões selecionados</p>
+        <p className={cmpStyles.subtitle}>
+          {nTalhoes === 1
+            ? 'Dados do módulo plantio e submódulos (CV%, estande, fenologia).'
+            : viewMode === 'detalhe'
+              ? 'Um talhão/plantio por vez — selecione acima. Safra e contexto vêm do relatório publicado.'
+              : 'Comparação lado a lado de até três talhões (colunas A, B e C).'}
+        </p>
+        {nTalhoes > 1 && viewMode === 'detalhe' ? (
+          <p className={cmpStyles.subtitleMeta}>
+            Safra (relatório): <strong>{str(meta.safra) || '—'}</strong>
+          </p>
+        ) : null}
       </header>
 
       <PlantioMultiComparativoCore {...coreProps} />
@@ -298,7 +417,7 @@ export default function RelatorioPlantioMultiContent({
       />
 
         <PlantioCompareDrawer open={compareOpen} onClose={() => setCompareOpen(false)}>
-          <PlantioMultiComparativoCore {...coreProps} hideSelectors />
+          <PlantioMultiComparativoCore {...compareCoreProps} />
         </PlantioCompareDrawer>
       </div>
     </div>

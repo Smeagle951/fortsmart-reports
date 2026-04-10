@@ -20,6 +20,8 @@ import ModalImagem from './ModalImagem';
 import RelatorioLayoutEnterprise from './RelatorioLayoutEnterprise';
 import BarraTecnicaRelatorio from './BarraTecnicaRelatorio';
 import RelatorioSection from './RelatorioSection';
+import { postReportAnalytics } from '@/lib/report-analytics-client';
+import InteligenciaAgronomicaPanel from '@/components/InteligenciaAgronomicaPanel';
 
 const MapaInterativo = dynamic(() => import('./MapaInterativo'), { ssr: false });
 
@@ -343,6 +345,8 @@ interface RelatorioFitossanitarioContentProps {
   relatorio: PayloadFitossanitario;
   reportId?: string;
   relatorioUuid?: string;
+  /** Token da rota `/r/[token]` — métrica `download` em `ai_report_events` após exportar PDF. */
+  shareToken?: string;
 }
 
 function severidadeLabel(severidade: number): string {
@@ -476,7 +480,12 @@ function mergePlantioCampos(params: {
   return { data_plantio, data_emergencia, ultima_avaliacao_iso, estagio, dae, dap };
 }
 
-export default function RelatorioFitossanitarioContent({ relatorio, reportId, relatorioUuid }: RelatorioFitossanitarioContentProps) {
+export default function RelatorioFitossanitarioContent({
+  relatorio,
+  reportId,
+  relatorioUuid,
+  shareToken,
+}: RelatorioFitossanitarioContentProps) {
   const normalized = useMemo((): RelatorioMonitoramento => {
     const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? relatorio.propriedade as Record<string, unknown> : undefined;
     const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? relatorio.meta as Record<string, unknown> : undefined;
@@ -682,6 +691,13 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       }).from(el).save();
+      if (shareToken) {
+        void postReportAnalytics({
+          shareToken,
+          eventType: 'download',
+          module: 'monitoramento',
+        });
+      }
     } finally {
       document.body.classList.remove('exporting-pdf');
     }
@@ -822,15 +838,37 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     URL.revokeObjectURL(a.href);
   };
 
-  const handleShare = () => {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({
-        title: `Relatório ${normalized.talhoes[0]?.nome ?? 'Talhão'} — FortSmart`,
-        text: `Relatório de Monitoramento Fitossanitário · ${normalized.fazenda} · ${normalized.safra}`,
-        url: typeof window !== 'undefined' ? window.location.href : '',
-      }).catch(() => {});
-    } else if (typeof window !== 'undefined') {
-      navigator.clipboard?.writeText(window.location.href).then(() => {});
+  const handleShare = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    const fireShareMetric = () => {
+      if (shareToken?.trim()) {
+        void postReportAnalytics({
+          shareToken: shareToken.trim(),
+          eventType: 'share',
+          module: 'monitoramento',
+        });
+      }
+    };
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share && url) {
+        await navigator.share({
+          title: `Relatório ${normalized.talhoes[0]?.nome ?? 'Talhão'} — FortSmart`,
+          text: `Relatório de Monitoramento Fitossanitário · ${normalized.fazenda} · ${normalized.safra}`,
+          url,
+        });
+        fireShareMetric();
+        return;
+      }
+    } catch {
+      /* cancelado */
+    }
+    try {
+      if (url && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        fireShareMetric();
+      }
+    } catch {
+      /* ignore */
     }
   };
   /** Imagens: relatorio.imagens (url + descricao) ou fallback fotos/registros_fotograficos; aceita url absoluta ou data: URL */
@@ -948,6 +986,8 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Próxima visita: {proximaVisita}</span>
         </div>
       </div>
+
+      <InteligenciaAgronomicaPanel relatorio={relatorio as Record<string, unknown>} variant="fitossanitario" />
 
       {/* Tabela técnica compacta: Indicador | Resultado | Ideal */}
       {dadosPlantioExibir && (() => {

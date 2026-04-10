@@ -1,9 +1,22 @@
 import type { FeatureCollection, Feature, Point } from 'geojson';
 
+/** Métricas de validação da coleta (compliance solo), preenchidas pelo app no `meta`. */
+export type ColetaValidacaoMeta = {
+  pontos_total?: number;
+  pontos_gps_valido?: number;
+  pontos_gps_invalido?: number;
+  precisao_gps_media_m?: number | null;
+  distancia_media_vizinho_m?: number | null;
+  cobertura_area_pct?: number | null;
+  area_talhao_ha?: number | null;
+  area_envoltoria_pontos_ha?: number | null;
+  criterio_precisao_max_m?: number | null;
+};
+
 export type AmostragemSoloPayload = {
   /** 2 = metadados de campanha (empresa/usuário) persistidos no app; 1 ou ausente = legado. */
   schemaVersion?: number;
-  meta?: Record<string, unknown>;
+  meta?: Record<string, unknown> & { coleta_validacao?: ColetaValidacaoMeta };
   talhoes?: Array<{ id?: string; nome?: string }>;
   observacoes?: AmostragemObservacao[];
   geojson?: FeatureCollection;
@@ -60,6 +73,9 @@ export type AmostragemObservacao = {
   depth_top_cm?: number | null;
   depth_bottom_cm?: number | null;
   leituras?: AmostragemLeitura[];
+  /** Evidência de subamostragem por ponto (compliance). */
+  subsamples_count?: number;
+  subsamples?: Array<{ lat: number; lng: number }>;
 };
 
 export function isAmostragemSoloPayload(raw: Record<string, unknown>): boolean {

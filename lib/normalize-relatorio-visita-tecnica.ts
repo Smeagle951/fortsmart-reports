@@ -4,6 +4,8 @@
  * um objeto flat compatível com RelatorioVisitaTecnicaContent.
  */
 
+import { sanitizeVisitaTecnicaPayload } from '@/lib/visita-tecnica/coerceVisitaPayload';
+
 type UnknownRecord = Record<string, unknown>;
 
 export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownRecord {
@@ -16,7 +18,16 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
     const mapaV2 = (raw.mapa ?? {}) as UnknownRecord;
 
     const isV2 = Object.keys(core).length > 0 || Object.keys(modVT).length > 0;
-    if (!isV2) return raw; // V1 passthrough — sem modificação
+
+    // ─── Normalização crítica: garantir talhoes como array ─────────────────────
+    // Se vier talhao (objeto singular) mas não talhoes (array), converter
+    if (!isV2 && raw.talhao && !raw.talhoes) {
+        const normalized = { ...raw };
+        normalized.talhoes = [raw.talhao];
+        return sanitizeVisitaTecnicaPayload(normalized);
+    }
+
+    if (!isV2) return sanitizeVisitaTecnicaPayload(raw);
 
     // modulos.visitaTecnica sub-objects
     const evolFeno = (modVT.evolucaoFenologica ?? {}) as UnknownRecord;
@@ -55,17 +66,22 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
         data: img.data,
     }));
 
-    return {
-        // Preserve all raw V2 fields
-        ...raw,
+    const normalizedV2 = { ...raw };
+
+    if (!normalizedV2.talhoes && normalizedV2.talhao) {
+        normalizedV2.talhoes = [normalizedV2.talhao];
+    }
+
+    const merged: UnknownRecord = {
+        ...normalizedV2,
 
         // ── meta fields ──
-        meta: raw.meta ?? {
+        meta: normalizedV2.meta ?? {
             id: core.reportId,
             dataGeracao: core.createdAt ?? core.publishedAt,
             tecnico: (core.generatedBy as UnknownRecord)?.nome,
             tecnicoCrea: (core.generatedBy as UnknownRecord)?.crea,
-            safra: (raw.talhao as UnknownRecord)?.safra ?? (raw.contextoSafra as UnknownRecord)?.safra,
+            safra: (normalizedV2.talhao as UnknownRecord)?.safra ?? (normalizedV2.contextoSafra as UnknownRecord)?.safra,
             versao: core.version ?? 2,
             status: core.status ?? 'published',
         },
@@ -138,4 +154,6 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
             itens: Array.isArray(indicadores.itemsIAT) ? indicadores.itemsIAT : [],
         } : undefined),
     };
+
+    return sanitizeVisitaTecnicaPayload(merged as UnknownRecord);
 }

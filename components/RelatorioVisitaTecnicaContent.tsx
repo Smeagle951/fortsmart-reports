@@ -7,6 +7,9 @@ import ModalImagem from '@/components/ModalImagem';
 import Mapa from '@/components/Mapa';
 import { formatDate } from '@/utils/format';
 
+import { postReportAnalytics } from '@/lib/report-analytics-client';
+import { coerceVisitaObjectArray } from '@/lib/visita-tecnica/coerceVisitaPayload';
+import InteligenciaAgronomicaPanel from '@/components/InteligenciaAgronomicaPanel';
 import TabelaTecnicaCampos from './visita_tecnica/TabelaTecnicaCampos';
 import OcorrenciasPragasVT from './visita_tecnica/sections/OcorrenciasPragasVT';
 import InteligenciaEstrategicaVisitaVT, {
@@ -18,7 +21,8 @@ import DecisaoAgronomicaVT from './visita_tecnica/sections/DecisaoAgronomicaVT';
 import AplicacoesRealizadasVT from './visita_tecnica/sections/AplicacoesRealizadasVT';
 import FotografiasEAutoriaVT from './visita_tecnica/sections/FotografiasEAutoriaVT';
 
-const MapaTalhaoDynamic = dynamic(() => import('@/components/MapaTalhaoDynamic'), { ssr: false });
+/** Import direto de MapaTalhao — evita dynamic() duplo (MapaTalhaoDynamic já é dynamic), que quebrava o runtime ("r is not a function"). */
+const MapaTalhaoLazy = dynamic(() => import('@/components/MapaTalhao'), { ssr: false });
 
 export type PayloadVisitaTecnica = Record<string, unknown> & {
   tipo?: string;
@@ -86,12 +90,26 @@ interface RelatorioVisitaTecnicaContentProps {
   relatorio: PayloadVisitaTecnica;
   reportId?: string;
   relatorioUuid?: string;
+  /** Token da rota `/r/[token]` — métricas `download` / `share` em `ai_report_events`. */
+  shareToken?: string;
 }
 
-export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, relatorioUuid }: RelatorioVisitaTecnicaContentProps) {
+export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, relatorioUuid, shareToken }: RelatorioVisitaTecnicaContentProps) {
   const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? (relatorio.meta as Record<string, unknown>) : {};
   const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? (relatorio.propriedade as Record<string, unknown>) : {};
-  const talhao = (relatorio.talhao != null && typeof relatorio.talhao === 'object') ? (relatorio.talhao as Record<string, unknown>) : {};
+  const talhaoFromRoot =
+    relatorio.talhao != null && typeof relatorio.talhao === 'object' && !Array.isArray(relatorio.talhao)
+      ? (relatorio.talhao as Record<string, unknown>)
+      : {};
+  const talhoesList = Array.isArray((relatorio as Record<string, unknown>).talhoes)
+    ? ((relatorio as Record<string, unknown>).talhoes as unknown[])
+    : [];
+  const primeiroTalhao =
+    talhoesList[0] != null && typeof talhoesList[0] === 'object' && !Array.isArray(talhoesList[0])
+      ? (talhoesList[0] as Record<string, unknown>)
+      : {};
+  const talhao =
+    Object.keys(talhaoFromRoot).length > 0 ? talhaoFromRoot : primeiroTalhao;
   const contextoSafra = (relatorio.contextoSafra != null && typeof relatorio.contextoSafra === 'object') ? (relatorio.contextoSafra as Record<string, unknown>) : undefined;
   const populacao = (relatorio.populacao != null && typeof relatorio.populacao === 'object') ? (relatorio.populacao as Record<string, unknown>) : undefined;
   const assinatura = (relatorio.assinaturaTecnica != null && typeof relatorio.assinaturaTecnica === 'object') ? (relatorio.assinaturaTecnica as Record<string, unknown>) : undefined;
@@ -134,7 +152,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const diagnostico = relatorio.diagnostico as Record<string, unknown> | undefined;
   const planoAcao = relatorio.planoAcao;
   const conclusao = relatorio.conclusao as string | undefined;
-  const pragas = (relatorio.pragas ?? []) as Record<string, unknown>[];
+  const pragas = coerceVisitaObjectArray(relatorio.pragas);
   const condicoes = (relatorio.condicoes ?? {}) as Record<string, unknown>;
   const amostragem =
     condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
@@ -149,7 +167,12 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
       ? (relatorio.produtividade as Record<string, unknown>)
       : undefined;
   const fenologia = (relatorio.fenologia ?? {}) as Record<string, unknown>;
-  const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
+  const imagens = coerceVisitaObjectArray(relatorio.imagens) as Array<{
+    url?: string;
+    descricao?: string;
+    categoria?: string;
+    data?: string;
+  }>;
   const imagensFenologia = imagens.filter((img) => (img.categoria ?? '').toLowerCase() === 'fenologia');
   const mapa = (relatorio.mapa ?? {}) as Record<string, unknown> & {
     viewBox?: string;
@@ -224,6 +247,15 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
 
   const handleShare = useCallback(async () => {
     const url = typeof window !== 'undefined' ? window.location.href : '';
+    const fireShareMetric = () => {
+      if (shareToken?.trim()) {
+        void postReportAnalytics({
+          shareToken: shareToken.trim(),
+          eventType: 'share',
+          module: 'visita_tecnica',
+        });
+      }
+    };
     try {
       if (navigator.share && url) {
         await navigator.share({
@@ -231,6 +263,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           text: `Relatório técnico: ${fazenda}${talhao?.nome ? ` · ${String(talhao.nome)}` : ''}`,
           url,
         });
+        fireShareMetric();
         return;
       }
     } catch {
@@ -240,11 +273,12 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
       if (url && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);
         alert('Link copiado para a área de transferência.');
+        fireShareMetric();
       }
     } catch {
       /* ignore */
     }
-  }, [fazenda, talhao]);
+  }, [fazenda, talhao, shareToken]);
 
   const handleExportPDF = useCallback(async () => {
     const { default: html2pdf } = await import('html2pdf.js');
@@ -253,14 +287,26 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
     setLightboxIndex(null);
     const safeFazenda = (fazenda || 'Relatorio').replace(/\s/g, '_');
     const safeData = (data || '').replace(/\//g, '-').replace(/\s/g, '_') || 'data';
-    html2pdf().set({
-      margin: [10, 10, 10, 10],
-      filename: `FortSmart_Visita_Tecnica_${safeFazenda}_${safeData}.pdf`,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    }).from(el).save();
-  }, [fazenda, data]);
+    document.body.classList.add('exporting-pdf');
+    try {
+      await html2pdf().set({
+        margin: [10, 10, 10, 10],
+        filename: `FortSmart_Visita_Tecnica_${safeFazenda}_${safeData}.pdf`,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      }).from(el).save();
+      if (shareToken?.trim()) {
+        void postReportAnalytics({
+          shareToken: shareToken.trim(),
+          eventType: 'download',
+          module: 'visita_tecnica',
+        });
+      }
+    } finally {
+      document.body.classList.remove('exporting-pdf');
+    }
+  }, [fazenda, data, shareToken]);
 
   const lightboxImg = lightboxIndex !== null && imagens[lightboxIndex]?.url
     ? imagens[lightboxIndex]
@@ -349,6 +395,8 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
             </p>
           )}
         </header>
+
+        <InteligenciaAgronomicaPanel relatorio={relatorio as Record<string, unknown>} variant="default" />
 
         <DecisaoAgronomicaVT input={decisaoInput} />
 
@@ -487,7 +535,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
             <div className="section-block__title">Mapa do Talhão</div>
             <div className="section-block__body" style={{ padding: 24 }}>
               {useRealMap ? (
-                <MapaTalhaoDynamic
+                <MapaTalhaoLazy
                   polygon={polygonForMap && polygonForMap.length >= 3 ? polygonForMap : undefined}
                   pontos={pontosForMap}
                   hideSectionTitle
@@ -497,7 +545,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                   mapa={{
                     viewBox: mapa.viewBox ?? '0 0 400 300',
                     path: mapa.path ?? undefined,
-                    pontos: (mapa.pontos ?? []).map((p: any, i: number) => ({
+                    pontos: (Array.isArray(mapa.pontos) ? mapa.pontos : []).map((p: any, i: number) => ({
                       x: p.x ?? 0,
                       y: p.y ?? 0,
                       index: p.index ?? i + 1,

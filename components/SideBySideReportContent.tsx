@@ -74,6 +74,40 @@ export type SideBySideReportData = {
     classe?: string;
     doseResumo?: string;
   }>;
+  /** Aplicações profissionais V2 (clima, bico, custo/ha, escopo A/B). */
+  applications?: Array<{
+    id?: string;
+    side?: string;
+    scope?: string;
+    point_ids?: string[];
+    date?: string;
+    daa?: number;
+    stage?: string;
+    type?: string;
+    responsible?: string;
+    climate?: {
+      temperature?: number;
+      humidity?: number;
+      wind?: number;
+      derivaRisco?: string;
+    };
+    applicationTech?: {
+      bico?: string;
+      vazao?: number;
+      pressao?: number;
+    };
+    products?: Array<{
+      nomeComercial?: string;
+      nomeAtivo?: string;
+      classe?: string;
+      dose?: number;
+      unidade?: string;
+      custoHa?: number;
+      linkedProtocolItemId?: string;
+    }>;
+  }>;
+  version?: string;
+  generated_at?: string;
   resumo?: {
     statusConcluida?: boolean;
     conclusaoCurta?: string;
@@ -82,6 +116,14 @@ export type SideBySideReportData = {
   };
   colheita?: Record<string, unknown> | null;
   custo?: Record<string, unknown> | null;
+  /** Preço da saca (R$) e rastreabilidade — export `economia`. */
+  economia?: Record<string, unknown> | null;
+  /** Narrativa por produto do ensaio — export `products_result`. */
+  products_result?: Array<Record<string, unknown>> | null;
+  /** Protocolo planejado por manejo (≠ `applications`). */
+  treatment_protocol?: Record<string, unknown> | null;
+  /** Legado / export: mesma informação que `treatment_protocol.sides` em versões antigas. */
+  treatments?: Array<Record<string, unknown>> | null;
   /** Estatística indicativa por critério (média/DP/CV% entre pontos) — preenchido quando o app enviar o bloco. */
   criteriosEstatistica?: Array<{
     criterio?: string;
@@ -116,14 +158,21 @@ type SideData = {
   };
   soilCompaction?: string;
   observations?: string[];
-  photos?: Array<{ caption?: string; url?: string; category?: string }>;
+  photos?: Array<{
+    caption?: string;
+    url?: string;
+    category?: string;
+    /** Hotspots opcionais (% da largura/altura da imagem, 0–100). */
+    hotspots?: Array<{ xPct: number; yPct: number; label?: string; detail?: string }>;
+  }>;
 };
 
 interface SideBySideReportContentProps {
   data: SideBySideReportData;
   reportId?: string;
+  shareToken?: string;
 }
 
-export default function SideBySideReportContent({ data, reportId }: SideBySideReportContentProps) {
-  return <RelatorioLadoALadoDashboard data={data} reportId={reportId} />;
+export default function SideBySideReportContent({ data, reportId, shareToken }: SideBySideReportContentProps) {
+  return <RelatorioLadoALadoDashboard data={data} reportId={reportId} shareToken={shareToken} />;
 }

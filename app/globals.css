@@ -458,6 +458,203 @@ body {
   color: var(--plantio-muted);
 }
 
+/* Trena proporcional (escala cm) + legenda + zoom */
+.relatorio-plantio .plantio-trena-pro-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.relatorio-plantio .plantio-trena-pro-title {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--plantio-text, #0f172a);
+  letter-spacing: -0.02em;
+}
+
+.relatorio-plantio .plantio-trena-pro-sub {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--plantio-muted, #64748b);
+  max-width: 52ch;
+}
+
+.relatorio-plantio .plantio-trena-zoom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  border: 1px solid var(--plantio-border, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.relatorio-plantio .plantio-trena-zoom-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--plantio-muted);
+}
+
+.relatorio-plantio .plantio-trena-zoom input[type='range'] {
+  width: 120px;
+  accent-color: #2d6a4f;
+}
+
+.relatorio-plantio .plantio-trena-zoom-val {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #1e293b;
+  min-width: 2.5rem;
+}
+
+.relatorio-plantio .plantio-trena-legend-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 8px;
+  border: 1px solid var(--plantio-border, #e2e8f0);
+}
+
+.relatorio-plantio .plantio-trena-legend-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.relatorio-plantio .plantio-trena-legend-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.relatorio-plantio .plantio-trena-legend-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.relatorio-plantio .plantio-trena-chip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.relatorio-plantio .plantio-trena-chip--ok {
+  background: #10b981;
+}
+
+.relatorio-plantio .plantio-trena-chip--dupla {
+  background: #fbbf24;
+}
+
+.relatorio-plantio .plantio-trena-chip--tripla {
+  background: #8b5cf6;
+}
+
+.relatorio-plantio .plantio-trena-chip--falha {
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+  background: #fecaca;
+  border: none;
+}
+
+.relatorio-plantio .plantio-trena-ideal-pill {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.relatorio-plantio .plantio-trena--proportional {
+  align-items: stretch;
+  padding-bottom: 10px;
+}
+
+.relatorio-plantio .plantio-trena-pro-track {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 0;
+  padding: 8px 4px 4px;
+  min-height: 52px;
+}
+
+.relatorio-plantio .plantio-trena-segment {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  min-width: 6px;
+}
+
+.relatorio-plantio .plantio-trena-segment-rail {
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #cbd5e1, #e2e8f0);
+  border-radius: 2px;
+  margin-bottom: 6px;
+}
+
+.relatorio-plantio .plantio-trena-segment-cm {
+  font-size: 0.62rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.relatorio-plantio .plantio-trena-ruler {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #94a3b8;
+  padding: 4px 8px 0;
+  border-top: 1px dashed #e2e8f0;
+  margin-top: 4px;
+}
+
+.relatorio-plantio .plantio-figure--linha-pro {
+  margin-bottom: 20px;
+  padding: 14px 14px 12px;
+  background: #fff;
+  border: 1px solid var(--plantio-border, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+}
+
 .relatorio-plantio .plantio-trena--mini .plantio-trena-bolinha {
   width: 8px;
   height: 8px;

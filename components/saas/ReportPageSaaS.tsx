@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
+import { postReportAnalytics } from '@/lib/report-analytics-client';
 import dynamic from 'next/dynamic';
 import HeaderInstitucionalVisitaTecnica from '@/components/visita/HeaderInstitucionalVisitaTecnica';
 import type { VisitaMapaEspacialPayload } from './VisitaMapaEspacialSaaS';
@@ -13,6 +14,13 @@ import StatisticsSection, { type EstatisticaItem } from './StatisticsSection';
 import ApplicationsTable, { type AplicacaoRow } from './ApplicationsTable';
 import ImageGallerySaaS, { type ImagemItem } from './ImageGallerySaaS';
 import ComparisonSection, { type ComparativoItem } from './ComparisonSection';
+import InteligenciaAgronomicaPanel from '@/components/InteligenciaAgronomicaPanel';
+import {
+  computeInteligenciaAgronomicaFromRelatorio,
+  mapInteligenciaToKpi,
+  normalizeInteligenciaPayload,
+  type IntelKpiDerived,
+} from '@/lib/inteligencia-agronomica';
 
 /** Retorna número válido ou null (evita NaN no UI). */
 function safeNum(v: unknown): number | null {
@@ -99,9 +107,13 @@ interface ReportPageSaaSProps {
   relatorioUuid?: string;
   /** Quando true, não exibe o header (evita duplicação em abas) */
   embedded?: boolean;
+  /** Token público — métricas ao usar PDF (impressão) e compartilhar. */
+  shareToken?: string;
+  /** Payload completo da visita — painel Inteligência agronómica (bloco `inteligencia_agronomica` + fallback TS). */
+  relatorioParaInteligencia?: Record<string, unknown>;
 }
 
-function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
+function buildAvaliacoesFromData(d: ReportPageSaaSData, intelKpi: IntelKpiDerived | null): AvaliacaoRow[] {
   if (d.avaliacoes?.length) return d.avaliacoes;
 
   const plant = d.plantabilidade;
@@ -118,7 +130,9 @@ function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
     (est?.perdaTotalPct != null ? safeNum(est.perdaTotalPct) : null) ??
     (est?.registros?.[0] != null ? safeNum((est.registros[0] as any).perdaTotalPct) : null);
   const iat = safeNum(
-    d.indiceAgronomicoTalhao?.valor ?? d.diagnosticoIntegrado?.spt ?? d.inteligenciaAgronomica?.score,
+    intelKpi?.score != null && Number.isFinite(intelKpi.score)
+      ? intelKpi.score
+      : d.indiceAgronomicoTalhao?.valor ?? d.diagnosticoIntegrado?.spt ?? d.inteligenciaAgronomica?.score,
   );
 
   let classificacao = 'Sem dado';
@@ -127,8 +141,18 @@ function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
       cv <= 10 ? 'Excelente' : cv <= 15 ? 'Bom' : cv <= 25 ? 'Moderado' : cv <= 35 ? 'Atenção' : 'Crítico';
   }
 
+  const statusFromIntel =
+    intelKpi != null
+      ? intelKpi.statusGeral === 'Crítico'
+        ? 'Crítico'
+        : intelKpi.statusGeral === 'Atenção'
+          ? 'Atenção'
+          : 'OK'
+      : null;
+
   const status =
-    cv != null
+    statusFromIntel ??
+    (cv != null
       ? classificacao === 'Excelente' || classificacao === 'Bom'
         ? 'OK'
         : classificacao === 'Atenção' || classificacao === 'Crítico'
@@ -138,7 +162,7 @@ function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
         ? 'Crítico'
         : d.inteligenciaAgronomica?.status === 'Atenção'
           ? 'Atenção'
-          : 'OK';
+          : 'OK');
 
   const fenologiaStr =
     (d.fenologia?.estadio && String(d.fenologia.estadio).trim()) ||
@@ -292,18 +316,41 @@ function classifFromEstande(ef: number | null, plm: number | null): 'Excelente' 
   return 'Moderado';
 }
 
-export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded }: ReportPageSaaSProps) {
+export default function ReportPageSaaS({
+  data,
+  reportId,
+  relatorioUuid,
+  embedded,
+  shareToken,
+  relatorioParaInteligencia,
+}: ReportPageSaaSProps) {
   const meta = data.meta ?? {};
   const prop = data.propriedade ?? {};
   const talhao = data.talhao ?? {};
 
+  const intelCanon =
+    relatorioParaInteligencia != null
+      ? computeInteligenciaAgronomicaFromRelatorio(relatorioParaInteligencia)
+      : data.inteligenciaAgronomica != null &&
+          (data.inteligenciaAgronomica.score != null || data.inteligenciaAgronomica.status != null)
+        ? normalizeInteligenciaPayload({
+            score: data.inteligenciaAgronomica.score,
+            situacao: data.inteligenciaAgronomica.status,
+          } as Record<string, unknown>)
+        : null;
+
+  const intelKpi: IntelKpiDerived | null = intelCanon != null ? mapInteligenciaToKpi(intelCanon) : null;
+
   const intel = data.inteligenciaAgronomica;
   const statusGeral: StatusGeral =
+    intelKpi?.statusGeral ??
     (data.indiceAgronomicoTalhao?.status as StatusGeral) ??
     (intel?.status === 'Atenção' ? 'Atenção' : intel?.status === 'Crítico' ? 'Crítico' : 'Saudável');
 
   const sptValor =
-    safeNum(data.diagnosticoIntegrado?.spt ?? data.indiceAgronomicoTalhao?.valor ?? intel?.score);
+    intelKpi?.score != null && Number.isFinite(intelKpi.score)
+      ? intelKpi.score
+      : safeNum(data.diagnosticoIntegrado?.spt ?? data.indiceAgronomicoTalhao?.valor ?? intel?.score);
   const cvNum =
     data.plantabilidade?.cvPercentual != null && Number.isFinite(Number(data.plantabilidade.cvPercentual))
       ? Number(data.plantabilidade.cvPercentual)
@@ -322,8 +369,11 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
       classificacao: classifFromScoreSpt(sptValor),
       tendencia: (sptValor != null && sptValor >= 70 ? 'up' : sptValor != null && sptValor < 50 ? 'down' : 'neutral') as 'up' | 'neutral' | 'down',
       tooltip:
-        sptValor != null && intel?.score != null && sptValor === intel.score && data.diagnosticoIntegrado?.spt == null && data.indiceAgronomicoTalhao?.valor == null
-          ? 'Score agregado da visita (inteligência agronômica, 0–100)'
+        intelKpi?.score != null &&
+        sptValor === intelKpi.score &&
+        data.diagnosticoIntegrado?.spt == null &&
+        data.indiceAgronomicoTalhao?.valor == null
+          ? 'Score unificado (inteligência agronômica, 0–100) — mesma fonte que o painel'
           : 'Índice de Saúde da Planta / talhão',
       historico: data.estande?.registros?.map((r) => ({
         data: r.data ?? '',
@@ -362,7 +412,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
     },
   ];
 
-  const avaliacoes = buildAvaliacoesFromData(data);
+  const avaliacoes = buildAvaliacoesFromData(data, intelKpi);
   const estatisticas = buildEstatisticas(data);
   const aplicacoes = buildAplicacoes(data);
   const imagens = buildImagens(data);
@@ -376,7 +426,26 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
 
   const handleExportPdf = useCallback(() => {
     window.print();
-  }, []);
+    const t = shareToken?.trim();
+    if (t) {
+      void postReportAnalytics({
+        shareToken: t,
+        eventType: 'download',
+        module: 'visita_tecnica_saas',
+      });
+    }
+  }, [shareToken]);
+
+  const handleCompartilharMetric = useCallback(() => {
+    const t = shareToken?.trim();
+    if (t) {
+      void postReportAnalytics({
+        shareToken: t,
+        eventType: 'share',
+        module: 'visita_tecnica_saas',
+      });
+    }
+  }, [shareToken]);
 
   const handleExportExcel = useCallback(() => {
     const csv = [
@@ -421,12 +490,17 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
             responsavel={meta.tecnico}
             status={statusGeral}
             onExportPdf={handleExportPdf}
-            onCompartilhar={() => {}}
+            onCompartilhar={handleCompartilharMetric}
           />
         </>
       )}
 
       <main className={`mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 ${embedded ? 'pt-4' : ''}`}>
+        {relatorioParaInteligencia != null && (
+          <div className="mb-6 print:break-inside-avoid">
+            <InteligenciaAgronomicaPanel relatorio={relatorioParaInteligencia} variant="default" />
+          </div>
+        )}
         <KpiCardsSection cards={kpiCards} />
         <EvaluationTable rows={avaliacoes} onExportCsv={handleExportCsv} />
         {estatisticas.length > 0 && <StatisticsSection items={estatisticas} />}

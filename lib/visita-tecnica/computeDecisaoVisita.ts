@@ -3,6 +3,8 @@
  * índice 0–100, dimensões e alertas a partir do payload (sem IA remota).
  */
 
+import { coerceVisitaObjectArray } from './coerceVisitaPayload';
+
 /** Subconjunto do payload usado pelo cálculo (evita dependência circular com componentes). */
 export interface VisitaTecnicaDecisaoInput {
   pragas?: Record<string, unknown>[];
@@ -139,7 +141,7 @@ function labelFromTone(t: DecisaoTone): string {
 }
 
 export function computeDecisaoVisita(relatorio: VisitaTecnicaDecisaoInput): DecisaoVisitaResult {
-  const pragas = (relatorio.pragas ?? []) as Record<string, unknown>[];
+  const pragas = coerceVisitaObjectArray(relatorio.pragas);
   const diag = (relatorio.diagnostico ?? {}) as Record<string, unknown>;
   const fen = (relatorio.fenologia ?? {}) as Record<string, unknown>;
   const pop =

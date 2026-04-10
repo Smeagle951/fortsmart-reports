@@ -1,13 +1,15 @@
 import React from 'react';
-import { Download, Share2, Layers } from 'lucide-react';
+import { Download, Share2 } from 'lucide-react';
 import { ResearchProReportCabecalho, ResearchProReportCore } from '../../../types/research-report';
 
 type Props = {
     data: ResearchProReportCabecalho;
     core: ResearchProReportCore;
+    onShare?: () => void | Promise<void>;
+    onExportPdf?: () => void | Promise<void>;
 };
 
-export default function HeaderExecutivo({ data, core }: Props) {
+export default function HeaderExecutivo({ data, core, onShare, onExportPdf }: Props) {
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             {/* Top Accent Bar */}
@@ -35,11 +37,19 @@ export default function HeaderExecutivo({ data, core }: Props) {
 
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2">
-                        <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                        <button
+                            type="button"
+                            onClick={() => void onShare?.()}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+                        >
                             <Share2 size={16} />
                             <span className="hidden sm:inline">Compartilhar</span>
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm">
+                        <button
+                            type="button"
+                            onClick={() => void onExportPdf?.()}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
+                        >
                             <Download size={16} />
                             <span>Baixar PDF</span>
                         </button>

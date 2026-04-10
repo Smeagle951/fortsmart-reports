@@ -17,6 +17,7 @@
     "@types/leaflet": "^1.9.21",
     "chart.js": "^4.5.1",
     "dotenv": "^17.3.1",
+    "framer-motion": "^12.38.0",
     "html2pdf.js": "^0.14.0",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
@@ -28,7 +29,7 @@
     "react-countup": "^6.5.3",
     "react-dom": "^18.2.0",
     "react-leaflet": "^5.0.0",
-    "recharts": "^3.7.0",
+    "recharts": "^3.8.1",
     "shp-write": "^0.3.2",
     "xlsx": "^0.18.5"
   },
