@@ -1,6 +1,10 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { insertReportViewEvent } from '@/lib/log-report-view-event';
-import { getRelatorioByShareToken, type RelatorioRow } from '@/lib/supabase';
+import {
+  getRelatorioByShareToken,
+  tokenLooksLikeRowIdUuid,
+  type RelatorioRow,
+} from '@/lib/supabase';
 import RelatorioContent from '@/components/RelatorioContent';
 import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitarioContent';
 import RelatorioResearchProContent from '@/components/research/RelatorioResearchProContent';
@@ -13,6 +17,7 @@ import { normalizeRelatorioVisitaTecnica } from '@/lib/normalize-relatorio-visit
 import PrintBar from '@/components/PrintBar';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import type { ResearchProReportPayload } from '@/types/research-report';
+import type { PayloadVisitaTecnica } from '@/types/payload-visita-tecnica';
 import { calcularEstatisticaFromAvaliacoes } from '@/lib/research-pro/anova-tukey';
 import { extractTalhaoChave, parseAiSnapshotFromRelatorio } from '@/lib/ai-intelligence-snapshot';
 import { buildAiTemporalViewerPayload } from '@/lib/inteligencia-temporal';
@@ -88,7 +93,7 @@ function ErroServidor({ mensagem, stack }: { mensagem: string; stack?: string })
   );
 }
 
-/** Rota pública /r/[token]: usa SERVICE_ROLE se configurado; senão anon. Só filtra por share_token (não por publicado). */
+/** Rota pública /r/[token]: share_token ou, se UUID, fallback por `relatorios.id` (links antigos / cópia errada do id). */
 export default async function RelatorioCompartilhadoPage(props: Props) {
   try {
     const resolvedParams = await props.params;
@@ -97,6 +102,9 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
 
   const debug = sp?.debug === '1' || sp?.debug === 'true';
   const debugPayload = sp?.debug === '2' || sp?.debug === 'payload';
+  /** Logs no servidor: `?debug=vt-flow` ou env `FORTSMART_VT_DEBUG=1` */
+  const vtFlowTrace =
+    sp?.debug === 'vt-flow' || sp?.debug === 'vtflow' || process.env.FORTSMART_VT_DEBUG === '1';
   console.log('[fortsmart-reports] /r/[token] token recebido:', token);
   if (debug) {
     return <div style={{ padding: 20, fontFamily: 'sans-serif' }}><h1>Token (roteamento OK)</h1><pre>{token}</pre></div>;
@@ -108,11 +116,20 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const supabaseAdmin = getSupabaseAdmin();
     if (supabaseAdmin) {
       try {
-        const { data, error } = await supabaseAdmin
+        const t = token.trim();
+        let { data, error } = await supabaseAdmin
           .from('relatorios')
           .select('*')
-          .eq('share_token', token)
+          .eq('share_token', t)
           .maybeSingle();
+        if (!data && !error && tokenLooksLikeRowIdUuid(t)) {
+          const byId = await supabaseAdmin.from('relatorios').select('*').eq('id', t).maybeSingle();
+          data = byId.data;
+          error = byId.error;
+          if (data) {
+            console.log('[fortsmart-reports] /r/[token] admin: resolvido por id (compat); prefira share_token na URL');
+          }
+        }
         console.log('[fortsmart-reports] /r/[token] admin query:', { error: error?.message ?? null, hasData: !!data, is_public: data?.is_public });
         if (error) {
           console.warn('[fortsmart-reports] /r/[token] admin error:', error.message);
@@ -222,7 +239,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
             <div><strong>hasTalhoes (array)</strong></div><div>{String(hasTalhoes)}</div>
             <div><strong>hasTalhao (objeto único)</strong></div><div>{String(hasTalhaoSingular)}</div>
             <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#64748b', marginTop: 4 }}>
-              Acima: objeto como veio do DB (após <code>sanitizeForRSC</code>). Visita técnica V1 costuma ter só <code>talhao</code> — <code>hasTalhoes</code> false é normal.
+              Acima: objeto como veio do DB (após <code>sanitizeForRSC</code>). Visita técnica V1 costuma ter só <code>talhao</code> — <code>hasTalhoes</code> false é normal antes do normalize.
             </div>
             {tipo === 'visita_tecnica' ? (
               <>
@@ -234,11 +251,22 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
                     : ''}
                 </div>
                 <div style={{ gridColumn: '1 / -1', fontSize: 11, color: '#64748b' }}>
-                  O componente <code>RelatorioVisitaTecnicaContent</code> recebe este objeto normalizado (talhao → talhoes[]).
+                  Após <code>normalizeRelatorioVisitaTecnica</code> + <code>sanitizeVisitaTecnicaPayload</code>:{' '}
+                  <code>talhoes[]</code> preenchido e <code>talhao</code> removido.
+                  {vtNormalized && 'talhao' in vtNormalized ? ' (aviso: talhao ainda presente no objeto)' : ''}
                 </div>
               </>
             ) : null}
-            <div><strong>topKeys</strong></div><div>{relatorio ? Object.keys(relatorio).slice(0, 25).join(', ') : '—'}</div>
+            <div><strong>topKeys (payload RSC — antes de normalize VT)</strong></div>
+            <div>{relatorio ? Object.keys(relatorio).slice(0, 25).join(', ') : '—'}</div>
+            {tipo === 'visita_tecnica' && vtNormalized ? (
+              <>
+                <div><strong>topKeys (após normalizeRelatorioVisitaTecnica)</strong></div>
+                <div>{Object.keys(vtNormalized).slice(0, 25).join(', ')}</div>
+                <div><strong>tem talhao na raiz após normalize?</strong></div>
+                <div>{String('talhao' in vtNormalized)}</div>
+              </>
+            ) : null}
           </div>
           <h2 style={{ fontSize: 14, marginTop: 16 }}>rawPayload (primeiros 2000 chars)</h2>
           <pre style={{ whiteSpace: 'pre-wrap', background: '#0b1020', color: '#d1d5db', padding: 12, borderRadius: 8, fontSize: 11 }}>
@@ -266,7 +294,9 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       tipo === 'plantio_multi' || tipoRelatorio === 'plantio_multi';
     const isPlantio =
       !isPlantioMulti && (tipo === 'plantio' || tipoRelatorio === 'plantio');
-    const isVisitaTecnica = tipo === 'visita_tecnica';
+    /** Alguns registros usam só `tipoRelatorio` (sem `tipo` no raiz). */
+    const isVisitaTecnica =
+      tipo === 'visita_tecnica' || tipoRelatorio === 'visita_tecnica';
     const hasTalhoes = Array.isArray(relatorio.talhoes) && (relatorio.talhoes as unknown[]).length > 0;
     const talhoesArray = Array.isArray(relatorio.talhoes) ? relatorio.talhoes : (relatorio.talhao != null && typeof relatorio.talhao === 'object' ? [relatorio.talhao] : []);
     const hasTalhoesValid = talhoesArray.length > 0 && talhoesArray.every((t: unknown) => t != null && typeof t === 'object');
@@ -385,9 +415,36 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       });
     }
 
+    let relatorioVisitaNormalizado: PayloadVisitaTecnica | null = null;
+    if (isVisitaTecnica) {
+      if (vtFlowTrace) {
+        console.log('[VT] ANTES normalize — keys talh*', {
+          stage: 'apos_sanitizeForRSC',
+          keysTalh: Object.keys(payloadSafe).filter((k) => k.toLowerCase().includes('talh')),
+          hasTalhaoRaiz: 'talhao' in payloadSafe,
+          talhoesIsArray: Array.isArray(payloadSafe.talhoes),
+          talhoesLen: Array.isArray(payloadSafe.talhoes) ? (payloadSafe.talhoes as unknown[]).length : 0,
+        });
+      }
+      relatorioVisitaNormalizado = normalizeRelatorioVisitaTecnica(
+        payloadSafe,
+      ) as PayloadVisitaTecnica;
+      if (vtFlowTrace) {
+        const p = relatorioVisitaNormalizado as Record<string, unknown>;
+        console.log('[VT] DEPOIS normalize+sanitize+ensure — keys talh*', {
+          stage: 'pronto_para_RelatorioVisitaTecnicaContent',
+          keysTalh: Object.keys(p).filter((k) => k.toLowerCase().includes('talh')),
+          hasTalhaoRaiz: 'talhao' in p,
+          talhoesIsArray: Array.isArray(p.talhoes),
+          talhoesLen: Array.isArray(p.talhoes) ? (p.talhoes as unknown[]).length : 0,
+        });
+      }
+    }
+
     return (
       <>
-        <PrintBar />
+        {/* Lado a lado: barra própria com Imprimir + PDF dentro do dashboard (evita duplicar botão) */}
+        {!isSideBySide && <PrintBar />}
         <article className={`relatorio ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''} ${isPlantioMulti ? 'relatorio--plantio-multi' : ''}`} style={isMonitoramento ? { minHeight: '100vh', background: '#F1F5F9' } : undefined}>
           {isMonitoramento ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de monitoramento">
@@ -429,9 +486,7 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
           ) : isVisitaTecnica ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de visita técnica">
               <RelatorioVisitaTecnicaContent
-                relatorio={
-                  normalizeRelatorioVisitaTecnica(payloadSafe) as import('@/components/RelatorioVisitaTecnicaContent').PayloadVisitaTecnica
-                }
+                relatorio={relatorioVisitaNormalizado!}
                 reportId={reportIdStr}
                 relatorioUuid={relatorioUuidStr}
                 shareToken={token}

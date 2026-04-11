@@ -36,13 +36,13 @@ function pinColor(severidade?: string): string {
 function PinAlfinete({ x, y, fill, index, onClick, onKey }: { x: number; y: number; fill: string; index?: number; onClick?: (e: React.MouseEvent) => void; onKey?: (e: React.KeyboardEvent) => void }) {
   const tipY = y;
   const headY = y - 14;
-  const r = 6;
+  const pinRadius = 6;
   const label = index != null ? `P${index}` : null;
   return (
     <g transform={`translate(${x}, ${y})`} style={{ cursor: 'pointer' }} role="button" aria-label={label || 'Ponto'} tabIndex={0} onClick={onClick} onKeyDown={onKey}>
       {/* Corpo do alfinete: triângulo da ponta até o “círculo” */}
       <path
-        d={`M 0 0 L -5 ${-10} L -${r} ${-12} A ${r} ${r} 0 1 1 ${r} ${-12} L 5 ${-10} Z`}
+        d={`M 0 0 L -5 ${-10} L -${pinRadius} ${-12} A ${pinRadius} ${pinRadius} 0 1 1 ${pinRadius} ${-12} L 5 ${-10} Z`}
         fill={fill}
         stroke="#fff"
         strokeWidth="1.5"
@@ -65,10 +65,24 @@ function PinAlfinete({ x, y, fill, index, onClick, onKey }: { x: number; y: numb
   );
 }
 
-export default function Mapa({ mapa, relatorioId, className = '' }: MapaProps) {
-  if (!mapa.viewBox && !mapa.path) return null;
+function viewBoxToString(v: unknown): string {
+  if (v == null) return '';
+  if (typeof v === 'string') return v.trim();
+  return String(v).trim();
+}
 
-  const viewBox = mapa.viewBox || '0 0 400 300';
+function pathToString(v: unknown): string {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  return String(v);
+}
+
+export default function Mapa({ mapa, relatorioId, className = '' }: MapaProps) {
+  const pathStr = pathToString(mapa.path);
+  const viewBoxRaw = viewBoxToString(mapa.viewBox);
+  if (!viewBoxRaw && !pathStr) return null;
+
+  const viewBox = viewBoxRaw || '0 0 400 300';
   const [selected, setSelected] = useState<MapaPoint | null>(null);
   const [overlayPos, setOverlayPos] = useState<{ left: number; top: number } | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -94,11 +108,11 @@ export default function Mapa({ mapa, relatorioId, className = '' }: MapaProps) {
         >
           {/* Background only; clicking background clears selection */}
           <rect width="100%" height="100%" fill="#f5f5f5" stroke="#e0e0e0" strokeWidth="1" onClick={() => setSelected(null)} />
-          {mapa.path ? (
-            <path d={mapa.path} fill="#e8f5e9" stroke="#2e7d32" strokeWidth="2" />
+          {pathStr ? (
+            <path d={pathStr} fill="#e8f5e9" stroke="#2e7d32" strokeWidth="2" />
           ) : null}
 
-          {mapa.pontos?.map((p, i) => (
+          {(Array.isArray(mapa.pontos) ? mapa.pontos : []).map((p, i) => (
             <PinAlfinete
               key={i}
               x={p.x}
@@ -187,7 +201,7 @@ export default function Mapa({ mapa, relatorioId, className = '' }: MapaProps) {
             </div>
           </div>
         )}
-        {!mapa.path && (
+        {!pathStr && (
           <div className="mapa-placeholder" title="Polígono do talhão não disponível">
             Polígono do talhão não disponível
           </div>

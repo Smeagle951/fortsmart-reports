@@ -85,6 +85,8 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
 
   // ─── V1 path reads (unchanged) ────────────────────────────────
   const talhao = (rawMerged.talhao ?? rawMerged.talhão) as UnknownRecord | undefined;
+  const coreRef = (rawMerged.core ?? {}) as UnknownRecord;
+  const coreTalhao = (coreRef.talhao as UnknownRecord | undefined) ?? {};
   const contextoSafra = (rawMerged.contextoSafra ?? rawMerged.contexto_safra) as UnknownRecord | undefined;
   const evolucaoCultura = (rawMerged.evolucaoCultura ?? rawMerged.evolucao_cultura) as UnknownRecord | undefined;
   const fenologia = (rawMerged.fenologia) as UnknownRecord | undefined;
@@ -92,11 +94,25 @@ export function normalizeRelatorioPlantio(raw: UnknownRecord): UnknownRecord {
   const plantabilidade = (rawMerged.plantabilidade) as UnknownRecord | undefined;
   const populacao = (rawMerged.populacao) as UnknownRecord | undefined;
 
+  const nomeTalhaoResolvido =
+    getStr(talhao?.nome) ??
+    getStr((talhao as UnknownRecord)?.nome_talhao) ??
+    getStr((talhao as UnknownRecord)?.nomeTalhao) ??
+    getStr((talhao as UnknownRecord)?.label) ??
+    getStr(coreTalhao.nome) ??
+    getStr(coreRef.talhaoNome) ??
+    getStr(coreRef.talhao_nome);
+  const idTalhaoResolvido =
+    getStr(talhao?.id) ??
+    getStr(coreTalhao.id) ??
+    getStr(coreRef.talhaoId) ??
+    getStr(coreRef.talhao_id);
+
   const talhaoNorm: UnknownRecord = {
     ...(typeof talhao === 'object' && talhao !== null ? talhao : {}),
-    id: getStr(talhao?.id),
-    nome: getStr(talhao?.nome),
-    cultura: getStr(talhao?.cultura),
+    id: idTalhaoResolvido,
+    nome: nomeTalhaoResolvido,
+    cultura: getStr(talhao?.cultura) ?? getStr(coreTalhao.cultura) ?? getStr(coreRef.culturaNome),
     area: getNum(talhao?.area),
     dataPlantio: getStr(talhao?.dataPlantio ?? (talhao as UnknownRecord)?.data_plantio),
     dataEmergencia: getStr(

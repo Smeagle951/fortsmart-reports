@@ -1,5 +1,5 @@
 import React from 'react';
-import { PayloadVisitaTecnica } from '@/components/RelatorioVisitaTecnicaContent';
+import type { PayloadVisitaTecnica } from '@/types/payload-visita-tecnica';
 import FortSmartLogo from '@/components/FortSmartLogo';
 
 interface HeaderVisitaTecnicaProps {

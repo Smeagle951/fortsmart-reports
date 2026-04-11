@@ -1,11 +1,14 @@
 import React from 'react';
-import { PayloadVisitaTecnica } from '@/components/RelatorioVisitaTecnicaContent';
+import { Droplets } from 'lucide-react';
+import type { PayloadVisitaTecnica } from '@/types/payload-visita-tecnica';
+import deck from '../visita-tecnica-deck.module.css';
 
 interface AplicacoesRealizadasVTProps {
     aplicacoes: NonNullable<PayloadVisitaTecnica['aplicacoes']>;
+    embedded?: boolean;
 }
 
-export default function AplicacoesRealizadasVT({ aplicacoes }: AplicacoesRealizadasVTProps) {
+export default function AplicacoesRealizadasVT({ aplicacoes, embedded }: AplicacoesRealizadasVTProps) {
     if (aplicacoes.length === 0) return null;
 
     type AplicacaoItem = NonNullable<PayloadVisitaTecnica['aplicacoes']>[number];
@@ -53,109 +56,83 @@ export default function AplicacoesRealizadasVT({ aplicacoes }: AplicacoesRealiza
         return String(s);
     };
 
-    const getBadgeClasse = (classeRaw?: string | null) => {
-        const classe = String(classeRaw ?? '—');
-        if (classe.toLowerCase().includes('herbicida')) return { bg: '#DCFCE7', color: '#166534' };
-        if (classe.toLowerCase().includes('inseticida')) return { bg: '#FEF3C7', color: '#B45309' };
-        if (classe.toLowerCase().includes('fungicida')) return { bg: '#DBEAFE', color: '#1D4ED8' };
-        return { bg: '#F1F5F9', color: '#475569' };
+    const getClasseChipClass = (classeRaw?: string | null): string => {
+        const classe = String(classeRaw ?? '—').toLowerCase();
+        if (classe.includes('herbicida')) return deck.classeChipHerbicida;
+        if (classe.includes('inseticida')) return deck.classeChipInseticida;
+        if (classe.includes('fungicida')) return deck.classeChipFungicida;
+        return deck.classeChip;
     };
 
-    return (
-        <section className="section-block relatorio-editorial">
-            <div className="section-block__title">Aplicações (Prescrições)</div>
-            <div className="section-block__body" style={{ padding: 20 }}>
+    const body = (
                 <div style={{ display: 'grid', gap: 12 }}>
                     {grupos.map((g) => {
                         const primeiro = g.produtos[0];
                         const dosePreview = primeiro?.dose != null
                             ? `${String(primeiro.dose)}${primeiro.unidade ? ` ${String(primeiro.unidade)}` : ''}`.trim()
                             : '—';
-                        const classePreview = getBadgeClasse(primeiro?.classe as any);
+                        const classePreviewClass = getClasseChipClass(primeiro?.classe as string | null);
                         return (
-                            <details
-                                key={g.chave}
-                                style={{
-                                    background: '#fff',
-                                    border: '1px solid #E2E8F0',
-                                    borderRadius: 12,
-                                    padding: '12px 14px',
-                                }}
-                            >
-                                <summary style={{ cursor: 'pointer', listStyle: 'none' }}>
+                            <details key={g.chave} className={deck.aplicacaoDetails}>
+                                <summary>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                                        <div style={{ display: 'grid', gap: 2 }}>
-                                            <div style={{ fontWeight: 950, color: '#0F172A', fontSize: 14 }}>
+                                        <div style={{ display: 'grid', gap: 6 }}>
+                                            <div className={deck.aplicacaoSummaryTitle}>
                                                 {String(g.tipoOperacao ?? g.tipo ?? '—')} · {String(g.data ?? '—')}
                                             </div>
                                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                                                <span style={{ padding: '4px 10px', borderRadius: 999, background: classePreview.bg, color: classePreview.color, fontSize: 12, fontWeight: 900 }}>
-                                                    {String(primeiro?.classe ?? '—')}
+                                                <span className={classePreviewClass}>{String(primeiro?.classe ?? '—')}</span>
+                                                <span className={deck.aplicacaoMeta}>
+                                                    Área {g.areaTrabalhoHa != null ? `${Number(g.areaTrabalhoHa).toFixed(2)} ha` : '—'}
                                                 </span>
-                                                <span style={{ fontSize: 12, color: '#64748B', fontWeight: 800 }}>
-                                                    Área: {g.areaTrabalhoHa != null ? `${Number(g.areaTrabalhoHa).toFixed(2)} ha` : '—'}
-                                                </span>
-                                                <span style={{ fontSize: 12, color: '#64748B', fontWeight: 800 }}>
-                                                    Status: {statusLabel(g.status)}
-                                                </span>
+                                                <span className={deck.aplicacaoMeta}>Status {statusLabel(g.status)}</span>
                                             </div>
                                         </div>
 
-                                        <div style={{ display: 'grid', gap: 3, textAlign: 'right' }}>
-                                            <div style={{ fontSize: 12, color: '#64748B', fontWeight: 900 }}>
-                                                Produtos: {g.produtos.length}
-                                            </div>
-                                            <div style={{ fontSize: 13, color: '#334155', fontWeight: 900 }}>
+                                        <div style={{ display: 'grid', gap: 4, textAlign: 'right' }}>
+                                            <div className={deck.aplicacaoMeta}>Produtos · {g.produtos.length}</div>
+                                            <div style={{ fontSize: '0.82rem', color: 'var(--vt-ink)', fontWeight: 800 }}>
                                                 {String(primeiro?.produto ?? '—')} · {dosePreview}
                                             </div>
                                         </div>
                                     </div>
                                 </summary>
 
-                                <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                                <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
                                     {g.produtos.map((a, idx) => {
-                                        const badgeClasse = getBadgeClasse(a.classe as any);
+                                        const chipClass = getClasseChipClass(a.classe as string | null);
                                         return (
-                                            <div
-                                                key={`${g.chave}_${idx}`}
-                                                style={{
-                                                    border: '1px solid #E2E8F0',
-                                                    borderRadius: 10,
-                                                    padding: '10px 12px',
-                                                    background: '#F8FAFC',
-                                                }}
-                                            >
+                                            <div key={`${g.chave}_${idx}`} className={deck.aplicacaoProdutoCard}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
                                                     <div style={{ minWidth: 240 }}>
-                                                        <div style={{ fontWeight: 950, color: '#0F172A', fontSize: 13 }}>
+                                                        <div style={{ fontWeight: 800, color: 'var(--vt-ink)', fontSize: '0.82rem' }}>
                                                             {String(a.produto ?? '—')}
                                                         </div>
-                                                        <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
-                                                            Dose: {a.dose != null ? `${String(a.dose)}${a.unidade ? ` ${String(a.unidade)}` : ''}`.trim() : '—'}
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--vt-muted)', marginTop: 4, fontWeight: 600 }}>
+                                                            Dose:{' '}
+                                                            {a.dose != null ? `${String(a.dose)}${a.unidade ? ` ${String(a.unidade)}` : ''}`.trim() : '—'}
                                                         </div>
-                                                        <div style={{ fontSize: 12, color: '#64748B' }}>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--vt-muted)', fontWeight: 600 }}>
                                                             Área: {a.areaTrabalhoHa != null ? `${Number(a.areaTrabalhoHa).toFixed(2)} ha` : '—'}
                                                         </div>
-                                                        <div style={{ marginTop: 6 }}>
-                                                            <span style={{ padding: '4px 10px', borderRadius: 999, background: badgeClasse.bg, color: badgeClasse.color, fontSize: 12, fontWeight: 900 }}>
-                                                                {String(a.classe ?? '—')}
-                                                            </span>
+                                                        <div style={{ marginTop: 8 }}>
+                                                            <span className={chipClass}>{String(a.classe ?? '—')}</span>
                                                         </div>
                                                     </div>
 
                                                     <div style={{ textAlign: 'right' }}>
                                                         {a.grupoQuimico && (
-                                                            <div style={{ fontSize: 12, color: '#64748B', fontWeight: 800 }}>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--vt-muted)', fontWeight: 700 }}>
                                                                 Grupo: {String(a.grupoQuimico)}
                                                             </div>
                                                         )}
                                                         {a.intervaloSeguranca && (
-                                                            <div style={{ fontSize: 12, color: '#64748B', fontWeight: 800, marginTop: 2 }}>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--vt-muted)', fontWeight: 700, marginTop: 4 }}>
                                                                 IS: {String(a.intervaloSeguranca)}
                                                             </div>
                                                         )}
                                                         {a.quantidade != null && (
-                                                            <div style={{ fontSize: 12, color: '#334155', fontWeight: 900, marginTop: 6 }}>
+                                                            <div style={{ fontSize: '0.78rem', color: 'var(--vt-ink)', fontWeight: 800, marginTop: 8 }}>
                                                                 Quant.: {Number(a.quantidade).toFixed(2)} {a.unidade ? String(a.unidade) : ''}
                                                             </div>
                                                         )}
@@ -163,7 +140,7 @@ export default function AplicacoesRealizadasVT({ aplicacoes }: AplicacoesRealiza
                                                 </div>
 
                                                 {a.observacoes && String(a.observacoes).trim().length > 0 && (
-                                                    <div style={{ marginTop: 8, fontSize: 12, color: '#475569', fontWeight: 800 }}>
+                                                    <div style={{ marginTop: 10, fontSize: '0.78rem', color: '#57534e', fontWeight: 700, lineHeight: 1.45 }}>
                                                         Obs.: {String(a.observacoes)}
                                                     </div>
                                                 )}
@@ -172,18 +149,10 @@ export default function AplicacoesRealizadasVT({ aplicacoes }: AplicacoesRealiza
                                     })}
 
                                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                                        {g.responsavel && (
-                                            <span style={{ fontSize: 12, color: '#475569', fontWeight: 900 }}>
-                                                Responsável: {String(g.responsavel)}
-                                            </span>
-                                        )}
-                                        {g.tipoOperacao && (
-                                            <span style={{ fontSize: 12, color: '#64748B', fontWeight: 900 }}>
-                                                Operação: {String(g.tipoOperacao)}
-                                            </span>
-                                        )}
+                                        {g.responsavel && <span className={deck.aplicacaoMeta}>Responsável · {String(g.responsavel)}</span>}
+                                        {g.tipoOperacao && <span className={deck.aplicacaoMeta}>Operação · {String(g.tipoOperacao)}</span>}
                                         {g.observacoes && String(g.observacoes).trim().length > 0 && (
-                                            <span style={{ fontSize: 12, color: '#475569', fontWeight: 800 }}>
+                                            <span style={{ fontSize: '0.75rem', color: '#57534e', fontWeight: 700 }}>
                                                 Observações gerais: {String(g.observacoes)}
                                             </span>
                                         )}
@@ -193,7 +162,22 @@ export default function AplicacoesRealizadasVT({ aplicacoes }: AplicacoesRealiza
                         );
                     })}
                 </div>
+    );
+
+    if (embedded) return body;
+
+    return (
+        <section className={`${deck.reportCard} ${deck.noBreakInside} pdf-keep-together`}>
+            <div className={deck.reportCardHead}>
+                <span className={deck.reportCardIcon} aria-hidden>
+                    <Droplets size={18} strokeWidth={2.25} />
+                </span>
+                <div style={{ minWidth: 0 }}>
+                    <span className={deck.reportCardKicker}>Operações</span>
+                    <h2 className={deck.reportCardTitle}>Aplicações e prescrições</h2>
+                </div>
             </div>
+            <div className={deck.reportCardBody}>{body}</div>
         </section>
     );
 }

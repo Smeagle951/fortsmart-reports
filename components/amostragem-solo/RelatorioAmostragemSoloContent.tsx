@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FeatureCollection, GeoJsonObject } from 'geojson';
+import type { Feature, FeatureCollection, GeoJsonObject } from 'geojson';
 import {
   computeCompactacaoAnalytics,
   computeSamplingQuality,
@@ -17,10 +17,13 @@ import {
 } from '@/lib/amostragem-solo/diagnostics';
 import { IC_LEGEND_ROWS } from '@/lib/amostragem-solo/mpa';
 import { type AmostragemObservacao, type AmostragemSoloPayload } from '@/lib/amostragem-solo/payload';
+import InteligenciaAgronomicaPanel from '@/components/InteligenciaAgronomicaPanel';
 
 type Props = {
   payload: Record<string, unknown>;
   shareToken: string;
+  /** Destaca e rola até a linha da tabela com este `sample_code` (query `?sample=`). */
+  highlightSampleCode?: string | null;
 };
 
 /** Paleta e tipografia — relatório técnico agronómico (dados reais do módulo; sem placeholders). */
@@ -54,6 +57,22 @@ function labelModoColeta(raw: unknown): string {
   return s || '';
 }
 
+/** Profundidades planejadas na campanha (`meta.desired_depths` do app, schema ≥ 2). */
+function formatMetaDesiredDepths(raw: unknown): string | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const parts: string[] = [];
+  for (const e of raw) {
+    if (!e || typeof e !== 'object') continue;
+    const o = e as Record<string, unknown>;
+    const top = o.top;
+    const bottom = o.bottom;
+    const t = typeof top === 'number' ? top : Number(top);
+    const b = typeof bottom === 'number' ? bottom : Number(bottom);
+    if (Number.isFinite(t) && Number.isFinite(b)) parts.push(`${t}–${b} cm`);
+  }
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 function colorForClass(c: string | undefined): string {
   switch (c) {
     case 'Crítica':
@@ -81,6 +100,16 @@ function colorForDepth(prof: string | null | undefined): string {
 
 function escapeTooltipText(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function fmtNumPt(n: unknown, decimals: number): string {
+  if (n == null || !Number.isFinite(Number(n))) return '—';
+  return Number(n).toFixed(decimals);
+}
+
+function coletaValidacaoRecord(meta: Record<string, unknown>): Record<string, unknown> | null {
+  const v = meta.coleta_validacao;
+  return v != null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
 }
 
 const CLASSE_PIOR_ORDEM = ['Crítica', 'Alta', 'Moderada', 'Baixa', 'Indefinido'] as const;
@@ -149,6 +178,42 @@ function featureMatchesTalhao(
   return candidates.includes(selectedTalhao);
 }
 
+/** Anéis exteriores [lat,lng][] para polyline (fecha o anel se o GeoJSON vier aberto). */
+function outerRingsAsLatLngArrays(ft: Feature): [number, number][][] {
+  const g = ft.geometry;
+  if (!g) return [];
+  if (g.type === 'Polygon') {
+    const outer = g.coordinates[0];
+    if (!Array.isArray(outer) || outer.length === 0) return [];
+    return [ringLngLatToLatLngClosed(outer)];
+  }
+  if (g.type === 'MultiPolygon') {
+    const out: [number, number][][] = [];
+    for (const poly of g.coordinates) {
+      const outer = poly[0];
+      if (!Array.isArray(outer) || outer.length === 0) continue;
+      out.push(ringLngLatToLatLngClosed(outer));
+    }
+    return out;
+  }
+  return [];
+}
+
+function ringLngLatToLatLngClosed(ring: number[][]): [number, number][] {
+  const pts: [number, number][] = [];
+  for (const c of ring) {
+    if (!Array.isArray(c) || c.length < 2) continue;
+    const lng = Number(c[0]);
+    const lat = Number(c[1]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) pts.push([lat, lng]);
+  }
+  if (pts.length < 2) return pts;
+  const [fLat, fLng] = pts[0];
+  const [lLat, lLng] = pts[pts.length - 1];
+  if (fLat !== lLat || fLng !== lLng) pts.push([fLat, fLng]);
+  return pts;
+}
+
 type AgTheme = typeof ag;
 
 function TabelaGruposPontos({
@@ -156,11 +221,13 @@ function TabelaGruposPontos({
   tabelaTemFoto,
   ag: theme,
   onOpen,
+  highlightSampleCode,
 }: {
   grupos: FieldPointGroup[];
   tabelaTemFoto: boolean;
   ag: AgTheme;
   onOpen: (g: FieldPointGroup) => void;
+  highlightSampleCode?: string | null;
 }) {
   return (
     <div
@@ -194,10 +261,23 @@ function TabelaGruposPontos({
                 ? layers.map((l) => l.profundidade ?? '—').join(' · ')
                 : `${layers.length} profundidades`;
             const thumbs = imagensDistintasDoPonto(layers);
+            const matchCode =
+              highlightSampleCode &&
+              layers.some((l) => l.sample_code === highlightSampleCode)
+                ? highlightSampleCode
+                : layers.find((l) => l.sample_code)?.sample_code ?? undefined;
             return (
               <tr
                 key={g.key}
-                style={{ borderTop: `1px solid ${theme.border}`, cursor: 'pointer' }}
+                data-sample-code={matchCode}
+                style={{
+                  borderTop: `1px solid ${theme.border}`,
+                  cursor: 'pointer',
+                  outline:
+                    highlightSampleCode && matchCode === highlightSampleCode
+                      ? `2px solid ${theme.forest}`
+                      : undefined,
+                }}
                 onClick={() => onOpen(g)}
               >
                 <td style={{ padding: 10, fontWeight: 600 }}>{numLabel}</td>
@@ -239,10 +319,29 @@ function TabelaGruposPontos({
   );
 }
 
-export default function RelatorioAmostragemSoloContent({ payload, shareToken }: Props) {
+export default function RelatorioAmostragemSoloContent({
+  payload,
+  shareToken,
+  highlightSampleCode,
+}: Props) {
   const p = payload as unknown as AmostragemSoloPayload;
   const meta = (p.meta ?? {}) as Record<string, unknown>;
   const observacoes = useMemo(() => (Array.isArray(p.observacoes) ? p.observacoes : []) as AmostragemObservacao[], [p.observacoes]);
+
+  useEffect(() => {
+    const code = highlightSampleCode?.trim();
+    if (!code) return;
+    const t = window.setTimeout(() => {
+      try {
+        const el = document.querySelector(`[data-sample-code="${CSS.escape(code)}"]`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch {
+        const el = document.querySelector(`[data-sample-code="${code}"]`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [highlightSampleCode]);
   const isolinesFc = useMemo((): FeatureCollection | null => {
     const prem = p.premium as Record<string, unknown> | undefined;
     const gj = prem?.isolines_geojson as FeatureCollection | undefined;
@@ -264,6 +363,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
   const heatRef = useRef<import('leaflet').Layer | null>(null);
   const isolineLayerRef = useRef<import('leaflet').Layer | null>(null);
   const talhoesLayerRef = useRef<import('leaflet').Layer | null>(null);
+  const talhaoOutlineLayerRef = useRef<import('leaflet').Layer | null>(null);
   const rotaLayerRef = useRef<import('leaflet').Layer | null>(null);
   const talhaoLabelLayerRef = useRef<import('leaflet').Layer | null>(null);
   const rotaDirectionLayerRef = useRef<import('leaflet').Layer | null>(null);
@@ -330,23 +430,47 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
     return pts;
   }, [observacoes]);
 
+  /** Contorno do(s) talhão(ões) no payload — enquadramento inicial quando ainda não há pontos. */
+  const talhaoOutlineLatLngPoints = useMemo((): [number, number][] => {
+    const pts: [number, number][] = [];
+    if (!talhoesFc?.features) return pts;
+    for (const f of talhoesFc.features) {
+      if (f.geometry?.type !== 'Polygon') continue;
+      const coords = (f.geometry as { type: 'Polygon'; coordinates: number[][][] }).coordinates;
+      const ring = coords[0];
+      if (!Array.isArray(ring)) continue;
+      for (const c of ring) {
+        if (!Array.isArray(c) || c.length < 2) continue;
+        const lng = Number(c[0]);
+        const lat = Number(c[1]);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) pts.push([lat, lng]);
+      }
+    }
+    return pts;
+  }, [talhoesFc]);
+
+  const mapViewLatLngPoints = useMemo((): [number, number][] => {
+    if (obsLatLngPoints.length > 0) return obsLatLngPoints;
+    return talhaoOutlineLatLngPoints;
+  }, [obsLatLngPoints, talhaoOutlineLatLngPoints]);
+
   const centerLat = useMemo(() => {
-    if (obsLatLngPoints.length === 0) return -14.235;
+    if (mapViewLatLngPoints.length === 0) return -14.235;
     let s = 0;
-    for (const [lat] of obsLatLngPoints) s += lat;
-    return s / obsLatLngPoints.length;
-  }, [obsLatLngPoints]);
+    for (const [lat] of mapViewLatLngPoints) s += lat;
+    return s / mapViewLatLngPoints.length;
+  }, [mapViewLatLngPoints]);
 
   const centerLng = useMemo(() => {
-    if (obsLatLngPoints.length === 0) return -51.9253;
+    if (mapViewLatLngPoints.length === 0) return -51.9253;
     let s = 0;
-    for (const [, lng] of obsLatLngPoints) s += lng;
-    return s / obsLatLngPoints.length;
-  }, [obsLatLngPoints]);
+    for (const [, lng] of mapViewLatLngPoints) s += lng;
+    return s / mapViewLatLngPoints.length;
+  }, [mapViewLatLngPoints]);
 
   const initialZoom = useMemo(() => {
-    return obsLatLngPoints.length > 0 ? 14 : 4;
-  }, [obsLatLngPoints]);
+    return mapViewLatLngPoints.length > 0 ? 14 : 4;
+  }, [mapViewLatLngPoints]);
 
   const isLegacyPayload = !p.schemaVersion || Number(p.schemaVersion) < 2;
 
@@ -444,8 +568,8 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       cluster.addTo(map);
       clusterRef.current = cluster;
 
-      if (obsLatLngPoints.length > 0) {
-        map.fitBounds(obsLatLngPoints, { padding: [40, 40], maxZoom: 17 });
+      if (mapViewLatLngPoints.length > 0) {
+        map.fitBounds(mapViewLatLngPoints, { padding: [40, 40], maxZoom: 17 });
       }
     })();
 
@@ -457,11 +581,12 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       heatRef.current = null;
       isolineLayerRef.current = null;
       talhoesLayerRef.current = null;
+      talhaoOutlineLayerRef.current = null;
       rotaLayerRef.current = null;
       talhaoLabelLayerRef.current = null;
       rotaDirectionLayerRef.current = null;
     };
-  }, [centerLat, centerLng, initialZoom, obsLatLngPoints]);
+  }, [centerLat, centerLng, initialZoom, mapViewLatLngPoints]);
 
   useEffect(() => {
     const map = mapInstance.current;
@@ -479,6 +604,10 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
       if (talhoesLayerRef.current) {
         map.removeLayer(talhoesLayerRef.current);
         talhoesLayerRef.current = null;
+      }
+      if (talhaoOutlineLayerRef.current) {
+        map.removeLayer(talhaoOutlineLayerRef.current);
+        talhaoOutlineLayerRef.current = null;
       }
       if (rotaLayerRef.current) {
         map.removeLayer(rotaLayerRef.current);
@@ -520,6 +649,25 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         });
         talhoesLayer.addTo(map);
         talhoesLayerRef.current = talhoesLayer;
+
+        const outlineGroup = L.layerGroup();
+        for (const ft of simplifiedTalhoesFc.features) {
+          for (const ring of outerRingsAsLatLngArrays(ft as Feature)) {
+            if (ring.length < 2) continue;
+            outlineGroup.addLayer(
+              L.polyline(ring, {
+                color: '#22c55e',
+                weight: 4,
+                opacity: 0.98,
+                lineJoin: 'round',
+                lineCap: 'round',
+                interactive: false,
+              }),
+            );
+          }
+        }
+        outlineGroup.addTo(map);
+        talhaoOutlineLayerRef.current = outlineGroup;
 
         if (showTalhaoLabels) {
           const labels = L.layerGroup();
@@ -727,6 +875,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
   const nomeCampanha = (meta.campaignName as string) || '';
   const nomeFazenda = (meta.fazenda_nome as string) || '';
   const talhoesTexto = talhoesOptions.map((t) => t.nome ?? t.id).join(' · ');
+  const profundidadesPlanejadas = formatMetaDesiredDepths(meta.desired_depths);
 
   return (
     <div
@@ -792,7 +941,8 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
               meta.tipo ||
               meta.fazenda_nome ||
               meta.empresa_id ||
-              meta.usuario_coleta_id
+              meta.usuario_coleta_id ||
+              profundidadesPlanejadas
           ) && (
             <details style={{ marginTop: 12, fontSize: 13, opacity: 0.94, maxWidth: 640 }}>
               <summary style={{ cursor: 'pointer', userSelect: 'none', fontWeight: 600 }}>
@@ -828,6 +978,11 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
                 {meta.modo_coleta ? (
                   <div>
                     <strong>Modo de coleta:</strong> {labelModoColeta(meta.modo_coleta)}
+                  </div>
+                ) : null}
+                {profundidadesPlanejadas ? (
+                  <div>
+                    <strong>Profundidades planejadas (campanha):</strong> {profundidadesPlanejadas}
                   </div>
                 ) : null}
                 {meta.tipo_layout ? (
@@ -920,6 +1075,13 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
         </div>
       </header>
 
+      <div style={{ margin: '12px 22px 0' }}>
+        <InteligenciaAgronomicaPanel
+          relatorio={{ ...payload, tipo: 'amostragem_solo' }}
+          variant="default"
+        />
+      </div>
+
       {isLegacyPayload ? (
         <div
           style={{
@@ -937,6 +1099,130 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
           talhão) podem estar incompletos ou inferidos dos pontos. Publique novamente pelo app atualizado para snapshot
           completo na campanha.
         </div>
+      ) : null}
+
+      {Boolean(meta.compliance_mode) ? (
+        <section
+          style={{
+            margin: '12px 22px 0',
+            padding: '16px 18px',
+            borderRadius: 4,
+            background: ag.card,
+            border: `1px solid ${ag.border}`,
+            boxShadow: '0 4px 18px rgba(28,25,23,0.06)',
+          }}
+        >
+          <h2 style={{ margin: 0, fontFamily: ag.fontTitle, fontSize: '1.1rem', color: ag.forest }}>
+            Metodologia de amostragem (compliance)
+          </h2>
+          <p style={{ margin: '10px 0 0', fontSize: 13, color: ag.inkMuted, lineHeight: 1.55 }}>
+            Levantamento georreferenciado com registro de precisão do GPS, evidência fotográfica por ponto de campo e
+            identificação única por profundidade. Cada camada planejada é associada a um código de amostra imutável após a
+            coleta; o QR codifica o link público deste relatório quando disponível após publicação.
+          </p>
+          <ul style={{ margin: '10px 0 0', paddingLeft: 18, fontSize: 13, color: ag.ink, lineHeight: 1.55 }}>
+            <li>
+              <strong>Método declarado:</strong> {String(meta.sampling_method ?? '—')}
+            </li>
+            <li>
+              <strong>Pontos mínimos exigidos:</strong> {String(meta.min_points ?? '—')}
+            </li>
+            <li>
+              <strong>Distância mínima entre pontos:</strong>{' '}
+              {meta.min_distance_m != null ? `${String(meta.min_distance_m)} m` : '—'}
+            </li>
+            <li>
+              <strong>Precisão GPS máxima aceita:</strong>{' '}
+              {meta.max_gps_accuracy_m != null ? `${String(meta.max_gps_accuracy_m)} m` : '—'}
+            </li>
+            <li>
+              <strong>Subamostras por ponto (planejado):</strong> {String(meta.subsamples_per_point ?? 1)}
+            </li>
+            {meta.soil_moisture_condition ? (
+              <li>
+                <strong>Condição de umidade do solo:</strong> {String(meta.soil_moisture_condition)}
+              </li>
+            ) : null}
+            {profundidadesPlanejadas ? (
+              <li>
+                <strong>Profundidades planejadas:</strong> {profundidadesPlanejadas}
+              </li>
+            ) : null}
+          </ul>
+        </section>
+      ) : null}
+
+      {Boolean(meta.compliance_mode) ? (
+        <section
+          style={{
+            margin: '12px 22px 0',
+            padding: '16px 18px',
+            borderRadius: 4,
+            background: ag.card,
+            border: `1px solid ${ag.border}`,
+            boxShadow: '0 4px 18px rgba(28,25,23,0.06)',
+          }}
+        >
+          <h2 style={{ margin: 0, fontFamily: ag.fontTitle, fontSize: '1.1rem', color: ag.forest }}>
+            Validação da coleta
+          </h2>
+          <p style={{ margin: '10px 0 0', fontSize: 13, color: ag.inkMuted, lineHeight: 1.55 }}>
+            Indicadores calculados a partir dos pontos publicados e do polígono do talhão (quando disponível). Úteis para
+            auditoria e revisão da distribuição espacial da amostragem.
+          </p>
+          {(() => {
+            const cv = coletaValidacaoRecord(meta);
+            if (!cv) {
+              return (
+                <p style={{ margin: '10px 0 0', fontSize: 13, color: ag.inkMuted }}>
+                  Publique o relatório novamente com o app atualizado para incluir estas métricas no payload.
+                </p>
+              );
+            }
+            return (
+              <ul style={{ margin: '10px 0 0', paddingLeft: 18, fontSize: 13, color: ag.ink, lineHeight: 1.55 }}>
+                <li>
+                  <strong>Pontos (total):</strong> {String(cv.pontos_total ?? '—')}
+                </li>
+                <li>
+                  <strong>GPS válido / inválido (critério de precisão):</strong>{' '}
+                  {cv.pontos_gps_valido != null && cv.pontos_gps_invalido != null
+                    ? `${String(cv.pontos_gps_valido)} / ${String(cv.pontos_gps_invalido)}`
+                    : '—'}
+                </li>
+                <li>
+                  <strong>Precisão GPS média:</strong>{' '}
+                  {fmtNumPt(cv.precisao_gps_media_m, 1) !== '—' ? `${fmtNumPt(cv.precisao_gps_media_m, 1)} m` : '—'}
+                </li>
+                <li>
+                  <strong>Distância média ao vizinho mais próximo:</strong>{' '}
+                  {fmtNumPt(cv.distancia_media_vizinho_m, 1) !== '—'
+                    ? `${fmtNumPt(cv.distancia_media_vizinho_m, 1)} m`
+                    : '—'}
+                </li>
+                <li>
+                  <strong>Cobertura da área (envoltória vs talhão):</strong>{' '}
+                  {fmtNumPt(cv.cobertura_area_pct, 1) !== '—' ? `${fmtNumPt(cv.cobertura_area_pct, 1)} %` : '—'}
+                </li>
+                {cv.area_talhao_ha != null && Number.isFinite(Number(cv.area_talhao_ha)) ? (
+                  <li>
+                    <strong>Área do talhão (polígono):</strong> {fmtNumPt(cv.area_talhao_ha, 2)} ha
+                  </li>
+                ) : null}
+                {cv.area_envoltoria_pontos_ha != null && Number.isFinite(Number(cv.area_envoltoria_pontos_ha)) ? (
+                  <li>
+                    <strong>Área envoltória dos pontos:</strong> {fmtNumPt(cv.area_envoltoria_pontos_ha, 2)} ha
+                  </li>
+                ) : null}
+                {cv.criterio_precisao_max_m != null && Number.isFinite(Number(cv.criterio_precisao_max_m)) ? (
+                  <li>
+                    <strong>Critério de precisão máx. (campanha):</strong> {fmtNumPt(cv.criterio_precisao_max_m, 1)} m
+                  </li>
+                ) : null}
+              </ul>
+            );
+          })()}
+        </section>
       ) : null}
 
       <section
@@ -1341,6 +1627,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
                       tabelaTemFoto={tabelaTemFoto}
                       ag={ag}
                       onOpen={(g) => setSelectedGroup(g)}
+                      highlightSampleCode={highlightSampleCode}
                     />
                   </div>
                 </details>
@@ -1353,6 +1640,7 @@ export default function RelatorioAmostragemSoloContent({ payload, shareToken }: 
             tabelaTemFoto={tabelaTemFoto}
             ag={ag}
             onOpen={(g) => setSelectedGroup(g)}
+            highlightSampleCode={highlightSampleCode}
           />
         )}
       </section>

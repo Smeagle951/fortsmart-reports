@@ -41,18 +41,30 @@ export default function HeaderSection({
 }: HeaderSectionProps) {
   const [copied, setCopied] = useState(false);
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: `Relatório Agronômico - ${talhao}`,
-        url: window.location.href,
-        text: `Relatório ${talhao} - ${cultura}`,
-      }).catch(() => onCompartilhar?.());
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      onCompartilhar?.();
+  const handleShare = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    try {
+      if (navigator.share && url) {
+        await navigator.share({
+          title: `Relatório Agronômico - ${talhao}`,
+          url,
+          text: `Relatório ${talhao} - ${cultura}`,
+        });
+        onCompartilhar?.();
+        return;
+      }
+    } catch {
+      /* cancelado ou indisponível */
+    }
+    try {
+      if (url && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        onCompartilhar?.();
+      }
+    } catch {
+      /* ignore */
     }
   };
 

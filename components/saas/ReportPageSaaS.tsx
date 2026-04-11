@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
+import { postReportAnalytics } from '@/lib/report-analytics-client';
 import dynamic from 'next/dynamic';
 import HeaderInstitucionalVisitaTecnica from '@/components/visita/HeaderInstitucionalVisitaTecnica';
 import type { VisitaMapaEspacialPayload } from './VisitaMapaEspacialSaaS';
@@ -99,6 +100,8 @@ interface ReportPageSaaSProps {
   relatorioUuid?: string;
   /** Quando true, não exibe o header (evita duplicação em abas) */
   embedded?: boolean;
+  /** Token público — métricas ao usar PDF (impressão) e compartilhar. */
+  shareToken?: string;
 }
 
 function buildAvaliacoesFromData(d: ReportPageSaaSData): AvaliacaoRow[] {
@@ -292,7 +295,7 @@ function classifFromEstande(ef: number | null, plm: number | null): 'Excelente' 
   return 'Moderado';
 }
 
-export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded }: ReportPageSaaSProps) {
+export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded, shareToken }: ReportPageSaaSProps) {
   const meta = data.meta ?? {};
   const prop = data.propriedade ?? {};
   const talhao = data.talhao ?? {};
@@ -376,7 +379,26 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
 
   const handleExportPdf = useCallback(() => {
     window.print();
-  }, []);
+    const t = shareToken?.trim();
+    if (t) {
+      void postReportAnalytics({
+        shareToken: t,
+        eventType: 'download',
+        module: 'visita_tecnica_saas',
+      });
+    }
+  }, [shareToken]);
+
+  const handleCompartilharMetric = useCallback(() => {
+    const t = shareToken?.trim();
+    if (t) {
+      void postReportAnalytics({
+        shareToken: t,
+        eventType: 'share',
+        module: 'visita_tecnica_saas',
+      });
+    }
+  }, [shareToken]);
 
   const handleExportExcel = useCallback(() => {
     const csv = [
@@ -421,7 +443,7 @@ export default function ReportPageSaaS({ data, reportId, relatorioUuid, embedded
             responsavel={meta.tecnico}
             status={statusGeral}
             onExportPdf={handleExportPdf}
-            onCompartilhar={() => {}}
+            onCompartilhar={handleCompartilharMetric}
           />
         </>
       )}

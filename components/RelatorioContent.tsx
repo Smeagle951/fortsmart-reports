@@ -31,9 +31,11 @@ interface RelatorioContentProps {
   relatorio: RelatorioJson;
   reportId?: string;
   relatorioUuid?: string;
+  /** Token `/r/[token]` para métricas de partilha/impressão no layout SaaS. */
+  shareToken?: string;
 }
 
-export default function RelatorioContent({ relatorio, reportId, relatorioUuid }: RelatorioContentProps) {
+export default function RelatorioContent({ relatorio, reportId, relatorioUuid, shareToken }: RelatorioContentProps) {
   const meta = relatorio.meta || {};
   const prop = relatorio.propriedade || {};
   const talhao = relatorio.talhao || {};
@@ -194,7 +196,7 @@ export default function RelatorioContent({ relatorio, reportId, relatorioUuid }:
       })(),
     };
 
-    return <ReportPageSaaS data={saasData} reportId={reportId} relatorioUuid={relatorioUuid} />;
+    return <ReportPageSaaS data={saasData} reportId={reportId} relatorioUuid={relatorioUuid} shareToken={shareToken} />;
   }
 
   return (

@@ -4,6 +4,11 @@
  * um objeto flat compatível com RelatorioVisitaTecnicaContent.
  */
 
+import {
+  ensureVisitaTecnicaRootTalhoesOnly,
+  sanitizeVisitaTecnicaPayload,
+} from '@/lib/visita-tecnica/coerceVisitaPayload';
+
 type UnknownRecord = Record<string, unknown>;
 
 export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownRecord {
@@ -16,7 +21,11 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
     const mapaV2 = (raw.mapa ?? {}) as UnknownRecord;
 
     const isV2 = Object.keys(core).length > 0 || Object.keys(modVT).length > 0;
-    if (!isV2) return raw; // V1 passthrough — sem modificação
+
+    // V1 flat: sanitize migra talhao → talhoes[]; ensure remove qualquer resíduo na raiz
+    if (!isV2) {
+        return ensureVisitaTecnicaRootTalhoesOnly(sanitizeVisitaTecnicaPayload({ ...raw }));
+    }
 
     // modulos.visitaTecnica sub-objects
     const evolFeno = (modVT.evolucaoFenologica ?? {}) as UnknownRecord;
@@ -55,17 +64,32 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
         data: img.data,
     }));
 
-    return {
-        // Preserve all raw V2 fields
-        ...raw,
+    const normalizedV2 = { ...raw };
+
+    const talhoesArr = Array.isArray(normalizedV2.talhoes) ? (normalizedV2.talhoes as unknown[]) : [];
+    if (talhoesArr.length === 0 && normalizedV2.talhao) {
+        talhoesArr.push(normalizedV2.talhao);
+    }
+    const talhoesFiltered = talhoesArr.filter(
+        (x): x is UnknownRecord =>
+            x != null && typeof x === 'object' && !Array.isArray(x),
+    );
+    const firstTalhaoV2 = (talhoesFiltered[0] ?? {}) as UnknownRecord;
+
+    // Não espalhar `talhao` no merged (evita { ...raw, ... } reintroduzir legado antes do sanitize)
+    const { talhao: _omitTalhaoSingularV2, ...v2BaseSemTalhaoRaiz } = normalizedV2;
+
+    const merged: UnknownRecord = {
+        ...v2BaseSemTalhaoRaiz,
+        talhoes: talhoesFiltered,
 
         // ── meta fields ──
-        meta: raw.meta ?? {
+        meta: normalizedV2.meta ?? {
             id: core.reportId,
             dataGeracao: core.createdAt ?? core.publishedAt,
             tecnico: (core.generatedBy as UnknownRecord)?.nome,
             tecnicoCrea: (core.generatedBy as UnknownRecord)?.crea,
-            safra: (raw.talhao as UnknownRecord)?.safra ?? (raw.contextoSafra as UnknownRecord)?.safra,
+            safra: firstTalhaoV2.safra ?? (normalizedV2.contextoSafra as UnknownRecord)?.safra,
             versao: core.version ?? 2,
             status: core.status ?? 'published',
         },
@@ -138,4 +162,6 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
             itens: Array.isArray(indicadores.itemsIAT) ? indicadores.itemsIAT : [],
         } : undefined),
     };
+
+    return ensureVisitaTecnicaRootTalhoesOnly(sanitizeVisitaTecnicaPayload(merged as UnknownRecord));
 }

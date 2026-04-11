@@ -1,97 +1,66 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
-import dynamic from 'next/dynamic';
+import {
+  AlertTriangle,
+  Bug,
+  ClipboardCheck,
+  CloudSun,
+  Droplets,
+  Home,
+  Leaf,
+  MapPinned,
+  Sprout,
+} from 'lucide-react';
 import FortSmartLogo from '@/components/FortSmartLogo';
 import ModalImagem from '@/components/ModalImagem';
 import Mapa from '@/components/Mapa';
 import { formatDate } from '@/utils/format';
 
+import { postReportAnalytics } from '@/lib/report-analytics-client';
+import { coerceVisitaObjectArray } from '@/lib/visita-tecnica/coerceVisitaPayload';
+import InteligenciaAgronomicaPanel from '@/components/InteligenciaAgronomicaPanel';
 import TabelaTecnicaCampos from './visita_tecnica/TabelaTecnicaCampos';
 import OcorrenciasPragasVT from './visita_tecnica/sections/OcorrenciasPragasVT';
-import InteligenciaEstrategicaVisitaVT, {
-  labelMetodoAmostragem,
-  labelCiclo,
-} from './visita_tecnica/sections/InteligenciaEstrategicaVisitaVT';
+import InteligenciaEstrategicaVisitaVT from './visita_tecnica/sections/InteligenciaEstrategicaVisitaVT';
+import { labelMetodoAmostragem, labelCiclo } from '@/lib/visita-tecnica/label-utils';
 import DiagnosticoEPlanoAcao from './visita_tecnica/sections/DiagnosticoEPlanoAcao';
 import DecisaoAgronomicaVT from './visita_tecnica/sections/DecisaoAgronomicaVT';
 import AplicacoesRealizadasVT from './visita_tecnica/sections/AplicacoesRealizadasVT';
 import FotografiasEAutoriaVT from './visita_tecnica/sections/FotografiasEAutoriaVT';
+import MapaTalhaoClientMount from './visita_tecnica/MapaTalhaoClientMount';
+import {
+  VtChecklistBlock,
+  VtCondicoesMomentBlock,
+  VtDeckSlide,
+  VtDesviosBlock,
+  VtPontosGeorefTable,
+} from './visita_tecnica/VisitaTecnicaDeckBlocks';
+import deck from './visita_tecnica/visita-tecnica-deck.module.css';
+import type { PayloadVisitaTecnica } from '@/types/payload-visita-tecnica';
 
-const MapaTalhaoDynamic = dynamic(() => import('@/components/MapaTalhaoDynamic'), { ssr: false });
-
-export type PayloadVisitaTecnica = Record<string, unknown> & {
-  tipo?: string;
-  meta?: Record<string, unknown>;
-  propriedade?: Record<string, unknown>;
-  talhao?: Record<string, unknown>;
-  contextoSafra?: Record<string, unknown>;
-  populacao?: Record<string, unknown>;
-  fazenda?: string;
-  safra?: string;
-  data?: string;
-  tecnico?: string;
-  aplicacoes?: Array<{
-    tipo?: string;
-    data?: string;
-    produto?: string;
-    dose?: string;
-    unidade?: string;
-    classe?: string;
-    status?: string;
-    alvo?: string;
-    talhaoId?: string;
-    talhaoNome?: string;
-    aplicacaoId?: string;
-    responsavel?: string;
-    tipoOperacao?: string;
-    areaTrabalhoHa?: number;
-    volumeLHa?: number;
-    quantidade?: number;
-    quantidadePorTanque?: number;
-    grupoQuimico?: string;
-    intervaloSeguranca?: string;
-    custoUnitario?: number;
-    custoPorHa?: number;
-    custoTotal?: number;
-    observacoes?: string;
-  }>;
-  diagnostico?: Record<string, unknown>;
-  planoAcao?: {
-    objetivoManejo?: string;
-    acoes?: Array<{
-      prioridade?: string;
-      acao?: string;
-      prazo?: string;
-      produto?: string;
-      dose?: string;
-      momento?: string;
-      objetivoTecnico?: string;
-    }>;
-  };
-  conclusao?: string;
-  pragas?: Record<string, unknown>[];
-  condicoes?: Record<string, unknown>;
-  fenologia?: Record<string, unknown>;
-  mapa?: Record<string, unknown>;
-  imagens?: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
-  assinaturaTecnica?: Record<string, unknown>;
-  consultoria?: { nome?: string };
-  /** Bloco gerado pelo app FortSmart (inteligência estratégica) */
-  inteligencia_estrategica?: Record<string, unknown>;
-  produtividade?: Record<string, unknown> | null;
-};
+export type { PayloadVisitaTecnica } from '@/types/payload-visita-tecnica';
 
 interface RelatorioVisitaTecnicaContentProps {
   relatorio: PayloadVisitaTecnica;
   reportId?: string;
   relatorioUuid?: string;
+  /** Token da rota `/r/[token]` — métricas `download` / `share` em `ai_report_events`. */
+  shareToken?: string;
 }
 
-export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, relatorioUuid }: RelatorioVisitaTecnicaContentProps) {
+export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, relatorioUuid, shareToken }: RelatorioVisitaTecnicaContentProps) {
   const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? (relatorio.meta as Record<string, unknown>) : {};
   const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? (relatorio.propriedade as Record<string, unknown>) : {};
-  const talhao = (relatorio.talhao != null && typeof relatorio.talhao === 'object') ? (relatorio.talhao as Record<string, unknown>) : {};
+  const talhoesList = Array.isArray((relatorio as Record<string, unknown>).talhoes)
+    ? ((relatorio as Record<string, unknown>).talhoes as unknown[])
+    : [];
+  const primeiroTalhao =
+    talhoesList[0] != null && typeof talhoesList[0] === 'object' && !Array.isArray(talhoesList[0])
+      ? (talhoesList[0] as Record<string, unknown>)
+      : {};
+  /** Dados do primeiro talhão vêm só de `talhoes[0]` (a rota /r normaliza e remove `talhao` na raiz). */
+  const talhao = primeiroTalhao;
   const contextoSafra = (relatorio.contextoSafra != null && typeof relatorio.contextoSafra === 'object') ? (relatorio.contextoSafra as Record<string, unknown>) : undefined;
   const populacao = (relatorio.populacao != null && typeof relatorio.populacao === 'object') ? (relatorio.populacao as Record<string, unknown>) : undefined;
   const assinatura = (relatorio.assinaturaTecnica != null && typeof relatorio.assinaturaTecnica === 'object') ? (relatorio.assinaturaTecnica as Record<string, unknown>) : undefined;
@@ -134,7 +103,9 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const diagnostico = relatorio.diagnostico as Record<string, unknown> | undefined;
   const planoAcao = relatorio.planoAcao;
   const conclusao = relatorio.conclusao as string | undefined;
-  const pragas = (relatorio.pragas ?? []) as Record<string, unknown>[];
+  const pragas = coerceVisitaObjectArray(relatorio.pragas);
+  const desvios = coerceVisitaObjectArray((relatorio as Record<string, unknown>).desvios);
+  const checklist = relatorio.checklist as Record<string, unknown> | undefined;
   const condicoes = (relatorio.condicoes ?? {}) as Record<string, unknown>;
   const amostragem =
     condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
@@ -149,7 +120,12 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
       ? (relatorio.produtividade as Record<string, unknown>)
       : undefined;
   const fenologia = (relatorio.fenologia ?? {}) as Record<string, unknown>;
-  const imagens = (relatorio.imagens ?? []) as Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
+  const imagens = coerceVisitaObjectArray(relatorio.imagens) as Array<{
+    url?: string;
+    descricao?: string;
+    categoria?: string;
+    data?: string;
+  }>;
   const imagensFenologia = imagens.filter((img) => (img.categoria ?? '').toLowerCase() === 'fenologia');
   const mapa = (relatorio.mapa ?? {}) as Record<string, unknown> & {
     viewBox?: string;
@@ -224,6 +200,15 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
 
   const handleShare = useCallback(async () => {
     const url = typeof window !== 'undefined' ? window.location.href : '';
+    const fireShareMetric = () => {
+      if (shareToken?.trim()) {
+        void postReportAnalytics({
+          shareToken: shareToken.trim(),
+          eventType: 'share',
+          module: 'visita_tecnica',
+        });
+      }
+    };
     try {
       if (navigator.share && url) {
         await navigator.share({
@@ -231,6 +216,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           text: `Relatório técnico: ${fazenda}${talhao?.nome ? ` · ${String(talhao.nome)}` : ''}`,
           url,
         });
+        fireShareMetric();
         return;
       }
     } catch {
@@ -240,11 +226,12 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
       if (url && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);
         alert('Link copiado para a área de transferência.');
+        fireShareMetric();
       }
     } catch {
       /* ignore */
     }
-  }, [fazenda, talhao]);
+  }, [fazenda, talhao, shareToken]);
 
   const handleExportPDF = useCallback(async () => {
     const { default: html2pdf } = await import('html2pdf.js');
@@ -253,21 +240,47 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
     setLightboxIndex(null);
     const safeFazenda = (fazenda || 'Relatorio').replace(/\s/g, '_');
     const safeData = (data || '').replace(/\//g, '-').replace(/\s/g, '_') || 'data';
-    html2pdf().set({
-      margin: [10, 10, 10, 10],
-      filename: `FortSmart_Visita_Tecnica_${safeFazenda}_${safeData}.pdf`,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    }).from(el).save();
-  }, [fazenda, data]);
+    document.body.classList.add('exporting-pdf');
+    try {
+      await html2pdf().set({
+        margin: [10, 10, 10, 10],
+        filename: `FortSmart_Visita_Tecnica_${safeFazenda}_${safeData}.pdf`,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      }).from(el).save();
+      if (shareToken?.trim()) {
+        void postReportAnalytics({
+          shareToken: shareToken.trim(),
+          eventType: 'download',
+          module: 'visita_tecnica',
+        });
+      }
+    } finally {
+      document.body.classList.remove('exporting-pdf');
+    }
+  }, [fazenda, data, shareToken]);
 
   const lightboxImg = lightboxIndex !== null && imagens[lightboxIndex]?.url
     ? imagens[lightboxIndex]
     : null;
 
+  const pontosMapaRows = Array.isArray(mapa.pontos) ? (mapa.pontos as Record<string, unknown>[]) : [];
+  const reportKey =
+    [reportId, relatorioUuid, meta.id, meta.relatorioId, meta.uuid]
+      .map((x) => (x != null ? String(x).trim() : ''))
+      .find((s) => s.length > 0) ?? '';
+  const versaoRel =
+    meta.versao != null
+      ? String(meta.versao)
+      : meta.version != null
+        ? String(meta.version)
+        : meta.appVersion != null
+          ? String(meta.appVersion)
+          : '';
+
   return (
-    <div style={{ minHeight: '100vh', background: '#F1F5F9', paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', background: '#f5f2eb', paddingBottom: 80 }}>
       {/* Barra fixa: Baixar PDF */}
       <div
         className="no-print"
@@ -326,36 +339,53 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
         </div>
       </div>
 
-      <div id="relatorio-visita-tecnica-content" className="relatorio-editorial" style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px 0' }}>
-
-        {/* Título do relatório */}
-        <header style={{ marginBottom: 28, paddingBottom: 20, borderBottom: '2px solid #e2e8f0' }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#14532d', margin: 0, letterSpacing: '-0.02em' }}>
-            Relatório Técnico de Visita
-          </h1>
-          <p style={{ fontSize: 13, color: '#64748b', marginTop: 8, marginBottom: 0 }}>
-            {fazenda}{talhao?.nome ? ` · ${String(talhao.nome)}` : ''}
-            {talhao?.cultura ? ` · ${String(talhao.cultura)}` : ''}
-            {safra ? ` · Safra ${safra}` : ''}
-            {data ? ` · ${formatDate(data) || data}` : ''}
-            {tecnico ? ` · Técnico: ${tecnico}` : ''}
-          </p>
-          {(condicoes?.temperatura != null || condicoes?.umidade != null || condicoes?.vento != null) && (
-            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 10, marginBottom: 0 }}>
-              Clima no registro:
-              {condicoes?.temperatura != null && ` ${condicoes.temperatura} °C`}
-              {condicoes?.umidade != null && ` · Umidade ${condicoes.umidade}%`}
-              {condicoes?.vento != null && ` · Vento ${String(condicoes.vento)}`}
-            </p>
-          )}
+      <div
+        id="relatorio-visita-tecnica-content"
+        className={`relatorio-editorial ${deck.deck}`}
+        style={{ maxWidth: 920, margin: '0 auto', padding: '28px 24px 32px' }}
+      >
+        <header className={deck.reportHeader}>
+          <h1 className={deck.reportHeaderTitle}>Relatório de visita técnica agronômica</h1>
+          <div className={deck.reportHeaderLogo}>
+            <FortSmartLogo size={44} />
+          </div>
         </header>
 
-        <DecisaoAgronomicaVT input={decisaoInput} />
+        <div className={deck.metaStrip} role="group" aria-label="Metadados do relatório">
+          <div className={deck.metaCell}>
+            <div className={deck.metaCellLabel}>Relatório e data</div>
+            <div className={deck.metaCellValue}>{reportKey || '—'}</div>
+            <div className={deck.metaCellMuted}>{data ? formatDate(data) || data : 'Data não informada'}</div>
+          </div>
+          <div className={deck.metaCell}>
+            <div className={deck.metaCellLabel}>Técnico e registro</div>
+            <div className={deck.metaCellValue}>{tecnico}</div>
+            <div className={deck.metaCellMuted}>
+              {tecnicoCrea ? `CREA ${tecnicoCrea}` : 'CREA não informado'}
+              {versaoRel ? ` · Versão ${versaoRel}` : ''}
+            </div>
+          </div>
+          <div className={deck.metaCell}>
+            <div className={deck.metaCellLabel}>Safra e propriedade</div>
+            <div className={deck.metaCellValue}>{safra || '—'}</div>
+            <div className={deck.metaCellMuted}>
+              {[fazenda !== 'Fazenda' ? fazenda : null, talhao?.nome != null ? String(talhao.nome) : null]
+                .filter(Boolean)
+                .join(' · ') || '—'}
+            </div>
+          </div>
+        </div>
 
-        {/* 1. Dados da Propriedade — tabela técnica */}
-        <section className="section-block">
-          <div className="section-block__title">Dados da Propriedade</div>
-          <div className="section-block__body">
+        <div className={deck.cardGrid}>
+          <div className={deck.cardSpanFull}>
+            <InteligenciaAgronomicaPanel relatorio={relatorio as Record<string, unknown>} variant="executiveBrief" />
+          </div>
+
+          <div className={deck.cardSpanFull}>
+            <DecisaoAgronomicaVT input={decisaoInput} />
+          </div>
+
+        <VtDeckSlide icon={Home} kicker="Identificação" title="Dados da propriedade e do talhão">
             <TabelaTecnicaCampos
               linhas={[
                 { campo: 'Fazenda', valor: fazenda !== 'Fazenda' ? fazenda : undefined },
@@ -369,8 +399,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                 { campo: 'Responsável técnico', valor: tecnicoCrea ? `${tecnico} · CREA ${tecnicoCrea}` : tecnico },
               ]}
             />
-          </div>
-        </section>
+        </VtDeckSlide>
 
         {/* 2. Contexto da Safra — tabela técnica (só renderiza se houver dados) */}
         {(contextoSafra?.materialVariedade != null ||
@@ -387,9 +416,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           contextoSafra?.resistFerrugem != null ||
           contextoSafra?.resistNematoide != null ||
           contextoSafra?.resistLagarta != null) && (
-          <section className="section-block">
-            <div className="section-block__title">Contexto da Safra</div>
-            <div className="section-block__body">
+          <VtDeckSlide icon={Sprout} kicker="Planeamento agrícola" title="Contexto da safra">
               <TabelaTecnicaCampos
                 linhas={[
                   { campo: 'Material / Variedade', valor: contextoSafra?.materialVariedade != null ? String(contextoSafra.materialVariedade) : undefined },
@@ -420,15 +447,27 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                   },
                 ]}
               />
-            </div>
-          </section>
+          </VtDeckSlide>
         )}
+
+        <VtDeckSlide icon={ClipboardCheck} kicker="Roteiro" title="Checklist da visita">
+          <VtChecklistBlock checklist={checklist} />
+        </VtDeckSlide>
+
+        <VtDeckSlide icon={CloudSun} kicker="Ambiente" title="Condições do momento">
+          <VtCondicoesMomentBlock
+            condicoes={condicoes}
+            amostragem={
+              condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
+                ? (condicoes.amostragem as Record<string, unknown>)
+                : undefined
+            }
+          />
+        </VtDeckSlide>
 
         {/* 3. Desenvolvimento da Cultura — tabela técnica */}
         {(fenologia?.estadio != null || fenologia?.estagio != null || fenologia?.dataUltimaAvaliacao != null || fenologia?.ultimaAvaliacaoDias != null || populacao?.plantasHa != null || populacao?.plantasPorMetro != null || populacao?.eficienciaPct != null || populacao?.situacao != null) && (
-          <section className="section-block">
-            <div className="section-block__title">Desenvolvimento da Cultura</div>
-            <div className="section-block__body">
+          <VtDeckSlide icon={Leaf} kicker="Cultura" title="Fenologia e desenvolvimento">
               <TabelaTecnicaCampos
                 linhas={[
                   { campo: 'Estágio atual', valor: (fenologia?.estadio ?? fenologia?.estagio) != null ? String(fenologia.estadio ?? fenologia.estagio) : undefined },
@@ -440,54 +479,15 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                   { campo: 'Situação', valor: populacao?.situacao != null ? String(populacao.situacao) : undefined },
                 ]}
               />
-            </div>
-          </section>
+          </VtDeckSlide>
         )}
 
-        {/* Condições de campo — opcional, só se houver dados */}
-        {(condicoes?.temperatura != null ||
-          condicoes?.umidade != null ||
-          condicoes?.vento != null ||
-          condicoes?.soloUmidade != null ||
-          condicoes?.vigorCultura != null ||
-          amostragem?.metodo != null ||
-          amostragem?.nPlantasAvaliadas != null ||
-          amostragem?.nPontosColetados != null ||
-          amostragem?.raioAmostraM != null) && (
-          <section className="section-block">
-            <div className="section-block__title">Condições de Campo</div>
-            <div className="section-block__body">
-              <TabelaTecnicaCampos
-                linhas={[
-                  { campo: 'Temperatura', valor: condicoes?.temperatura != null ? `${condicoes.temperatura} °C` : undefined },
-                  { campo: 'Umidade', valor: condicoes?.umidade != null ? `${condicoes.umidade}%` : undefined },
-                  { campo: 'Vento', valor: condicoes?.vento != null ? String(condicoes.vento) : undefined },
-                  { campo: 'Nebulosidade', valor: condicoes?.nebulosidade != null ? String(condicoes.nebulosidade) : undefined },
-                  { campo: 'Solo / Umidade', valor: condicoes?.soloUmidade != null ? String(condicoes.soloUmidade) : undefined },
-                  { campo: 'Palhada', valor: condicoes?.palhada != null ? String(condicoes.palhada) : undefined },
-                  { campo: 'Compactação', valor: condicoes?.compactacao != null ? String(condicoes.compactacao) : undefined },
-                  { campo: 'Vigor da cultura', valor: condicoes?.vigorCultura != null ? String(condicoes.vigorCultura) : undefined },
-                  { campo: 'Uniformidade', valor: condicoes?.uniformidade != null ? String(condicoes.uniformidade) : undefined },
-                  { campo: 'Sintomas', valor: condicoes?.sintomas != null ? String(condicoes.sintomas) : undefined },
-                  { campo: 'Método de amostragem', valor: amostragem?.metodo != null ? labelMetodoAmostragem(amostragem.metodo) : undefined },
-                  { campo: 'Nº plantas avaliadas', valor: amostragem?.nPlantasAvaliadas != null ? String(amostragem.nPlantasAvaliadas) : undefined },
-                  { campo: 'Nº pontos coletados', valor: amostragem?.nPontosColetados != null ? String(amostragem.nPontosColetados) : undefined },
-                  { campo: 'Raio da amostra (m)', valor: amostragem?.raioAmostraM != null ? String(amostragem.raioAmostraM) : undefined },
-                ]}
-              />
-            </div>
-          </section>
-        )}
-
-        <InteligenciaEstrategicaVisitaVT produtividade={produtividadePayload} inteligenciaEstrategica={inteligenciaEstrategica} />
-
-        {/* 4. Mapa do talhão */}
-        {hasMapa && (
-          <section className="section-block">
-            <div className="section-block__title">Mapa do Talhão</div>
-            <div className="section-block__body" style={{ padding: 24 }}>
+        {/* Mapa + pontos georreferenciados */}
+        {hasMapa ? (
+          <VtDeckSlide icon={MapPinned} spanFull kicker="Geodata" title="Mapa do talhão e pontos georreferenciados">
+            <div style={{ marginBottom: pontosMapaRows.length > 0 ? 20 : 0 }}>
               {useRealMap ? (
-                <MapaTalhaoDynamic
+                <MapaTalhaoClientMount
                   polygon={polygonForMap && polygonForMap.length >= 3 ? polygonForMap : undefined}
                   pontos={pontosForMap}
                   hideSectionTitle
@@ -497,7 +497,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                   mapa={{
                     viewBox: mapa.viewBox ?? '0 0 400 300',
                     path: mapa.path ?? undefined,
-                    pontos: (mapa.pontos ?? []).map((p: any, i: number) => ({
+                    pontos: (Array.isArray(mapa.pontos) ? mapa.pontos : []).map((p: any, i: number) => ({
                       x: p.x ?? 0,
                       y: p.y ?? 0,
                       index: p.index ?? i + 1,
@@ -511,25 +511,72 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                 />
               )}
             </div>
-          </section>
+            {pontosMapaRows.length > 0 ? (
+              <>
+                <div className={deck.reportCardKicker} style={{ marginBottom: 10 }}>
+                  Coordenadas dos pontos (WGS84)
+                </div>
+                <VtPontosGeorefTable pontos={pontosMapaRows} />
+              </>
+            ) : null}
+          </VtDeckSlide>
+        ) : (
+          <VtDeckSlide icon={MapPinned} spanFull kicker="Geodata" title="Mapa do talhão e pontos georreferenciados">
+            <p className={deck.emptyHint}>
+              Sem polígono ou pontos com coordenadas neste relatório. No app, associe GPS aos registros (fenologia, pragas, ocorrências) ou carregue o perímetro do talhão.
+            </p>
+          </VtDeckSlide>
         )}
 
-        {/* 5. Monitoramento Fitossanitário */}
-        <OcorrenciasPragasVT pragas={pragas} />
+        {pragas.length === 0 ? (
+          <VtDeckSlide icon={Bug} spanFull kicker="Fitossanidade" title="Pragas, doenças e daninhas">
+            <p className={deck.emptyHint}>Nenhum alvo fitossanitário registrado nesta visita.</p>
+          </VtDeckSlide>
+        ) : (
+          <div className={deck.cardSpanFull}>
+            <OcorrenciasPragasVT pragas={pragas} />
+          </div>
+        )}
 
-        <DiagnosticoEPlanoAcao diagnostico={diagnostico} planoAcao={planoAcao} />
+        <VtDeckSlide icon={AlertTriangle} variant="warning" spanFull kicker="Não conformidades" title="Desvios e anomalias">
+          <VtDesviosBlock desvios={desvios} />
+        </VtDeckSlide>
 
-        <AplicacoesRealizadasVT aplicacoes={aplicacoes} />
+        <div className={deck.cardSpanFull}>
+          <DiagnosticoEPlanoAcao diagnostico={diagnostico} planoAcao={planoAcao} />
+        </div>
 
-        <FotografiasEAutoriaVT
-          imagens={imagens}
-          assinatura={assinatura}
-          conclusao={conclusao}
-          setLightboxIndex={setLightboxIndex}
-        />
+        {aplicacoes.length === 0 ? (
+          <VtDeckSlide icon={Droplets} spanFull kicker="Operações" title="Aplicações e prescrições">
+            <p className={deck.emptyHint}>
+              Nenhuma prescrição ou operação ligada ao talhão incluída neste relatório. As prescrições do módulo Premium e as operações registradas na visita aparecem aqui.
+            </p>
+          </VtDeckSlide>
+        ) : (
+          <div className={deck.cardSpanFull}>
+            <AplicacoesRealizadasVT aplicacoes={aplicacoes} />
+          </div>
+        )}
 
-        <footer style={{ textAlign: 'center', padding: '36px 0', borderTop: '1px solid #E2E8F0', fontSize: 12, color: '#64748B' }}>
-          {relatorio.consultoria?.nome || 'FortSmart Agro'} · Relatório de Visita Técnica · {data} · {tecnico}
+        <div className={deck.cardSpanFull}>
+          <InteligenciaEstrategicaVisitaVT produtividade={produtividadePayload} inteligenciaEstrategica={inteligenciaEstrategica} />
+        </div>
+
+        <div className={deck.cardSpanFull}>
+          <FotografiasEAutoriaVT
+            imagens={imagens}
+            assinatura={assinatura}
+            conclusao={conclusao}
+            setLightboxIndex={setLightboxIndex}
+          />
+        </div>
+        </div>
+
+        <footer className={deck.reportFooter}>
+          <span>
+            {relatorio.consultoria?.nome || 'FortSmart Agro'} — relatório de visita técnica · {data ? formatDate(data) || data : '—'} · {tecnico}
+          </span>
+          <FortSmartLogo size={32} />
         </footer>
       </div>
 

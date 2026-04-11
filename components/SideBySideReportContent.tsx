@@ -2,6 +2,23 @@
 
 import React from 'react';
 import RelatorioLadoALadoDashboard from '@/components/lado_a_lado/RelatorioLadoALadoDashboard';
+import type {
+  ColheitaJson,
+  CustoJson,
+  EconomiaJson,
+  ReportApplicationEventV2Json,
+  ReportPhotoWeb,
+  TreatmentProtocolJson,
+} from '@/types/side-by-side-report';
+
+export type {
+  ColheitaJson,
+  CustoJson,
+  EconomiaJson,
+  ReportApplicationEventV2Json,
+  ReportPhotoWeb,
+  TreatmentProtocolJson,
+} from '@/types/side-by-side-report';
 
 export type SideBySideReportData = {
   tipo: string;
@@ -52,7 +69,6 @@ export type SideBySideReportData = {
     standImpactScHa?: number;
     recommendations?: string[];
   };
-  /** Diagnóstico completo: problema principal, causas, urgência, plano de ação */
   diagnosis?: {
     problemaPrincipal?: string;
     problemasSecundarios?: string[];
@@ -74,15 +90,20 @@ export type SideBySideReportData = {
     classe?: string;
     doseResumo?: string;
   }>;
+  /** Execuções V2 — chave JSON `applications` */
+  applications?: ReportApplicationEventV2Json[];
+  /** Protocolo planejado — chave JSON `treatment_protocol` */
+  treatment_protocol?: TreatmentProtocolJson;
   resumo?: {
     statusConcluida?: boolean;
     conclusaoCurta?: string;
     numOcorrencias?: number;
     numAplicacoes?: number;
   };
-  colheita?: Record<string, unknown> | null;
-  custo?: Record<string, unknown> | null;
-  /** Estatística indicativa por critério (média/DP/CV% entre pontos) — preenchido quando o app enviar o bloco. */
+  colheita?: ColheitaJson | null;
+  custo?: CustoJson | null;
+  economia?: EconomiaJson | null;
+  products_result?: Record<string, unknown>[] | null;
   criteriosEstatistica?: Array<{
     criterio?: string;
     unidade?: string;
@@ -116,14 +137,15 @@ type SideData = {
   };
   soilCompaction?: string;
   observations?: string[];
-  photos?: Array<{ caption?: string; url?: string; category?: string }>;
+  photos?: ReportPhotoWeb[];
 };
 
 interface SideBySideReportContentProps {
   data: SideBySideReportData;
   reportId?: string;
+  shareToken?: string;
 }
 
-export default function SideBySideReportContent({ data, reportId }: SideBySideReportContentProps) {
-  return <RelatorioLadoALadoDashboard data={data} reportId={reportId} />;
+export default function SideBySideReportContent({ data, reportId, shareToken }: SideBySideReportContentProps) {
+  return <RelatorioLadoALadoDashboard data={data} reportId={reportId} shareToken={shareToken} />;
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, Grid, Beaker, CalendarClock, Activity, BarChart, Image as ImageIcon, FileText, PenTool } from 'lucide-react';
+import { LayoutDashboard, Grid, Beaker, CalendarClock, Activity, Microscope, BarChart, Image as ImageIcon, FileText, PenTool } from 'lucide-react';
 
 const MENU_ITEMS = [
     { id: 'visao-geral', label: 'Visão Geral', icon: LayoutDashboard },
@@ -7,6 +7,7 @@ const MENU_ITEMS = [
     { id: 'tratamentos', label: 'Programas de Manejo', icon: Beaker },
     { id: 'aplicacoes', label: 'Aplicações Realizadas', icon: CalendarClock },
     { id: 'avaliacoes', label: 'Avaliações Técnicas', icon: Activity },
+    { id: 'diagnostico-parcela', label: 'Diagnóstico (parcela)', icon: Microscope },
     { id: 'estatistica', label: 'Estatística Avançada', icon: BarChart },
     { id: 'galeria', label: 'Galeria Fotográfica', icon: ImageIcon },
     { id: 'conclusao', label: 'Conclusão Técnica', icon: FileText },

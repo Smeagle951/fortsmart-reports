@@ -20,7 +20,7 @@ import ModalImagem from './ModalImagem';
 import RelatorioLayoutEnterprise from './RelatorioLayoutEnterprise';
 import BarraTecnicaRelatorio from './BarraTecnicaRelatorio';
 import RelatorioSection from './RelatorioSection';
-import { RecomendacaoIaFortsmartMonitoramento, fortsmartIaPayloadTemConteudo } from './RelatorioMonitoramento';
+import { postReportAnalytics } from '@/lib/report-analytics-client';
 
 const MapaInterativo = dynamic(() => import('./MapaInterativo'), { ssr: false });
 
@@ -344,6 +344,8 @@ interface RelatorioFitossanitarioContentProps {
   relatorio: PayloadFitossanitario;
   reportId?: string;
   relatorioUuid?: string;
+  /** Token da rota `/r/[token]` — métrica `download` em `ai_report_events` após exportar PDF. */
+  shareToken?: string;
 }
 
 function severidadeLabel(severidade: number): string {
@@ -477,12 +479,19 @@ function mergePlantioCampos(params: {
   return { data_plantio, data_emergencia, ultima_avaliacao_iso, estagio, dae, dap };
 }
 
-export default function RelatorioFitossanitarioContent({ relatorio, reportId, relatorioUuid }: RelatorioFitossanitarioContentProps) {
+export default function RelatorioFitossanitarioContent({
+  relatorio,
+  reportId,
+  relatorioUuid,
+  shareToken,
+}: RelatorioFitossanitarioContentProps) {
   const normalized = useMemo((): RelatorioMonitoramento => {
     const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? relatorio.propriedade as Record<string, unknown> : undefined;
     const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? relatorio.meta as Record<string, unknown> : undefined;
     const perfilFaz = (relatorio as any).perfil_fazenda ?? (relatorio as any).fazenda_perfil ?? (relatorio as any).perfilFazenda;
-    const fazendaNome = (perfilFaz && typeof perfilFaz === 'object' && (perfilFaz as any).nome) ?? (perfilFaz as any)?.fazenda;
+    const pfObj = perfilFaz != null && typeof perfilFaz === 'object' ? (perfilFaz as Record<string, unknown>) : undefined;
+    const pickStr = (v: unknown): string => (v != null && String(v).trim() ? String(v).trim() : '');
+    const fazendaNome = pfObj ? pickStr(pfObj.nome ?? pfObj.fazenda) : '';
     const fazenda = String(
       fazendaNome
       ?? relatorio.fazenda
@@ -505,7 +514,17 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       ?? (relatorio as any).dataVisita
       ?? '';
     const data = typeof dataRaw === 'string' ? dataRaw : (dataRaw != null ? String(dataRaw) : '');
-    const tecnico = String(
+    const tecnicoFromPerfil =
+      pickStr(pfObj?.responsavel_tecnico)
+      || pickStr(pfObj?.technical_responsible_name)
+      || pickStr(pfObj?.technicalResponsibleName)
+      || pickStr(pfObj?.nome_engenheiro)
+      || pickStr(pfObj?.engenheiro_agronomo)
+      || pickStr(pfObj?.engenheiro)
+      || pickStr(pfObj?.agronomo)
+      || pickStr(pfObj?.tecnico)
+      || pickStr(pfObj?.nome_tecnico);
+    const tecnico = pickStr(
       relatorio.tecnico
       ?? (relatorio as any).agronomo
       ?? (relatorio as any).nome_tecnico
@@ -514,13 +533,27 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
       ?? prop?.tecnico
       ?? (prop as any)?.agronomo
       ?? (prop as any)?.nome_tecnico
+      ?? (prop as any)?.technical_responsible_name
+      ?? (prop as any)?.technicalResponsibleName
+      ?? (prop as any)?.responsavel_tecnico
       ?? meta?.tecnico
       ?? (meta as any)?.agronomo
       ?? (meta as any)?.nome_tecnico
-      ?? 'FortSmart Agro'
-    ).trim() || 'FortSmart Agro';
+      ?? tecnicoFromPerfil
+      ?? ''
+    );
     const crea = String(
-      relatorio.crea ?? relatorio.tecnico_crea ?? meta?.tecnicoCrea ?? meta?.crea ?? prop?.crea ?? ''
+      relatorio.crea
+      ?? relatorio.tecnico_crea
+      ?? meta?.tecnicoCrea
+      ?? meta?.crea
+      ?? prop?.crea
+      ?? (prop as any)?.technical_responsible_id
+      ?? (prop as any)?.technicalResponsibleId
+      ?? pfObj?.crea_rt
+      ?? pfObj?.technical_responsible_id
+      ?? pfObj?.technicalResponsibleId
+      ?? ''
     ).trim() || undefined;
     const talhoesRaw =
       Array.isArray(relatorio.talhoes) && relatorio.talhoes.length > 0
@@ -657,6 +690,13 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       }).from(el).save();
+      if (shareToken) {
+        void postReportAnalytics({
+          shareToken,
+          eventType: 'download',
+          module: 'monitoramento',
+        });
+      }
     } finally {
       document.body.classList.remove('exporting-pdf');
     }
@@ -797,15 +837,37 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
     URL.revokeObjectURL(a.href);
   };
 
-  const handleShare = () => {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({
-        title: `Relatório ${normalized.talhoes[0]?.nome ?? 'Talhão'} — FortSmart`,
-        text: `Relatório de Monitoramento Fitossanitário · ${normalized.fazenda} · ${normalized.safra}`,
-        url: typeof window !== 'undefined' ? window.location.href : '',
-      }).catch(() => {});
-    } else if (typeof window !== 'undefined') {
-      navigator.clipboard?.writeText(window.location.href).then(() => {});
+  const handleShare = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    const fireShareMetric = () => {
+      if (shareToken?.trim()) {
+        void postReportAnalytics({
+          shareToken: shareToken.trim(),
+          eventType: 'share',
+          module: 'monitoramento',
+        });
+      }
+    };
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share && url) {
+        await navigator.share({
+          title: `Relatório ${normalized.talhoes[0]?.nome ?? 'Talhão'} — FortSmart`,
+          text: `Relatório de Monitoramento Fitossanitário · ${normalized.fazenda} · ${normalized.safra}`,
+          url,
+        });
+        fireShareMetric();
+        return;
+      }
+    } catch {
+      /* cancelado */
+    }
+    try {
+      if (url && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        fireShareMetric();
+      }
+    } catch {
+      /* ignore */
     }
   };
   /** Imagens: relatorio.imagens (url + descricao) ou fallback fotos/registros_fotograficos; aceita url absoluta ou data: URL */
@@ -1743,26 +1805,6 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
         </div>
       )}
 
-      {recomendacoesTalhao.some((r) => r.fortsmartIa && fortsmartIaPayloadTemConteudo(r.fortsmartIa)) ? (
-        <div className="card pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
-          <div className="card-title">
-            <span className="card-title-icon">📌</span> Recomendações técnicas
-          </div>
-          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0 0 1rem', lineHeight: 1.5 }}>
-            Prescrição detalhada, manejo integrado e nutrição da cultura.
-          </p>
-          {recomendacoesTalhao.map((r, i) => {
-            if (!r.fortsmartIa || !fortsmartIaPayloadTemConteudo(r.fortsmartIa)) return null;
-            return (
-              <div key={`${r.organismo}-${i}`} className="pdf-keep-together" style={{ marginBottom: '1.25rem' }}>
-                <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', margin: '0 0 0.5rem' }}>{r.organismo}</p>
-                <RecomendacaoIaFortsmartMonitoramento ia={r.fortsmartIa} />
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
-
       {/* #pragas — Análise de Pragas */}
       <div id="pragas" className="pdf-keep-together">
         <div className="section-heading">🐛 Análise de Pragas</div>
@@ -1812,11 +1854,6 @@ export default function RelatorioFitossanitarioContent({ relatorio, reportId, re
                         <div className="action-deadline">{p.manejo}</div>
                       </div>
                     </div>
-                    {p.fortsmartIa && fortsmartIaPayloadTemConteudo(p.fortsmartIa) ? (
-                      <div className="pest-ia-fortsmart" style={{ marginTop: '0.75rem' }}>
-                        <RecomendacaoIaFortsmartMonitoramento ia={p.fortsmartIa} />
-                      </div>
-                    ) : null}
                   </div>
                 );
               })}
