@@ -79,7 +79,7 @@ function checklistTone(v: unknown): 'sim' | 'nao' | 'outro' {
 
 export function VtChecklistBlock({ checklist }: { checklist: Record<string, unknown> | undefined }) {
   if (checklist == null || typeof checklist !== 'object') {
-    return <p className={styles.emptyHint}>Checklist não registado para esta visita.</p>;
+    return <p className={styles.emptyHint}>Checklist não registrado para esta visita.</p>;
   }
   const entries = Object.entries(checklist).filter(
     ([k, v]) => k !== 'observacoes' && v != null && String(v).trim() !== '',
@@ -129,7 +129,7 @@ export function VtChecklistBlock({ checklist }: { checklist: Record<string, unkn
 
 export function VtDesviosBlock({ desvios }: { desvios: Record<string, unknown>[] }) {
   if (desvios.length === 0) {
-    return <p className={styles.emptyHint}>Nenhum desvio / não conformidade registado nesta visita.</p>;
+    return <p className={styles.emptyHint}>Nenhum desvio / não conformidade registrado nesta visita.</p>;
   }
   return (
     <div className={styles.tableWrap}>

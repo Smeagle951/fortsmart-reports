@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
   Radar,
@@ -25,6 +26,7 @@ import type { ReportApplicationEventV2Json, ReportPhotoWeb } from '@/types/side-
 import FortSmartLogo from '@/components/FortSmartLogo';
 import { postReportAnalytics } from '@/lib/report-analytics-client';
 import {
+  buildEvolucaoAvaliacaoRows,
   COLOR_SIDE_A,
   COLOR_SIDE_B,
   distinctApplicationDaas,
@@ -107,25 +109,101 @@ function rootCell(kpis?: SideData['kpis']) {
   return '—';
 }
 
-function PhotoWithHotspots({ ph, accentClass }: { ph: ReportPhotoWeb; accentClass: string }) {
+function PhotoWithHotspots({
+  ph,
+  accentClass,
+  lightbox = true,
+}: {
+  ph: ReportPhotoWeb;
+  accentClass: string;
+  /** Abre preview em tela cheia ao clicar (desligar para thumbs que não devem ampliar). */
+  lightbox?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
   return (
     <figure className="rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow bg-white">
       {ph.url ? (
-        <div className="relative w-full aspect-[4/3] bg-slate-100">
-          <img src={ph.url} alt={ph.caption || 'Evidência'} className="w-full h-full object-cover" />
-          {ph.hotspots?.map((h, i) => (
-            <div
-              key={i}
-              className="absolute w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400 border-2 border-white shadow-md z-10"
-              style={{ left: `${h.xPct}%`, top: `${h.yPct}%` }}
-              title={[h.label, h.detail].filter(Boolean).join(' — ') || undefined}
-            />
-          ))}
-        </div>
+        <>
+          <div className="relative w-full aspect-[4/3] bg-slate-100">
+            <button
+              type="button"
+              onClick={() => lightbox && setOpen(true)}
+              disabled={!lightbox}
+              className={`absolute inset-0 z-0 block h-full w-full p-0 border-0 bg-transparent text-left ${
+                lightbox
+                  ? 'cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset'
+                  : 'cursor-default'
+              }`}
+              aria-label={lightbox ? 'Ampliar imagem' : undefined}
+            >
+              <img src={ph.url} alt={ph.caption || 'Evidência'} className="pointer-events-none h-full w-full object-cover" />
+            </button>
+            {ph.hotspots?.map((h, i) => (
+              <div
+                key={i}
+                className="absolute z-20 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-amber-400 shadow-md"
+                style={{ left: `${h.xPct}%`, top: `${h.yPct}%` }}
+                title={[h.label, h.detail].filter(Boolean).join(' — ') || undefined}
+                onClick={(e) => e.stopPropagation()}
+                role="presentation"
+              />
+            ))}
+          </div>
+          {lightbox &&
+            open &&
+            typeof document !== 'undefined' &&
+            createPortal(
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Visualização ampliada da evidência"
+                className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/88 p-4 print:hidden"
+                onClick={() => setOpen(false)}
+              >
+                <button
+                  type="button"
+                  className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl font-light text-white backdrop-blur-sm transition hover:bg-white/20"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpen(false);
+                  }}
+                  aria-label="Fechar"
+                >
+                  ×
+                </button>
+                <img
+                  src={ph.url}
+                  alt={ph.caption || 'Evidência ampliada'}
+                  className="max-h-[min(88vh,100%)] max-w-full rounded-lg object-contain shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {ph.caption ? (
+                  <p className="mt-4 max-w-3xl text-center text-sm text-white/90">{ph.caption}</p>
+                ) : null}
+                <p className="mt-2 text-xs text-white/50">Clique fora ou Esc para fechar</p>
+              </div>,
+              document.body,
+            )}
+        </>
       ) : (
-        <div className="w-full aspect-[4/3] bg-slate-100 flex items-center justify-center text-slate-400 text-xs">Sem imagem</div>
+        <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-100 text-xs text-slate-400">Sem imagem</div>
       )}
-      {ph.caption && <figcaption className={`p-2 text-xs truncate ${accentClass}`}>{ph.caption}</figcaption>}
+      {ph.caption && <figcaption className={`truncate p-2 text-xs ${accentClass}`}>{ph.caption}</figcaption>}
     </figure>
   );
 }
@@ -234,20 +312,78 @@ export default function RelatorioLadoALadoDashboard({
     return steps;
   }, [coleta?.dataPlantio, daaTimeline]);
 
-  const [selectedDaa, setSelectedDaa] = useState<'pre' | number>('pre');
-  useEffect(() => {
-    if (daaSteps.length === 0) return;
-    setSelectedDaa((prev) => (daaSteps.some((s) => s.key === prev) ? prev : daaSteps[0].key));
-  }, [daaSteps]);
-
-  const appsForSelectedDaa = useMemo(() => {
-    if (selectedDaa === 'pre') return [] as ReportApplicationEventV2Json[];
-    return applications.filter((a) => a.daa === selectedDaa);
-  }, [applications, selectedDaa]);
-
   const perfIdxA = performanceIndexFromKpis(kpisA);
   const perfIdxB = performanceIndexFromKpis(kpisB);
   const pressaoFito = pressaoFitossanitariaMedia(ocorrencias);
+
+  const includePreEvo = !!(coleta?.dataPlantio || daaTimeline.length > 0);
+  const evolucaoPack = useMemo(
+    () =>
+      buildEvolucaoAvaliacaoRows({
+        applications,
+        daaSorted: daaTimeline,
+        includePre: includePreEvo,
+        kpisA,
+        kpisB,
+        pressaoFitoPct: pressaoFito,
+      }),
+    [applications, daaTimeline, includePreEvo, kpisA, kpisB, pressaoFito],
+  );
+
+  const evoTabs = useMemo(() => {
+    if (evolucaoPack?.rows?.length) {
+      return evolucaoPack.rows.map((r) => ({
+        key: r.matchKey,
+        label:
+          r.matchKey === 'pre'
+            ? 'Pré-aplicação'
+            : r.matchKey === 'consolidado'
+              ? 'Consolidado'
+              : `${r.matchKey} DAA`,
+        dateSub: r.dateIso,
+      }));
+    }
+    return daaSteps.map((s) => ({
+      key: s.key === 'pre' ? 'pre' : String(s.key),
+      label: s.label,
+      dateSub: undefined as string | undefined,
+    }));
+  }, [evolucaoPack, daaSteps]);
+
+  const [momentKey, setMomentKey] = useState<string>('pre');
+  useEffect(() => {
+    if (!evoTabs.length) return;
+    setMomentKey((prev) => (evoTabs.some((t) => t.key === prev) ? prev : evoTabs[0].key));
+  }, [evoTabs]);
+
+  const appsForMoment = useMemo(() => {
+    if (momentKey === 'pre' || momentKey === 'consolidado') return [] as ReportApplicationEventV2Json[];
+    const d = Number(momentKey);
+    if (!Number.isFinite(d)) return [];
+    return applications.filter((a) => a.daa === d);
+  }, [applications, momentKey]);
+
+  const chartRowsEvo = useMemo(() => {
+    if (!evolucaoPack?.rows.length) return [];
+    return evolucaoPack.rows.map((r) => ({
+      name: r.matchKey,
+      xLabel:
+        r.dateIso && r.matchKey !== 'pre' && r.matchKey !== 'consolidado'
+          ? `${r.chartTick}\n${formatDate(r.dateIso)}`
+          : r.chartTick,
+      controle: r.controlePct,
+      vigor: r.vigorPct,
+    }));
+  }, [evolucaoPack]);
+
+  const evoYDomain = useMemo(() => {
+    if (!chartRowsEvo.length) return [60, 100] as [number, number];
+    const vals = chartRowsEvo.flatMap((r) => [r.controle, r.vigor]);
+    const lo = Math.min(...vals);
+    const hi = Math.max(...vals);
+    const pad = 6;
+    return [Math.max(0, Math.floor(lo - pad)), Math.min(100, Math.ceil(hi + pad))] as [number, number];
+  }, [chartRowsEvo]);
 
   const insightComparativo = comparativoInsightText(
     conclusion.summary,
@@ -782,66 +918,241 @@ export default function RelatorioLadoALadoDashboard({
           <motion.section id="avaliacoes-daa" {...fadeIn} className="scroll-mt-36">
             <h2 className="text-lg font-bold text-slate-900 mb-2 border-l-4 border-indigo-600 pl-3">Avaliações por momento (DAA)</h2>
             <p className="text-sm text-slate-600 mb-6">
-              Selecione o momento da linha do tempo. O comparativo numérico usa os dados consolidados do relatório; por DAA você vê as aplicações e o contexto daquele dia.
+              Linha do tempo, evolução visual e registro por momento. O comparativo numérico completo permanece consolidado nas demais seções até existir série por visita no JSON.
             </p>
-            {daaSteps.length === 0 ? (
+            {evoTabs.length === 0 ? (
               <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
-                Nenhum DAA informado nas aplicações. Ao registrar <strong>applications</strong> com o campo <strong>daa</strong>, esta linha do tempo fica ativa.
+                Inclua <strong>applications</strong> com <strong>daa</strong> e data, ou KPIs no relatório, para ativar a linha do tempo e o gráfico de evolução.
               </p>
             ) : (
-              <div className="space-y-8">
-                <div className="flex flex-wrap justify-center gap-2">
-                  {daaSteps.map((s) => {
-                    const active = selectedDaa === s.key;
-                    return (
-                      <motion.button
-                        key={String(s.key)}
-                        type="button"
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setSelectedDaa(s.key)}
-                        className={`px-4 py-2.5 rounded-xl text-sm font-semibold border shadow-sm transition-colors ${
-                          active
-                            ? 'bg-blue-600 text-white border-blue-700 ring-2 ring-blue-200'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        {s.label}
-                      </motion.button>
-                    );
-                  })}
-                </div>
+              <div className="space-y-10">
+                {evolucaoPack && chartRowsEvo.length >= 2 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.45 }}
+                    className="relative overflow-hidden rounded-3xl border border-white/60 shadow-2xl shadow-slate-900/10"
+                  >
+                    <div
+                      className="absolute inset-0 scale-105"
+                      style={{
+                        background:
+                          'radial-gradient(ellipse 80% 60% at 20% 30%, rgb(34 197 94 / 0.22), transparent 50%), radial-gradient(ellipse 70% 50% at 85% 75%, rgb(59 130 246 / 0.2), transparent 45%), linear-gradient(115deg, rgb(15 23 42) 0%, rgb(20 83 45 / 0.55) 42%, rgb(30 58 138 / 0.58) 100%)',
+                      }}
+                      aria-hidden
+                    />
+                    <div className="relative p-4 sm:p-6 md:p-8">
+                      <div className="backdrop-blur-md bg-white/80 rounded-2xl border border-white/70 shadow-lg px-4 py-5 sm:px-6 sm:py-6 space-y-6">
+                        <div className="text-center space-y-1">
+                          <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Evolução da avaliação</h3>
+                          <p className="text-xs text-slate-500">
+                            {evolucaoPack.labelSerieControle} · {evolucaoPack.labelSerieVigor} — escala 0 a 100
+                          </p>
+                        </div>
+
+                        <div className="flex justify-center">
+                          <div className="inline-flex flex-wrap justify-center gap-1 rounded-full bg-slate-200/90 p-1 shadow-inner">
+                            {evoTabs.map((t) => {
+                              const active = momentKey === t.key;
+                              return (
+                                <motion.button
+                                  key={t.key}
+                                  type="button"
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => setMomentKey(t.key)}
+                                  className={`rounded-full px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all min-w-[7rem] ${
+                                    active
+                                      ? 'bg-blue-600 text-white shadow-md'
+                                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+                                  }`}
+                                >
+                                  <span className="block leading-tight">{t.label}</span>
+                                  {t.dateSub ? (
+                                    <span className={`block text-[10px] font-normal mt-0.5 ${active ? 'text-blue-100' : 'text-slate-500'}`}>
+                                      {formatDate(t.dateSub)}
+                                    </span>
+                                  ) : null}
+                                </motion.button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="h-[280px] w-full">
+                          <ResponsiveContainer width="100%" height={280}>
+                            <LineChart data={chartRowsEvo} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgb(148 163 184 / 0.35)" vertical={false} />
+                              <XAxis
+                                dataKey="xLabel"
+                                tick={{ fontSize: 10, fill: '#64748b' }}
+                                interval={0}
+                                height={48}
+                                tickLine={false}
+                              />
+                              <YAxis domain={evoYDomain} tick={{ fontSize: 10, fill: '#64748b' }} width={36} />
+                              <Tooltip
+                                contentStyle={{
+                                  borderRadius: 12,
+                                  border: '1px solid rgb(226 232 240)',
+                                  boxShadow: '0 10px 40px -10px rgb(0 0 0 / 0.2)',
+                                }}
+                              />
+                              <Legend wrapperStyle={{ fontSize: 12 }} />
+                              <Line
+                                type="natural"
+                                dataKey="controle"
+                                name={evolucaoPack.labelSerieControle}
+                                stroke={COLOR_SIDE_A}
+                                strokeWidth={2.5}
+                                dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
+                                activeDot={{ r: 6 }}
+                              />
+                              <Line
+                                type="natural"
+                                dataKey="vigor"
+                                name={evolucaoPack.labelSerieVigor}
+                                stroke={COLOR_SIDE_B}
+                                strokeWidth={2.5}
+                                dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
+                                activeDot={{ r: 6 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+
+                        {evolucaoPack.usesInterpolation && (
+                          <p className="text-[11px] text-slate-500 text-center leading-relaxed px-2">
+                            Trajetória entre os pontos da linha do tempo usa <strong>interpolação</strong> a partir dos KPIs consolidados do relatório.
+                            Com <strong>avaliações por DAA</strong> no JSON, cada aba poderá refletir medições reais da visita.
+                          </p>
+                        )}
+
+                        <div className="border-t border-slate-200/90 pt-6">
+                          <p className="text-xs font-semibold uppercase text-slate-500 mb-4 text-center">Linha do tempo — contexto</p>
+                          <div className="space-y-0 max-w-xl mx-auto">
+                            {chartRowsEvo.map((row, idx) => {
+                              const active = momentKey === row.name;
+                              const activeIdx = chartRowsEvo.findIndex((r) => r.name === momentKey);
+                              const isPast = activeIdx >= 0 && idx < activeIdx;
+                              const line =
+                                row.name === 'pre'
+                                  ? 'Avaliação inicial antes da aplicação do manejo (linha de base).'
+                                  : row.name === 'consolidado'
+                                    ? 'Fechamento com os indicadores consolidados registrados no relatório.'
+                                    : `Aproximadamente ${row.name} dias após a aplicação — confira abaixo as aplicações e o clima deste momento, quando houver.`;
+                              return (
+                                <motion.div
+                                  key={row.name}
+                                  initial={{ opacity: 0, x: -8 }}
+                                  whileInView={{ opacity: 1, x: 0 }}
+                                  viewport={{ once: true }}
+                                  className="flex gap-4"
+                                >
+                                  <div className="flex flex-col items-center w-8 shrink-0 pt-1">
+                                    <motion.div
+                                      whileHover={{ scale: 1.15 }}
+                                      className={`w-3.5 h-3.5 rounded-full border-2 shadow-sm z-10 ${
+                                        active
+                                          ? 'bg-blue-600 border-blue-200 scale-110'
+                                          : isPast
+                                            ? 'bg-slate-300 border-white'
+                                            : 'bg-white border-slate-300'
+                                      }`}
+                                    />
+                                    {idx < chartRowsEvo.length - 1 ? (
+                                      <div className="w-0.5 flex-1 min-h-[32px] bg-gradient-to-b from-slate-200 to-slate-100" />
+                                    ) : null}
+                                  </div>
+                                  <div className={`pb-6 ${active ? 'ring-2 ring-blue-100 rounded-xl -mx-2 px-2 -mt-1 pt-1 bg-blue-50/40' : ''}`}>
+                                    <p className="text-sm font-semibold text-slate-900 whitespace-pre-line">{row.xLabel}</p>
+                                    <p className="text-sm text-slate-600 mt-1 leading-relaxed">{line}</p>
+                                    {active && insightComparativo ? (
+                                      <p className="text-xs text-slate-500 mt-2 italic border-l-2 border-blue-200 pl-2">{insightComparativo}</p>
+                                    ) : null}
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {(heroPhotoA?.url || heroPhotoB?.url) && (
+                          <motion.div
+                            whileHover={{ scale: 1.005 }}
+                            className="rounded-2xl overflow-hidden border border-slate-200/80 shadow-md bg-slate-100"
+                          >
+                            <div className="relative w-full aspect-[21/9] min-h-[140px]">
+                              <img
+                                src={(heroPhotoA?.url || heroPhotoB?.url) as string}
+                                alt="Evidência em campo"
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 to-transparent pointer-events-none" />
+                              <p className="absolute bottom-3 left-4 right-4 text-xs sm:text-sm text-white font-medium drop-shadow">
+                                Evidência visual do ensaio (foto principal registrada no relatório)
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {!evolucaoPack && (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {evoTabs.map((t) => {
+                      const active = momentKey === t.key;
+                      return (
+                        <motion.button
+                          key={t.key}
+                          type="button"
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setMomentKey(t.key)}
+                          className={`px-4 py-2.5 rounded-xl text-sm font-semibold border shadow-sm transition-colors ${
+                            active
+                              ? 'bg-blue-600 text-white border-blue-700 ring-2 ring-blue-200'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {t.label}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-                  {selectedDaa === 'pre' ? (
+                  {momentKey === 'pre' ? (
                     <div className="text-sm text-slate-700 space-y-2">
                       <p className="font-semibold text-slate-900">Referência pré-aplicação</p>
                       {coleta?.dataPlantio ? (
                         <p>
                           Data de plantio: <strong>{formatDate(coleta.dataPlantio)}</strong>
-                          {coleta.dae != null && (
-                            <span className="text-slate-600">
-                              {' '}
-                              · {coleta.dae} DAE
-                            </span>
-                          )}
-                          {coleta.dap != null && (
-                            <span className="text-slate-600">
-                              {' '}
-                              · {coleta.dap} DAP
-                            </span>
-                          )}
+                          {coleta.dae != null && <span className="text-slate-600"> · {coleta.dae} DAE</span>}
+                          {coleta.dap != null && <span className="text-slate-600"> · {coleta.dap} DAP</span>}
                         </p>
                       ) : (
-                        <p className="text-slate-500">Sem data de plantio registrada — use este ponto como visão geral antes dos DAA com aplicações.</p>
+                        <p className="text-slate-500">Sem data de plantio registrada — ponto de leitura antes dos DAA com aplicações.</p>
                       )}
+                    </div>
+                  ) : momentKey === 'consolidado' ? (
+                    <div className="text-sm text-slate-700 space-y-2">
+                      <p className="font-semibold text-slate-900">Visão consolidada</p>
+                      <p className="text-slate-600">
+                        Corresponde ao fechamento da série exibida no gráfico. Detalhes numéricos A vs B estão em <strong>Comparativo</strong> e{' '}
+                        <strong>KPIs</strong>.
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       <p className="text-sm font-semibold text-slate-900">
-                        Aplicações em <span className="text-blue-700">{selectedDaa} DAA</span>
+                        Aplicações em <span className="text-blue-700">{momentKey} DAA</span>
                       </p>
-                      {appsForSelectedDaa.length === 0 ? (
+                      {appsForMoment.length === 0 ? (
                         <p className="text-sm text-slate-500">Nenhum evento de aplicação com este DAA no JSON.</p>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -850,7 +1161,7 @@ export default function RelatorioLadoALadoDashboard({
                               {sideAName}
                             </p>
                             <div className="space-y-3">
-                              {appsForSelectedDaa
+                              {appsForMoment
                                 .filter((e) => e.side === 'A')
                                 .map((ev, i) => (
                                   <ExecutionEventCard key={ev.id || `a-${i}`} ev={ev} compact />
@@ -862,7 +1173,7 @@ export default function RelatorioLadoALadoDashboard({
                               {sideBName}
                             </p>
                             <div className="space-y-3">
-                              {appsForSelectedDaa
+                              {appsForMoment
                                 .filter((e) => e.side === 'B')
                                 .map((ev, i) => (
                                   <ExecutionEventCard key={ev.id || `b-${i}`} ev={ev} compact />
@@ -875,8 +1186,8 @@ export default function RelatorioLadoALadoDashboard({
                   )}
 
                   <p className="text-xs text-slate-500 border-t border-slate-100 pt-4">
-                    Comparativo visual e KPIs consolidados continuam na seção <strong>Comparativo</strong>. Quando o app passar a enviar{' '}
-                    <strong>avaliações por DAA</strong> no JSON, estes números poderão ser específicos de cada momento.
+                    Comparativo visual completo na seção <strong>Comparativo</strong>. Volume de aplicações por DAA (A vs B) continua disponível nos dados
+                    brutos quando há ≥2 DAA distintos.
                   </p>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -902,12 +1213,10 @@ export default function RelatorioLadoALadoDashboard({
                     whileHover={{ boxShadow: '0 12px 40px -12px rgb(0 0 0 / 0.12)' }}
                     className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm transition-shadow"
                   >
-                    <h3 className="text-base font-semibold text-slate-900 mb-1">Evolução da avaliação (volume de registros)</h3>
-                    <p className="text-xs text-slate-500 mb-4">
-                      Número de aplicações registradas por DAA (quando informado). Para curvas de controle ou vigor por visita, o backend pode enviar séries dedicadas sem alterar os campos atuais.
-                    </p>
-                    <div className="h-64 w-full" style={{ minHeight: 220 }}>
-                      <ResponsiveContainer width="100%" height={220}>
+                    <h3 className="text-base font-semibold text-slate-900 mb-1">Aplicações registradas por DAA (contagem)</h3>
+                    <p className="text-xs text-slate-500 mb-4">Eventos por lado e por dias após aplicação — métrica operacional, distinta das curvas de desempenho acima.</p>
+                    <div className="h-56 w-full" style={{ minHeight: 200 }}>
+                      <ResponsiveContainer width="100%" height={200}>
                         <LineChart data={evolutionData}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="name" tick={{ fontSize: 11 }} />

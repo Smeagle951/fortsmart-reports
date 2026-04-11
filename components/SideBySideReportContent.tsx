@@ -134,6 +134,10 @@ type SideData = {
     pesoRaizG?: number;
     estandeEfetivo?: number;
     eficienciaPct?: number;
+    /** Controle de daninhas (%), quando enviado explicitamente pelo app/mapper. */
+    controleDaninhasPct?: number;
+    /** Vigor da cultura em % (0–100), quando enviado explicitamente (alternativa a vigorRating). */
+    vigorCulturaPct?: number;
   };
   soilCompaction?: string;
   observations?: string[];
