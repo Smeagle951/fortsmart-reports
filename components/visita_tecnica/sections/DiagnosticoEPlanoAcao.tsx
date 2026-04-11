@@ -6,9 +6,19 @@ import deck from '../visita-tecnica-deck.module.css';
 interface DiagnosticoEPlanoAcaoProps {
   diagnostico?: Record<string, unknown>;
   planoAcao?: PayloadVisitaTecnica['planoAcao'];
+  /** Evita repetir problema/causa/risco quando já exibidos na narrativa do topo; mantém recomendações e plano. */
+  omitDiagnosticoResumo?: boolean;
 }
 
-export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao }: DiagnosticoEPlanoAcaoProps) {
+function planoPriorClass(prioridade: string | undefined): string {
+  const s = String(prioridade ?? '').toLowerCase();
+  if (s.includes('alt') || s.includes('crít') || s.includes('crit')) return deck.planoPriorAlta;
+  if (s.includes('méd') || s.includes('med')) return deck.planoPriorMedia;
+  if (s.includes('baix') || s.includes('baixa')) return deck.planoPriorBaixa;
+  return deck.planoPriorNeutra;
+}
+
+export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao, omitDiagnosticoResumo }: DiagnosticoEPlanoAcaoProps) {
   const hasDiagnostico =
     diagnostico &&
     (diagnostico.problemaPrincipal != null ||
@@ -21,6 +31,12 @@ export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao }: Diagno
     (planoAcao.objetivoManejo != null || (Array.isArray(planoAcao.acoes) && planoAcao.acoes.length > 0));
 
   if (!hasDiagnostico && !hasPlanoAcao) return null;
+
+  const recomendacoes =
+    Array.isArray(diagnostico?.recomendacoes) && diagnostico!.recomendacoes!.length > 0
+      ? (diagnostico!.recomendacoes as unknown[])
+      : [];
+  const showSlimRecomendacoes = Boolean(omitDiagnosticoResumo && recomendacoes.length > 0);
 
   const acoes = Array.isArray(planoAcao?.acoes) ? planoAcao!.acoes : [];
   const showProduto = acoes.some((a) => (a as { produto?: string }).produto != null && String((a as { produto?: string }).produto).trim() !== '');
@@ -39,7 +55,30 @@ export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao }: Diagno
 
   return (
     <>
-      {hasDiagnostico && (
+      {showSlimRecomendacoes && (
+        <section className={`${deck.reportCard} ${deck.noBreakInside} pdf-keep-together`}>
+          <div className={deck.reportCardHead}>
+            <span className={deck.reportCardIcon} aria-hidden>
+              <Stethoscope size={18} strokeWidth={2.25} />
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <span className={deck.reportCardKicker}>Diagnóstico</span>
+              <h2 className={deck.reportCardTitle}>Recomendações técnicas</h2>
+            </div>
+          </div>
+          <div className={deck.reportCardBody}>
+            <ul className={deck.recommendList}>
+              {recomendacoes.map((item, i) => (
+                <li key={i} style={{ marginBottom: 6 }}>
+                  {typeof item === 'string' ? item : JSON.stringify(item)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      {hasDiagnostico && !omitDiagnosticoResumo && (
         <section className={`${deck.reportCard} ${deck.noBreakInside} pdf-keep-together`}>
           <div className={deck.reportCardHead}>
             <span className={deck.reportCardIcon} aria-hidden>
@@ -131,6 +170,40 @@ export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao }: Diagno
               <p className={deck.objetivoLead}>
                 <strong style={{ color: 'var(--vt-forest)' }}>Objetivo de manejo:</strong> {String(planoAcao!.objetivoManejo)}
               </p>
+            )}
+            {Array.isArray(planoAcao!.acoes) && planoAcao!.acoes.length > 0 && (
+              <div className={deck.planoExecStack} aria-label="Plano de ação — visão executiva">
+                {planoAcao!.acoes.flatMap((acao, i) => {
+                  const a = acao as {
+                    prioridade?: string;
+                    acao?: string;
+                    prazo?: string;
+                    produto?: string;
+                    dose?: string;
+                    momento?: string;
+                    objetivoTecnico?: string;
+                  };
+                  const linhas = [
+                    a.acao != null && String(a.acao).trim() ? String(a.acao) : null,
+                    a.produto != null && String(a.produto).trim() ? `Produto: ${a.produto}` : null,
+                    a.dose != null && String(a.dose).trim() ? `Dose: ${a.dose}` : null,
+                    a.momento != null && String(a.momento).trim() ? `Momento: ${a.momento}` : null,
+                    a.objetivoTecnico != null && String(a.objetivoTecnico).trim() ? `Objetivo: ${a.objetivoTecnico}` : null,
+                    a.prazo != null && String(a.prazo).trim() ? `Prazo: ${a.prazo}` : null,
+                  ].filter(Boolean) as string[];
+                  if (linhas.length === 0) return [];
+                  return [
+                    <div key={i} className={`${deck.planoExecCard} ${planoPriorClass(a.prioridade)}`}>
+                      <div className={deck.planoExecPrior}>{String(a.prioridade ?? 'Prioridade')}</div>
+                      {linhas.map((line, j) => (
+                        <p key={j} className={deck.planoExecLine}>
+                          {line}
+                        </p>
+                      ))}
+                    </div>,
+                  ];
+                })}
+              </div>
             )}
             {Array.isArray(planoAcao!.acoes) && planoAcao!.acoes.length > 0 && (
               <div className={deck.tableWrap}>

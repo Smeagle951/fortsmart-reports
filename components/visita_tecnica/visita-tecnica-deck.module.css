@@ -944,6 +944,62 @@
   margin-top: 0.25rem;
 }
 
+.planoExecStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.planoExecCard {
+  border-radius: 12px;
+  padding: 0.85rem 1rem 0.95rem;
+  border: 1px solid var(--vt-line);
+  border-left-width: 4px;
+  background: #fafafa;
+}
+
+.planoPriorAlta {
+  border-left-color: #b91c1c;
+  background: #fef2f2;
+}
+
+.planoPriorMedia {
+  border-left-color: #ca8a04;
+  background: #fffbeb;
+}
+
+.planoPriorBaixa {
+  border-left-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.planoPriorNeutra {
+  border-left-color: #64748b;
+  background: #f8fafc;
+}
+
+.planoExecPrior {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--vt-muted);
+  margin-bottom: 0.45rem;
+}
+
+.planoExecLine {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--vt-ink);
+}
+
+.planoExecLine:last-child {
+  margin-bottom: 0;
+}
+
 @media print {
   .deck {
     background: #fff;

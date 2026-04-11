@@ -10,6 +10,7 @@ import {
   Home,
   Leaf,
   MapPinned,
+  Scale,
   Sprout,
 } from 'lucide-react';
 import FortSmartLogo from '@/components/FortSmartLogo';
@@ -20,10 +21,12 @@ import { formatDate } from '@/utils/format';
 import { postReportAnalytics } from '@/lib/report-analytics-client';
 import { coerceVisitaObjectArray } from '@/lib/visita-tecnica/coerceVisitaPayload';
 import InteligenciaAgronomicaPanel from '@/components/InteligenciaAgronomicaPanel';
+import { buildVtHeroNarrative } from '@/lib/visita-tecnica/buildVtDecisionNarrative';
+import { extractProdutividadeSerie } from '@/lib/visita-tecnica/extractVtChartSeries';
 import TabelaTecnicaCampos from './visita_tecnica/TabelaTecnicaCampos';
 import OcorrenciasPragasVT from './visita_tecnica/sections/OcorrenciasPragasVT';
 import InteligenciaEstrategicaVisitaVT from './visita_tecnica/sections/InteligenciaEstrategicaVisitaVT';
-import { labelMetodoAmostragem, labelCiclo } from '@/lib/visita-tecnica/label-utils';
+import { labelCiclo } from '@/lib/visita-tecnica/label-utils';
 import DiagnosticoEPlanoAcao from './visita_tecnica/sections/DiagnosticoEPlanoAcao';
 import DecisaoAgronomicaVT from './visita_tecnica/sections/DecisaoAgronomicaVT';
 import AplicacoesRealizadasVT from './visita_tecnica/sections/AplicacoesRealizadasVT';
@@ -37,6 +40,15 @@ import {
   VtPontosGeorefTable,
 } from './visita_tecnica/VisitaTecnicaDeckBlocks';
 import deck from './visita_tecnica/visita-tecnica-deck.module.css';
+import dp from './visita_tecnica/decision-premium.module.css';
+import mc from './visita_tecnica/vt-mobile-collapsible.module.css';
+import VtBlocoImpactoProdutivo from './visita_tecnica/VtBlocoImpactoProdutivo';
+import VtDecisionHero from './visita_tecnica/VtDecisionHero';
+import VtGraficoTendenciasDecisao from './visita_tecnica/VtGraficoTendenciasDecisao';
+import VtInteligenciaNarrativa from './visita_tecnica/VtInteligenciaNarrativa';
+import VtMobileCollapsibleDetails from './visita_tecnica/VtMobileCollapsibleDetails';
+import VtNarrativaDiagnostico from './visita_tecnica/VtNarrativaDiagnostico';
+import VtPragasBarras from './visita_tecnica/VtPragasBarras';
 import type { PayloadVisitaTecnica } from '@/types/payload-visita-tecnica';
 
 export type { PayloadVisitaTecnica } from '@/types/payload-visita-tecnica';
@@ -279,61 +291,112 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           ? String(meta.appVersion)
           : '';
 
+  const vtProductivity = useMemo(() => {
+    const ctx = contextoSafra;
+    if (!ctx || typeof ctx !== 'object') {
+      return {
+        showCard: false,
+        potencial: undefined as string | undefined,
+        estimativa: undefined as string | undefined,
+        nota: undefined as string | undefined,
+      };
+    }
+    const pot = ctx.potencialScHa != null ? String(ctx.potencialScHa).trim() : '';
+    const est = ctx.estimativaAtualScHa != null ? String(ctx.estimativaAtualScHa).trim() : '';
+    const nota = ctx.notaMetodoEstimativa != null ? String(ctx.notaMetodoEstimativa).trim() : '';
+    const showCard = pot.length > 0 || est.length > 0 || nota.length > 0;
+    return {
+      showCard,
+      potencial: pot.length > 0 ? pot : undefined,
+      estimativa: est.length > 0 ? est : undefined,
+      nota: nota.length > 0 ? nota : undefined,
+    };
+  }, [contextoSafra]);
+
+  const heroModel = useMemo(() => {
+    const rel = relatorio as Record<string, unknown>;
+    const areaN = talhao?.area != null ? Number(talhao.area) : NaN;
+    const fen =
+      (fenologia?.estadio ?? fenologia?.estagio) != null
+        ? String(fenologia.estadio ?? fenologia.estagio)
+        : undefined;
+    return buildVtHeroNarrative(rel, decisaoInput, {
+      fazenda,
+      talhaoNome: talhao?.nome != null ? String(talhao.nome) : undefined,
+      cultura: talhao?.cultura != null ? String(talhao.cultura) : undefined,
+      areaHa: !Number.isNaN(areaN) ? areaN : undefined,
+      fenologiaEstagio: fen,
+      potencialSc: vtProductivity.potencial,
+      estimativaSc: vtProductivity.estimativa,
+    });
+  }, [relatorio, decisaoInput, fazenda, talhao, fenologia, vtProductivity]);
+
+  const showDeckProdutividadeSlide =
+    vtProductivity.showCard && (!vtProductivity.potencial || !vtProductivity.estimativa);
+
+  const serieProdutividadeVt = useMemo(
+    () => extractProdutividadeSerie(relatorio as Record<string, unknown>),
+    [relatorio],
+  );
+
+  const contextoSafraLinhas = useMemo(() => {
+    if (!contextoSafra || typeof contextoSafra !== 'object') return [];
+    const ctx = contextoSafra;
+    const rows = [
+      { campo: 'Material / Variedade', valor: ctx.materialVariedade != null ? String(ctx.materialVariedade) : undefined },
+      { campo: 'Empresa', valor: ctx.empresa != null ? String(ctx.empresa) : undefined },
+      { campo: 'Espaçamento', valor: ctx.espacamentoCm != null ? `${ctx.espacamentoCm} cm` : undefined },
+      {
+        campo: 'População alvo',
+        valor: ctx.populacaoAlvoPlHa != null ? `${Number(ctx.populacaoAlvoPlHa).toLocaleString('pt-BR')} plantas/ha` : undefined,
+      },
+      { campo: 'DAP', valor: ctx.dap != null ? String(ctx.dap) : undefined },
+      { campo: 'DAE', valor: ctx.dae != null ? String(ctx.dae) : undefined },
+      { campo: 'Potencial (sc/ha)', valor: ctx.potencialScHa != null ? String(ctx.potencialScHa) : undefined },
+      { campo: 'Estimativa atual (sc/ha)', valor: ctx.estimativaAtualScHa != null ? String(ctx.estimativaAtualScHa) : undefined },
+      { campo: 'Nota método estimativa', valor: ctx.notaMetodoEstimativa != null ? String(ctx.notaMetodoEstimativa) : undefined },
+      { campo: 'Ciclo da cultivar', valor: ctx.cicloCultivar != null ? labelCiclo(ctx.cicloCultivar) : undefined },
+      { campo: 'Tecnologia sementes', valor: ctx.tecnologiaSementes != null ? String(ctx.tecnologiaSementes) : undefined },
+      {
+        campo: 'Resist. ferrugem / nematóide / lagarta',
+        valor:
+          ctx.resistFerrugem != null || ctx.resistNematoide != null || ctx.resistLagarta != null
+            ? [
+                ctx.resistFerrugem != null ? `Ferrugem: ${ctx.resistFerrugem === true || ctx.resistFerrugem === 1 ? 'Sim' : 'Não'}` : null,
+                ctx.resistNematoide != null ? `Nematóide: ${ctx.resistNematoide === true || ctx.resistNematoide === 1 ? 'Sim' : 'Não'}` : null,
+                ctx.resistLagarta != null ? `Lagarta: ${ctx.resistLagarta === true || ctx.resistLagarta === 1 ? 'Sim' : 'Não'}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || undefined
+            : undefined,
+      },
+    ];
+    if (!vtProductivity.showCard) return rows;
+    return rows.filter(
+      (l) =>
+        l.campo !== 'Potencial (sc/ha)' &&
+        l.campo !== 'Estimativa atual (sc/ha)' &&
+        l.campo !== 'Nota método estimativa',
+    );
+  }, [contextoSafra, vtProductivity.showCard]);
+
+  const hasContextoSafraSlide = useMemo(
+    () => contextoSafraLinhas.some((l) => l.valor != null && String(l.valor).trim() !== ''),
+    [contextoSafraLinhas],
+  );
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f2eb', paddingBottom: 80 }}>
-      {/* Barra fixa: Baixar PDF */}
-      <div
-        className="no-print"
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          background: 'linear-gradient(180deg, #14532d 0%, #166534 100%)',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-          padding: '12px 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 12,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div className={dp.pagePremium} style={{ minHeight: '100vh', paddingBottom: 80 }}>
+      <div className={`no-print ${deck.stickyToolbar}`}>
+        <div className={deck.stickyToolbarBrand}>
           <FortSmartLogo size={36} />
-          <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.95)' }}>Relatório de Visita Técnica</span>
+          <span className={deck.stickyToolbarTitle}>Relatório de visita técnica</span>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-          <button
-            type="button"
-            onClick={handleShare}
-            style={{
-              padding: '12px 20px',
-              background: 'rgba(255,255,255,0.15)',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.5)',
-              borderRadius: 8,
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
+        <div className={deck.stickyToolbarActions}>
+          <button type="button" onClick={handleShare} className={deck.stickyBtnGhost}>
             Compartilhar link
           </button>
-          <button
-            type="button"
-            onClick={handleExportPDF}
-            style={{
-              padding: '12px 24px',
-              background: '#fff',
-              color: '#166534',
-              border: 'none',
-              borderRadius: 8,
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-            }}
-          >
+          <button type="button" onClick={handleExportPDF} className={deck.stickyBtnSolid}>
             Baixar PDF
           </button>
         </div>
@@ -378,111 +441,19 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
 
         <div className={deck.cardGrid}>
           <div className={deck.cardSpanFull}>
-            <InteligenciaAgronomicaPanel relatorio={relatorio as Record<string, unknown>} variant="executiveBrief" />
-          </div>
-
-          <div className={deck.cardSpanFull}>
-            <DecisaoAgronomicaVT input={decisaoInput} />
-          </div>
-
-        <VtDeckSlide icon={Home} kicker="Identificação" title="Dados da propriedade e do talhão">
-            <TabelaTecnicaCampos
-              linhas={[
-                { campo: 'Fazenda', valor: fazenda !== 'Fazenda' ? fazenda : undefined },
-                { campo: 'Município', valor: municipio },
-                { campo: 'Estado', valor: estado },
-                { campo: 'Talhão', valor: talhao?.nome != null ? String(talhao.nome) : undefined },
-                { campo: 'Cultura', valor: talhao?.cultura != null ? String(talhao.cultura) : undefined },
-                { campo: 'Área', valor: talhao?.area != null ? `${Number(talhao.area).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} ha` : undefined },
-                { campo: 'Safra', valor: safra || undefined },
-                { campo: 'Data do relatório', valor: data ? formatDate(data) || data : undefined },
-                { campo: 'Responsável técnico', valor: tecnicoCrea ? `${tecnico} · CREA ${tecnicoCrea}` : tecnico },
-              ]}
+            <VtDecisionHero model={heroModel} />
+            <VtBlocoImpactoProdutivo
+              potencial={vtProductivity.potencial}
+              estimativa={vtProductivity.estimativa}
+              frase={heroModel.impactoFrase}
+              notaMetodo={vtProductivity.nota}
+              seriePontos={serieProdutividadeVt}
             />
-        </VtDeckSlide>
+            <VtGraficoTendenciasDecisao relatorio={relatorio as Record<string, unknown>} />
+            {diagnostico ? <VtNarrativaDiagnostico diagnostico={diagnostico} /> : null}
+            <VtInteligenciaNarrativa relatorio={relatorio as Record<string, unknown>} />
+          </div>
 
-        {/* 2. Contexto da Safra — tabela técnica (só renderiza se houver dados) */}
-        {(contextoSafra?.materialVariedade != null ||
-          contextoSafra?.empresa != null ||
-          contextoSafra?.espacamentoCm != null ||
-          contextoSafra?.populacaoAlvoPlHa != null ||
-          contextoSafra?.dap != null ||
-          contextoSafra?.dae != null ||
-          contextoSafra?.potencialScHa != null ||
-          contextoSafra?.estimativaAtualScHa != null ||
-          contextoSafra?.notaMetodoEstimativa != null ||
-          contextoSafra?.cicloCultivar != null ||
-          contextoSafra?.tecnologiaSementes != null ||
-          contextoSafra?.resistFerrugem != null ||
-          contextoSafra?.resistNematoide != null ||
-          contextoSafra?.resistLagarta != null) && (
-          <VtDeckSlide icon={Sprout} kicker="Planeamento agrícola" title="Contexto da safra">
-              <TabelaTecnicaCampos
-                linhas={[
-                  { campo: 'Material / Variedade', valor: contextoSafra?.materialVariedade != null ? String(contextoSafra.materialVariedade) : undefined },
-                  { campo: 'Empresa', valor: contextoSafra?.empresa != null ? String(contextoSafra.empresa) : undefined },
-                  { campo: 'Espaçamento', valor: contextoSafra?.espacamentoCm != null ? `${contextoSafra.espacamentoCm} cm` : undefined },
-                  { campo: 'População alvo', valor: contextoSafra?.populacaoAlvoPlHa != null ? `${Number(contextoSafra.populacaoAlvoPlHa).toLocaleString('pt-BR')} plantas/ha` : undefined },
-                  { campo: 'DAP', valor: contextoSafra?.dap != null ? String(contextoSafra.dap) : undefined },
-                  { campo: 'DAE', valor: contextoSafra?.dae != null ? String(contextoSafra.dae) : undefined },
-                  { campo: 'Potencial (sc/ha)', valor: contextoSafra?.potencialScHa != null ? String(contextoSafra.potencialScHa) : undefined },
-                  { campo: 'Estimativa atual (sc/ha)', valor: contextoSafra?.estimativaAtualScHa != null ? String(contextoSafra.estimativaAtualScHa) : undefined },
-                  { campo: 'Nota método estimativa', valor: contextoSafra?.notaMetodoEstimativa != null ? String(contextoSafra.notaMetodoEstimativa) : undefined },
-                  { campo: 'Ciclo da cultivar', valor: contextoSafra?.cicloCultivar != null ? labelCiclo(contextoSafra.cicloCultivar) : undefined },
-                  { campo: 'Tecnologia sementes', valor: contextoSafra?.tecnologiaSementes != null ? String(contextoSafra.tecnologiaSementes) : undefined },
-                  {
-                    campo: 'Resist. ferrugem / nematóide / lagarta',
-                    valor:
-                      contextoSafra?.resistFerrugem != null ||
-                      contextoSafra?.resistNematoide != null ||
-                      contextoSafra?.resistLagarta != null
-                        ? [
-                            contextoSafra?.resistFerrugem != null ? `Ferrugem: ${contextoSafra.resistFerrugem === true || contextoSafra.resistFerrugem === 1 ? 'Sim' : 'Não'}` : null,
-                            contextoSafra?.resistNematoide != null ? `Nematóide: ${contextoSafra.resistNematoide === true || contextoSafra.resistNematoide === 1 ? 'Sim' : 'Não'}` : null,
-                            contextoSafra?.resistLagarta != null ? `Lagarta: ${contextoSafra.resistLagarta === true || contextoSafra.resistLagarta === 1 ? 'Sim' : 'Não'}` : null,
-                          ]
-                            .filter(Boolean)
-                            .join(' · ') || undefined
-                        : undefined,
-                  },
-                ]}
-              />
-          </VtDeckSlide>
-        )}
-
-        <VtDeckSlide icon={ClipboardCheck} kicker="Roteiro" title="Checklist da visita">
-          <VtChecklistBlock checklist={checklist} />
-        </VtDeckSlide>
-
-        <VtDeckSlide icon={CloudSun} kicker="Ambiente" title="Condições do momento">
-          <VtCondicoesMomentBlock
-            condicoes={condicoes}
-            amostragem={
-              condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
-                ? (condicoes.amostragem as Record<string, unknown>)
-                : undefined
-            }
-          />
-        </VtDeckSlide>
-
-        {/* 3. Desenvolvimento da Cultura — tabela técnica */}
-        {(fenologia?.estadio != null || fenologia?.estagio != null || fenologia?.dataUltimaAvaliacao != null || fenologia?.ultimaAvaliacaoDias != null || populacao?.plantasHa != null || populacao?.plantasPorMetro != null || populacao?.eficienciaPct != null || populacao?.situacao != null) && (
-          <VtDeckSlide icon={Leaf} kicker="Cultura" title="Fenologia e desenvolvimento">
-              <TabelaTecnicaCampos
-                linhas={[
-                  { campo: 'Estágio atual', valor: (fenologia?.estadio ?? fenologia?.estagio) != null ? String(fenologia.estadio ?? fenologia.estagio) : undefined },
-                  { campo: 'Última avaliação', valor: fenologia?.dataUltimaAvaliacao != null ? formatDate(String(fenologia.dataUltimaAvaliacao)) || String(fenologia.dataUltimaAvaliacao) : undefined },
-                  { campo: 'Dias desde avaliação', valor: fenologia?.ultimaAvaliacaoDias != null ? String(fenologia.ultimaAvaliacaoDias) : undefined },
-                  { campo: 'Plantas por hectare', valor: populacao?.plantasHa != null ? Number(populacao.plantasHa).toLocaleString('pt-BR') : undefined },
-                  { campo: 'Plantas por metro', valor: populacao?.plantasPorMetro != null ? Number(populacao.plantasPorMetro) : undefined },
-                  { campo: 'Eficiência de estande', valor: populacao?.eficienciaPct != null ? `${Number(populacao.eficienciaPct)}%` : undefined },
-                  { campo: 'Situação', valor: populacao?.situacao != null ? String(populacao.situacao) : undefined },
-                ]}
-              />
-          </VtDeckSlide>
-        )}
-
-        {/* Mapa + pontos georreferenciados */}
         {hasMapa ? (
           <VtDeckSlide icon={MapPinned} spanFull kicker="Geodata" title="Mapa do talhão e pontos georreferenciados">
             <div style={{ marginBottom: pontosMapaRows.length > 0 ? 20 : 0 }}>
@@ -528,13 +499,105 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           </VtDeckSlide>
         )}
 
+        <VtDeckSlide icon={Home} kicker="Identificação" title="Dados da propriedade e do talhão">
+            <TabelaTecnicaCampos
+              linhas={[
+                { campo: 'Fazenda', valor: fazenda !== 'Fazenda' ? fazenda : undefined },
+                { campo: 'Produtor', valor: proprietario },
+                { campo: 'Município', valor: municipio },
+                { campo: 'Estado', valor: estado },
+                { campo: 'Talhão', valor: talhao?.nome != null ? String(talhao.nome) : undefined },
+                { campo: 'Cultura', valor: talhao?.cultura != null ? String(talhao.cultura) : undefined },
+                { campo: 'Área', valor: talhao?.area != null ? `${Number(talhao.area).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} ha` : undefined },
+                { campo: 'Safra', valor: safra || undefined },
+                { campo: 'Data do relatório', valor: data ? formatDate(data) || data : undefined },
+                { campo: 'Responsável técnico', valor: tecnicoCrea ? `${tecnico} · CREA ${tecnicoCrea}` : tecnico },
+              ]}
+            />
+        </VtDeckSlide>
+
+        {hasContextoSafraSlide && (
+          <VtDeckSlide icon={Sprout} kicker="Planeamento agrícola" title="Contexto da safra">
+            <TabelaTecnicaCampos linhas={contextoSafraLinhas} />
+          </VtDeckSlide>
+        )}
+
+        {showDeckProdutividadeSlide && (
+          <VtDeckSlide icon={Scale} spanFull kicker="Produção" title="Estimativa de produtividade">
+            <div className={deck.prodHighlightGrid}>
+              <div className={deck.prodHighlightBox}>
+                <div className={deck.prodHighlightLabel}>Potencial</div>
+                <div className={deck.prodHighlightValue}>
+                  {vtProductivity.potencial ?? '—'}
+                  <span className={deck.prodHighlightUnit}>sc/ha</span>
+                </div>
+              </div>
+              <div className={deck.prodHighlightBox}>
+                <div className={deck.prodHighlightLabel}>Estimativa atual</div>
+                <div className={deck.prodHighlightValue}>
+                  {vtProductivity.estimativa ?? '—'}
+                  <span className={deck.prodHighlightUnit}>sc/ha</span>
+                </div>
+              </div>
+            </div>
+            {vtProductivity.nota != null ? (
+              <p className={deck.prodNota}>
+                <strong style={{ color: 'var(--vt-forest)' }}>Método / observação:</strong> {vtProductivity.nota}
+              </p>
+            ) : null}
+          </VtDeckSlide>
+        )}
+
+        <VtDeckSlide icon={ClipboardCheck} kicker="Roteiro" title="Checklist da visita">
+          <VtChecklistBlock checklist={checklist} />
+        </VtDeckSlide>
+
+        <VtDeckSlide icon={CloudSun} kicker="Ambiente" title="Condições do momento">
+          <VtCondicoesMomentBlock
+            condicoes={condicoes}
+            amostragem={
+              condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
+                ? (condicoes.amostragem as Record<string, unknown>)
+                : undefined
+            }
+          />
+        </VtDeckSlide>
+
+        {/* 3. Desenvolvimento da Cultura — tabela técnica */}
+        {(fenologia?.estadio != null || fenologia?.estagio != null || fenologia?.dataUltimaAvaliacao != null || fenologia?.ultimaAvaliacaoDias != null || populacao?.plantasHa != null || populacao?.plantasPorMetro != null || populacao?.eficienciaPct != null || populacao?.situacao != null) && (
+          <VtDeckSlide icon={Leaf} kicker="Cultura" title="Fenologia e desenvolvimento">
+              <TabelaTecnicaCampos
+                linhas={[
+                  { campo: 'Estágio atual', valor: (fenologia?.estadio ?? fenologia?.estagio) != null ? String(fenologia.estadio ?? fenologia.estagio) : undefined },
+                  { campo: 'Última avaliação', valor: fenologia?.dataUltimaAvaliacao != null ? formatDate(String(fenologia.dataUltimaAvaliacao)) || String(fenologia.dataUltimaAvaliacao) : undefined },
+                  { campo: 'Dias desde avaliação', valor: fenologia?.ultimaAvaliacaoDias != null ? String(fenologia.ultimaAvaliacaoDias) : undefined },
+                  { campo: 'Plantas por hectare', valor: populacao?.plantasHa != null ? Number(populacao.plantasHa).toLocaleString('pt-BR') : undefined },
+                  { campo: 'Plantas por metro', valor: populacao?.plantasPorMetro != null ? Number(populacao.plantasPorMetro) : undefined },
+                  { campo: 'Eficiência de estande', valor: populacao?.eficienciaPct != null ? `${Number(populacao.eficienciaPct)}%` : undefined },
+                  { campo: 'Situação', valor: populacao?.situacao != null ? String(populacao.situacao) : undefined },
+                ]}
+              />
+          </VtDeckSlide>
+        )}
+
         {pragas.length === 0 ? (
           <VtDeckSlide icon={Bug} spanFull kicker="Fitossanidade" title="Pragas, doenças e daninhas">
             <p className={deck.emptyHint}>Nenhum alvo fitossanitário registrado nesta visita.</p>
           </VtDeckSlide>
         ) : (
           <div className={deck.cardSpanFull}>
-            <OcorrenciasPragasVT pragas={pragas} />
+            <VtPragasBarras pragas={pragas} />
+            <div className={dp.detailsZone} style={{ marginTop: '1.5rem', paddingTop: '1.25rem' }}>
+              <div className={dp.detailsZoneLabel}>Registro técnico detalhado</div>
+              <p className={mc.hintMobileOnly}>No celular, use o botão abaixo para abrir a tabela completa (PDF e telas largas mostram tudo automaticamente).</p>
+              <VtMobileCollapsibleDetails
+                panelId="vt-pragas-tabela-detalhe"
+                labelExpandir="Mostrar tabela técnica completa"
+                labelRecolher="Ocultar tabela técnica"
+              >
+                <OcorrenciasPragasVT pragas={pragas} embedded />
+              </VtMobileCollapsibleDetails>
+            </div>
           </div>
         )}
 
@@ -543,7 +606,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
         </VtDeckSlide>
 
         <div className={deck.cardSpanFull}>
-          <DiagnosticoEPlanoAcao diagnostico={diagnostico} planoAcao={planoAcao} />
+          <DiagnosticoEPlanoAcao diagnostico={diagnostico} planoAcao={planoAcao} omitDiagnosticoResumo />
         </div>
 
         {aplicacoes.length === 0 ? (
@@ -560,6 +623,20 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
 
         <div className={deck.cardSpanFull}>
           <InteligenciaEstrategicaVisitaVT produtividade={produtividadePayload} inteligenciaEstrategica={inteligenciaEstrategica} />
+        </div>
+
+        <div className={`${deck.cardSpanFull} ${dp.detailsZone}`}>
+          <div className={dp.detailsZoneLabel}>Detalhamento técnico</div>
+          <VtMobileCollapsibleDetails
+            panelId="vt-detalhe-motor-painel"
+            labelExpandir="Mostrar motor de decisão e painel executivo"
+            labelRecolher="Ocultar motor e painel"
+          >
+            <DecisaoAgronomicaVT input={decisaoInput} />
+            <div style={{ marginTop: '1rem' }}>
+              <InteligenciaAgronomicaPanel relatorio={relatorio as Record<string, unknown>} variant="executiveBrief" />
+            </div>
+          </VtMobileCollapsibleDetails>
         </div>
 
         <div className={deck.cardSpanFull}>

@@ -1,0 +1,98 @@
+/**
+ * Mobile: painel oculto até expandir. Desktop e PDF/impressão: sempre visível.
+ */
+
+.hintMobileOnly {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #64748b;
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  .hintMobileOnly {
+    display: none;
+  }
+}
+
+.toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #14532d;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.toggle:hover {
+  background: #d1fae5;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid #14532d;
+  outline-offset: 2px;
+}
+
+.panel {
+  overflow: hidden;
+}
+
+.chevron {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+@media (max-width: 767px) {
+  .toggle {
+    display: inline-flex;
+  }
+
+  .panelCollapsed {
+    display: none;
+  }
+
+  .panelCollapsed.panelOpen {
+    display: block;
+  }
+}
+
+@media (min-width: 768px) {
+  .panel {
+    display: block !important;
+  }
+}
+
+/* Exportação PDF (html2pdf) */
+body.exporting-pdf .panelCollapsed {
+  display: block !important;
+}
+
+body.exporting-pdf .toggle {
+  display: none !important;
+}
+
+@media print {
+  .panelCollapsed {
+    display: block !important;
+  }
+
+  .toggle {
+    display: none !important;
+  }
+}

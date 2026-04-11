@@ -1,0 +1,417 @@
+/**
+ * Relatório VT — arquitetura de decisão (hero, narrativa, hierarquia).
+ * Fundo claro premium, cartões amplos, pouca “cara de dashboard genérico”.
+ */
+
+.pagePremium {
+  --dp-ink: #0f172a;
+  --dp-muted: #64748b;
+  --dp-line: #e2e8f0;
+  --dp-card: #ffffff;
+  --dp-green: #14532d;
+  --dp-greenSoft: #ecfdf5;
+  --dp-amber: #b45309;
+  --dp-amberBg: #fffbeb;
+  --dp-red: #b91c1c;
+  --dp-redBg: #fef2f2;
+  --dp-radius: 16px;
+  --dp-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+  background: #f4f4f5;
+}
+
+.hero {
+  background: var(--dp-card);
+  border-radius: var(--dp-radius);
+  box-shadow: var(--dp-shadow);
+  border: 1px solid var(--dp-line);
+  padding: clamp(1.25rem, 4vw, 1.75rem);
+  margin-bottom: 1.25rem;
+}
+
+.heroTop {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: clamp(1.35rem, 4vw, 1.65rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--dp-ink);
+  line-height: 1.2;
+}
+
+.heroSub {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--dp-muted);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.badgeCritico {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--dp-redBg);
+  color: var(--dp-red);
+  border: 1px solid #fecaca;
+}
+
+.badgeAtencao {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--dp-amberBg);
+  color: var(--dp-amber);
+  border: 1px solid #fde68a;
+}
+
+.badgeOk {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.badgeBom {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--dp-greenSoft);
+  color: var(--dp-green);
+  border: 1px solid #bbf7d0;
+}
+
+.scoreLine {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--dp-muted);
+}
+
+.heroResumo {
+  margin: 1rem 0 0;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #1e293b;
+  background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%);
+  border-radius: 12px;
+  border: 1px solid var(--dp-line);
+}
+
+.heroMetrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-top: 1.35rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--dp-line);
+}
+
+.metric {
+  min-width: 0;
+}
+
+.metricLabel {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dp-muted);
+  margin-bottom: 0.35rem;
+}
+
+.metricValue {
+  font-size: clamp(1.05rem, 3vw, 1.35rem);
+  font-weight: 800;
+  color: var(--dp-ink);
+  line-height: 1.2;
+}
+
+.metricValueImpact {
+  font-size: clamp(1.05rem, 3vw, 1.35rem);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--dp-red);
+}
+
+.metricValueAction {
+  font-size: clamp(1.05rem, 3vw, 1.35rem);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--dp-green);
+}
+
+.causaStrip {
+  margin-top: 1.1rem;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid var(--dp-line);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #334155;
+}
+
+.causaStrip strong {
+  color: var(--dp-ink);
+  font-weight: 800;
+}
+
+.sectionPremium {
+  background: var(--dp-card);
+  border-radius: var(--dp-radius);
+  box-shadow: var(--dp-shadow);
+  border: 1px solid var(--dp-line);
+  padding: clamp(1.15rem, 3vw, 1.5rem);
+  margin-bottom: 1.25rem;
+}
+
+.sectionTitle {
+  margin: 0 0 1rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dp-muted);
+}
+
+.chartSubtitle {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.chartWrap {
+  width: 100%;
+  height: 220px;
+  margin-top: 0.5rem;
+}
+
+.fraseImpacto {
+  margin: 1rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #334155;
+  font-weight: 600;
+}
+
+.narrativeStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.narrativeCard {
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid var(--dp-line);
+}
+
+.narrativeCardProblema {
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+  background: var(--dp-redBg);
+}
+
+.narrativeCardCausa {
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid var(--dp-line);
+  background: #f8fafc;
+}
+
+.narrativeCardRisco {
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  background: var(--dp-amberBg);
+}
+
+.narrativeCardLabel {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+
+.narrativeCardProblema .narrativeCardLabel {
+  color: var(--dp-red);
+}
+
+.narrativeCardCausa .narrativeCardLabel {
+  color: var(--dp-muted);
+}
+
+.narrativeCardRisco .narrativeCardLabel {
+  color: var(--dp-amber);
+}
+
+.narrativeCardText {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.intelGradient {
+  background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 55%, #f0fdf4 100%);
+  border: 1px solid #bbf7d0;
+}
+
+.intelBlock {
+  margin-bottom: 1rem;
+}
+
+.intelBlock:last-child {
+  margin-bottom: 0;
+}
+
+.intelBlockTitle {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dp-green);
+  margin-bottom: 0.35rem;
+}
+
+.intelBlockText {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #334155;
+}
+
+.intelAlertText {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--dp-amber);
+  font-weight: 700;
+}
+
+.pragasGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.pragaCard {
+  padding: 1rem;
+  border: 1px solid var(--dp-line);
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.pragaNome {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--dp-ink);
+}
+
+.pragaMeta {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  color: var(--dp-muted);
+  font-weight: 600;
+}
+
+.barTrack {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+.pragaFoot {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.detailsZone {
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed var(--dp-line);
+}
+
+.detailsZoneLabel {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+  .heroTop {
+    flex-direction: column;
+  }
+
+  .chartWrap {
+    height: 200px;
+  }
+}
+
+@media print {
+  .hero,
+  .sectionPremium {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}
