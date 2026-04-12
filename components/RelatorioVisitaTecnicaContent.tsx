@@ -464,7 +464,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
       <div
         id="relatorio-visita-tecnica-content"
         className={`relatorio-editorial ${deck.deck}`}
-        style={{ maxWidth: 920, margin: '0 auto', padding: '28px 24px 32px' }}
+        style={{ maxWidth: 1160, margin: '0 auto', padding: '28px 24px 32px' }}
       >
         <header className={deck.reportHeader}>
           <h1 className={deck.reportHeaderTitle}>Relatório de visita técnica agronômica</h1>
@@ -622,16 +622,18 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           <VtChecklistBlock checklist={checklist} />
         </VtDeckSlide>
 
-        <VtDeckSlide detail icon={CloudSun} kicker="Ambiente" title="Condições do momento">
-          <VtCondicoesMomentBlock
-            condicoes={condicoes}
-            amostragem={
-              condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
-                ? (condicoes.amostragem as Record<string, unknown>)
-                : undefined
-            }
-          />
-        </VtDeckSlide>
+        {visitaSnapshot == null ? (
+          <VtDeckSlide detail icon={CloudSun} kicker="Ambiente" title="Condições do momento">
+            <VtCondicoesMomentBlock
+              condicoes={condicoes}
+              amostragem={
+                condicoes.amostragem != null && typeof condicoes.amostragem === 'object'
+                  ? (condicoes.amostragem as Record<string, unknown>)
+                  : undefined
+              }
+            />
+          </VtDeckSlide>
+        ) : null}
 
         {/* 3. Desenvolvimento da Cultura — tabela técnica */}
         {(fenologia?.estadio != null || fenologia?.estagio != null || fenologia?.dataUltimaAvaliacao != null || fenologia?.ultimaAvaliacaoDias != null || populacao?.plantasHa != null || populacao?.plantasPorMetro != null || populacao?.eficienciaPct != null || populacao?.situacao != null) && (
@@ -657,17 +659,23 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
         ) : (
           <div className={deck.cardSpanFull}>
             <VtPragasBarras pragas={pragas} />
-            <div className={dp.detailsZone} style={{ marginTop: '1.5rem', paddingTop: '1.25rem' }}>
-              <div className={dp.detailsZoneLabel}>Registro técnico detalhado</div>
-              <p className={mc.hintMobileOnly}>No celular, use o botão abaixo para abrir a tabela completa (PDF e telas largas mostram tudo automaticamente).</p>
-              <VtMobileCollapsibleDetails
-                panelId="vt-pragas-tabela-detalhe"
-                labelExpandir="Mostrar tabela técnica completa"
-                labelRecolher="Ocultar tabela técnica"
-              >
-                <OcorrenciasPragasVT pragas={pragas} embedded />
-              </VtMobileCollapsibleDetails>
-            </div>
+            {visitaSnapshot == null ? (
+              <div className={dp.detailsZone} style={{ marginTop: '1.5rem', paddingTop: '1.25rem' }}>
+                <div className={dp.detailsZoneLabel}>Registro técnico detalhado</div>
+                <p className={mc.hintMobileOnly}>No celular, use o botão abaixo para abrir a tabela completa (PDF e telas largas mostram tudo automaticamente).</p>
+                <VtMobileCollapsibleDetails
+                  panelId="vt-pragas-tabela-detalhe"
+                  labelExpandir="Mostrar tabela técnica completa"
+                  labelRecolher="Ocultar tabela técnica"
+                >
+                  <OcorrenciasPragasVT pragas={pragas} embedded />
+                </VtMobileCollapsibleDetails>
+              </div>
+            ) : (
+              <p className={deck.emptyHint} style={{ marginTop: '1rem' }}>
+                Detalhe fitossanitário por espécie está no comparativo lado a lado acima.
+              </p>
+            )}
           </div>
         )}
 
@@ -675,9 +683,11 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           <DiagnosticoEPlanoAcao diagnostico={diagnostico} planoAcao={planoAcao} omitDiagnosticoResumo />
         </div>
 
-        <VtDeckSlide detail icon={AlertTriangle} variant="warning" spanFull kicker="Não conformidades" title="Desvios e anomalias">
-          <VtDesviosBlock desvios={desvios} />
-        </VtDeckSlide>
+        {visitaSnapshot == null ? (
+          <VtDeckSlide detail icon={AlertTriangle} variant="warning" spanFull kicker="Não conformidades" title="Desvios e anomalias">
+            <VtDesviosBlock desvios={desvios} />
+          </VtDeckSlide>
+        ) : null}
 
         {aplicacoes.length === 0 ? (
           <VtDeckSlide detail icon={Droplets} spanFull kicker="Operações" title="Aplicações e prescrições">
@@ -685,9 +695,15 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
               Nenhuma prescrição ou operação ligada ao talhão incluída neste relatório. As prescrições do módulo Premium e as operações registradas na visita aparecem aqui.
             </p>
           </VtDeckSlide>
+        ) : visitaSnapshot != null ? (
+          <div className={deck.cardSpanFull}>
+            <p className={deck.emptyHint} style={{ marginTop: 0 }}>
+              Aplicações e prescrições do snapshot estão no comparativo acima (somente leitura).
+            </p>
+          </div>
         ) : (
           <div className={deck.cardSpanFull}>
-        <AplicacoesRealizadasVT aplicacoes={aplicacoes} />
+            <AplicacoesRealizadasVT aplicacoes={aplicacoes} />
           </div>
         )}
 
