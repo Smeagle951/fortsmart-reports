@@ -1,5 +1,6 @@
 import React from 'react';
 import { Camera, PenLine } from 'lucide-react';
+import { assinaturaImagemUrl } from '../assinaturaImagemUrl';
 import deck from '../visita-tecnica-deck.module.css';
 
 interface FotografiasEAutoriaVTProps {
@@ -21,6 +22,14 @@ const categoriaLabel: Record<string, string> = {
 };
 
 export default function FotografiasEAutoriaVT({ imagens, assinatura, conclusao, setLightboxIndex }: FotografiasEAutoriaVTProps) {
+  const assinaturaRecord = assinatura && typeof assinatura === 'object' ? (assinatura as Record<string, unknown>) : null;
+  const imgAssinatura = assinaturaRecord ? assinaturaImagemUrl(assinaturaRecord) : undefined;
+  const mostrarAssinatura =
+    assinaturaRecord != null &&
+    (assinaturaRecord.nome != null ||
+      assinaturaRecord.crea != null ||
+      (typeof imgAssinatura === 'string' && imgAssinatura.length > 0));
+
   return (
     <>
       {imagens.length > 0 && (
@@ -80,7 +89,7 @@ export default function FotografiasEAutoriaVT({ imagens, assinatura, conclusao, 
         </div>
       )}
 
-      {assinatura && (assinatura.nome != null || assinatura.crea != null) && (
+      {mostrarAssinatura && assinaturaRecord && (
         <section className={`${deck.reportCard} ${deck.noBreakInside} pdf-keep-together`}>
           <div className={deck.reportCardHead}>
             <span className={deck.reportCardIcon} aria-hidden>
@@ -92,16 +101,22 @@ export default function FotografiasEAutoriaVT({ imagens, assinatura, conclusao, 
             </div>
           </div>
           <div className={deck.reportCardBody}>
+            {imgAssinatura ? (
+              <div className={deck.signatureImageWrap}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imgAssinatura} alt="Assinatura do responsável técnico" className={deck.signatureImage} />
+              </div>
+            ) : null}
             <div className={deck.signatureBlock}>
               <div className={deck.signatureKicker}>Registro de responsabilidade técnica</div>
-              <div className={deck.signatureName}>{String(assinatura.nome ?? '—')}</div>
-              {assinatura.crea != null && <div className={deck.signatureMeta}>CREA {String(assinatura.crea)}</div>}
-              {assinatura.dataAssinatura != null && (
+              <div className={deck.signatureName}>{String(assinaturaRecord.nome ?? '—')}</div>
+              {assinaturaRecord.crea != null && <div className={deck.signatureMeta}>CREA {String(assinaturaRecord.crea)}</div>}
+              {assinaturaRecord.dataAssinatura != null && (
                 <div className={deck.signatureMeta} style={{ marginTop: 6 }}>
-                  Data · {String(assinatura.dataAssinatura)}
+                  Data · {String(assinaturaRecord.dataAssinatura)}
                 </div>
               )}
-              {assinatura.cidade != null && <div className={deck.signatureMeta}>{String(assinatura.cidade)}</div>}
+              {assinaturaRecord.cidade != null && <div className={deck.signatureMeta}>{String(assinaturaRecord.cidade)}</div>}
             </div>
           </div>
         </section>

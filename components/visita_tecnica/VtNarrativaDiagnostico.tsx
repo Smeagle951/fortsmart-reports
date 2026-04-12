@@ -12,7 +12,10 @@ export default function VtNarrativaDiagnostico({ diagnostico }: { diagnostico: R
 
   return (
     <section className={dp.sectionPremium} aria-label="Diagnóstico agronômico">
-      <h2 className={dp.sectionTitle}>Diagnóstico</h2>
+      <h2 className={dp.sectionTitle}>Diagnóstico estratégico</h2>
+      <p style={{ margin: '-0.35rem 0 1rem', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.45, fontWeight: 600 }}>
+        Problema → causa → risco (narrativa antes dos detalhes operacionais).
+      </p>
       <div className={dp.narrativeStack}>
         {problema ? (
           <div className={dp.narrativeCardProblema}>

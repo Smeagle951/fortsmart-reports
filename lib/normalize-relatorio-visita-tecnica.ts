@@ -161,6 +161,13 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
             status: indicadores.riscoAtual === 'baixo' ? 'Saudável' : 'Atenção',
             itens: Array.isArray(indicadores.itemsIAT) ? indicadores.itemsIAT : [],
         } : undefined),
+
+        // ── visita técnica v2 / side-by-side (preservar no payload V2) ──
+        visita_snapshot:
+            (raw as UnknownRecord).visita_snapshot ??
+            (normalizedV2 as UnknownRecord).visita_snapshot,
+        visita_snapshot_anterior: (raw as UnknownRecord).visita_snapshot_anterior,
+        conclusao_metricas: (raw as UnknownRecord).conclusao_metricas,
     };
 
     return ensureVisitaTecnicaRootTalhoesOnly(sanitizeVisitaTecnicaPayload(merged as UnknownRecord));

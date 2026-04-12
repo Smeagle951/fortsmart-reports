@@ -52,6 +52,9 @@ export default function VtBlocoImpactoProdutivo({
   return (
     <section className={dp.sectionPremium} aria-label="Produtividade comparada">
       <h2 className={dp.sectionTitle}>Impacto produtivo</h2>
+      <p style={{ margin: '-0.35rem 0 0.85rem', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.45, fontWeight: 600 }}>
+        Comparativo potencial × estimativa e tendência quando há série no payload.
+      </p>
       {showLine ? (
         <>
           <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.45, fontWeight: 600 }}>

@@ -19,13 +19,29 @@
   background: #f4f4f5;
 }
 
+.cockpitStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
 .hero {
   background: var(--dp-card);
   border-radius: var(--dp-radius);
   box-shadow: var(--dp-shadow);
   border: 1px solid var(--dp-line);
+  border-left: 4px solid var(--dp-green);
   padding: clamp(1.25rem, 4vw, 1.75rem);
-  margin-bottom: 1.25rem;
+  margin-bottom: 0;
+}
+
+.heroKicker {
+  margin: 0 0 0.5rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dp-muted);
 }
 
 .heroTop {
@@ -138,6 +154,39 @@
   border: 1px solid var(--dp-line);
 }
 
+.heroQaStrip {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: #fafafa;
+  border: 1px solid var(--dp-line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.heroQaRow {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #334155;
+}
+
+.heroQaQ {
+  display: block;
+  font-weight: 800;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dp-muted);
+  margin-bottom: 0.2rem;
+}
+
+.heroQaA {
+  font-weight: 700;
+  color: var(--dp-ink);
+}
+
 .heroMetrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -222,6 +271,52 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #475569;
+}
+
+.historicoList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.historicoItem {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid var(--dp-line);
+  background: #fafafa;
+}
+
+.historicoMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.historicoData {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dp-muted);
+}
+
+.historicoEstagio {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--dp-green);
+}
+
+.historicoObs {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #334155;
+  font-weight: 600;
 }
 
 .chartWrap {

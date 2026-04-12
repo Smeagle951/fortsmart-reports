@@ -21,7 +21,8 @@ function badgeClass(variant: VtHeroNarrativeModel['statusVariant']): string {
 
 export default function VtDecisionHero({ model }: { model: VtHeroNarrativeModel }) {
   return (
-    <section className={dp.hero} aria-label="Status e decisão da visita">
+    <section className={dp.hero} aria-label="Status do talhão e decisão em 5 segundos">
+      <p className={dp.heroKicker}>Status do talhão · cockpit de decisão</p>
       <div className={dp.heroTop}>
         <div>
           <h1 className={dp.heroTitle}>{model.tituloTalhao}</h1>
@@ -31,6 +32,17 @@ export default function VtDecisionHero({ model }: { model: VtHeroNarrativeModel 
           <span className={badgeClass(model.statusVariant)}>{model.statusLabel}</span>
           <p className={dp.scoreLine}>Score {model.score} / 100</p>
         </div>
+      </div>
+
+      <div className={dp.heroQaStrip} aria-label="Respostas prontas">
+        <p className={dp.heroQaRow}>
+          <span className={dp.heroQaQ}>Estou perdendo produtividade?</span>
+          <span className={dp.heroQaA}>{model.respostaPerdaProdutividade}</span>
+        </p>
+        <p className={dp.heroQaRow}>
+          <span className={dp.heroQaQ}>Preciso agir agora?</span>
+          <span className={dp.heroQaA}>{model.respostaAgirAgora}</span>
+        </p>
       </div>
 
       {model.resumoDecisao?.trim() ? (
@@ -49,8 +61,14 @@ export default function VtDecisionHero({ model }: { model: VtHeroNarrativeModel 
           <div className={dp.metricValue}>{model.riscoExibicao}</div>
         </div>
         <div className={dp.metric}>
+          <div className={dp.metricLabel}>Janela crítica</div>
+          <div className={dp.metricValue} style={{ fontSize: '0.9rem', lineHeight: 1.35 }}>
+            {model.janelaCritica ?? '—'}
+          </div>
+        </div>
+        <div className={dp.metric}>
           <div className={dp.metricLabel}>Próxima ação</div>
-          <div className={dp.metricValueAction} style={{ fontSize: '0.95rem', lineHeight: 1.35 }}>
+          <div className={dp.metricValueAction} style={{ fontSize: '0.9rem', lineHeight: 1.35 }}>
             {model.proximaAcao}
           </div>
         </div>

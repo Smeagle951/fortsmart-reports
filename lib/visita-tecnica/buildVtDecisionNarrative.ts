@@ -26,6 +26,12 @@ export interface VtHeroNarrativeModel {
   proximaAcao: string;
   causaLinha: string | null;
   resumoDecisao: string;
+  /** Estágio fenológico + ênfase em janela de decisão (ex.: R5). */
+  janelaCritica: string | null;
+  /** Resposta direta a “Estou perdendo produtividade?”. */
+  respostaPerdaProdutividade: string;
+  /** Resposta direta a “Preciso agir agora?”. */
+  respostaAgirAgora: string;
 }
 
 function parseNumSc(v: unknown): number | null {
@@ -134,6 +140,60 @@ function buildProximaAcao(
   return d.resumoLinha;
 }
 
+function buildJanelaCritica(fenologiaEstagio: string | undefined): string | null {
+  const e = fenologiaEstagio?.trim();
+  if (!e) return null;
+  if (/^R\d/i.test(e)) {
+    return `${e} — janela crítica para manejo (momento da visita)`;
+  }
+  return `${e} — estágio registrado na visita`;
+}
+
+function buildRespostasProntas(args: {
+  statusVariant: HeroStatusVariant;
+  score: number;
+  impactoScHaTexto: string | null;
+  impactoFrase: string | null;
+  potN: number | null;
+  estN: number | null;
+  perdaIntel: number | undefined;
+}): { perda: string; agir: string } {
+  const { statusVariant, score, impactoScHaTexto, impactoFrase, potN, estN, perdaIntel } = args;
+
+  let perda: string;
+  if (typeof perdaIntel === 'number' && !Number.isNaN(perdaIntel) && perdaIntel > 0) {
+    perda = 'Sim — o motor indica impacto negativo estimado na produtividade (veja sc/ha acima).';
+  } else if (typeof perdaIntel === 'number' && !Number.isNaN(perdaIntel) && perdaIntel < 0) {
+    perda = 'Indício de espaço positivo frente à referência do motor — validar em campo.';
+  } else if (potN != null && estN != null) {
+    const delta = estN - potN;
+    if (delta < -0.05) {
+      perda = 'Sim — estimativa abaixo do potencial declarado (perda relativa possível).';
+    } else if (delta > 0.05) {
+      perda = 'Não no sentido de perda — estimativa acima do potencial; confira método e dados.';
+    } else {
+      perda = 'Não — estimativa alinhada ao potencial declarado.';
+    }
+  } else if (impactoFrase?.includes('parcialmente')) {
+    perda = 'Indeterminado — complete potencial e estimativa no app para comparar.';
+  } else if (impactoScHaTexto?.startsWith('-') || impactoScHaTexto?.startsWith('−')) {
+    perda = 'Sim — há indício quantificado de diferença em sc/ha (ver acima).';
+  } else {
+    perda = 'Não foi possível concluir só com este relatório — faltam comparativos claros.';
+  }
+
+  let agir: string;
+  if (statusVariant === 'critico' || score < 42) {
+    agir = 'Sim — priorize a próxima ação e reduza risco técnico já nesta janela.';
+  } else if (statusVariant === 'atencao' || score < 62) {
+    agir = 'Atenção — não ignore: cumpra o prazo da próxima ação e monitore de perto.';
+  } else {
+    agir = 'Rotina — manter monitoramento; sem sinal de urgência máxima neste snapshot.';
+  }
+
+  return { perda, agir };
+}
+
 export function buildVtHeroNarrative(
   relatorio: Record<string, unknown>,
   input: VisitaTecnicaDecisaoInput,
@@ -163,8 +223,9 @@ export function buildVtHeroNarrative(
   let impactoScHaTexto: string | null = null;
   let impactoFrase: string | null = null;
 
-  const perdaIntel = intel.impacto?.perda_estimada_sc ?? intel.economia?.perda_evitada_sc_ha;
-  if (typeof perdaIntel === 'number' && !Number.isNaN(perdaIntel) && perdaIntel !== 0) {
+  const perdaIntelRaw = intel.impacto?.perda_estimada_sc ?? intel.economia?.perda_evitada_sc_ha;
+  const perdaIntel = typeof perdaIntelRaw === 'number' && !Number.isNaN(perdaIntelRaw) ? perdaIntelRaw : undefined;
+  if (perdaIntel !== undefined && perdaIntel !== 0) {
     const sign = perdaIntel > 0 ? '−' : '+';
     impactoScHaTexto = `${sign}${Math.abs(perdaIntel).toFixed(1)} sc/ha`;
     impactoFrase =
@@ -203,6 +264,17 @@ export function buildVtHeroNarrative(
   if (opts.fenologiaEstagio?.trim()) parts.push(opts.fenologiaEstagio.trim());
   const sublinha = parts.length > 0 ? parts.join(' · ') : (opts.fazenda !== 'Fazenda' ? opts.fazenda : 'Visita técnica');
 
+  const janelaCritica = buildJanelaCritica(opts.fenologiaEstagio);
+  const { perda: respostaPerdaProdutividade, agir: respostaAgirAgora } = buildRespostasProntas({
+    statusVariant,
+    score,
+    impactoScHaTexto,
+    impactoFrase,
+    potN,
+    estN,
+    perdaIntel,
+  });
+
   return {
     tituloTalhao,
     sublinha,
@@ -215,5 +287,8 @@ export function buildVtHeroNarrative(
     proximaAcao,
     causaLinha,
     resumoDecisao: intel.resumo?.trim() || d.resumoLinha,
+    janelaCritica,
+    respostaPerdaProdutividade,
+    respostaAgirAgora,
   };
 }

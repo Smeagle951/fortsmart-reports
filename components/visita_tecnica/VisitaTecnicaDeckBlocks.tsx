@@ -12,6 +12,7 @@ export function VtDeckSlide({
   icon: Icon,
   variant = 'default',
   spanFull = false,
+  detail = false,
 }: {
   kicker?: string;
   title: string;
@@ -19,6 +20,8 @@ export function VtDeckSlide({
   icon?: LucideIcon;
   variant?: 'default' | 'warning';
   spanFull?: boolean;
+  /** Visual mais neutro (vs. cockpit de decisão) */
+  detail?: boolean;
 }) {
   return (
     <section
@@ -26,6 +29,7 @@ export function VtDeckSlide({
         styles.reportCard,
         variant === 'warning' ? styles.reportCardWarning : '',
         spanFull ? styles.cardSpanFull : '',
+        detail ? styles.deckSlideDetail : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -34,6 +38,7 @@ export function VtDeckSlide({
         className={[
           styles.reportCardHead,
           variant === 'warning' ? styles.reportCardHeadWarning : '',
+          detail ? styles.deckSlideDetailHead : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -163,10 +168,31 @@ export function VtDesviosBlock({ desvios }: { desvios: Record<string, unknown>[]
   );
 }
 
+function imagemThumbCell(p: Record<string, unknown>): React.ReactNode {
+  const raw = p.imagem ?? p.image;
+  const s = typeof raw === 'string' ? raw.trim() : '';
+  if (!s) return '—';
+  if (/^https?:\/\//i.test(s)) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={s}
+        alt=""
+        style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 6, display: 'block' }}
+      />
+    );
+  }
+  return (
+    <span className={styles.emptyHint} title={s}>
+      Arquivo local
+    </span>
+  );
+}
+
 export function VtPontosGeorefTable({ pontos }: { pontos: Record<string, unknown>[] }) {
   const rows = pontos.filter((p) => {
     const lat = (p.latitude ?? p.lat) as number | undefined;
-    const lng = (p.longitude ?? p.lng) as number | undefined;
+    const lng = (p.longitude ?? p.lng ?? p.lon) as number | undefined;
     return lat != null && lng != null && !Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng));
   });
   if (rows.length === 0) {
@@ -182,20 +208,22 @@ export function VtPontosGeorefTable({ pontos }: { pontos: Record<string, unknown
             <th>Longitude</th>
             <th>Tipo</th>
             <th>Título</th>
+            <th>Imagem</th>
             <th>Data</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((p, i) => {
             const lat = Number(p.latitude ?? p.lat);
-            const lng = Number(p.longitude ?? p.lng);
+            const lng = Number(p.longitude ?? p.lng ?? p.lon);
             return (
               <tr key={i}>
                 <td>{i + 1}</td>
                 <td>{lat.toFixed(6)}</td>
                 <td>{lng.toFixed(6)}</td>
                 <td>{fmt(p.tipo)}</td>
-                <td>{fmt(p.titulo)}</td>
+                <td>{fmt(p.titulo ?? p.descricao)}</td>
+                <td>{imagemThumbCell(p)}</td>
                 <td>{fmt(p.data)}</td>
               </tr>
             );
@@ -241,7 +269,7 @@ export function VtCondicoesMomentBlock({
   if (condPairs.length === 0 && amoPairs.length === 0) {
     return (
       <p className={styles.emptyHint}>
-        Condições de campo não registadas nesta sessão. Preencha no app (visita técnica → condições) para aparecerem aqui.
+        Condições de campo não registradas nesta sessão. Preencha no app (visita técnica → condições) para aparecerem aqui.
       </p>
     );
   }

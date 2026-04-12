@@ -2,6 +2,36 @@
 
 import React from 'react';
 import RelatorioLadoALadoDashboard from '@/components/lado_a_lado/RelatorioLadoALadoDashboard';
+import PremiumReport from '@/components/lado_a_lado/premium/PremiumReport';
+import type { DecisionLayerJson } from '@/lib/decisionLayer';
+
+export type MarketReferenceJson = {
+  schemaVersion?: number;
+  culture?: string;
+  cultureKey?: string;
+  region?: string | null;
+  price_sack_brl?: number;
+  kg_per_sack?: number;
+  updated_at?: string;
+  source?: string;
+  economicEngineVersion?: number;
+};
+
+export type EconomicTimelineJson = {
+  schemaVersion?: number;
+  economicEngineVersion?: number;
+  methodology?: string;
+  sides?: Array<{
+    side?: string;
+    points?: Array<{
+      daa?: number;
+      date?: string;
+      eventCostBrlHa?: number | null;
+      costAccumulatedBrlHa?: number;
+      applicationId?: string;
+    }>;
+  }>;
+};
 import type {
   ColheitaJson,
   CustoJson,
@@ -29,7 +59,12 @@ export type SideBySideReportData = {
     appVersion?: string;
     generatedBy?: { name?: string; role?: string };
   };
-  branding?: { title?: string; subtitle?: string };
+  branding?: {
+    title?: string;
+    subtitle?: string;
+    /** `premium` (padrão): narrativa executiva. `dashboard`: layout técnico completo anterior. */
+    reportLayout?: 'premium' | 'dashboard';
+  };
   farm?: {
     farmName?: string;
     owner?: string;
@@ -46,6 +81,10 @@ export type SideBySideReportData = {
   sideB?: SideData;
   conclusion?: {
     summary?: string;
+    /** Linha curta para o herói (publicado pelo app / DTO). */
+    headline?: string;
+    /** Manejo favorecido — só exibido se vier no JSON (`conclusion.winner`). */
+    winner?: 'A' | 'B';
     recommendations?: string[];
     signature?: { name?: string; crea?: string; city?: string };
   };
@@ -117,6 +156,12 @@ export type SideBySideReportData = {
     estabilidadeDpDiff?: number;
     notaRegra?: string;
   }>;
+  /** Motor multifator + ROI + métricas — publicado pelo app (`decision_layer`). */
+  decision_layer?: DecisionLayerJson | null;
+  /** Preço/kg saca efetivos e metadados — `market_reference`. */
+  market_reference?: MarketReferenceJson | null;
+  /** Custo acumulado por DAA — `economic_timeline`. */
+  economic_timeline?: EconomicTimelineJson | null;
 };
 
 type SideData = {
@@ -138,6 +183,12 @@ type SideData = {
     controleDaninhasPct?: number;
     /** Vigor da cultura em % (0–100), quando enviado explicitamente (alternativa a vigorRating). */
     vigorCulturaPct?: number;
+    /** Fitotoxidez em escala (ex.: 0–10), quando enviado pelo app/mapper. */
+    fitotoxidez?: { score?: number; max?: number };
+    coberturaAplicacaoPct?: number;
+    rebrotaPct?: number;
+    /** 0–100, calculado no app a partir dos KPIs coletados (DTO `performanceScore`). */
+    performanceScore?: number;
   };
   soilCompaction?: string;
   observations?: string[];
@@ -151,5 +202,8 @@ interface SideBySideReportContentProps {
 }
 
 export default function SideBySideReportContent({ data, reportId, shareToken }: SideBySideReportContentProps) {
-  return <RelatorioLadoALadoDashboard data={data} reportId={reportId} shareToken={shareToken} />;
+  if (data.branding?.reportLayout === 'dashboard') {
+    return <RelatorioLadoALadoDashboard data={data} reportId={reportId} shareToken={shareToken} />;
+  }
+  return <PremiumReport data={data} reportId={reportId} shareToken={shareToken} />;
 }

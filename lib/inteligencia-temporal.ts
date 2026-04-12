@@ -55,11 +55,11 @@ export function computeIntelTemporalDelta(
   const abs = Math.abs(scoreDiff);
   let mensagem: string;
   if (direcao === 'queda') {
-    mensagem = `Queda de ${abs} ponto${abs === 1 ? '' : 's'} no score desde a última visita registada.`;
+    mensagem = `Queda de ${abs} ponto${abs === 1 ? '' : 's'} no score desde a última visita registrada.`;
   } else if (direcao === 'subida') {
-    mensagem = `Subida de ${abs} ponto${abs === 1 ? '' : 's'} no score desde a última visita registada.`;
+    mensagem = `Subida de ${abs} ponto${abs === 1 ? '' : 's'} no score desde a última visita registrada.`;
   } else {
-    mensagem = 'Score estável em relação à última visita registada.';
+    mensagem = 'Score estável em relação à última visita registrada.';
   }
 
   return {

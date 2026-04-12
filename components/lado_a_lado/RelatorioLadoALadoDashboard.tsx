@@ -51,6 +51,30 @@ const fadeIn = {
   transition: { duration: 0.35 },
 };
 
+/** Fontes internas/padrão: não exibir — o preço informado é do usuário ou da análise, sem “referência” de sistema. */
+const PRECO_FONTE_OCULTAR = new Set([
+  'padrao_sistema',
+  'padrao sistema',
+  'sistema',
+  'default',
+  'interno',
+  'internal',
+]);
+
+function showEconomiaFontePreco(fonte?: string | null): boolean {
+  const f = (fonte || '').trim().toLowerCase();
+  if (!f) return false;
+  return !PRECO_FONTE_OCULTAR.has(f);
+}
+
+function fitotoxCell(kpis?: SideData['kpis']) {
+  const ft = kpis?.fitotoxidez;
+  const sc = ft?.score;
+  const mx = ft?.max ?? 10;
+  if (sc == null || !Number.isFinite(sc)) return null;
+  return `${formatNumber(sc, { decimals: 0 })} / ${mx}`;
+}
+
 /** Âncoras da nav (scroll + destaque) — fluxo premium tipo produto. */
 const NAV_SECTIONS: { id: string; label: string }[] = [
   { id: 'visao-geral', label: 'Geral' },
@@ -113,11 +137,17 @@ function PhotoWithHotspots({
   ph,
   accentClass,
   lightbox = true,
+  legendExtras,
+  structuredLegend = false,
 }: {
   ph: ReportPhotoWeb;
   accentClass: string;
   /** Abre preview em tela cheia ao clicar (desligar para thumbs que não devem ampliar). */
   lightbox?: boolean;
+  /** Bloco “premium” abaixo da foto: data/DAA, local, observação, destaque visual. */
+  legendExtras?: { daaLine?: string; regionLine?: string; technicalNote?: string };
+  /** Se true, legenda completa fica no bloco estruturado (evita legenda duplicada na miniatura). */
+  structuredLegend?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -203,7 +233,44 @@ function PhotoWithHotspots({
       ) : (
         <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-100 text-xs text-slate-400">Sem imagem</div>
       )}
-      {ph.caption && <figcaption className={`truncate p-2 text-xs ${accentClass}`}>{ph.caption}</figcaption>}
+      {structuredLegend &&
+      (legendExtras?.daaLine ||
+        legendExtras?.regionLine ||
+        legendExtras?.technicalNote ||
+        ph.caption ||
+        (ph.hotspots && ph.hotspots.length > 0)) ? (
+        <div className="border-t border-slate-100 bg-slate-50/90 px-3 py-2.5 text-left text-[11px] leading-snug text-slate-700 space-y-1.5">
+          {legendExtras?.daaLine ? (
+            <p>
+              <span className="font-semibold text-slate-600">Data · </span>
+              {legendExtras.daaLine}
+            </p>
+          ) : null}
+          {legendExtras?.regionLine ? (
+            <p>
+              <span className="font-semibold text-slate-600">Local · </span>
+              {legendExtras.regionLine}
+            </p>
+          ) : null}
+          {(legendExtras?.technicalNote || ph.caption) ? (
+            <p>
+              <span className="font-semibold text-slate-600">Observação técnica · </span>
+              {legendExtras?.technicalNote || ph.caption}
+            </p>
+          ) : null}
+          {ph.hotspots && ph.hotspots.length > 0 ? (
+            <p className="text-amber-900/90">
+              <span className="font-semibold">Destaque visual · </span>
+              {ph.hotspots
+                .map((h) => [h.label, h.detail].filter(Boolean).join(' — '))
+                .filter(Boolean)
+                .join(' · ') || 'Marcações na imagem (pontos de observação em campo).'}
+            </p>
+          ) : null}
+        </div>
+      ) : ph.caption && !structuredLegend ? (
+        <figcaption className={`truncate p-2 text-xs ${accentClass}`}>{ph.caption}</figcaption>
+      ) : null}
     </figure>
   );
 }
@@ -280,10 +347,10 @@ export default function RelatorioLadoALadoDashboard({
   const photosByCategory = hasCategoryInPhotos
     ? categoryOrder
         .map((cat) => ({
-          category: cat,
-          label: categoryLabels[cat] || cat,
-          photosA: photosA.filter((p) => (p?.category || 'geral') === cat),
-          photosB: photosB.filter((p) => (p?.category || 'geral') === cat),
+        category: cat,
+        label: categoryLabels[cat] || cat,
+        photosA: photosA.filter((p) => (p?.category || 'geral') === cat),
+        photosB: photosB.filter((p) => (p?.category || 'geral') === cat),
         }))
         .filter((g) => g.photosA.length > 0 || g.photosB.length > 0)
     : [];
@@ -363,6 +430,19 @@ export default function RelatorioLadoALadoDashboard({
     return applications.filter((a) => a.daa === d);
   }, [applications, momentKey]);
 
+  const momentLegendDaaLine = useMemo(() => {
+    if (momentKey === 'pre') {
+      return coleta?.dataPlantio
+        ? `Pré-aplicação · plantio ${formatDate(coleta.dataPlantio)}`
+        : 'Pré-aplicação';
+    }
+    if (momentKey === 'consolidado') return 'Consolidado (fechamento da série)';
+    const d = Number(momentKey);
+    if (!Number.isFinite(d)) return undefined;
+    const ev = applications.find((a) => a.daa === d && a.date);
+    return ev?.date ? `${formatDate(ev.date)} · ${d} DAA` : `${d} DAA`;
+  }, [momentKey, coleta?.dataPlantio, applications]);
+
   const chartRowsEvo = useMemo(() => {
     if (!evolucaoPack?.rows.length) return [];
     return evolucaoPack.rows.map((r) => ({
@@ -399,6 +479,51 @@ export default function RelatorioLadoALadoDashboard({
   const subCaptionB = [coleta?.dae != null ? `${coleta.dae} DAE` : null, phenology?.sideB?.estadio]
     .filter(Boolean)
     .join(' · ');
+
+  const comparativoDaaLine = useMemo(() => {
+    if (daaTimeline.length > 0) {
+      const maxD = Math.max(...daaTimeline);
+      const ev = applications.find((a) => a.daa === maxD && a.date);
+      const datePart = ev?.date ? formatDate(ev.date) : '';
+      return [datePart, `${maxD} DAA`].filter(Boolean).join(' · ');
+    }
+    if (coleta?.dae != null) return `${coleta.dae} DAE`;
+    if (coleta?.dap != null) return `${coleta.dap} DAP`;
+    return undefined;
+  }, [daaTimeline, applications, coleta?.dae, coleta?.dap]);
+
+  const regionLineFarm = [farm.city, farm.state].filter(Boolean).join(' — ') || undefined;
+
+  const comparativoMetricRows = useMemo(() => {
+    const rows: { label: string; a: string; b: string }[] = [];
+    const pushRow = (label: string, va: string | null | undefined, vb: string | null | undefined) => {
+      const a = (va ?? '—').trim() || '—';
+      const b = (vb ?? '—').trim() || '—';
+      if (a === '—' && b === '—') return;
+      rows.push({ label, a, b });
+    };
+    const pct = (n?: number | null) =>
+      n != null && Number.isFinite(n) ? `${formatNumber(n, { decimals: 0 })}%` : null;
+    pushRow('Controle de daninhas', pct(kpisA.controleDaninhasPct), pct(kpisB.controleDaninhasPct));
+    pushRow('Fitotoxidez', fitotoxCell(kpisA), fitotoxCell(kpisB));
+    pushRow('Cobertura (%)', pct(kpisA.coberturaAplicacaoPct), pct(kpisB.coberturaAplicacaoPct));
+    const vigorA =
+      kpisA.vigorCulturaPct != null ? pct(kpisA.vigorCulturaPct) : vigorCell(kpisA, phenology?.sideA);
+    const vigorB =
+      kpisB.vigorCulturaPct != null ? pct(kpisB.vigorCulturaPct) : vigorCell(kpisB, phenology?.sideB);
+    pushRow('Vigor da cultura', vigorA, vigorB);
+    pushRow('Rebrota (%)', pct(kpisA.rebrotaPct), pct(kpisB.rebrotaPct));
+    pushRow('Uniformidade', phenology?.sideA?.uniformidade ?? null, phenology?.sideB?.uniformidade ?? null);
+    pushRow('Eficiência de plantio', pct(kpisA.eficienciaPct), pct(kpisB.eficienciaPct));
+    pushRow(
+      'Altura média',
+      kpisA.avgHeightCm != null ? `${formatNumber(kpisA.avgHeightCm, { decimals: 0 })} cm` : null,
+      kpisB.avgHeightCm != null ? `${formatNumber(kpisB.avgHeightCm, { decimals: 0 })} cm` : null,
+    );
+    pushRow('Sanidade de raiz', rootCell(kpisA), rootCell(kpisB));
+    pushRow('Estádio (fenologia)', phenology?.sideA?.estadio ?? null, phenology?.sideB?.estadio ?? null);
+    return rows;
+  }, [kpisA, kpisB, phenology]);
 
   const vigorNum = (v: string | undefined) =>
     v === 'Alto' || v === 'alto' ? 100 : v === 'Médio' || v === 'medio' ? 60 : v ? 30 : 0;
@@ -541,29 +666,29 @@ export default function RelatorioLadoALadoDashboard({
           />
           <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-10">
             <div className="flex flex-wrap items-start justify-between gap-6">
-              <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
                 <FortSmartLogo size={52} />
-                <div>
+              <div>
                   <p className="text-xs font-semibold uppercase tracking-widest text-emerald-800/90">FortSmart Agro</p>
                   <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mt-1">
                     RELATÓRIO AGRONÔMICO LADO A LADO
-                  </h1>
-                </div>
+                </h1>
               </div>
+            </div>
             </div>
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
               {farm.farmName && (
                 <div className="rounded-xl bg-white/90 border border-slate-200/80 px-4 py-3 shadow-sm">
                   <span className="text-slate-500 text-xs uppercase">Fazenda</span>
                   <p className="font-semibold text-slate-900">{farm.farmName}</p>
-                </div>
+          </div>
               )}
               {farm.culture && (
                 <div className="rounded-xl bg-white/90 border border-slate-200/80 px-4 py-3 shadow-sm">
                   <span className="text-slate-500 text-xs uppercase">Cultura</span>
                   <p className="font-semibold text-slate-900">{farm.culture}</p>
-                </div>
-              )}
+            </div>
+          )}
               {farm.fieldName && (
                 <div className="rounded-xl bg-white/90 border border-slate-200/80 px-4 py-3 shadow-sm">
                   <span className="text-slate-500 text-xs uppercase">Talhão</span>
@@ -618,8 +743,8 @@ export default function RelatorioLadoALadoDashboard({
                 </div>
               )}
             </div>
-          </div>
-        </header>
+        </div>
+      </header>
 
         <nav className="sticky top-[49px] z-20 print:hidden border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-sm">
           <div className="max-w-6xl mx-auto px-2 sm:px-4 flex flex-wrap gap-1 py-2">
@@ -642,8 +767,67 @@ export default function RelatorioLadoALadoDashboard({
 
         <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-14 print:space-y-8">
           <motion.section id="visao-geral" {...fadeIn} className="scroll-mt-36 space-y-8">
-            <h2 className="text-lg font-bold text-slate-900 mb-2 border-l-4 border-emerald-600 pl-3">Visão geral do ensaio</h2>
-            <p className="text-sm text-slate-600 mb-6">Contexto, responsáveis e condições — leitura rápida antes do comparativo técnico.</p>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 border-l-4 border-emerald-600 pl-3">Visão geral do ensaio</h2>
+                <p className="text-sm text-slate-600 mt-2 max-w-xl leading-relaxed">
+                  Contexto executivo e condições — alinhado a relatório técnico profissional.
+                </p>
+              </div>
+            </div>
+            {(farm.fieldName ||
+              farm.culture ||
+              coleta?.estadio ||
+              regionLineFarm ||
+              (climateHero &&
+                (climateHero.temperature != null ||
+                  climateHero.humidity != null ||
+                  climateHero.wind != null ||
+                  climateHero.derivaRisco))) && (
+              <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-r from-slate-50 to-white px-4 py-3 shadow-sm">
+                <div className="flex flex-wrap items-baseline gap-x-1 gap-y-2 text-sm">
+                  {[
+                    farm.fieldName ? { k: 'Talhão', v: farm.fieldName } : null,
+                    [farm.culture, farm.season].filter(Boolean).length
+                      ? { k: 'Cultura', v: [farm.culture, farm.season].filter(Boolean).join(' · ') }
+                      : null,
+                    coleta?.estadio ? { k: 'Estádio', v: coleta.estadio, highlight: true } : null,
+                    regionLineFarm ? { k: 'Região', v: regionLineFarm } : null,
+                    climateHero &&
+                    (climateHero.temperature != null ||
+                      climateHero.humidity != null ||
+                      climateHero.wind != null ||
+                      climateHero.derivaRisco)
+                      ? {
+                          k: 'Condições',
+                          v: [
+                            climateHero.temperature != null ? `${climateHero.temperature}°C` : null,
+                            climateHero.humidity != null ? `${climateHero.humidity}%` : null,
+                            climateHero.wind != null ? `Vento ${formatWind(climateHero.wind)}` : null,
+                            climateHero.derivaRisco || null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · '),
+                        }
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .map((item, idx) => {
+                      if (!item) return null;
+                      const hi = 'highlight' in item && item.highlight;
+                      return (
+                        <React.Fragment key={`${item.k}-${idx}`}>
+                          {idx > 0 ? <span className="text-slate-300 hidden sm:inline px-1 select-none">|</span> : null}
+                          <span className="inline-flex flex-wrap items-baseline gap-x-1.5 mr-2 sm:mr-0">
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{item.k}</span>
+                            <span className={`font-semibold ${hi ? 'text-blue-700' : 'text-slate-900'}`}>{item.v}</span>
+                          </span>
+                        </React.Fragment>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {coleta?.ensaioName && (
                 <div className="rounded-2xl bg-white border border-slate-200/90 p-4 shadow-sm">
@@ -656,15 +840,15 @@ export default function RelatorioLadoALadoDashboard({
                   <p className="text-xs font-semibold uppercase text-slate-500">Cultura / safra</p>
                   <p className="font-semibold text-slate-900 mt-1">
                     {[farm.culture, farm.season].filter(Boolean).join(' · ') || '—'}
-                  </p>
-                </div>
+              </p>
+            </div>
               )}
               {(meta.generatedBy?.name || meta.generatedBy?.role) && (
                 <div className="rounded-2xl bg-white border border-slate-200/90 p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase text-slate-500">Responsável técnico</p>
                   <p className="font-semibold text-slate-900 mt-1">{meta.generatedBy?.name || '—'}</p>
                   {meta.generatedBy?.role && <p className="text-xs text-slate-600 mt-0.5">{meta.generatedBy.role}</p>}
-                </div>
+            </div>
               )}
               {farm.objective && (
                 <div className="rounded-2xl bg-white border border-slate-200/90 p-4 shadow-sm sm:col-span-2 lg:col-span-3">
@@ -749,168 +933,126 @@ export default function RelatorioLadoALadoDashboard({
                       {formatNumber(popA, { decimals: 0 })} / {formatNumber(popB, { decimals: 0 })}
                     </span>
                   </li>
-                </ul>
-              </div>
+              </ul>
             </div>
+          </div>
           </motion.section>
 
           <motion.section id="comparativo" {...fadeIn} className="scroll-mt-36">
             <h2 className="text-xl font-bold text-slate-900 mb-1 text-center tracking-tight">Comparativo de desempenho</h2>
-            <p className="text-sm text-slate-500 text-center mb-8">Evidência em campo e indicadores registrados por manejo (dados do relatório).</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-lg bg-white ring-2 ring-blue-100">
-                <div className="bg-blue-600 text-white px-4 py-3 text-center">
-                  <p className="text-xs font-semibold uppercase tracking-wide opacity-90">Manejo A</p>
-                  <p className="font-bold text-lg">{sideAName}</p>
-                  {subCaptionA ? <p className="text-xs opacity-90 mt-1 font-normal">{subCaptionA}</p> : null}
+            <p className="text-sm text-slate-500 text-center mb-6 max-w-2xl mx-auto leading-relaxed">
+              Fotos com legenda técnica e tabela única de indicadores — evita repetir os mesmos números nas duas colunas.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-white ring-1 ring-slate-200/80">
+                <div className="bg-blue-800 text-white px-4 py-2.5 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-95">Manejo padrão</p>
+                  <p className="font-bold text-base mt-0.5 leading-tight">{sideAName}</p>
+                  {subCaptionA ? <p className="text-[11px] opacity-90 mt-1 font-normal leading-snug">{subCaptionA}</p> : null}
                 </div>
-                <div className="p-3 sm:p-4">
+                <div className="p-2 sm:p-3">
                   {heroPhotoA ? (
-                    <PhotoWithHotspots ph={heroPhotoA} accentClass="text-slate-600" />
+                    <PhotoWithHotspots
+                      ph={heroPhotoA}
+                      accentClass="text-slate-600"
+                      structuredLegend
+                      legendExtras={{
+                        daaLine: comparativoDaaLine,
+                        regionLine: regionLineFarm,
+                        technicalNote: phenology?.sideA?.observacao,
+                      }}
+                    />
                   ) : (
                     <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 aspect-[4/3] flex items-center justify-center text-sm text-slate-400">
                       Sem foto para este manejo
                     </div>
                   )}
                 </div>
-                <ul className="px-4 pb-4 space-y-2 text-sm border-t border-slate-100 pt-3">
-                  {(kpisA.eficienciaPct != null || kpisB.eficienciaPct != null) && (
-                    <li className="flex justify-between gap-2">
-                      <span className="text-slate-600">Eficiência de plantio</span>
-                      <span className="font-semibold" style={{ color: COLOR_SIDE_A }}>
-                        {kpisA.eficienciaPct != null ? `${kpisA.eficienciaPct.toFixed(0)}%` : '—'}
-                      </span>
-                    </li>
-                  )}
-                  <li className="flex justify-between gap-2">
-                    <span className="text-slate-600">Vigor</span>
-                    <span className="font-semibold text-right" style={{ color: COLOR_SIDE_A }}>
-                      {vigorCell(kpisA, phenology?.sideA)}
-                    </span>
-                  </li>
-                  <li className="flex justify-between gap-2">
-                    <span className="text-slate-600">Sanidade de raiz</span>
-                    <span className="font-semibold" style={{ color: COLOR_SIDE_A }}>
-                      {rootCell(kpisA)}
-                    </span>
-                  </li>
-                  {(kpisA.avgHeightCm != null || kpisB.avgHeightCm != null) && (
-                    <li className="flex justify-between gap-2">
-                      <span className="text-slate-600">Altura média</span>
-                      <span className="font-semibold" style={{ color: COLOR_SIDE_A }}>
-                        {kpisA.avgHeightCm != null ? `${formatNumber(kpisA.avgHeightCm, { decimals: 0 })} cm` : '—'}
-                      </span>
-                    </li>
-                  )}
-                  {phenology?.sideA?.estadio && (
-                    <li className="flex justify-between gap-2">
-                      <span className="text-slate-600">Estádio (fenologia)</span>
-                      <span className="font-semibold text-right" style={{ color: COLOR_SIDE_A }}>
-                        {phenology.sideA.estadio}
-                      </span>
-                    </li>
-                  )}
-                  {phenology?.sideA?.uniformidade && (
-                    <li className="flex justify-between gap-2">
-                      <span className="text-slate-600">Uniformidade</span>
-                      <span className="font-semibold text-right" style={{ color: COLOR_SIDE_A }}>
-                        {phenology.sideA.uniformidade}
-                      </span>
-                    </li>
-                  )}
-                </ul>
               </div>
-              <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-lg bg-white ring-2 ring-emerald-100">
-                <div className="bg-emerald-600 text-white px-4 py-3 text-center">
-                  <p className="text-xs font-semibold uppercase tracking-wide opacity-90">Manejo B</p>
-                  <p className="font-bold text-lg">{sideBName}</p>
-                  {subCaptionB ? <p className="text-xs opacity-90 mt-1 font-normal">{subCaptionB}</p> : null}
+              <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-white ring-1 ring-slate-200/80">
+                <div className="bg-emerald-800 text-white px-4 py-2.5 text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-95">Manejo OFA</p>
+                  <p className="font-bold text-base mt-0.5 leading-tight">{sideBName}</p>
+                  {subCaptionB ? <p className="text-[11px] opacity-90 mt-1 font-normal leading-snug">{subCaptionB}</p> : null}
                 </div>
-                <div className="p-3 sm:p-4">
+                <div className="p-2 sm:p-3">
                   {heroPhotoB ? (
-                    <PhotoWithHotspots ph={heroPhotoB} accentClass="text-slate-600" />
+                    <PhotoWithHotspots
+                      ph={heroPhotoB}
+                      accentClass="text-slate-600"
+                      structuredLegend
+                      legendExtras={{
+                        daaLine: comparativoDaaLine,
+                        regionLine: regionLineFarm,
+                        technicalNote: phenology?.sideB?.observacao,
+                      }}
+                    />
                   ) : (
                     <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 aspect-[4/3] flex items-center justify-center text-sm text-slate-400">
                       Sem foto para este manejo
                     </div>
                   )}
                 </div>
-                <ul className="px-4 pb-4 space-y-2 text-sm border-t border-slate-100 pt-3">
-                  {(kpisA.eficienciaPct != null || kpisB.eficienciaPct != null) && (
-                    <li className="flex justify-between gap-2">
-                      <span className="text-slate-600">Eficiência de plantio</span>
-                      <span className="font-semibold" style={{ color: COLOR_SIDE_B }}>
-                        {kpisB.eficienciaPct != null ? `${kpisB.eficienciaPct.toFixed(0)}%` : '—'}
-                      </span>
-                    </li>
-                  )}
-                  <li className="flex justify-between gap-2">
-                    <span className="text-slate-600">Vigor</span>
-                    <span className="font-semibold text-right" style={{ color: COLOR_SIDE_B }}>
-                      {vigorCell(kpisB, phenology?.sideB)}
-                    </span>
-                  </li>
-                  <li className="flex justify-between gap-2">
-                    <span className="text-slate-600">Sanidade de raiz</span>
-                    <span className="font-semibold" style={{ color: COLOR_SIDE_B }}>
-                      {rootCell(kpisB)}
-                    </span>
-                  </li>
-                  {(kpisA.avgHeightCm != null || kpisB.avgHeightCm != null) && (
-                    <li className="flex justify-between gap-2">
-                      <span className="text-slate-600">Altura média</span>
-                      <span className="font-semibold" style={{ color: COLOR_SIDE_B }}>
-                        {kpisB.avgHeightCm != null ? `${formatNumber(kpisB.avgHeightCm, { decimals: 0 })} cm` : '—'}
-                      </span>
-                    </li>
-                  )}
-                  {phenology?.sideB?.estadio && (
-                    <li className="flex justify-between gap-2">
-                      <span className="text-slate-600">Estádio (fenologia)</span>
-                      <span className="font-semibold text-right" style={{ color: COLOR_SIDE_B }}>
-                        {phenology.sideB.estadio}
-                      </span>
-                    </li>
-                  )}
-                  {phenology?.sideB?.uniformidade && (
-                    <li className="flex justify-between gap-2">
-                      <span className="text-slate-600">Uniformidade</span>
-                      <span className="font-semibold text-right" style={{ color: COLOR_SIDE_B }}>
-                        {phenology.sideB.uniformidade}
-                      </span>
-                    </li>
-                  )}
-                </ul>
               </div>
             </div>
-            {insightComparativo && (
-              <div className="mt-6 rounded-xl bg-slate-100 border border-slate-200 px-5 py-4 text-sm text-slate-800 text-center leading-relaxed">
+            {comparativoMetricRows.length > 0 ? (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">Indicadores — leitura lado a lado</p>
+                </div>
+            <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                <thead>
+                      <tr className="border-b border-slate-200 text-left text-[10px] text-slate-500 uppercase tracking-wide">
+                        <th className="py-2.5 pl-4 pr-2 font-semibold w-[40%]">Indicador</th>
+                        <th className="py-2.5 px-2 font-semibold" style={{ color: COLOR_SIDE_A }}>
+                          {sideAName}
+                        </th>
+                        <th className="py-2.5 pr-4 pl-2 font-semibold" style={{ color: COLOR_SIDE_B }}>
+                          {sideBName}
+                        </th>
+                  </tr>
+                </thead>
+                <tbody>
+                      {comparativoMetricRows.map((row, i) => (
+                        <tr key={i} className="border-b border-slate-100 last:border-0">
+                          <td className="py-2 pl-4 pr-2 text-slate-600 align-top">{row.label}</td>
+                          <td className="py-2 px-2 font-semibold align-top tabular-nums" style={{ color: COLOR_SIDE_A }}>
+                            {row.a}
+                      </td>
+                          <td className="py-2 pr-4 pl-2 font-semibold align-top tabular-nums" style={{ color: COLOR_SIDE_B }}>
+                            {row.b}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+              </div>
+            ) : null}
+            {insightComparativo ? (
+              <div className="mt-5 rounded-xl bg-slate-100 border border-slate-200 px-5 py-3.5 text-sm text-slate-800 text-center leading-relaxed">
                 {insightComparativo}
               </div>
-            )}
+            ) : null}
             {(coleta?.dataPlantio || daaTimeline.length > 0) && (
-              <div className="mt-8">
-                <p className="text-xs font-semibold uppercase text-slate-500 text-center mb-3">Linha do tempo (dados registrados)</p>
+              <div className="mt-6">
+                <p className="text-xs font-semibold uppercase text-slate-500 text-center mb-2.5">Linha do tempo</p>
                 <div className="flex flex-wrap justify-center items-center gap-2">
                   {coleta?.dataPlantio && (
-                    <span className="px-3 py-2 rounded-full text-xs font-medium bg-white text-slate-700 border border-slate-200 shadow-sm">
+                    <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-white text-slate-700 border border-slate-200 shadow-sm">
                       Pré · plantio {formatDate(coleta.dataPlantio)}
                     </span>
                   )}
                   {daaTimeline.map((d) => (
                     <span
                       key={d}
-                      className="px-3 py-2 rounded-full text-xs font-semibold bg-blue-600 text-white shadow-sm"
+                      className="px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-600 text-white shadow-sm"
                     >
                       {d} DAA
                     </span>
                   ))}
                 </div>
-                {applications.length > 0 && (
-                  <p className="text-center text-xs text-slate-400 mt-3">
-                    DAA extraídos das aplicações registradas. Use a seção <strong>Avaliações</strong> para focar cada momento e <strong>Aplicações</strong> para o registro completo.
-                  </p>
-                )}
               </div>
             )}
           </motion.section>
@@ -1026,8 +1168,8 @@ export default function RelatorioLadoALadoDashboard({
                           <p className="text-[11px] text-slate-500 text-center leading-relaxed px-2">
                             Trajetória entre os pontos da linha do tempo usa <strong>interpolação</strong> a partir dos KPIs consolidados do relatório.
                             Com <strong>avaliações por DAA</strong> no JSON, cada aba poderá refletir medições reais da visita.
-                          </p>
-                        )}
+              </p>
+            )}
 
                         <div className="border-t border-slate-200/90 pt-6">
                           <p className="text-xs font-semibold uppercase text-slate-500 mb-4 text-center">Linha do tempo — contexto</p>
@@ -1185,27 +1327,61 @@ export default function RelatorioLadoALadoDashboard({
                     </div>
                   )}
 
-                  <p className="text-xs text-slate-500 border-t border-slate-100 pt-4">
-                    Comparativo visual completo na seção <strong>Comparativo</strong>. Volume de aplicações por DAA (A vs B) continua disponível nos dados
-                    brutos quando há ≥2 DAA distintos.
-                  </p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <motion.div
-                      whileHover={{ y: -2 }}
-                      className="rounded-xl border-2 border-blue-100 overflow-hidden shadow-sm bg-slate-50/50"
-                    >
-                      <div className="bg-blue-600 text-white text-center text-xs font-semibold py-2">{sideAName}</div>
-                      <div className="p-3">{heroPhotoA ? <PhotoWithHotspots ph={heroPhotoA} accentClass="text-slate-600" /> : null}</div>
-                    </motion.div>
-                    <motion.div
-                      whileHover={{ y: -2 }}
-                      className="rounded-xl border-2 border-emerald-100 overflow-hidden shadow-sm bg-slate-50/50"
-                    >
-                      <div className="bg-emerald-600 text-white text-center text-xs font-semibold py-2">{sideBName}</div>
-                      <div className="p-3">{heroPhotoB ? <PhotoWithHotspots ph={heroPhotoB} accentClass="text-slate-600" /> : null}</div>
-                    </motion.div>
-                  </div>
+                  {(heroPhotoA?.url || heroPhotoB?.url) && (
+                    <div className="border-t border-slate-100 pt-5 space-y-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 text-center">
+                        Evidência no momento selecionado · legenda técnica
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white">
+                          <div className="bg-blue-800 text-white text-center text-[10px] font-semibold uppercase tracking-wider py-2">
+                            Manejo padrão · {sideAName}
+                          </div>
+                          <div className="p-2">
+                            {heroPhotoA ? (
+                              <PhotoWithHotspots
+                                ph={heroPhotoA}
+                                accentClass="text-slate-600"
+                                structuredLegend
+                                legendExtras={{
+                                  daaLine: momentLegendDaaLine,
+                                  regionLine: regionLineFarm,
+                                  technicalNote: phenology?.sideA?.observacao,
+                                }}
+                              />
+                            ) : (
+                              <div className="aspect-[4/3] flex items-center justify-center text-xs text-slate-400 bg-slate-50 rounded-lg">
+                                Sem foto
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white">
+                          <div className="bg-emerald-800 text-white text-center text-[10px] font-semibold uppercase tracking-wider py-2">
+                            Manejo OFA · {sideBName}
+                          </div>
+                          <div className="p-2">
+                            {heroPhotoB ? (
+                              <PhotoWithHotspots
+                                ph={heroPhotoB}
+                                accentClass="text-slate-600"
+                                structuredLegend
+                                legendExtras={{
+                                  daaLine: momentLegendDaaLine,
+                                  regionLine: regionLineFarm,
+                                  technicalNote: phenology?.sideB?.observacao,
+                                }}
+                              />
+                            ) : (
+                              <div className="aspect-[4/3] flex items-center justify-center text-xs text-slate-400 bg-slate-50 rounded-lg">
+                                Sem foto
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {evolutionData && evolutionData.length >= 2 && (
@@ -1317,21 +1493,21 @@ export default function RelatorioLadoALadoDashboard({
 
             <div>
               <h3 className="text-base font-semibold text-slate-800 mb-4">Indicadores agronômicos</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { label: 'Altura média (cm)', a: kpisA.avgHeightCm, b: kpisB.avgHeightCm },
-                  { label: 'População final (pl/ha)', a: kpisA.finalPopulationPlHa, b: kpisB.finalPopulationPlHa },
-                  { label: 'Estande efetivo', a: kpisA.estandeEfetivo, b: kpisB.estandeEfetivo },
-                  { label: 'Eficiência (%)', a: kpisA.eficienciaPct, b: kpisB.eficienciaPct },
-                  { label: 'Profundidade raiz (cm)', a: kpisA.profundidadeRaizCm, b: kpisB.profundidadeRaizCm },
-                  { label: 'Peso raiz (g)', a: kpisA.pesoRaizG, b: kpisB.pesoRaizG },
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: 'Altura média (cm)', a: kpisA.avgHeightCm, b: kpisB.avgHeightCm },
+              { label: 'População final (pl/ha)', a: kpisA.finalPopulationPlHa, b: kpisB.finalPopulationPlHa },
+              { label: 'Estande efetivo', a: kpisA.estandeEfetivo, b: kpisB.estandeEfetivo },
+              { label: 'Eficiência (%)', a: kpisA.eficienciaPct, b: kpisB.eficienciaPct },
+              { label: 'Profundidade raiz (cm)', a: kpisA.profundidadeRaizCm, b: kpisB.profundidadeRaizCm },
+              { label: 'Peso raiz (g)', a: kpisA.pesoRaizG, b: kpisB.pesoRaizG },
                   {
                     label: 'Vigor',
                     a: phenology?.sideA?.vigor || kpisA.vigorRating?.label,
                     b: phenology?.sideB?.vigor || kpisB.vigorRating?.label,
                     isText: true,
                   },
-                  { label: 'Produtividade est. (kg/ha)', a: kpisA.estimatedYieldKgHa, b: kpisB.estimatedYieldKgHa },
+              { label: 'Produtividade est. (kg/ha)', a: kpisA.estimatedYieldKgHa, b: kpisB.estimatedYieldKgHa },
                 ]
                   .filter((r) => r.a != null || r.b != null)
                   .map((item, i) => (
@@ -1340,48 +1516,48 @@ export default function RelatorioLadoALadoDashboard({
                       whileHover={{ scale: 1.01 }}
                       className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm"
                     >
-                      <p className="text-xs font-medium text-slate-500 mb-2">{item.label}</p>
+                <p className="text-xs font-medium text-slate-500 mb-2">{item.label}</p>
                       {'isText' in item && item.isText ? (
-                        <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-sm">
                           <span style={{ color: COLOR_SIDE_A }}>{String(item.a || '—')}</span>
                           <span style={{ color: COLOR_SIDE_B }}>{String(item.b || '—')}</span>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex justify-between text-sm font-medium mb-1">
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm font-medium mb-1">
                             <span style={{ color: COLOR_SIDE_A }}>
                               {item.a != null ? formatNumber(item.a as number, { decimals: 1 }) : '—'}
                             </span>
                             <span style={{ color: COLOR_SIDE_B }}>
                               {item.b != null ? formatNumber(item.b as number, { decimals: 1 }) : '—'}
                             </span>
-                          </div>
-                          <div className="flex gap-1 h-2 rounded overflow-hidden bg-slate-100">
-                            <div
+                    </div>
+                    <div className="flex gap-1 h-2 rounded overflow-hidden bg-slate-100">
+                      <div
                               className="h-full rounded-l"
-                              style={{
+                        style={{
                                 backgroundColor: COLOR_SIDE_A,
-                                width:
-                                  item.a != null && item.b != null
-                                    ? (() => {
-                                        const numA = Number(item.a);
-                                        const numB = Number(item.b);
-                                        return numA + numB > 0 ? `${(numA / (numA + numB)) * 100}%` : '50%';
-                                      })()
-                                    : '50%',
-                              }}
-                            />
+                          width:
+                            item.a != null && item.b != null
+                              ? (() => {
+                                  const numA = Number(item.a);
+                                  const numB = Number(item.b);
+                                  return numA + numB > 0 ? `${(numA / (numA + numB)) * 100}%` : '50%';
+                                })()
+                              : '50%',
+                        }}
+                      />
                             <div
                               className="h-full rounded-r flex-1"
                               style={{ backgroundColor: COLOR_SIDE_B }}
                             />
-                          </div>
-                        </>
-                      )}
-                      <div className="flex justify-between text-xs text-slate-400 mt-1">
-                        <span>{sideAName}</span>
-                        <span>{sideBName}</span>
-                      </div>
+                    </div>
+                  </>
+                )}
+                <div className="flex justify-between text-xs text-slate-400 mt-1">
+                  <span>{sideAName}</span>
+                  <span>{sideBName}</span>
+                </div>
                     </motion.div>
                   ))}
               </div>
@@ -1436,7 +1612,7 @@ export default function RelatorioLadoALadoDashboard({
                       ))}
                     </tbody>
                   </table>
-                </div>
+          </div>
                 {data.criteriosEstatistica.some((r) => r.notaRegra) && (
                   <p className="text-xs text-slate-500 mt-3 italic">
                     {data.criteriosEstatistica.find((r) => r.notaRegra)?.notaRegra}
@@ -1445,7 +1621,7 @@ export default function RelatorioLadoALadoDashboard({
               </div>
             )}
 
-            {radarData.length > 0 && (
+        {radarData.length > 0 && (
               <motion.div
                 whileHover={{ y: -3 }}
                 transition={{ duration: 0.2 }}
@@ -1455,16 +1631,16 @@ export default function RelatorioLadoALadoDashboard({
                 <p className="text-xs text-slate-500 mb-4">Eixos normalizados no front a partir dos KPIs e fenologia — mesmo contrato JSON.</p>
                 <div className="h-64 w-full" style={{ minHeight: 240 }}>
                   <ResponsiveContainer width="100%" height={240}>
-                    <RadarChart data={radarData}>
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
-                      <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                <RadarChart data={radarData}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} />
                       <Radar name={sideAName} dataKey="A" stroke={COLOR_SIDE_A} fill={COLOR_SIDE_A} fillOpacity={0.25} strokeWidth={2} />
                       <Radar name={sideBName} dataKey="B" stroke={COLOR_SIDE_B} fill={COLOR_SIDE_B} fillOpacity={0.25} strokeWidth={2} />
-                      <Legend />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
+                  <Legend />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
               </motion.div>
             )}
 
@@ -1475,56 +1651,56 @@ export default function RelatorioLadoALadoDashboard({
               <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                 <h3 className="text-base font-semibold text-slate-900 mb-4">Contexto de plantio</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm">
-                  {coleta?.espacamento != null && (
-                    <div>
-                      <p className="text-2xl font-bold text-slate-900">{formatNumber(coleta.espacamento, { decimals: 1 })} cm</p>
-                      <p className="text-xs text-slate-500">Espaçamento</p>
-                    </div>
-                  )}
-                  {coleta?.populacaoAlvo != null && (
-                    <div>
-                      <p className="text-2xl font-bold text-slate-900">{formatNumber(coleta.populacaoAlvo, { decimals: 0 })}</p>
-                      <p className="text-xs text-slate-500">Pop. alvo (pl/ha)</p>
-                    </div>
-                  )}
-                  {kpisA.finalPopulationPlHa != null && (
-                    <div>
+              {coleta?.espacamento != null && (
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">{formatNumber(coleta.espacamento, { decimals: 1 })} cm</p>
+                  <p className="text-xs text-slate-500">Espaçamento</p>
+                </div>
+              )}
+              {coleta?.populacaoAlvo != null && (
+                <div>
+                  <p className="text-2xl font-bold text-slate-900">{formatNumber(coleta.populacaoAlvo, { decimals: 0 })}</p>
+                  <p className="text-xs text-slate-500">Pop. alvo (pl/ha)</p>
+                </div>
+              )}
+              {kpisA.finalPopulationPlHa != null && (
+                <div>
                       <p className="text-2xl font-bold" style={{ color: COLOR_SIDE_A }}>
                         {formatNumber(kpisA.finalPopulationPlHa, { decimals: 0 })}
                       </p>
                       <p className="text-xs text-slate-500">{sideAName}</p>
-                    </div>
-                  )}
-                  {kpisB.finalPopulationPlHa != null && (
-                    <div>
+                </div>
+              )}
+              {kpisB.finalPopulationPlHa != null && (
+                <div>
                       <p className="text-2xl font-bold" style={{ color: COLOR_SIDE_B }}>
                         {formatNumber(kpisB.finalPopulationPlHa, { decimals: 0 })}
                       </p>
                       <p className="text-xs text-slate-500">{sideBName}</p>
-                    </div>
-                  )}
                 </div>
+              )}
+            </div>
               </div>
-            )}
+        )}
 
-            {points.length > 0 && (
+        {points.length > 0 && (
               <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                 <h3 className="text-base font-semibold text-slate-900 mb-4">Pontos de avaliação</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200">
-                        <th className="text-left py-2 font-medium text-slate-600">Ponto</th>
-                        <th className="text-left py-2 font-medium text-slate-600">Nome</th>
-                        <th className="text-left py-2 font-medium text-slate-600">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {points.map((p, i) => (
-                        <tr key={i} className="border-b border-slate-100">
-                          <td className="py-2">{p.indexNo ?? i + 1}</td>
-                          <td className="py-2">{p.name || '—'}</td>
-                          <td className="py-2">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left py-2 font-medium text-slate-600">Ponto</th>
+                    <th className="text-left py-2 font-medium text-slate-600">Nome</th>
+                    <th className="text-left py-2 font-medium text-slate-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {points.map((p, i) => (
+                    <tr key={i} className="border-b border-slate-100">
+                      <td className="py-2">{p.indexNo ?? i + 1}</td>
+                      <td className="py-2">{p.name || '—'}</td>
+                      <td className="py-2">
                             <span
                               className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                                 (p.status || '').toLowerCase() === 'ok'
@@ -1534,27 +1710,27 @@ export default function RelatorioLadoALadoDashboard({
                                     : 'bg-red-100 text-red-800'
                               }`}
                             >
-                              {situacaoLabel(p.status)}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          {situacaoLabel(p.status)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
               </div>
-            )}
+        )}
 
-            {phenology && (phenology.sideA || phenology.sideB) && (
+        {phenology && (phenology.sideA || phenology.sideB) && (
               <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                 <h3 className="text-base font-semibold text-slate-900 mb-4">Fenologia</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {phenology.sideA && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {phenology.sideA && (
                     <div className="border rounded-xl p-4" style={{ borderColor: `${COLOR_SIDE_A}44`, background: `${COLOR_SIDE_A}0d` }}>
                       <p className="font-medium mb-2" style={{ color: COLOR_SIDE_A }}>
                         {sideAName}
                       </p>
-                      <ul className="text-sm space-y-1">
+                  <ul className="text-sm space-y-1">
                         {phenology.sideA.estadio && (
                           <li>
                             <span className="text-slate-500">Estádio:</span> {phenology.sideA.estadio}
@@ -1575,15 +1751,15 @@ export default function RelatorioLadoALadoDashboard({
                             <span className="text-slate-500">Obs.:</span> {phenology.sideA.observacao}
                           </li>
                         )}
-                      </ul>
-                    </div>
-                  )}
-                  {phenology.sideB && (
+                  </ul>
+                </div>
+              )}
+              {phenology.sideB && (
                     <div className="border rounded-xl p-4" style={{ borderColor: `${COLOR_SIDE_B}44`, background: `${COLOR_SIDE_B}0d` }}>
                       <p className="font-medium mb-2" style={{ color: COLOR_SIDE_B }}>
                         {sideBName}
                       </p>
-                      <ul className="text-sm space-y-1">
+                  <ul className="text-sm space-y-1">
                         {phenology.sideB.estadio && (
                           <li>
                             <span className="text-slate-500">Estádio:</span> {phenology.sideB.estadio}
@@ -1604,10 +1780,10 @@ export default function RelatorioLadoALadoDashboard({
                             <span className="text-slate-500">Obs.:</span> {phenology.sideB.observacao}
                           </li>
                         )}
-                      </ul>
-                    </div>
-                  )}
+                  </ul>
                 </div>
+              )}
+            </div>
               </div>
             )}
 
@@ -1624,38 +1800,38 @@ export default function RelatorioLadoALadoDashboard({
               kpisA.rootRating ||
               kpisB.rootRating) ? (
               <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                {barKpis.filter((r) => r.name.includes('Raiz') || r.name.includes('Peso')).length > 0 ? (
+            {barKpis.filter((r) => r.name.includes('Raiz') || r.name.includes('Peso')).length > 0 ? (
                   <div className="h-56 w-full overflow-x-auto" style={{ minHeight: 200 }}>
-                    <ResponsiveContainer width="100%" height={200} minWidth={280}>
+                <ResponsiveContainer width="100%" height={200} minWidth={280}>
                       <BarChart
                         data={barKpis.filter((r) => r.name.includes('Raiz') || r.name.includes('Peso'))}
                         layout="vertical"
                         margin={{ left: 80 }}
                       >
-                        <XAxis type="number" />
-                        <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Legend />
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Legend />
                         <Bar dataKey="a" name={sideAName} fill={COLOR_SIDE_A} radius={[0, 4, 4, 0]} />
                         <Bar dataKey="b" name={sideBName} fill={COLOR_SIDE_B} radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : null}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : null}
                 <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
-                  {kpisA.rootRating && (
+              {kpisA.rootRating && (
                     <div>
                       <span className="text-slate-500">Sanidade raiz {sideAName}: </span>
                       {kpisA.rootRating.label} ({kpisA.rootRating.score}/{kpisA.rootRating.max})
                     </div>
-                  )}
-                  {kpisB.rootRating && (
+              )}
+              {kpisB.rootRating && (
                     <div>
                       <span className="text-slate-500">Sanidade raiz {sideBName}: </span>
                       {kpisB.rootRating.label} ({kpisB.rootRating.score}/{kpisB.rootRating.max})
                     </div>
-                  )}
-                </div>
+              )}
+            </div>
               </div>
             ) : (
               <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
@@ -1667,7 +1843,7 @@ export default function RelatorioLadoALadoDashboard({
           <motion.section id="fitossanidade" {...fadeIn} className="scroll-mt-36 space-y-6">
             <h2 className="text-lg font-bold text-slate-900 border-l-4 border-orange-600 pl-3">Fitossanidade</h2>
             <p className="text-sm text-slate-600">Principais problemas e incidência declarada no relatório.</p>
-            {ocorrencias.length > 0 ? (
+          {ocorrencias.length > 0 ? (
               <div className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[...ocorrencias]
@@ -1701,22 +1877,22 @@ export default function RelatorioLadoALadoDashboard({
                         )}
                       </motion.div>
                     ))}
-                </div>
-                {ocorrenciasChart.length > 0 && (
+              </div>
+              {ocorrenciasChart.length > 0 && (
                   <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                     <h3 className="text-sm font-semibold text-slate-800 mb-3">Distribuição (incidência %)</h3>
                     <div className="h-44 w-full" style={{ minHeight: 160 }}>
                       <ResponsiveContainer width="100%" height={160}>
                         <BarChart data={ocorrenciasChart}>
-                          <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                          <YAxis tick={{ fontSize: 10 }} />
-                          <Tooltip />
-                          <Bar dataKey="incidencia" name="Incidência %" fill="#E65100" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Bar dataKey="incidencia" name="Incidência %" fill="#E65100" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                     </div>
-                  </div>
-                )}
+                </div>
+              )}
               </div>
             ) : (
               <p className="text-slate-500 text-sm rounded-2xl border border-dashed border-slate-200 bg-white p-6">
@@ -1730,60 +1906,60 @@ export default function RelatorioLadoALadoDashboard({
             <p className="text-sm text-slate-600">Comparativo visual por categoria, quando as fotos estão classificadas no JSON.</p>
             {photosA.length > 0 || photosB.length > 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm overflow-hidden">
-                {photosByCategory.length > 0 ? (
+            {photosByCategory.length > 0 ? (
                   <div className="space-y-8">
-                    {photosByCategory.map((group) => (
-                      <div key={group.category}>
+                {photosByCategory.map((group) => (
+                  <div key={group.category}>
                         <h4 className="text-sm font-medium text-slate-600 mb-3">{group.label}</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
                             <p className="text-xs font-semibold mb-2" style={{ color: COLOR_SIDE_A }}>
                               {sideAName}
                             </p>
                             <div className="grid grid-cols-2 gap-2">
-                              {group.photosA.map((ph, i) => (
+                          {group.photosA.map((ph, i) => (
                                 <PhotoWithHotspots key={i} ph={ph} accentClass="text-slate-600" />
-                              ))}
-                            </div>
-                          </div>
-                          <div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
                             <p className="text-xs font-semibold mb-2" style={{ color: COLOR_SIDE_B }}>
                               {sideBName}
                             </p>
                             <div className="grid grid-cols-2 gap-2">
-                              {group.photosB.map((ph, i) => (
+                          {group.photosB.map((ph, i) => (
                                 <PhotoWithHotspots key={i} ph={ph} accentClass="text-slate-600" />
-                              ))}
-                            </div>
-                          </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
                       <p className="font-medium mb-3" style={{ color: COLOR_SIDE_A }}>
                         {sideAName}
                       </p>
                       <div className="grid grid-cols-2 gap-2">
-                        {photosA.map((ph, i) => (
+                    {photosA.map((ph, i) => (
                           <PhotoWithHotspots key={i} ph={ph} accentClass="text-slate-600" />
-                        ))}
-                      </div>
-                    </div>
-                    <div>
+                    ))}
+                  </div>
+                </div>
+                <div>
                       <p className="font-medium mb-3" style={{ color: COLOR_SIDE_B }}>
                         {sideBName}
                       </p>
                       <div className="grid grid-cols-2 gap-2">
-                        {photosB.map((ph, i) => (
+                    {photosB.map((ph, i) => (
                           <PhotoWithHotspots key={i} ph={ph} accentClass="text-slate-600" />
-                        ))}
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                )}
+                </div>
+              </div>
+            )}
               </div>
             ) : (
               <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
@@ -1803,7 +1979,7 @@ export default function RelatorioLadoALadoDashboard({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {treatmentSides.map((s) => {
                   const isA = s.side === 'A';
-                  const headerBg = isA ? 'bg-blue-600' : 'bg-emerald-600';
+                  const headerBg = isA ? 'bg-blue-800' : 'bg-emerald-800';
                   const borderRing = isA ? 'ring-blue-200' : 'ring-emerald-200';
                   const plannedSum = (s.products ?? []).reduce((acc, p) => acc + (p.cost_per_ha ?? 0), 0);
                   const protocolPhoto = pickHeroPhoto(isA ? photosA : photosB);
@@ -1813,10 +1989,12 @@ export default function RelatorioLadoALadoDashboard({
                       whileHover={{ y: -2 }}
                       className={`rounded-2xl overflow-hidden border border-slate-200 shadow-md ring-2 ${borderRing} bg-white`}
                     >
-                      <div className={`${headerBg} text-white px-4 py-3 flex items-center gap-2`}>
-                        <span className="font-bold">
-                          [{s.side}] {s.name}
-                        </span>
+                      <div className={`${headerBg} text-white px-4 py-2.5 text-center`}>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-95">
+                          {isA ? 'Manejo padrão' : 'Manejo OFA'}
+                        </p>
+                        <p className="font-bold text-base mt-0.5 leading-tight">{s.name}</p>
+                        <p className="text-[11px] opacity-85 mt-0.5">Tratamento {s.side}</p>
                       </div>
                       {protocolPhoto?.url ? (
                         <div className="px-3 pt-3">
@@ -1855,14 +2033,14 @@ export default function RelatorioLadoALadoDashboard({
                                 </p>
                               </li>
                             ))}
-                          </ul>
+                </ul>
                         </div>
                         {plannedSum > 0 && (
                           <p className="text-sm font-medium text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 inline-block">
                             Soma custos planejados (itens): R$ {formatNumber(plannedSum, { decimals: 2 })}/ha
                           </p>
-                        )}
-                      </div>
+              )}
+            </div>
                     </motion.div>
                   );
                 })}
@@ -1988,7 +2166,9 @@ export default function RelatorioLadoALadoDashboard({
                     <p className="text-lg font-bold text-emerald-800">
                       R$ {formatNumber(economia.preco_saca_brl, { decimals: 2 })}/sc
                     </p>
-                    {economia.fonte_preco && <p className="text-xs text-slate-500 mt-1">Fonte: {economia.fonte_preco}</p>}
+                    {showEconomiaFontePreco(economia.fonte_preco) ? (
+                      <p className="text-xs text-slate-500 mt-1">Fonte: {economia.fonte_preco}</p>
+        ) : null}
                     {receitaPorLado && receitaPorLado.some((r) => r.receita != null) && (
                       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {receitaPorLado.map((r, i) =>
@@ -2033,33 +2213,33 @@ export default function RelatorioLadoALadoDashboard({
                   ))}
                 </ul>
               )}
-              {conclusion.recommendations && conclusion.recommendations.length > 0 && (
+          {conclusion.recommendations && conclusion.recommendations.length > 0 && (
                 <div>
                   <p className="font-medium text-slate-800 mb-2">Recomendações</p>
-                  <ol className="list-decimal list-inside text-slate-700 space-y-1">
+              <ol className="list-decimal list-inside text-slate-700 space-y-1">
                     {conclusion.recommendations.map((r, i) => (
                       <li key={i}>{r}</li>
                     ))}
-                  </ol>
-                </div>
-              )}
-              {conclusion.signature && (conclusion.signature.name || conclusion.signature.crea || conclusion.signature.city) && (
-                <div className="pt-4 border-t border-slate-200">
-                  <p className="font-semibold text-slate-900">{conclusion.signature.name}</p>
-                  {conclusion.signature.crea && <p className="text-sm text-slate-600">CREA: {conclusion.signature.crea}</p>}
-                  {conclusion.signature.city && <p className="text-sm text-slate-600">{conclusion.signature.city}</p>}
-                </div>
-              )}
+              </ol>
+            </div>
+          )}
+          {conclusion.signature && (conclusion.signature.name || conclusion.signature.crea || conclusion.signature.city) && (
+            <div className="pt-4 border-t border-slate-200">
+              <p className="font-semibold text-slate-900">{conclusion.signature.name}</p>
+              {conclusion.signature.crea && <p className="text-sm text-slate-600">CREA: {conclusion.signature.crea}</p>}
+              {conclusion.signature.city && <p className="text-sm text-slate-600">{conclusion.signature.city}</p>}
+            </div>
+          )}
             </div>
           </motion.section>
 
           <footer className="text-center text-sm text-slate-500 py-8 border-t border-slate-200">
-            <p>Relatório gerado pelo FortSmart Agro</p>
-            <p className="mt-1">
+          <p>Relatório gerado pelo FortSmart Agro</p>
+          <p className="mt-1">
               {formatDate(meta.createdAt)} · {meta.appVersion || '—'} · ID: {meta.reportId || reportId || '—'}
-            </p>
-          </footer>
-        </main>
+          </p>
+        </footer>
+      </main>
       </div>
     </div>
   );
@@ -2068,44 +2248,42 @@ export default function RelatorioLadoALadoDashboard({
 function ExecutionEventCard({ ev, compact }: { ev: ReportApplicationEventV2Json; compact?: boolean }) {
   const c = ev.climate;
   const t = ev.applicationTech;
-  const pad = compact ? 'p-4' : 'p-5';
+  const pad = compact ? 'p-3' : 'p-4';
+  const sideBar = ev.side === 'A' ? 'border-blue-500' : 'border-emerald-500';
   return (
     <motion.div
-      whileHover={{ x: 2 }}
-      className={`relative pl-5 border-l-4 border-emerald-500 border-y border-r border-slate-200 bg-white rounded-r-2xl shadow-sm ${pad}`}
+      whileHover={{ y: -1 }}
+      className={`relative pl-4 border-l-[3px] ${sideBar} border-y border-r border-slate-200/90 bg-white rounded-r-xl shadow-sm ${pad}`}
     >
-      <div className="flex flex-wrap gap-2 items-baseline justify-between">
-        <div>
-          <span className="text-xs font-semibold uppercase text-slate-500">Data</span>
-          <p className="font-semibold text-slate-900">{ev.date ? formatDate(ev.date) : '—'}</p>
-        </div>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <span className="font-semibold text-slate-900 tabular-nums">{ev.date ? formatDate(ev.date) : '—'}</span>
         {ev.daa != null && (
-          <span className="text-sm font-medium bg-slate-100 text-slate-800 px-2 py-1 rounded-lg">{ev.daa} DAA</span>
+          <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">{ev.daa} DAA</span>
         )}
         <span
-          className={`text-xs font-bold px-2 py-1 rounded ${
+          className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${
             ev.side === 'A' ? 'bg-blue-100 text-blue-900' : 'bg-emerald-100 text-emerald-900'
           }`}
         >
-          Lado {ev.side}
+          {ev.side === 'A' ? 'Manejo padrão' : 'Manejo OFA'}
         </span>
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <p className="font-medium text-slate-800">{ev.type || 'Aplicação'}</p>
-        {ev.stage && (
-          <span className="text-xs font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        <span className="font-medium text-slate-800">{ev.type || 'Aplicação'}</span>
+        {ev.stage ? (
+          <span className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200/80 px-1.5 py-0.5 rounded">
             {ev.stage}
           </span>
-        )}
+        ) : null}
       </div>
-      {ev.responsible && <p className="text-xs text-slate-500 mt-1">Responsável: {ev.responsible}</p>}
-      {!compact && ev.scope && <p className="text-xs text-slate-500">Escopo: {ev.scope}</p>}
-      {!compact && ev.point_ids && ev.point_ids.length > 0 && (
-        <p className="text-xs text-slate-500">Pontos: {ev.point_ids.join(', ')}</p>
-      )}
+      {ev.responsible ? <p className="text-[11px] text-slate-500 mt-1">{ev.responsible}</p> : null}
+      {!compact && ev.scope ? <p className="text-[11px] text-slate-500 mt-0.5">Escopo {ev.scope}</p> : null}
+      {!compact && ev.point_ids && ev.point_ids.length > 0 ? (
+        <p className="text-[11px] text-slate-500 mt-0.5">Pontos {ev.point_ids.join(', ')}</p>
+      ) : null}
       {c && (c.temperature != null || c.humidity != null || c.wind != null || c.derivaRisco) && (
-        <div className="mt-3 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-          <span className="font-semibold text-slate-600">Clima: </span>
+        <p className="mt-2 text-[11px] leading-snug text-slate-700 bg-slate-50 rounded-md px-2 py-1.5 border border-slate-100">
+          <span className="font-semibold text-slate-600">Clima </span>
           {[
             c.temperature != null ? `${c.temperature}°C` : null,
             c.humidity != null ? `${c.humidity}%` : null,
@@ -2114,45 +2292,46 @@ function ExecutionEventCard({ ev, compact }: { ev: ReportApplicationEventV2Json;
           ]
             .filter(Boolean)
             .join(' · ')}
-        </div>
+        </p>
       )}
       {(t?.bico != null || t?.vazao != null || t?.pressao != null) && (
-        <div className="mt-2 text-sm text-slate-700">
-          <span className="font-semibold text-slate-600">Tecnologia: </span>
-          {[t?.bico && `Bico ${t.bico}`, t?.vazao != null && `Vazão ${t.vazao} L/min`, t?.pressao != null && `Pressão ${t.pressao}`]
+        <p className="mt-1.5 text-[11px] text-slate-700 leading-snug">
+          <span className="font-semibold text-slate-600">Tecnologia </span>
+          {[t?.bico && `Bico ${t.bico}`, t?.vazao != null && `${t.vazao} L/min`, t?.pressao != null && `${t.pressao} bar`]
             .filter(Boolean)
             .join(' · ')}
-        </div>
+        </p>
       )}
       {ev.products && ev.products.length > 0 && (
-        <ul className="mt-4 space-y-2">
+        <ul className={`mt-2 space-y-1.5 ${compact ? '' : 'mt-3'}`}>
           {ev.products.map((p, j) => (
-            <li key={j} className="text-sm border border-slate-100 rounded-lg p-3 bg-slate-50/80">
-              <div className="flex flex-wrap gap-2 justify-between items-start">
+            <li key={j} className="text-[11px] sm:text-xs border border-slate-100 rounded-lg px-2 py-1.5 bg-slate-50/90 leading-snug">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
                 <span className="font-semibold text-slate-900">{p.nomeComercial || 'Produto'}</span>
-                <div className="flex flex-wrap gap-1 justify-end">
-                  {p.classe && (
-                    <span className="text-xs font-medium bg-white text-slate-700 px-2 py-0.5 rounded-full border border-slate-200">
-                      {p.classe}
-                    </span>
-                  )}
-                  {p.linkedProtocolItemId ? (
-                    <span className="text-xs font-medium bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full">
-                      Protocolo
-                    </span>
-                  ) : null}
-                </div>
+                {p.classe ? (
+                  <span className="text-[10px] font-medium text-slate-600 whitespace-nowrap">{p.classe}</span>
+                ) : null}
               </div>
-              {p.nomeAtivo && <p className="text-xs text-slate-600 mt-1">→ Ativo: {p.nomeAtivo}</p>}
-              <p className="text-xs text-slate-600 mt-1">
-                → Dose:{' '}
-                {p.dose != null && p.unidade ? `${p.dose} ${p.unidade}` : p.dose != null ? String(p.dose) : '—'}
-                {p.custoHa != null && (
-                  <span className="ml-2 font-medium text-slate-800">
-                    · R$ {formatNumber(p.custoHa, { decimals: 2 })}/ha
+              <div className="text-slate-600 mt-0.5">
+                {p.nomeAtivo ? <span>Ativo {p.nomeAtivo}</span> : null}
+                {p.nomeAtivo && (p.dose != null || p.custoHa != null) ? <span className="text-slate-300 mx-1">·</span> : null}
+                {p.dose != null ? (
+                  <span>
+                    {p.dose}
+                    {p.unidade ? ` ${p.unidade}` : ''}
                   </span>
-                )}
-              </p>
+                ) : null}
+                {p.custoHa != null ? (
+                  <span className="text-slate-700 font-medium">
+                    {p.dose != null ? ' · ' : ''}R$ {formatNumber(p.custoHa, { decimals: 2 })}/ha
+                  </span>
+                ) : null}
+              </div>
+              {p.linkedProtocolItemId ? (
+                <span className="inline-block mt-1 text-[10px] font-medium text-emerald-800 bg-emerald-100/80 px-1.5 py-0.5 rounded">
+                  Protocolo
+                </span>
+              ) : null}
             </li>
           ))}
         </ul>

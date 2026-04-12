@@ -45,10 +45,12 @@ import mc from './visita_tecnica/vt-mobile-collapsible.module.css';
 import VtBlocoImpactoProdutivo from './visita_tecnica/VtBlocoImpactoProdutivo';
 import VtDecisionHero from './visita_tecnica/VtDecisionHero';
 import VtGraficoTendenciasDecisao from './visita_tecnica/VtGraficoTendenciasDecisao';
+import VtHistoricoFenologia from './visita_tecnica/VtHistoricoFenologia';
 import VtInteligenciaNarrativa from './visita_tecnica/VtInteligenciaNarrativa';
 import VtMobileCollapsibleDetails from './visita_tecnica/VtMobileCollapsibleDetails';
 import VtNarrativaDiagnostico from './visita_tecnica/VtNarrativaDiagnostico';
 import VtPragasBarras from './visita_tecnica/VtPragasBarras';
+import RelatorioSideBySide from './visita_tecnica/RelatorioSideBySide';
 import type { PayloadVisitaTecnica } from '@/types/payload-visita-tecnica';
 
 export type { PayloadVisitaTecnica } from '@/types/payload-visita-tecnica';
@@ -146,6 +148,14 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
     pontos?: Array<Record<string, unknown> & { x?: number; y?: number; index?: number; severidade?: string; titulo?: string; descricao?: string; data?: string; latitude?: number; longitude?: number; lat?: number; lng?: number }>;
   };
 
+  const visitaSnapshot =
+    relatorio.visita_snapshot != null && typeof relatorio.visita_snapshot === 'object'
+      ? relatorio.visita_snapshot
+      : undefined;
+  const pontosGeoSnap = Array.isArray(visitaSnapshot?.pontos_georreferenciados)
+    ? visitaSnapshot.pontos_georreferenciados
+    : [];
+
   const polygonForMap = useMemo(() => {
     let raw: string | number[][] | undefined = mapa.polygon;
     if (typeof raw === 'string') {
@@ -188,8 +198,26 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
         data: p.data != null ? String(p.data) : undefined,
       };
     });
-    return mapped.filter(Boolean) as PontoMapa[];
-  }, [mapa.pontos]);
+    const fromMapa = mapped.filter(Boolean) as PontoMapa[];
+    if (fromMapa.length > 0) return fromMapa;
+
+    return pontosGeoSnap
+      .filter((p): p is Record<string, unknown> => p != null && typeof p === 'object' && !Array.isArray(p))
+      .map((p) => {
+        const lat = Number(p.latitude ?? p.lat);
+        const lng = Number(p.longitude ?? p.lng ?? p.lon);
+        if (Number.isNaN(lat) || Number.isNaN(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+        const desc = p.descricao != null ? String(p.descricao) : undefined;
+        return {
+          latitude: lat,
+          longitude: lng,
+          titulo: desc,
+          descricao: desc,
+          data: p.data != null ? String(p.data) : undefined,
+        };
+      })
+      .filter(Boolean) as PontoMapa[];
+  }, [mapa.pontos, pontosGeoSnap]);
 
   const hasValidPolygon = (polygonForMap?.length ?? 0) >= 3;
   const hasValidGeoPontos = pontosForMap.length > 0;
@@ -278,6 +306,31 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
     : null;
 
   const pontosMapaRows = Array.isArray(mapa.pontos) ? (mapa.pontos as Record<string, unknown>[]) : [];
+  const pontosTableRows = useMemo((): Record<string, unknown>[] => {
+    const fromMapa = Array.isArray(mapa.pontos) ? (mapa.pontos as Record<string, unknown>[]) : [];
+    if (pontosGeoSnap.length === 0) return fromMapa;
+    return pontosGeoSnap.map((p) => {
+      const rec = p as Record<string, unknown>;
+      const lat = rec.latitude ?? rec.lat;
+      const lng = rec.longitude ?? rec.lng ?? rec.lon;
+      return {
+        ...rec,
+        latitude: lat,
+        longitude: lng,
+        lat,
+        lng,
+        titulo: rec.titulo ?? rec.descricao,
+        tipo: rec.tipo ?? 'visita_snapshot',
+      };
+    });
+  }, [pontosGeoSnap, mapa.pontos]);
+  const hasPontosGeoTable = useMemo(() => {
+    return pontosTableRows.some((p) => {
+      const lat = p.latitude ?? p.lat;
+      const lng = p.longitude ?? p.lng ?? p.lon;
+      return lat != null && lng != null && !Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng));
+    });
+  }, [pontosTableRows]);
   const reportKey =
     [reportId, relatorioUuid, meta.id, meta.relatorioId, meta.uuid]
       .map((x) => (x != null ? String(x).trim() : ''))
@@ -338,6 +391,12 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
     () => extractProdutividadeSerie(relatorio as Record<string, unknown>),
     [relatorio],
   );
+
+  const historicoFenologiaRows = useMemo(() => {
+    const h = fenologia?.historico;
+    if (!Array.isArray(h)) return [];
+    return h.filter((x): x is Record<string, unknown> => x != null && typeof x === 'object' && !Array.isArray(x));
+  }, [fenologia]);
 
   const contextoSafraLinhas = useMemo(() => {
     if (!contextoSafra || typeof contextoSafra !== 'object') return [];
@@ -439,8 +498,19 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           </div>
         </div>
 
+        <RelatorioSideBySide
+          relatorio={relatorio}
+          talhaoNome={talhao?.nome != null ? String(talhao.nome) : undefined}
+          culturaNome={talhao?.cultura != null ? String(talhao.cultura) : undefined}
+          dataRelatorio={data ? formatDate(data) || data : undefined}
+          onPhotoClick={(url) => {
+            const i = imagens.findIndex((x) => (x.url ?? '').trim() === url.trim());
+            if (i >= 0) setLightboxIndex(i);
+          }}
+        />
+
         <div className={deck.cardGrid}>
-          <div className={deck.cardSpanFull}>
+          <div className={`${deck.cardSpanFull} ${dp.cockpitStack}`}>
             <VtDecisionHero model={heroModel} />
             <VtBlocoImpactoProdutivo
               potencial={vtProductivity.potencial}
@@ -455,8 +525,8 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           </div>
 
         {hasMapa ? (
-          <VtDeckSlide icon={MapPinned} spanFull kicker="Geodata" title="Mapa do talhão e pontos georreferenciados">
-            <div style={{ marginBottom: pontosMapaRows.length > 0 ? 20 : 0 }}>
+          <VtDeckSlide detail icon={MapPinned} spanFull kicker="Geodata" title="Mapa do talhão e pontos georreferenciados">
+            <div style={{ marginBottom: pontosForMap.length > 0 ? 20 : 0 }}>
               {useRealMap ? (
                 <MapaTalhaoClientMount
                   polygon={polygonForMap && polygonForMap.length >= 3 ? polygonForMap : undefined}
@@ -482,24 +552,24 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
                 />
               )}
             </div>
-            {pontosMapaRows.length > 0 ? (
+            {hasPontosGeoTable ? (
               <>
                 <div className={deck.reportCardKicker} style={{ marginBottom: 10 }}>
                   Coordenadas dos pontos (WGS84)
                 </div>
-                <VtPontosGeorefTable pontos={pontosMapaRows} />
+                <VtPontosGeorefTable pontos={pontosTableRows} />
               </>
             ) : null}
           </VtDeckSlide>
         ) : (
-          <VtDeckSlide icon={MapPinned} spanFull kicker="Geodata" title="Mapa do talhão e pontos georreferenciados">
+          <VtDeckSlide detail icon={MapPinned} spanFull kicker="Geodata" title="Mapa do talhão e pontos georreferenciados">
             <p className={deck.emptyHint}>
               Sem polígono ou pontos com coordenadas neste relatório. No app, associe GPS aos registros (fenologia, pragas, ocorrências) ou carregue o perímetro do talhão.
             </p>
           </VtDeckSlide>
         )}
 
-        <VtDeckSlide icon={Home} kicker="Identificação" title="Dados da propriedade e do talhão">
+        <VtDeckSlide detail icon={Home} kicker="Identificação" title="Dados da propriedade e do talhão">
             <TabelaTecnicaCampos
               linhas={[
                 { campo: 'Fazenda', valor: fazenda !== 'Fazenda' ? fazenda : undefined },
@@ -517,13 +587,13 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
         </VtDeckSlide>
 
         {hasContextoSafraSlide && (
-          <VtDeckSlide icon={Sprout} kicker="Planeamento agrícola" title="Contexto da safra">
+          <VtDeckSlide detail icon={Sprout} kicker="Planeamento agrícola" title="Contexto da safra">
             <TabelaTecnicaCampos linhas={contextoSafraLinhas} />
           </VtDeckSlide>
         )}
 
         {showDeckProdutividadeSlide && (
-          <VtDeckSlide icon={Scale} spanFull kicker="Produção" title="Estimativa de produtividade">
+          <VtDeckSlide detail icon={Scale} spanFull kicker="Produção" title="Estimativa de produtividade">
             <div className={deck.prodHighlightGrid}>
               <div className={deck.prodHighlightBox}>
                 <div className={deck.prodHighlightLabel}>Potencial</div>
@@ -548,11 +618,11 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           </VtDeckSlide>
         )}
 
-        <VtDeckSlide icon={ClipboardCheck} kicker="Roteiro" title="Checklist da visita">
+        <VtDeckSlide detail icon={ClipboardCheck} kicker="Roteiro" title="Checklist da visita">
           <VtChecklistBlock checklist={checklist} />
         </VtDeckSlide>
 
-        <VtDeckSlide icon={CloudSun} kicker="Ambiente" title="Condições do momento">
+        <VtDeckSlide detail icon={CloudSun} kicker="Ambiente" title="Condições do momento">
           <VtCondicoesMomentBlock
             condicoes={condicoes}
             amostragem={
@@ -565,7 +635,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
 
         {/* 3. Desenvolvimento da Cultura — tabela técnica */}
         {(fenologia?.estadio != null || fenologia?.estagio != null || fenologia?.dataUltimaAvaliacao != null || fenologia?.ultimaAvaliacaoDias != null || populacao?.plantasHa != null || populacao?.plantasPorMetro != null || populacao?.eficienciaPct != null || populacao?.situacao != null) && (
-          <VtDeckSlide icon={Leaf} kicker="Cultura" title="Fenologia e desenvolvimento">
+          <VtDeckSlide detail icon={Leaf} kicker="Cultura" title="Fenologia e desenvolvimento">
               <TabelaTecnicaCampos
                 linhas={[
                   { campo: 'Estágio atual', valor: (fenologia?.estadio ?? fenologia?.estagio) != null ? String(fenologia.estadio ?? fenologia.estagio) : undefined },
@@ -581,7 +651,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
         )}
 
         {pragas.length === 0 ? (
-          <VtDeckSlide icon={Bug} spanFull kicker="Fitossanidade" title="Pragas, doenças e daninhas">
+          <VtDeckSlide detail icon={Bug} spanFull kicker="Fitossanidade" title="Pragas, doenças e daninhas">
             <p className={deck.emptyHint}>Nenhum alvo fitossanitário registrado nesta visita.</p>
           </VtDeckSlide>
         ) : (
@@ -601,23 +671,23 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           </div>
         )}
 
-        <VtDeckSlide icon={AlertTriangle} variant="warning" spanFull kicker="Não conformidades" title="Desvios e anomalias">
-          <VtDesviosBlock desvios={desvios} />
-        </VtDeckSlide>
-
         <div className={deck.cardSpanFull}>
           <DiagnosticoEPlanoAcao diagnostico={diagnostico} planoAcao={planoAcao} omitDiagnosticoResumo />
         </div>
 
+        <VtDeckSlide detail icon={AlertTriangle} variant="warning" spanFull kicker="Não conformidades" title="Desvios e anomalias">
+          <VtDesviosBlock desvios={desvios} />
+        </VtDeckSlide>
+
         {aplicacoes.length === 0 ? (
-          <VtDeckSlide icon={Droplets} spanFull kicker="Operações" title="Aplicações e prescrições">
+          <VtDeckSlide detail icon={Droplets} spanFull kicker="Operações" title="Aplicações e prescrições">
             <p className={deck.emptyHint}>
               Nenhuma prescrição ou operação ligada ao talhão incluída neste relatório. As prescrições do módulo Premium e as operações registradas na visita aparecem aqui.
             </p>
           </VtDeckSlide>
         ) : (
           <div className={deck.cardSpanFull}>
-            <AplicacoesRealizadasVT aplicacoes={aplicacoes} />
+        <AplicacoesRealizadasVT aplicacoes={aplicacoes} />
           </div>
         )}
 
@@ -639,13 +709,19 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
           </VtMobileCollapsibleDetails>
         </div>
 
+        {historicoFenologiaRows.length > 0 ? (
+          <div className={deck.cardSpanFull}>
+            <VtHistoricoFenologia itens={historicoFenologiaRows} />
+          </div>
+        ) : null}
+
         <div className={deck.cardSpanFull}>
-          <FotografiasEAutoriaVT
-            imagens={imagens}
-            assinatura={assinatura}
-            conclusao={conclusao}
-            setLightboxIndex={setLightboxIndex}
-          />
+        <FotografiasEAutoriaVT
+          imagens={imagens}
+          assinatura={assinatura}
+          conclusao={conclusao}
+          setLightboxIndex={setLightboxIndex}
+        />
         </div>
         </div>
 

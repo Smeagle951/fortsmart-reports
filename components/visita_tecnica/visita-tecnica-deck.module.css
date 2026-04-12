@@ -181,6 +181,18 @@
   flex: 1;
 }
 
+/* Slides de detalhe — fundo neutro, menos peso que o cockpit */
+.deckSlideDetail {
+  background: #f4f4f5;
+  border-color: #d4d4d8;
+  box-shadow: 0 1px 8px rgba(28, 25, 23, 0.05);
+}
+
+.deckSlideDetailHead {
+  background: #e8e8ea;
+  border-bottom-color: #d4d4d8;
+}
+
 .reportFooter {
   margin-top: 2rem;
   padding: 1rem 1.25rem;

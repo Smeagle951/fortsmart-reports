@@ -162,7 +162,7 @@ export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao, omitDiag
             </span>
             <div style={{ minWidth: 0 }}>
               <span className={deck.reportCardKicker}>Execução</span>
-              <h2 className={deck.reportCardTitle}>Plano de ação</h2>
+              <h2 className={deck.reportCardTitle}>Plano de ação (o quê, quando, prioridade)</h2>
             </div>
           </div>
           <div className={deck.reportCardBody}>

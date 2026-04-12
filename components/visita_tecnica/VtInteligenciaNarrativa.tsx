@@ -31,7 +31,7 @@ export default function VtInteligenciaNarrativa({ relatorio }: { relatorio: Reco
       </h2>
       {resumo ? (
         <div className={dp.intelBlock}>
-          <div className={dp.intelBlockTitle}>Insight</div>
+          <div className={dp.intelBlockTitle}>Insight automático</div>
           <p className={dp.intelBlockText}>{resumo}</p>
         </div>
       ) : null}

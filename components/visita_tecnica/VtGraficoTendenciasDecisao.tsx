@@ -41,10 +41,9 @@ export default function VtGraficoTendenciasDecisao({ relatorio }: { relatorio: R
 
   return (
     <section className={dp.sectionPremium} aria-label="Tendências para decisão">
-      <h2 className={dp.sectionTitle}>Tendências (decisão)</h2>
-      <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.45, fontWeight: 600 }}>
-        Indicadores derivados do motor e da inteligência estratégica — úteis para ver direção (melhora/piora), não só números
-        isolados.
+      <h2 className={dp.sectionTitle}>Tendências para decisão</h2>
+      <p style={{ margin: '-0.35rem 0 1rem', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.45, fontWeight: 600 }}>
+        Direção (melhora/piora) a partir do IQF e dos indicadores estratégicos — complementa o impacto em sc/ha.
       </p>
 
       {pressaoPts ? (

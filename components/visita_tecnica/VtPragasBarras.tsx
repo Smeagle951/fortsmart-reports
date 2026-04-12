@@ -17,7 +17,10 @@ export default function VtPragasBarras({ pragas }: { pragas: Record<string, unkn
 
   return (
     <section className={dp.sectionPremium} aria-label="Pragas e daninhas — severidade visual">
-      <h2 className={dp.sectionTitle}>Pragas, doenças e daninhas</h2>
+      <h2 className={dp.sectionTitle}>Pressão fitossanitária</h2>
+      <p style={{ margin: '-0.35rem 0 1rem', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.45, fontWeight: 600 }}>
+        Severidade visual primeiro; tabela técnica abaixo para rastreio.
+      </p>
       <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.45 }}>
         Barras indicam pressão relativa (incidência % quando informada; caso contrário, severidade declarada).
       </p>
