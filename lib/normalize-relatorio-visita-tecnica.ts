@@ -6,6 +6,7 @@
 
 import {
   ensureVisitaTecnicaRootTalhoesOnly,
+  mergeVisitaSnapshotIntoFlatBeforeSanitize,
   sanitizeVisitaTecnicaPayload,
 } from '@/lib/visita-tecnica/coerceVisitaPayload';
 
@@ -22,9 +23,10 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
 
     const isV2 = Object.keys(core).length > 0 || Object.keys(modVT).length > 0;
 
-    // V1 flat: sanitize migra talhao → talhoes[]; ensure remove qualquer resíduo na raiz
+    // V1 flat: promover visita_snapshot/visita → raiz quando faltam pragas/desvios/etc.; depois sanitize
     if (!isV2) {
-        return ensureVisitaTecnicaRootTalhoesOnly(sanitizeVisitaTecnicaPayload({ ...raw }));
+        const bridged = mergeVisitaSnapshotIntoFlatBeforeSanitize({ ...raw });
+        return ensureVisitaTecnicaRootTalhoesOnly(sanitizeVisitaTecnicaPayload(bridged));
     }
 
     // modulos.visitaTecnica sub-objects
@@ -170,5 +172,6 @@ export function normalizeRelatorioVisitaTecnica(raw: UnknownRecord): UnknownReco
         conclusao_metricas: (raw as UnknownRecord).conclusao_metricas,
     };
 
-    return ensureVisitaTecnicaRootTalhoesOnly(sanitizeVisitaTecnicaPayload(merged as UnknownRecord));
+    const mergedBridged = mergeVisitaSnapshotIntoFlatBeforeSanitize(merged as UnknownRecord);
+    return ensureVisitaTecnicaRootTalhoesOnly(sanitizeVisitaTecnicaPayload(mergedBridged));
 }

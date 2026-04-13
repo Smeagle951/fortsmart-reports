@@ -13,6 +13,7 @@ import TreatmentSection from './TreatmentSection';
 import ExecutionSection from './ExecutionSection';
 import EvolutionSection from './EvolutionSection';
 import EvaluationSection from './EvaluationSection';
+import SubareaCostsAndEvolutionSection from './SubareaCostsAndEvolutionSection';
 
 const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'hero-premium', label: 'Início' },
@@ -20,6 +21,7 @@ const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'comparativo-premium', label: 'Comparativo' },
   { id: 'timeline-premium', label: 'Linha do tempo' },
   { id: 'economico-premium', label: 'Econômico' },
+  { id: 'custos-evolucao-visitas-premium', label: 'Subáreas / visitas' },
   { id: 'conclusao-premium', label: 'Conclusão' },
   { id: 'tratamento-premium', label: 'Protocolo' },
   { id: 'execucao-premium', label: 'Execução' },
@@ -124,6 +126,7 @@ export default function PremiumReport({
           <InsightSection data={data} />
           <TimelinePremiumSection data={data} />
           <EconomicSection data={data} />
+          <SubareaCostsAndEvolutionSection data={data} />
           <ConclusionSection data={data} />
           <TreatmentSection data={data} />
           <ExecutionSection data={data} />

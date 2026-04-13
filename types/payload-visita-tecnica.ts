@@ -45,6 +45,8 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
   tipo?: string;
   /** Payload v2 para UI SaaS / timeline / comparativo */
   visita_snapshot?: VisitaSnapshotCanonico;
+  /** Alias do app (mesmo conteúdo que `visita_snapshot`); o normalizador replica em `visita_snapshot` se só existir aqui. */
+  visita?: VisitaSnapshotCanonico;
   /** Snapshot completo da visita anterior (opcional; mesmo formato que visita_snapshot). */
   visita_snapshot_anterior?: VisitaSnapshotCanonico;
   /** Score e variação oficiais (opcional); se ausente, o viewer deriva heurística. */

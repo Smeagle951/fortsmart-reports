@@ -134,3 +134,206 @@ export function sanitizeVisitaTecnicaPayload(raw: Record<string, unknown>): Reco
   delete out.talhao;
   return out;
 }
+
+type UnknownRecord = Record<string, unknown>;
+
+function asRecord(v: unknown): UnknownRecord | undefined {
+  if (v != null && typeof v === 'object' && !Array.isArray(v)) return v as UnknownRecord;
+  return undefined;
+}
+
+function arrayOfRecords(v: unknown): UnknownRecord[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((x): x is UnknownRecord => x != null && typeof x === 'object' && !Array.isArray(x));
+}
+
+function condicoesHasMeaningfulData(c: unknown): boolean {
+  const o = asRecord(c);
+  if (!o) return false;
+  const skip = new Set(['amostragem']);
+  for (const [k, v] of Object.entries(o)) {
+    if (skip.has(k)) continue;
+    if (v != null && String(v).trim() !== '') return true;
+  }
+  const am = asRecord(o.amostragem);
+  if (am) {
+    for (const v of Object.values(am)) {
+      if (v != null && String(v).trim() !== '') return true;
+    }
+  }
+  return false;
+}
+
+function planoAcaoPrecisaSnapshot(plano: unknown): boolean {
+  if (plano == null) return true;
+  const o = asRecord(plano);
+  if (!o) return true;
+  const acoes = o.acoes;
+  return !Array.isArray(acoes) || acoes.length === 0;
+}
+
+function diagnosticoPrecisaSnapshot(d: unknown): boolean {
+  if (d == null) return true;
+  const o = asRecord(d);
+  if (!o) return true;
+  const pp = o.problemaPrincipal != null ? String(o.problemaPrincipal).trim() : '';
+  const cp = o.causaProvavel != null ? String(o.causaProvavel).trim() : '';
+  return pp === '' && cp === '';
+}
+
+function mapRiscoSnapshotParaNivel(risco: unknown): string {
+  const r = String(risco ?? '').toLowerCase();
+  if (r.includes('baix')) return 'Baixo';
+  if (r.includes('alt') || r.includes('crit')) return 'Alto';
+  return 'Moderado';
+}
+
+function mapSnapshotPragaParaRaiz(row: UnknownRecord): UnknownRecord {
+  const nome = String(row.nome ?? row.alvo ?? '—').trim() || '—';
+  const tipoRaw = String(row.tipo ?? 'praga').toLowerCase();
+  let tipo = 'praga';
+  if (tipoRaw.includes('doen')) tipo = 'doença';
+  else if (tipoRaw.includes('daninh')) tipo = 'daninha';
+  const sev = String(row.severidade ?? 'baixa').toLowerCase();
+  let situacao = 'Monitorar';
+  if (sev.includes('baixa')) situacao = 'OK';
+  else if (sev.includes('alta') || sev.includes('crit')) situacao = 'Atenção';
+  let severidadeLabel = 'Baixa';
+  if (sev.includes('alta')) severidadeLabel = 'Alta';
+  else if (sev.includes('méd') || sev.includes('med')) severidadeLabel = 'Média';
+  const inc = String(row.incidencia ?? row.observacoes ?? '—').trim() || '—';
+  const out: UnknownRecord = {
+    tipo,
+    alvo: nome,
+    incidencia: inc,
+    severidade: severidadeLabel,
+    situacao,
+  };
+  if (row.observacoes != null && String(row.observacoes).trim() !== '') {
+    out.observacoes = row.observacoes;
+  }
+  if (row.origem != null) out.origem = row.origem;
+  if (row.occurrence_id != null) out.occurrence_id = row.occurrence_id;
+  return out;
+}
+
+function mapSnapshotDesvioParaRaiz(row: UnknownRecord): UnknownRecord {
+  const impact = String(row.impacto ?? 'medio').toLowerCase();
+  let severidade = 'Média';
+  if (impact.includes('alt')) severidade = 'Alta';
+  else if (impact.includes('baix') || impact.includes('baixo')) severidade = 'Baixa';
+  return {
+    tipo: row.tipo != null ? String(row.tipo) : '—',
+    descricao: row.descricao != null ? String(row.descricao) : '—',
+    severidade,
+    status: 'Aberto',
+  };
+}
+
+function mapSnapshotAplicParaRaiz(row: UnknownRecord): UnknownRecord {
+  const status = String(row.status ?? 'recomendado').toLowerCase();
+  const aplicado = status.includes('aplic');
+  const obj = row.objetivo != null ? String(row.objetivo) : '';
+  return {
+    tipo: aplicado ? 'Aplicação' : 'Prescrição',
+    data: row.data != null && String(row.data).trim() !== '' ? String(row.data) : '—',
+    produto: row.produto != null ? String(row.produto) : '—',
+    dose: row.dose != null ? String(row.dose) : undefined,
+    status: aplicado ? 'Executada' : 'Recomendada',
+    alvo: obj.trim() !== '' ? obj : '—',
+    observacoes: obj.trim() !== '' ? obj : undefined,
+  };
+}
+
+/**
+ * Promove dados canónicos de `visita_snapshot` / `visita` para as chaves raiz
+ * que o viewer (`RelatorioVisitaTecnicaContent`) consome, quando a raiz está vazia
+ * ou incompleta. Deve correr **antes** de `sanitizeVisitaTecnicaPayload`.
+ */
+export function mergeVisitaSnapshotIntoFlatBeforeSanitize(raw: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...raw };
+
+  const snap = asRecord(out.visita_snapshot) ?? asRecord(out.visita);
+  if (snap == null) return out;
+
+  if (out.visita_snapshot == null) {
+    out.visita_snapshot = { ...snap };
+  }
+  if (out.visita == null) {
+    out.visita = { ...snap };
+  }
+
+  const pragasExistentes = coerceVisitaObjectArray(out.pragas);
+  const pd = arrayOfRecords(snap.pragas_doencas);
+  if (pragasExistentes.length === 0 && pd.length > 0) {
+    out.pragas = pd.map(mapSnapshotPragaParaRaiz);
+  }
+
+  const desviosExistentes = coerceVisitaObjectArray(out.desvios);
+  const sd = arrayOfRecords(snap.desvios);
+  if (desviosExistentes.length === 0 && sd.length > 0) {
+    out.desvios = sd.map(mapSnapshotDesvioParaRaiz);
+  }
+
+  const aplicRaw = out.aplicacoes;
+  const aplicLista = Array.isArray(aplicRaw) ? aplicRaw : [];
+  const apSnap = arrayOfRecords(snap.aplicacoes_prescricoes);
+  if (aplicLista.length === 0 && apSnap.length > 0) {
+    out.aplicacoes = apSnap.map(mapSnapshotAplicParaRaiz);
+  }
+
+  if (planoAcaoPrecisaSnapshot(out.planoAcao)) {
+    const pa = arrayOfRecords(snap.plano_acao);
+    if (pa.length > 0) {
+      const prev = asRecord(out.planoAcao);
+      const objM = prev?.objetivoManejo != null ? String(prev.objetivoManejo).trim() : '';
+      out.planoAcao = {
+        objetivoManejo: objM,
+        acoes: pa.map((a) => ({
+          prioridade: String(a.prioridade ?? 'media'),
+          acao: a.acao != null ? String(a.acao) : '',
+          prazo: a.prazo != null ? String(a.prazo) : '',
+        })),
+      };
+    }
+  }
+
+  if (diagnosticoPrecisaSnapshot(out.diagnostico)) {
+    const df = asRecord(snap.diagnostico_final);
+    const resumo = df?.resumo != null ? String(df.resumo).trim() : '';
+    const risco = df?.risco;
+    const pot = df?.potencial_produtivo != null ? String(df.potencial_produtivo).trim() : '';
+    if (resumo !== '' || String(risco ?? '').trim() !== '' || pot !== '') {
+      out.diagnostico = {
+        ...(asRecord(out.diagnostico) ?? {}),
+        problemaPrincipal: resumo !== '' ? resumo : '—',
+        nivelRisco: mapRiscoSnapshotParaNivel(risco),
+        ...(pot !== '' ? { causaProvavel: pot } : {}),
+        origem: 'final',
+      };
+    }
+  }
+
+  if (!condicoesHasMeaningfulData(out.condicoes)) {
+    const cm = asRecord(snap.condicoes_momento);
+    if (cm) {
+      const sint = [cm.clima, cm.observacoes]
+        .map((x) => (x != null ? String(x).trim() : ''))
+        .filter((s) => s.length > 0)
+        .join(' · ');
+      const temp = cm.temperatura != null ? String(cm.temperatura).trim() : '';
+      const umid = cm.umidade != null ? String(cm.umidade).trim() : '';
+      out.condicoes = {
+        ...(temp !== '' ? { temperatura: temp } : {}),
+        ...(umid !== '' ? { umidade: umid } : {}),
+        ...(sint !== '' ? { sintomas: sint } : {}),
+      };
+    }
+  }
+
+  if (out.evolucao == null && snap.evolucao != null && typeof snap.evolucao === 'object' && !Array.isArray(snap.evolucao)) {
+    out.evolucao = { ...(snap.evolucao as UnknownRecord) };
+  }
+
+  return out;
+}

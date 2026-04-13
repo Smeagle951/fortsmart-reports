@@ -32,6 +32,33 @@ export type EconomicTimelineJson = {
     }>;
   }>;
 };
+
+/** Linha de custo por subárea publicada pelo app (`custos[]`). */
+export type SubareaCostLineWeb = {
+  tipo?: string;
+  descricao?: string;
+  valor_por_ha?: number;
+  area_ha?: number;
+  valor_total?: number;
+  tratamento?: string;
+  subarea_nome?: string;
+  subarea_id?: string;
+};
+
+/** Evolução vs visita anterior (`evolucao`). */
+export type EvolucaoVisitasWeb = {
+  disponivel?: boolean;
+  avaliacao_anterior_id?: string;
+  melhoria?: boolean;
+  sanidade_delta?: number;
+  vigor_delta?: number;
+  dae_atual?: number;
+  dae_anterior?: number;
+  sanidade_media_atual?: number;
+  vigor_media_atual?: number;
+  sanidade_media_anterior?: number;
+  vigor_media_anterior?: number;
+};
 import type {
   ColheitaJson,
   CustoJson,
@@ -162,6 +189,10 @@ export type SideBySideReportData = {
   market_reference?: MarketReferenceJson | null;
   /** Custo acumulado por DAA — `economic_timeline`. */
   economic_timeline?: EconomicTimelineJson | null;
+  /** Custos detalhados por subárea — `custos`. */
+  custos?: SubareaCostLineWeb[];
+  /** Comparação com visita anterior — `evolucao`. */
+  evolucao?: EvolucaoVisitasWeb;
 };
 
 type SideData = {

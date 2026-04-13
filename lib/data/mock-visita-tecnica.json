@@ -1,0 +1,258 @@
+{
+  "tipo": "visita_tecnica",
+  "tipoRelatorio": "visita_tecnica",
+  "meta": {
+    "id": "preview-vt-2026",
+    "dataGeracao": "2026-04-10",
+    "tecnico": "Eng. Agr. Preview Silva",
+    "tecnicoCrea": "MG-12345",
+    "safra": "2025/26",
+    "versao": 1
+  },
+  "propriedade": {
+    "fazenda": "Fazenda Demo FortSmart",
+    "municipio": "Uberaba",
+    "estado": "MG",
+    "proprietario": "Produtor Exemplo"
+  },
+  "talhao": {
+    "id": "talhao-preview",
+    "nome": "Talhão 12 — Gleba Norte",
+    "cultura": "Soja",
+    "area": 185.4,
+    "dataPlantio": "2025-11-02"
+  },
+  "contextoSafra": {
+    "materialVariedade": "Cultivar TMG 7062",
+    "empresa": "Sementes Demo",
+    "espacamentoCm": 45,
+    "populacaoAlvoPlHa": 320000,
+    "dae": 118,
+    "dap": 125,
+    "potencialScHa": 68,
+    "estimativaAtualScHa": 62,
+    "notaMetodoEstimativa": "Projeção por amostragem de vagens",
+    "cicloCultivar": "medio",
+    "tecnologiaSementes": "RR2 PRO",
+    "resistFerrugem": true,
+    "resistNematoide": true,
+    "resistLagarta": false
+  },
+  "fenologia": {
+    "estadio": "R5.2",
+    "ultimaAvaliacaoDias": 4,
+    "dataUltimaAvaliacao": "2026-04-06",
+    "historico": [
+      { "estagio": "R4", "data": "2026-03-28", "observacoes": "Enchimento de vagens uniforme." }
+    ]
+  },
+  "populacao": {
+    "plantasHa": 312000,
+    "eficienciaPct": 91,
+    "plantasPorMetro": 14.2,
+    "situacao": "OK"
+  },
+  "condicoes": {
+    "temperatura": 26,
+    "umidade": 72,
+    "vento": "Moderado NE",
+    "nebulosidade": "Parcial",
+    "soloUmidade": "Adequada",
+    "vigorCultura": "Alto",
+    "amostragem": {
+      "metodo": "zigue_zague",
+      "nPlantasAvaliadas": 40,
+      "nPontosColetados": 8,
+      "raioAmostraM": 12
+    }
+  },
+  "checklist": {
+    "Plantio uniforme": "Sim",
+    "Falhas de estande": "Não",
+    "Pragas presentes": "Sim",
+    "Doenças presentes": "Não",
+    "Plantas daninhas presentes": "Sim",
+    "Fitotoxicidade": "Não",
+    "Compactação superficial": "Não",
+    "Problemas de aplicação": "Não",
+    "Estresse hídrico/temperatura": "Não",
+    "observacoes": "Linha sul com leve desuniformidade de estande; monitorar fechamento."
+  },
+  "inteligencia_agronomica": {
+    "situacao": "atencao",
+    "risco": "moderado",
+    "tendencia": "estavel",
+    "score": 72,
+    "confianca": "media",
+    "confianca_score": 0.58,
+    "resumo": "Pressão moderada de lagarta e presença de daninhas; estande e fenologia favoráveis.",
+    "recomendacao": { "acao": "reforcar_monitoramento", "prazo": "7d" },
+    "motor_fatores": [
+      "Múltiplos alvos fitossanitários na mesma janela fenológica.",
+      "Umidade relativa elevada — atenção a doenças foliares nas próximas semanas."
+    ],
+    "motor_alertas": [
+      {
+        "nivel": "medio",
+        "titulo": "Janela sensível (R5)",
+        "descricao": "Cultura em grão em formação; decisões de dessecação e fungicida têm impacto elevado no resultado final.",
+        "acaoSugerida": "Validar calendário de aplicações com base em previsão e histórico do talhão."
+      }
+    ],
+    "padrao": ["Correlação entre incidência de lagarta e bordadura do talhão."]
+  },
+  "inteligencia_estrategica": {
+    "evolucaoIndicadores": [
+      {
+        "alvo": "Lagarta da soja",
+        "tipo": "PEST",
+        "tendencia": "estavel",
+        "subtitulo": "Incidência estável vs. visita anterior",
+        "deltaPct": 4
+      }
+    ],
+    "temposResposta": {
+      "horasDuracaoVisita": 3.5,
+      "diasOcorrenciaParaAplicacao": 5
+    },
+    "agregacaoCausaProvavel": [
+      { "causa": "manejo", "count": 2 },
+      { "causa": "clima", "count": 1 }
+    ]
+  },
+  "produtividade": {
+    "potencialDeclaradoScHa": 68,
+    "estimativaDeclaradaScHa": 62,
+    "potencialHeuristicaScHa": 66,
+    "estimativaHeuristicaScHa": 60,
+    "notaHeuristica": "Indicativo; conferir amostragem de vagens.",
+    "cicloCultivar": "medio",
+    "tecnologiaSementes": "RR2 PRO"
+  },
+  "mapa": {
+    "viewBox": "0 0 400 300",
+    "polygon": [
+      [-19.456, -48.901],
+      [-19.458, -48.898],
+      [-19.461, -48.902],
+      [-19.457, -48.905],
+      [-19.456, -48.901]
+    ],
+    "pontos": [
+      {
+        "latitude": -19.4572,
+        "longitude": -48.9015,
+        "index": 1,
+        "tipo": "praga_doenca",
+        "severidade": "media",
+        "titulo": "Praga: Lagarta",
+        "descricao": "Desfolha localizada",
+        "data": "2026-04-10"
+      },
+      {
+        "latitude": -19.4588,
+        "longitude": -48.903,
+        "index": 2,
+        "tipo": "fenologia",
+        "titulo": "Fenologia: R5.2",
+        "data": "2026-04-10"
+      }
+    ]
+  },
+  "pragas": [
+    {
+      "tipo": "praga",
+      "alvo": "Lagarta-da-soja",
+      "incidencia": "12% das plantas amostradas",
+      "severidade": "Média",
+      "situacao": "Monitorar",
+      "causaProvavel": "manejo",
+      "recomendacao": "Confirmar nível de dano econômico antes de nova aplicação."
+    },
+    {
+      "tipo": "daninha",
+      "alvo": "Buva",
+      "incidencia": "Baixa infestação",
+      "severidade": "Baixa",
+      "situacao": "OK"
+    }
+  ],
+  "desvios": [
+    {
+      "tipo": "compactacao",
+      "descricao": "Faixa de entrada com sinais leves de compactação após chuva.",
+      "severidade": "baixa",
+      "status": "aberto",
+      "prioridade": "media",
+      "data": "2026-04-10",
+      "causaProvavel": "manejo",
+      "recomendacao": "Evitar tráfego em solo úmido; avaliar subsolador pós-safra."
+    }
+  ],
+  "diagnostico": {
+    "problemaPrincipal": "Pressão fitossanitária moderada com cultura em fase de definição de rendimento.",
+    "causaProvavel": "Conjunto manejo + clima úmido",
+    "nivelRisco": "Moderado",
+    "urgenciaAcao": "Curto prazo",
+    "recomendacoes": [
+      "Manter monitoramento de lagarta com pano de batida em pontos fixos.",
+      "Revisar necessidade de fungicida conforme previsão de chuva."
+    ]
+  },
+  "planoAcao": {
+    "objetivoManejo": "Preservar potencial produtivo até colheita com mínimo de intervenções.",
+    "acoes": [
+      {
+        "prioridade": "Alta",
+        "acao": "Nova avaliação de lagarta em 5 dias",
+        "prazo": "15/04/2026",
+        "produto": "—",
+        "momento": "R5–R6",
+        "objetivoTecnico": "Decisão baseada em limiar"
+      },
+      {
+        "prioridade": "Média",
+        "acao": "Registrar fechamento de fileiras na área sul",
+        "prazo": "20/04/2026"
+      }
+    ]
+  },
+  "aplicacoes": [
+    {
+      "tipo": "Herbicida",
+      "data": "2026-03-15",
+      "produto": "Glifosato sal de potássio",
+      "dose": "2.5",
+      "unidade": "L/ha",
+      "classe": "Herbicida",
+      "status": "Realizada",
+      "talhaoNome": "Talhão 12 — Gleba Norte",
+      "responsavel": "Aplicações Demo",
+      "tipoOperacao": "Dessecação",
+      "areaTrabalhoHa": 185.4,
+      "observacoes": "Volume 150 L/ha"
+    }
+  ],
+  "imagens": [
+    {
+      "url": "https://picsum.photos/seed/vt1/640/400",
+      "descricao": "Canópio e sintomas foliares",
+      "categoria": "praga",
+      "data": "2026-04-10"
+    },
+    {
+      "url": "https://picsum.photos/seed/vt2/640/400",
+      "descricao": "Estádio fenológico — referência",
+      "categoria": "fenologia",
+      "data": "2026-04-10"
+    }
+  ],
+  "assinaturaTecnica": {
+    "nome": "Eng. Agr. Preview Silva",
+    "crea": "MG-12345",
+    "dataAssinatura": "2026-04-10",
+    "cidade": "Uberaba / MG"
+  },
+  "conclusao": "Cultura em bom estado vegetativo, com pressão fitossanitária sob controle mediante o plano proposto. Recomenda-se visita de acompanhamento após 7–10 dias ou conforme evolução meteorológica.",
+  "consultoria": { "nome": "FortSmart Agro — Preview" }
+}
