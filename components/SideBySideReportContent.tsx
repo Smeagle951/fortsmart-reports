@@ -193,6 +193,23 @@ export type SideBySideReportData = {
   custos?: SubareaCostLineWeb[];
   /** Comparação com visita anterior — `evolucao`. */
   evolucao?: EvolucaoVisitasWeb;
+  /** Amostras brutas por planta (exportação / arquivo) — `plant_samples`. */
+  plant_samples?: Array<Record<string, unknown>>;
+  /** Amostras por planta agregadas A vs B — `plant_evaluation`. */
+  plant_evaluation?: {
+    metrics?: Array<{
+      key?: string;
+      label?: string;
+      unit?: string;
+      meanA?: number;
+      meanB?: number;
+      diffAbs?: number;
+      diffPct?: number;
+      winner?: string;
+    }>;
+    sampleSize?: { A?: number; B?: number };
+    source?: string;
+  } | null;
 };
 
 type SideData = {

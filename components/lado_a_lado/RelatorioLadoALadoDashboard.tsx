@@ -51,6 +51,126 @@ const fadeIn = {
   transition: { duration: 0.35 },
 };
 
+function PlantEvaluationDashboardSection({
+  data,
+  sideAName,
+  sideBName,
+}: {
+  data: SideBySideReportData;
+  sideAName: string;
+  sideBName: string;
+}) {
+  const pe = data.plant_evaluation;
+  const metrics =
+    (pe?.metrics as
+      | Array<{
+          key?: string;
+          label?: string;
+          unit?: string;
+          meanA?: number;
+          meanB?: number;
+          diffAbs?: number;
+          diffPct?: number;
+          winner?: string;
+        }>
+      | undefined) ?? [];
+  const has = metrics.length > 0;
+  const nA = pe?.sampleSize && typeof pe.sampleSize === 'object' ? (pe.sampleSize as { A?: number }).A : undefined;
+  const nB = pe?.sampleSize && typeof pe.sampleSize === 'object' ? (pe.sampleSize as { B?: number }).B : undefined;
+
+  const chartRows = metrics.map((m) => ({
+    name: (m.label || m.key || '—').slice(0, 24),
+    A: m.meanA ?? 0,
+    B: m.meanB ?? 0,
+  }));
+
+  return (
+    <motion.section id="avaliacao-plantas" {...fadeIn} className="scroll-mt-36 space-y-6">
+      <h2 className="text-lg font-bold text-slate-900 mb-1 border-l-4 border-teal-500 pl-3">Avaliação por planta</h2>
+      <p className="text-sm text-slate-600 mb-4">
+        Comparação quantitativa a partir de amostras por planta (vigor, pragas, doença, altura, stand). Separado dos KPIs
+        macro da visita.
+        {nA != null || nB != null ? (
+          <span className="block mt-1 text-xs text-slate-500">
+            n amostras: A {nA ?? '—'} · B {nB ?? '—'}
+          </span>
+        ) : null}
+      </p>
+      {!has ? (
+        <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
+          Sem dados de plantas neste relatório. No app: Aplicações → ícone de planta ao lado de cada evento.
+        </p>
+      ) : (
+        <>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">Métrica</th>
+                  <th className="px-4 py-3">{sideAName}</th>
+                  <th className="px-4 py-3">{sideBName}</th>
+                  <th className="px-4 py-3">Δ %</th>
+                  <th className="px-4 py-3">Melhor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metrics.map((m) => {
+                  const w = (m.winner || '').toUpperCase();
+                  const dp = m.diffPct;
+                  const deltaStr =
+                    dp != null && Number.isFinite(dp)
+                      ? `${dp > 0 ? '+' : ''}${dp.toFixed(0)}%`
+                      : m.diffAbs != null && Number.isFinite(m.diffAbs)
+                        ? `${m.diffAbs > 0 ? '+' : ''}${formatNumber(m.diffAbs, { decimals: 1 })}`
+                        : '—';
+                  const cellCls = (side: 'A' | 'B') => {
+                    if (w === 'TIE' || !w) return 'px-4 py-3 tabular-nums text-slate-700';
+                    if (w === side) return 'px-4 py-3 tabular-nums font-semibold text-emerald-800 bg-emerald-50/60';
+                    return 'px-4 py-3 tabular-nums text-rose-900/80 bg-rose-50/50';
+                  };
+                  return (
+                    <tr key={m.key || m.label} className="border-t border-slate-100">
+                      <td className="px-4 py-3 font-medium text-slate-800">
+                        {m.label || m.key}
+                        {m.unit ? <span className="text-slate-400 font-normal"> ({m.unit})</span> : null}
+                      </td>
+                      <td className={cellCls('A')}>{formatNumber(m.meanA, { decimals: 1 })}</td>
+                      <td className={cellCls('B')}>{formatNumber(m.meanB, { decimals: 1 })}</td>
+                      <td className="px-4 py-3 tabular-nums text-slate-600">{deltaStr}</td>
+                      <td className="px-4 py-3">
+                        {w === 'TIE' || !w ? (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">Empate</span>
+                        ) : (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-900">
+                            {w}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartRows} margin={{ top: 8, right: 8, left: 0, bottom: 48 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={52} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v: number) => formatNumber(v, { decimals: 1 })} />
+                <Legend />
+                <Bar dataKey="A" name={sideAName} fill={COLOR_SIDE_A} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="B" name={sideBName} fill={COLOR_SIDE_B} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
+    </motion.section>
+  );
+}
+
 /** Fontes internas/padrão: não exibir — o preço informado é do usuário ou da análise, sem “referência” de sistema. */
 const PRECO_FONTE_OCULTAR = new Set([
   'padrao_sistema',
@@ -81,6 +201,7 @@ const NAV_SECTIONS: { id: string; label: string }[] = [
   { id: 'comparativo', label: 'Comparativo' },
   { id: 'avaliacoes-daa', label: 'Avaliações' },
   { id: 'aplicacoes', label: 'Aplicações' },
+  { id: 'avaliacao-plantas', label: 'Plantas' },
   { id: 'kpis', label: 'KPIs' },
   { id: 'radicular', label: 'Radicular' },
   { id: 'fitossanidade', label: 'Fitossanidade' },
@@ -1445,6 +1566,8 @@ export default function RelatorioLadoALadoDashboard({
               </div>
             )}
           </motion.section>
+
+          <PlantEvaluationDashboardSection data={data} sideAName={sideAName} sideBName={sideBName} />
 
           <motion.section id="kpis" {...fadeIn} className="scroll-mt-36 space-y-10">
             <h2 className="text-lg font-bold text-slate-900 border-l-4 border-violet-600 pl-3">KPIs e análise agronômica</h2>

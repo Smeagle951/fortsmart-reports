@@ -14,6 +14,7 @@ import ExecutionSection from './ExecutionSection';
 import EvolutionSection from './EvolutionSection';
 import EvaluationSection from './EvaluationSection';
 import SubareaCostsAndEvolutionSection from './SubareaCostsAndEvolutionSection';
+import PlantEvaluationSection from './PlantEvaluationSection';
 
 const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'hero-premium', label: 'Início' },
@@ -25,6 +26,7 @@ const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'conclusao-premium', label: 'Conclusão' },
   { id: 'tratamento-premium', label: 'Protocolo' },
   { id: 'execucao-premium', label: 'Execução' },
+  { id: 'plantas-premium', label: 'Plantas' },
   { id: 'evolucao-premium', label: 'Evolução' },
   { id: 'avaliacao-premium', label: 'Evidências' },
 ];
@@ -130,6 +132,7 @@ export default function PremiumReport({
           <ConclusionSection data={data} />
           <TreatmentSection data={data} />
           <ExecutionSection data={data} />
+          <PlantEvaluationSection data={data} />
           <EvolutionSection data={data} />
           <EvaluationSection data={data} />
         </div>
