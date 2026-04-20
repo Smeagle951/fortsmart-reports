@@ -63,6 +63,8 @@ import type {
   ColheitaJson,
   CustoJson,
   EconomiaJson,
+  ExperimentDesignJson,
+  PlantEvaluationMetricJson,
   ReportApplicationEventV2Json,
   ReportPhotoWeb,
   TreatmentProtocolJson,
@@ -72,6 +74,8 @@ export type {
   ColheitaJson,
   CustoJson,
   EconomiaJson,
+  ExperimentDesignJson,
+  PlantEvaluationMetricJson,
   ReportApplicationEventV2Json,
   ReportPhotoWeb,
   TreatmentProtocolJson,
@@ -197,19 +201,14 @@ export type SideBySideReportData = {
   plant_samples?: Array<Record<string, unknown>>;
   /** Amostras por planta agregadas A vs B — `plant_evaluation`. */
   plant_evaluation?: {
-    metrics?: Array<{
-      key?: string;
-      label?: string;
-      unit?: string;
-      meanA?: number;
-      meanB?: number;
-      diffAbs?: number;
-      diffPct?: number;
-      winner?: string;
-    }>;
+    metrics?: PlantEvaluationMetricJson[];
     sampleSize?: { A?: number; B?: number };
     source?: string;
   } | null;
+  /** Planejamento experimental — chave JSON `experiment_design` (mapa versionado no app). */
+  experiment_design?: ExperimentDesignJson | null;
+  /** Layout de coleta (`paired_points` | `parcel_per_treatment` | …) — pode vir na raiz do export. */
+  collection_layout?: string | null;
 };
 
 type SideData = {

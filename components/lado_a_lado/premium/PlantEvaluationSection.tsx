@@ -1,19 +1,12 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
+import type { PlantEvaluationMetricJson } from '@/types/side-by-side-report';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { COLOR_SIDE_A, COLOR_SIDE_B } from '@/components/lado_a_lado/ladoALadoHelpers';
 
-type PlantMetric = {
-  key?: string;
-  label?: string;
-  unit?: string;
-  meanA?: number;
-  meanB?: number;
-  diffAbs?: number;
-  diffPct?: number;
-  winner?: string;
-};
+type PlantMetric = PlantEvaluationMetricJson;
 
 function fmt(n: number | undefined | null, dec = 1) {
   if (n == null || !Number.isFinite(n)) return '—';
@@ -37,7 +30,14 @@ export default function PlantEvaluationSection({ data }: { data: SideBySideRepor
   }));
 
   return (
-    <section id="plantas-premium" className="scroll-mt-36 space-y-6">
+    <motion.section
+      id="plantas-premium"
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-24px' }}
+      transition={{ duration: 0.35 }}
+      className="scroll-mt-36 space-y-6"
+    >
       <div>
         <h2 className="text-lg font-bold text-slate-900 border-l-4 border-teal-500 pl-3">Avaliação por planta</h2>
         <p className="text-sm text-slate-600 mt-1">
@@ -74,15 +74,24 @@ export default function PlantEvaluationSection({ data }: { data: SideBySideRepor
                   : m.diffAbs != null && Number.isFinite(m.diffAbs)
                     ? `${m.diffAbs > 0 ? '+' : ''}${fmt(m.diffAbs)}`
                     : '—';
+              const rowTint = tie ? '' : 'bg-emerald-50/40 border-l-4 border-l-emerald-500';
+              const deltaClass =
+                tie || dp == null || !Number.isFinite(dp)
+                  ? 'text-slate-600'
+                  : dp > 0
+                    ? 'text-emerald-700 font-medium'
+                    : dp < 0
+                      ? 'text-rose-700 font-medium'
+                      : 'text-slate-600';
               return (
-                <tr key={m.key || m.label} className="border-t border-slate-100">
+                <tr key={m.key || m.label} className={`border-t border-slate-100 ${rowTint}`}>
                   <td className="px-4 py-3 font-medium text-slate-800">
                     {m.label || m.key}
                     {m.unit ? <span className="text-slate-400 font-normal"> ({m.unit})</span> : null}
                   </td>
                   <td className="px-4 py-3 tabular-nums">{fmt(m.meanA)}</td>
                   <td className="px-4 py-3 tabular-nums">{fmt(m.meanB)}</td>
-                  <td className="px-4 py-3 tabular-nums text-slate-600">{deltaStr}</td>
+                  <td className={`px-4 py-3 tabular-nums ${deltaClass}`}>{deltaStr}</td>
                   <td className="px-4 py-3">
                     {tie ? (
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">Empate</span>
@@ -114,6 +123,6 @@ export default function PlantEvaluationSection({ data }: { data: SideBySideRepor
           </BarChart>
         </ResponsiveContainer>
       </div>
-    </section>
+    </motion.section>
   );
 }

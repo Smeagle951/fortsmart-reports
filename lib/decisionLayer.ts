@@ -41,6 +41,32 @@ export type DecisionLayerJson = {
   decisionReasons?: string[];
   weights?: Record<string, number>;
   roiBySide?: Record<string, RoiSideSnapshot>;
+
+  /** FortSmart AI (V1): score/alertas calculados no app, offline. */
+  fortsmart_ai?: {
+    kb_snapshot?: {
+      cultura?: string;
+      versao?: string;
+      safra?: string;
+      fontes?: string[];
+      generated_at?: string;
+    };
+    inputs?: Record<string, unknown>;
+    score?: {
+      total?: number; // 0–100
+      class?: string; // Excelente|Bom|Regular|Ruim|Crítico
+    };
+    subscores?: Record<string, number>;
+    motor_alertas?: Array<{
+      id?: string; // ALERTA_D01...
+      nivel?: 'info' | 'ok' | 'monitorar' | 'atencao' | 'critico';
+      titulo?: string;
+      mensagem?: string;
+      acao_sugerida?: string[];
+      evidencias?: Record<string, unknown>;
+    }>;
+    referencias_usadas?: Array<Record<string, unknown>>;
+  };
 };
 
 /** Subconjunto do payload do relatório — evita import circular com SideBySideReportContent. */

@@ -15,10 +15,14 @@ import EvolutionSection from './EvolutionSection';
 import EvaluationSection from './EvaluationSection';
 import SubareaCostsAndEvolutionSection from './SubareaCostsAndEvolutionSection';
 import PlantEvaluationSection from './PlantEvaluationSection';
+import FortSmartAiSection from './FortSmartAiSection';
+import ExperimentDesignSection from './ExperimentDesignSection';
 
 const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'hero-premium', label: 'Início' },
   { id: 'kpis-premium', label: 'Indicadores' },
+  { id: 'fortsmart-ai-premium', label: 'FortSmart AI' },
+  { id: 'ensaio-premium', label: 'Ensaio' },
   { id: 'comparativo-premium', label: 'Comparativo' },
   { id: 'timeline-premium', label: 'Linha do tempo' },
   { id: 'economico-premium', label: 'Econômico' },
@@ -124,6 +128,8 @@ export default function PremiumReport({
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-20 sm:space-y-24 py-14 sm:py-20 print:space-y-12">
           <KPISection data={data} />
+          <FortSmartAiSection data={data} />
+          <ExperimentDesignSection data={data} sectionId="ensaio-premium" />
           <CompareManejosSection data={data} />
           <InsightSection data={data} />
           <TimelinePremiumSection data={data} />

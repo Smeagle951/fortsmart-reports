@@ -52,6 +52,8 @@ export type TreatmentProtocolSideJson = {
   description?: string;
   objective?: string;
   expected_result?: string;
+  /** Testemunha / controle — chave JSON `is_control_side` (export Flutter). */
+  is_control_side?: boolean;
   products?: TreatmentProtocolProductJson[];
 };
 
@@ -106,3 +108,51 @@ export type ReportPhotoWeb = {
     detail?: string;
   }>;
 };
+
+/** Chaves alinhadas a `ExperimentDesignV1.toJson()` + overlay de exportação (`evaluation_export_service`). */
+export type ExperimentDesignJson = {
+  schema_version?: number;
+  delineamento?: string;
+  numero_tratamentos?: number;
+  numero_repeticoes?: number;
+  tamanho_parcela_m2?: number;
+  area_util_m2?: number;
+  bordadura_metros?: number;
+  croqui_attachment_uri?: string;
+  data_plantio?: string;
+  data_emergencia?: string;
+  data_inicio_avaliacao?: string;
+  latitude_centroide?: number;
+  longitude_centroide?: number;
+  cultivar_hibrido?: string;
+  cultura_outro?: string;
+  objective_codes?: string[];
+  objective_notes?: string;
+  property_label?: string;
+  talhao_area_ha?: number;
+  technician_crea?: string;
+  technician_company?: string;
+  evaluation_title?: string;
+  evaluation_type?: string;
+  culture?: string;
+  season?: string;
+  objective_text?: string;
+  municipality_uf?: string;
+  technician_name?: string;
+  technician_role?: string;
+  soy_maturity_group?: string;
+};
+
+export type PlantEvaluationMetricJson = {
+  key?: string;
+  label?: string;
+  unit?: string;
+  meanA?: number;
+  meanB?: number;
+  diffAbs?: number;
+  diffPct?: number;
+  winner?: 'A' | 'B' | 'tie' | string;
+};
+
+// Extensão V1: `decision_layer.fortsmart_ai` é tipado em `lib/decisionLayer.ts`
+// e consumido via `SideBySideReportData.decision_layer`.

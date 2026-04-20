@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { formatWind } from '@/components/lado_a_lado/ladoALadoHelpers';
-import { resolveDecision } from '@/lib/decisionLayer';
+import { resolveDecision } from '@/lib/decision';
+import DecisionAlert from './DecisionAlert';
 import { formatNumber } from '@/utils/format';
 import {
   climateFromLatestApplication,
@@ -130,40 +131,39 @@ export default function HeroSection({ data }: { data: SideBySideReportData }) {
             ) : null}
 
             {showConflictAlert ? (
-              <div
-                className="mt-5 rounded-xl border border-amber-400/50 bg-amber-500/15 px-4 py-3 max-w-3xl"
-                role="status"
-              >
-                <p className="text-sm font-bold text-amber-100">Divergência detectada</p>
-                <p className="mt-1 text-sm text-amber-50/95 leading-relaxed">
-                  O motor multifator indica <span className="font-semibold">{engineName}</span>.
-                  {roiName &&
-                  roiWinner &&
-                  roiWinner !== 'tie' &&
-                  roiWinner !== resolved.app &&
-                  deltaMargin != null &&
-                  Number.isFinite(deltaMargin) ? (
-                    <>
-                      {' '}
-                      O critério de margem líquida favorece <span className="font-semibold">{roiName}</span>
-                      {Math.abs(deltaMargin) >= 1 ? (
-                        <>
-                          {' '}
-                          (Δ margem B−A: {deltaMargin > 0 ? '+' : ''}
-                          R$ {formatNumber(Math.abs(deltaMargin), { decimals: 0 })}/ha)
-                        </>
-                      ) : null}
-                      .
-                    </>
+              <div className="mt-5">
+                <DecisionAlert title="Divergência detectada">
+                  <p>
+                    O motor multifator indica <span className="font-semibold">{engineName}</span> com melhor
+                    desempenho agregado nas métricas do motor.
+                    {roiName &&
+                    roiWinner &&
+                    roiWinner !== 'tie' &&
+                    roiWinner !== resolved.app &&
+                    deltaMargin != null &&
+                    Number.isFinite(deltaMargin) ? (
+                      <>
+                        {' '}
+                        O critério de margem líquida favorece <span className="font-semibold">{roiName}</span>
+                        {Math.abs(deltaMargin) >= 1 ? (
+                          <>
+                            {' '}
+                            (Δ margem B−A: {deltaMargin > 0 ? '+' : ''}
+                            R$ {formatNumber(Math.abs(deltaMargin), { decimals: 0 })}/ha)
+                          </>
+                        ) : null}
+                        .
+                      </>
+                    ) : null}
+                  </p>
+                  {data.decision_layer?.summaryLines && data.decision_layer.summaryLines.length > 0 ? (
+                    <ul className="mt-2 list-disc list-inside text-xs text-amber-100/90 space-y-1">
+                      {data.decision_layer.summaryLines.slice(0, 4).map((line, i) => (
+                        <li key={i}>{line}</li>
+                      ))}
+                    </ul>
                   ) : null}
-                </p>
-                {data.decision_layer?.summaryLines && data.decision_layer.summaryLines.length > 0 ? (
-                  <ul className="mt-2 list-disc list-inside text-xs text-amber-100/90 space-y-1">
-                    {data.decision_layer.summaryLines.slice(0, 4).map((line, i) => (
-                      <li key={i}>{line}</li>
-                    ))}
-                  </ul>
-                ) : null}
+                </DecisionAlert>
               </div>
             ) : null}
 

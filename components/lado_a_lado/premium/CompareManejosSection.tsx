@@ -3,7 +3,13 @@
 import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import type { ReportPhotoWeb } from '@/types/side-by-side-report';
-import { COLOR_SIDE_A, COLOR_SIDE_B, isCustoJson, pickHeroPhoto } from '@/components/lado_a_lado/ladoALadoHelpers';
+import {
+  COLOR_SIDE_A,
+  COLOR_SIDE_B,
+  isColheitaJson,
+  isCustoJson,
+  pickHeroPhoto,
+} from '@/components/lado_a_lado/ladoALadoHelpers';
 import { formatNumber } from '@/utils/format';
 import { winnerFromJson } from './premiumInference';
 
@@ -78,16 +84,60 @@ function costForSide(data: SideBySideReportData, side: Side): number | null {
   return row?.costPerHa != null && Number.isFinite(row.costPerHa) ? row.costPerHa : null;
 }
 
+function productivityForSide(
+  data: SideBySideReportData,
+  side: Side,
+): { kgHa: number; sourceLabel: string } | null {
+  const colheita = isColheitaJson(data.colheita) ? data.colheita : null;
+  const row = colheita?.sides?.find((s) => s.side === side);
+  if (row?.yieldKgHa != null && Number.isFinite(row.yieldKgHa)) {
+    return { kgHa: row.yieldKgHa, sourceLabel: 'Colheita publicada' };
+  }
+  const kgSack = colheita?.kgPerSack;
+  if (row?.yieldScHa != null && kgSack != null && kgSack > 0 && Number.isFinite(row.yieldScHa)) {
+    return { kgHa: row.yieldScHa * kgSack, sourceLabel: 'Colheita (kg/ha a partir de sc/ha)' };
+  }
+  const kpis = side === 'A' ? data.sideA?.kpis : data.sideB?.kpis;
+  if (kpis?.estimatedYieldKgHa != null && Number.isFinite(kpis.estimatedYieldKgHa)) {
+    return { kgHa: kpis.estimatedYieldKgHa, sourceLabel: 'Produtividade estimada (KPIs)' };
+  }
+  return null;
+}
+
+function isWitnessSide(data: SideBySideReportData, side: Side): boolean {
+  return data.treatment_protocol?.sides?.find((x) => x.side === side)?.is_control_side === true;
+}
+
+/** Destaque do card: vencedor declarado no JSON; se ausente, usa `engineOverallWinner` (exceto empate). */
+function compareHighlight(data: SideBySideReportData): {
+  side: Side | null;
+  badge: 'tecnico' | 'motor' | null;
+} {
+  const app = winnerFromJson(data);
+  if (app === 'A' || app === 'B') return { side: app, badge: 'tecnico' };
+  const eng = data.decision_layer?.engineOverallWinner;
+  if (eng === 'A' || eng === 'B') return { side: eng, badge: 'motor' };
+  return { side: null, badge: null };
+}
+
 function ManejoCard({
   side,
   data,
   photo,
   isWinnerPick,
+  badgeKind,
+  dimPeer,
+  productivity,
+  witness,
 }: {
   side: Side;
   data: SideBySideReportData;
   photo: ReportPhotoWeb | undefined;
   isWinnerPick: boolean;
+  badgeKind: 'tecnico' | 'motor' | null;
+  dimPeer: boolean;
+  productivity: { kgHa: number; sourceLabel: string } | null;
+  witness: boolean;
 }) {
   const isA = side === 'A';
   const name = (isA ? data.sideA?.name : data.sideB?.name) || `Manejo ${side}`;
@@ -100,14 +150,23 @@ function ManejoCard({
   const border = isA ? 'border-blue-200' : 'border-emerald-200';
   const headBg = isA ? 'from-blue-700 to-blue-900' : 'from-emerald-700 to-emerald-900';
 
+  const badgeText =
+    isWinnerPick && badgeKind === 'tecnico'
+      ? 'Melhor desempenho'
+      : isWinnerPick && badgeKind === 'motor'
+        ? 'Motor multifator'
+        : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-24px' }}
-      className={`flex flex-col rounded-2xl border-2 bg-white shadow-md overflow-hidden ${border} ${
-        isWinnerPick ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-100' : ''
-      }`}
+      className={`flex flex-col rounded-2xl border-2 bg-white shadow-md overflow-hidden transition-transform duration-200 ${border} ${
+        isWinnerPick
+          ? 'ring-2 ring-emerald-600 ring-offset-2 ring-offset-slate-100 md:scale-[1.02] shadow-lg z-[1]'
+          : ''
+      } ${dimPeer ? 'opacity-75 md:opacity-70' : ''}`}
     >
       <div
         className={`flex items-center justify-between gap-2 px-4 py-3 bg-gradient-to-r ${headBg} text-white`}
@@ -116,11 +175,18 @@ function ManejoCard({
           <p className="text-[10px] font-semibold uppercase tracking-widest opacity-90">Manejo {side}</p>
           <p className="font-bold text-lg truncate">{name}</p>
         </div>
-        {isWinnerPick ? (
-          <span className="shrink-0 rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold px-2.5 py-1">
-            Indicado
-          </span>
-        ) : null}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {witness ? (
+            <span className="rounded-full bg-white/20 text-white text-[10px] font-semibold px-2 py-0.5 border border-white/30">
+              Testemunha
+            </span>
+          ) : null}
+          {badgeText ? (
+            <span className="rounded-full bg-amber-400 text-amber-950 text-[10px] font-bold px-2.5 py-1">
+              {badgeText}
+            </span>
+          ) : null}
+        </div>
       </div>
       <div className="p-4 flex flex-col flex-1 gap-4">
         {photo?.url ? (
@@ -138,6 +204,15 @@ function ManejoCard({
             {prod ?? 'Protocolo não detalhado no relatório'}
           </p>
         </div>
+        {productivity ? (
+          <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase text-slate-500">Produtividade</p>
+            <p className="text-lg font-bold tabular-nums text-slate-900" style={{ color: isA ? COLOR_SIDE_A : COLOR_SIDE_B }}>
+              {formatNumber(productivity.kgHa, { decimals: 0 })} kg/ha
+            </p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{productivity.sourceLabel}</p>
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-4 text-sm">
           <div>
             <p className="text-[10px] font-bold uppercase text-slate-500">Vigor</p>
@@ -182,11 +257,15 @@ function ManejoCard({
 }
 
 export default function CompareManejosSection({ data }: { data: SideBySideReportData }) {
-  const winner = winnerFromJson(data);
+  const { side: pickSide, badge } = compareHighlight(data);
   const photosA = data.sideA?.photos ?? [];
   const photosB = data.sideB?.photos ?? [];
   const heroA = pickHeroPhoto(photosA);
   const heroB = pickHeroPhoto(photosB);
+  const winA = pickSide === 'A';
+  const winB = pickSide === 'B';
+  const dimA = Boolean(pickSide) && !winA;
+  const dimB = Boolean(pickSide) && !winB;
 
   return (
     <section id="comparativo-premium" className="scroll-mt-28">
@@ -198,8 +277,10 @@ export default function CompareManejosSection({ data }: { data: SideBySideReport
       >
         <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Comparativo visual</h2>
         <p className="mt-2 text-slate-600 text-sm max-w-2xl leading-relaxed">
-          Dois manejos lado a lado: mesma hierarquia, leitura imediata. Cores fixas — A azul, B verde. O selo
-          &quot;Indicado&quot; segue o manejo registrado no relatório.
+          Dois manejos lado a lado: mesma hierarquia, leitura imediata. Cores fixas — A azul, B verde. O destaque
+          segue primeiro o registro técnico (<span className="font-medium text-slate-700">conclusion.winner</span>); na
+          ausência dele, o motor multifator (
+          <span className="font-medium text-slate-700">decision_layer.engineOverallWinner</span>) quando não for empate.
         </p>
       </motion.div>
       <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-stretch">
@@ -207,13 +288,21 @@ export default function CompareManejosSection({ data }: { data: SideBySideReport
           side="A"
           data={data}
           photo={heroA ?? undefined}
-          isWinnerPick={winner === 'A'}
+          isWinnerPick={winA}
+          badgeKind={winA ? badge : null}
+          dimPeer={dimA}
+          productivity={productivityForSide(data, 'A')}
+          witness={isWitnessSide(data, 'A')}
         />
         <ManejoCard
           side="B"
           data={data}
           photo={heroB ?? undefined}
-          isWinnerPick={winner === 'B'}
+          isWinnerPick={winB}
+          badgeKind={winB ? badge : null}
+          dimPeer={dimB}
+          productivity={productivityForSide(data, 'B')}
+          witness={isWitnessSide(data, 'B')}
         />
       </div>
     </section>
