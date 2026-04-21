@@ -8,6 +8,7 @@ import {
   warningsFromExperimentDesignJson,
 } from '@/lib/experimentDesignWarnings';
 import { formatNumber } from '@/utils/format';
+import PremiumSectionShell from './PremiumSectionShell';
 
 const DELINEAMENTO_LABELS: Record<string, string> = {
   dbc: 'DBC — Blocos casualizados',
@@ -57,32 +58,29 @@ export default function ExperimentDesignSection({
   const layoutPretty = collectionLayoutLabel(layout || undefined);
 
   return (
-    <motion.section
+    <PremiumSectionShell
       id={sectionId}
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-24px' }}
-      transition={{ duration: 0.35 }}
-      className="scroll-mt-36 space-y-5"
+      eyebrow="Desenho experimental"
+      title="Planejamento do ensaio"
+      subtitle="Delineamento, parcelas, layout de coleta e datas conforme registrados no JSON publicado — sem inferência adicional no front."
+      className="scroll-mt-36"
     >
-      <div>
-        <h2 className="text-lg sm:text-xl font-bold text-slate-900 border-l-4 border-indigo-500 pl-3">
-          Planejamento do ensaio
-        </h2>
-        <p className="text-sm text-slate-600 mt-1 max-w-3xl leading-relaxed">
-          Delineamento e coleta conforme registrados no relatório — sem inferências fora do JSON publicado.
-        </p>
-      </div>
-
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-24px' }}
+        transition={{ duration: 0.35 }}
+        className="space-y-5"
+      >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {ed?.delineamento != null && String(ed.delineamento).trim() ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-slate-200/60 bg-white/95 p-4 shadow-[0_1px_8px_-2px_rgba(15,23,42,0.05)] ring-1 ring-slate-900/[0.03]">
             <p className="text-[10px] font-bold uppercase text-slate-500">Delineamento</p>
             <p className="mt-1 text-sm font-semibold text-slate-900 leading-snug">{delineamentoLabel(ed.delineamento)}</p>
           </div>
         ) : null}
         {ed?.numero_tratamentos != null && Number.isFinite(ed.numero_tratamentos) ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-slate-200/60 bg-white/95 p-4 shadow-[0_1px_8px_-2px_rgba(15,23,42,0.05)] ring-1 ring-slate-900/[0.03]">
             <p className="text-[10px] font-bold uppercase text-slate-500">Nº tratamentos</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
               {formatNumber(ed.numero_tratamentos, { decimals: 0 })}
@@ -90,7 +88,7 @@ export default function ExperimentDesignSection({
           </div>
         ) : null}
         {ed?.numero_repeticoes != null && Number.isFinite(ed.numero_repeticoes) ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-slate-200/60 bg-white/95 p-4 shadow-[0_1px_8px_-2px_rgba(15,23,42,0.05)] ring-1 ring-slate-900/[0.03]">
             <p className="text-[10px] font-bold uppercase text-slate-500">Repetições</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
               {formatNumber(ed.numero_repeticoes, { decimals: 0 })}
@@ -98,7 +96,7 @@ export default function ExperimentDesignSection({
           </div>
         ) : null}
         {ed?.tamanho_parcela_m2 != null && Number.isFinite(ed.tamanho_parcela_m2) ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-slate-200/60 bg-white/95 p-4 shadow-[0_1px_8px_-2px_rgba(15,23,42,0.05)] ring-1 ring-slate-900/[0.03]">
             <p className="text-[10px] font-bold uppercase text-slate-500">Área útil da parcela</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
               {formatNumber(ed.tamanho_parcela_m2, { decimals: 1 })} m²
@@ -106,7 +104,7 @@ export default function ExperimentDesignSection({
           </div>
         ) : null}
         {ed?.area_util_m2 != null && Number.isFinite(ed.area_util_m2) ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-slate-200/60 bg-white/95 p-4 shadow-[0_1px_8px_-2px_rgba(15,23,42,0.05)] ring-1 ring-slate-900/[0.03]">
             <p className="text-[10px] font-bold uppercase text-slate-500">Área útil (alternativa)</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
               {formatNumber(ed.area_util_m2, { decimals: 1 })} m²
@@ -114,7 +112,7 @@ export default function ExperimentDesignSection({
           </div>
         ) : null}
         {ed?.bordadura_metros != null && Number.isFinite(ed.bordadura_metros) ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-slate-200/60 bg-white/95 p-4 shadow-[0_1px_8px_-2px_rgba(15,23,42,0.05)] ring-1 ring-slate-900/[0.03]">
             <p className="text-[10px] font-bold uppercase text-slate-500">Bordadura</p>
             <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">
               {formatNumber(ed.bordadura_metros, { decimals: 2 })} m
@@ -122,7 +120,7 @@ export default function ExperimentDesignSection({
           </div>
         ) : null}
         {layoutPretty ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:col-span-2 lg:col-span-1">
+          <div className="rounded-xl border border-slate-200/60 bg-white/95 p-4 shadow-[0_1px_8px_-2px_rgba(15,23,42,0.05)] ring-1 ring-slate-900/[0.03] sm:col-span-2 lg:col-span-1">
             <p className="text-[10px] font-bold uppercase text-slate-500">Layout de coleta</p>
             <p className="mt-1 text-sm font-semibold text-slate-900 leading-snug">{layoutPretty}</p>
             {layout && layout !== 'paired_points' && layout !== 'parcel_per_treatment' ? (
@@ -178,6 +176,7 @@ export default function ExperimentDesignSection({
           ))}
         </div>
       ) : null}
-    </motion.section>
+      </motion.div>
+    </PremiumSectionShell>
   );
 }

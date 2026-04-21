@@ -5,6 +5,7 @@ import type { SideBySideReportData } from '@/components/SideBySideReportContent'
 import type { ReportApplicationEventV2Json } from '@/types/side-by-side-report';
 import { formatWind } from '@/components/lado_a_lado/ladoALadoHelpers';
 import { formatDate, formatNumber } from '@/utils/format';
+import PremiumSectionShell from './PremiumSectionShell';
 
 function protocolBadge(ev: ReportApplicationEventV2Json): { label: string; ok: boolean } {
   const prods = ev.products ?? [];
@@ -21,11 +22,12 @@ export default function ExecutionSection({ data }: { data: SideBySideReportData 
 
   if (apps.length === 0 && legacy.length > 0) {
     return (
-      <section id="execucao-premium" className="scroll-mt-28">
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Execução em campo</h2>
-        <p className="mt-1 text-sm text-slate-600 mb-6 max-w-2xl">
-          Registro resumido (formato legado). Para timeline completa com clima e protocolo, use <code className="text-xs bg-slate-100 px-1 rounded">applications</code> no JSON.
-        </p>
+      <PremiumSectionShell
+        id="execucao-premium"
+        eyebrow="Registros de aplicação"
+        title="Execução em campo"
+        subtitle="Formato legado (resumo). Para linha do tempo completa com clima, DAA e vínculo ao protocolo, o JSON deve incluir o array applications."
+      >
         <ul className="space-y-3">
           {legacy.map((a, i) => (
             <li key={i} className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
@@ -35,7 +37,7 @@ export default function ExecutionSection({ data }: { data: SideBySideReportData 
             </li>
           ))}
         </ul>
-      </section>
+      </PremiumSectionShell>
     );
   }
 
@@ -48,11 +50,12 @@ export default function ExecutionSection({ data }: { data: SideBySideReportData 
   });
 
   return (
-    <section id="execucao-premium" className="scroll-mt-28">
-      <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Execução em campo</h2>
-      <p className="mt-1 text-sm text-slate-600 mb-8 max-w-2xl">
-        Linha do tempo das aplicações — clima, tecnologia e aderência ao protocolo quando houver vínculo no JSON.
-      </p>
+    <PremiumSectionShell
+      id="execucao-premium"
+      eyebrow="Registros de aplicação"
+      title="Execução em campo"
+      subtitle="Linha do tempo das aplicações: data, DAA, lado, clima, tecnologia e aderência ao protocolo quando o evento publica vínculo ao item planejado."
+    >
       <div className="relative max-w-3xl mx-auto pl-2 sm:pl-4">
         <div className="absolute left-[11px] sm:left-[15px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-blue-200 via-emerald-200 to-slate-200 rounded-full" aria-hidden />
         <ul className="space-y-6">
@@ -143,6 +146,6 @@ export default function ExecutionSection({ data }: { data: SideBySideReportData 
           })}
         </ul>
       </div>
-    </section>
+    </PremiumSectionShell>
   );
 }

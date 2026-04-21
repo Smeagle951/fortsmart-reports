@@ -29,6 +29,18 @@ export type RoiSideSnapshot = {
   roiPct?: number;
 };
 
+/** Resumo económico opcional espelhado pelo motor FortSmart (derivado de `roiBySide`). */
+export type FortsmartAiEconomicSideBlock = {
+  cost?: number;
+  margin?: number;
+  roiPct?: number;
+};
+
+export type FortsmartAiConfidence = {
+  score?: number;
+  label?: string;
+};
+
 export type DecisionLayerJson = {
   schemaVersion?: number;
   economicEngineVersion?: number;
@@ -65,6 +77,39 @@ export type DecisionLayerJson = {
       acao_sugerida?: string[];
       evidencias?: Record<string, unknown>;
     }>;
+    /** Linhas de texto explicativas (subscores baixos, fatores de risco da KB, etc.). */
+    explanations?: string[];
+    /** Confiança agregada 0–1 + rótulo qualitativo. */
+    confidence?: FortsmartAiConfidence;
+    /** Snapshot só leitura alinhado ao `decision_layer.roiBySide` quando existir. */
+    economic?: {
+      sides?: Record<string, FortsmartAiEconomicSideBlock>;
+    };
+    /** Motor quantitativo V2 (curvas, produtividade, interações, regionalização). */
+    fortsmart_ai_v2?: {
+      kb_v2_loaded?: boolean;
+      numeric_model?: {
+        culture?: string;
+        yield_estimate?: number;
+        yield_target?: number;
+        yield_gap?: number;
+        soil_score?: number;
+        nutrition_score?: number;
+        climate_score?: number;
+        final_score?: number;
+        interaction_factor?: number;
+        limiting_factors?: string[];
+        region?: string | null;
+        lime_t_ha?: number;
+        recommendations?: string[];
+        economic?: {
+          revenue?: number;
+          roi?: number;
+          viable?: boolean;
+          cost_brl_ha?: number;
+        };
+      } | null;
+    };
     referencias_usadas?: Array<Record<string, unknown>>;
   };
 };

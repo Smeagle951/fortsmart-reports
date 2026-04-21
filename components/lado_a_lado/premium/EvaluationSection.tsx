@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import type { ReportPhotoWeb } from '@/types/side-by-side-report';
 import { pickHeroPhoto } from '@/components/lado_a_lado/ladoALadoHelpers';
+import PremiumSectionShell from './PremiumSectionShell';
 
 function ExtraPhotoThumb({ ph, label }: { ph: ReportPhotoWeb; label: string }) {
   if (!ph.url) return null;
@@ -56,11 +57,12 @@ export default function EvaluationSection({ data }: { data: SideBySideReportData
   if (extras.length === 0) return null;
 
   return (
-    <section id="avaliacao-premium" className="scroll-mt-28">
-      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Mais evidências</h2>
-      <p className="mt-2 text-sm text-slate-600 mb-6 max-w-2xl">
-        Fotos adicionais publicadas no relatório (além do comparativo visual principal).
-      </p>
+    <PremiumSectionShell
+      id="avaliacao-premium"
+      eyebrow="Registro fotográfico"
+      title="Mais evidências"
+      subtitle="Fotos adicionais publicadas no relatório, além das imagens herói usadas no comparativo visual principal."
+    >
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {restA.map((ph, i) => (
           <ExtraPhotoThumb key={`a-${i}`} ph={ph} label={`${nameA} · ${i + 1}`} />
@@ -69,6 +71,6 @@ export default function EvaluationSection({ data }: { data: SideBySideReportData
           <ExtraPhotoThumb key={`b-${i}`} ph={ph} label={`${nameB} · ${i + 1}`} />
         ))}
       </div>
-    </section>
+    </PremiumSectionShell>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from '@/components/lado_a_lado/ladoALadoHelpers';
 import { formatNumber } from '@/utils/format';
 import { winnerFromJson } from './premiumInference';
+import PremiumSectionShell from './PremiumSectionShell';
 
 type Side = 'A' | 'B';
 
@@ -276,16 +277,13 @@ export default function CompareManejosSection({ data }: { data: SideBySideReport
   const dimB = Boolean(pickSide) && !winB;
 
   return (
-    <section id="comparativo-premium" className="scroll-mt-28">
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        className="mb-8"
-      >
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Comparativo visual</h2>
-        <p className="mt-2 text-slate-600 text-sm max-w-2xl leading-relaxed">{comparativoSubtitle(data)}</p>
-      </motion.div>
+    <PremiumSectionShell
+      id="comparativo-premium"
+      eyebrow="Leitura comparada"
+      title="Comparativo visual"
+      subtitle={comparativoSubtitle(data)}
+    >
+      <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
       <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-stretch">
         <ManejoCard
           side="A"
@@ -308,6 +306,7 @@ export default function CompareManejosSection({ data }: { data: SideBySideReport
           witness={isWitnessSide(data, 'B')}
         />
       </div>
-    </section>
+      </motion.div>
+    </PremiumSectionShell>
   );
 }

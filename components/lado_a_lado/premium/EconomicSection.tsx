@@ -7,6 +7,7 @@ import { formatNumber } from '@/utils/format';
 import type { RoiSideSnapshot } from '@/lib/decisionLayer';
 import { estimatedRevenueBrlPerHa, winnerFromJson } from './premiumInference';
 import EconomicTimelineChart from './EconomicTimelineChart';
+import PremiumSectionShell from './PremiumSectionShell';
 
 const PRECO_FONTE_OCULTAR = new Set(['padrao_sistema', 'padrao sistema', 'sistema', 'default', 'interno', 'internal']);
 
@@ -144,12 +145,12 @@ export default function EconomicSection({ data }: { data: SideBySideReportData }
       : null;
 
   return (
-    <section id="economico-premium" className="scroll-mt-28">
-      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Fechamento econômico</h2>
-      <p className="mt-2 text-sm text-slate-600 mb-6 max-w-2xl leading-relaxed">
-        Valores do bloco &quot;Motor econômico&quot; vêm calculados no app e publicados no JSON — o relatório web apenas exibe. Valide sempre com o agrônomo
-        responsável.
-      </p>
+    <PremiumSectionShell
+      id="economico-premium"
+      eyebrow="Margem e ROI"
+      title="Fechamento econômico"
+      subtitle="Valores do motor econômico e referências de mercado conforme publicados no JSON. Uso decisório sujeito à validação do responsável técnico e ao contexto comercial da propriedade."
+    >
 
       {mr && (mr.price_sack_brl != null || mr.kg_per_sack != null) ? (
         <motion.div
@@ -341,6 +342,6 @@ export default function EconomicSection({ data }: { data: SideBySideReportData }
           Variação de custo (B − A): R$ {formatNumber(custo.deltaCostPerHa_B_vs_A, { decimals: 2 })}/ha
         </p>
       ) : null}
-    </section>
+    </PremiumSectionShell>
   );
 }

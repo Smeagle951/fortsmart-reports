@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { formatNumber } from '@/utils/format';
 import { heroFinancialSnapshot, scoresFromJson, winnerFromJson } from './premiumInference';
+import PremiumSectionShell from './PremiumSectionShell';
 
 export default function ConclusionSection({ data }: { data: SideBySideReportData }) {
   const summary = data.conclusion?.summary?.trim() || data.resumo?.conclusaoCurta?.trim();
@@ -43,12 +44,14 @@ export default function ConclusionSection({ data }: { data: SideBySideReportData
   }
 
   return (
-    <section id="conclusao-premium" className="scroll-mt-28 pb-6">
-      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Conclusão</h2>
-      <p className="mt-2 text-sm text-slate-600 mb-8 max-w-2xl">
-        Recomendação e síntese para uso comercial e técnico — somente com base no conteúdo publicado.
-      </p>
-
+    <PremiumSectionShell
+      id="conclusao-premium"
+      eyebrow="Encerramento"
+      title="Conclusão e recomendação"
+      subtitle="Síntese e próximos passos conforme publicados no relatório — base para decisão técnica e comercial."
+      tone="dark"
+      className="pb-2"
+    >
       <div className="grid md:grid-cols-2 gap-5">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -121,6 +124,6 @@ export default function ConclusionSection({ data }: { data: SideBySideReportData
           {data.conclusion.signature.city ? <p>{data.conclusion.signature.city}</p> : null}
         </div>
       ) : null}
-    </section>
+    </PremiumSectionShell>
   );
 }

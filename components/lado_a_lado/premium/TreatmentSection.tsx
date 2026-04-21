@@ -4,15 +4,19 @@ import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { COLOR_SIDE_A, COLOR_SIDE_B } from '@/components/lado_a_lado/ladoALadoHelpers';
 import { formatNumber } from '@/utils/format';
+import PremiumSectionShell from './PremiumSectionShell';
 
 export default function TreatmentSection({ data }: { data: SideBySideReportData }) {
   const sides = [...(data.treatment_protocol?.sides ?? [])].sort((a, b) => (a.side === 'A' ? -1 : b.side === 'A' ? 1 : 0));
   if (sides.length === 0) return null;
 
   return (
-    <section id="tratamento-premium" className="scroll-mt-28">
-      <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Plano de tratamento</h2>
-      <p className="mt-1 text-sm text-slate-600 mb-6 max-w-2xl">Protocolo planejado antes da execução — cartão técnico por manejo.</p>
+    <PremiumSectionShell
+      id="tratamento-premium"
+      eyebrow="Protocolo planejado"
+      title="Plano de tratamento"
+      subtitle="Cartão técnico por manejo (produtos, doses e custos planejados) conforme publicado antes da execução em campo."
+    >
       <div className="grid md:grid-cols-2 gap-4">
         {sides.map((s, i) => {
           const isA = s.side === 'A';
@@ -78,6 +82,6 @@ export default function TreatmentSection({ data }: { data: SideBySideReportData 
           );
         })}
       </div>
-    </section>
+    </PremiumSectionShell>
   );
 }

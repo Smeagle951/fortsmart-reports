@@ -3,6 +3,8 @@
 import React, { useMemo } from 'react';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 
+/* ----------------------------- labels & order ----------------------------- */
+
 const KEY_LABELS: Record<string, string> = {
   data: 'Data',
   dose: 'Dose',
@@ -11,8 +13,8 @@ const KEY_LABELS: Record<string, string> = {
   categoria: 'Categoria',
   tipo: 'Tipo',
   alvo: 'Alvo',
-  incidencia: 'Incidência',
-  severidade: 'Severidade',
+  incidencia: 'Incid.',
+  severidade: 'Sev.',
   observacao: 'Observação',
   observacoes: 'Observações',
   nota: 'Nota',
@@ -20,13 +22,8 @@ const KEY_LABELS: Record<string, string> = {
   valor: 'Valor',
   descricao: 'Descrição',
   nome: 'Nome',
-  quantidade: 'Quantidade',
+  quantidade: 'Qtd',
   status: 'Status',
-  filePath: 'Ficheiro',
-  file_path: 'Ficheiro',
-  url: 'URL',
-  caption: 'Legenda',
-  id: 'ID',
   pressao: 'Pressão (hPa)',
   ur: 'U.R. (%)',
   temperatura: 'Temp. (°C)',
@@ -34,6 +31,11 @@ const KEY_LABELS: Record<string, string> = {
   chuva: 'Chuva',
   solo_umidade: 'Solo (umid.)',
   compactacao: 'Compactação',
+  caption: 'Legenda',
+  foto: 'Foto',
+  imagem: 'Foto',
+  url: 'Foto',
+  gps: 'GPS',
 };
 
 const SECTION_ID_FALLBACK: Record<string, string> = {
@@ -49,6 +51,44 @@ const SECTION_ID_FALLBACK: Record<string, string> = {
   plantas_daninhas: 'Plantas daninhas',
 };
 
+const HIDDEN_KEYS = new Set([
+  'id',
+  '_id',
+  'filePath',
+  'file_path',
+  'path',
+  'localPath',
+  'local_path',
+  'createdAt',
+  'updatedAt',
+  'uid',
+  'owner_uid',
+  'hash',
+]);
+
+const COLUMN_PRIORITY = [
+  'foto',
+  'imagem',
+  'url',
+  'data',
+  'produto',
+  'categoria',
+  'tipo',
+  'estadio',
+  'dose',
+  'alvo',
+  'severidade',
+  'incidencia',
+  'caption',
+  'observacao',
+  'unidade',
+] as const;
+
+const IMAGE_KEYS = new Set(['url', 'foto', 'imagem', 'image', 'thumbnail', 'thumb']);
+const IMAGE_EXT = /\.(jpe?g|png|webp|gif|avif|heic|heif)(\?.*)?$/i;
+
+/* ------------------------------- utilities ------------------------------- */
+
 function titleForSection(secId: string, moduleLabels: Record<string, string>): string {
   if (moduleLabels[secId]) return moduleLabels[secId];
   if (SECTION_ID_FALLBACK[secId]) return SECTION_ID_FALLBACK[secId];
@@ -59,26 +99,20 @@ function titleForSection(secId: string, moduleLabels: Record<string, string>): s
     .join(' ');
 }
 
-const COLUMN_PRIORITY = [
-  'data',
-  'produto',
-  'categoria',
-  'tipo',
-  'estadio',
-  'dose',
-  'alvo',
-  'severidade',
-  'incidencia',
-  'observacao',
-  'unidade',
-] as const;
+function isPlainObject(x: unknown): x is Record<string, unknown> {
+  return x !== null && typeof x === 'object' && !Array.isArray(x);
+}
 
-type FcmPoint = {
-  point_id?: string;
-  index?: number;
-  status?: string;
-  sides?: Record<string, Record<string, unknown>>;
-};
+function isLikelyImageUrl(v: unknown): boolean {
+  if (typeof v !== 'string') return false;
+  const t = v.trim();
+  if (!t) return false;
+  if (!/^https?:\/\//i.test(t)) return false;
+  if (IMAGE_EXT.test(t)) return true;
+  if (/\/storage\/v1\/object\/public\//i.test(t)) return true;
+  if (/supabase\.co\/.+\/public\//i.test(t)) return true;
+  return false;
+}
 
 function hasFieldCollectionData(data: SideBySideReportData): boolean {
   const fcm = data.field_collection_modules;
@@ -91,6 +125,7 @@ function formatCellValue(raw: unknown): string {
   if (raw == null) return '—';
   if (typeof raw === 'string') {
     const t = raw.trim();
+    if (!t) return '—';
     if (/^\d{4}-\d{2}-\d{2}T/.test(t)) {
       const d = new Date(t);
       if (!Number.isNaN(d.getTime())) {
@@ -113,7 +148,7 @@ function formatCellValue(raw: unknown): string {
   }
   if (Array.isArray(raw)) return raw.map((x) => formatCellValue(x)).filter(Boolean).join(' · ') || '—';
   if (typeof raw === 'object') {
-    const keys = Object.keys(raw as object);
+    const keys = Object.keys(raw as object).filter((k) => !HIDDEN_KEYS.has(k));
     if (keys.length <= 3) {
       return keys
         .map((k) => {
@@ -127,8 +162,12 @@ function formatCellValue(raw: unknown): string {
   return String(raw);
 }
 
-function isPlainObject(x: unknown): x is Record<string, unknown> {
-  return x !== null && typeof x === 'object' && !Array.isArray(x);
+function pickImageUrlFromRow(row: Record<string, unknown>): string | null {
+  for (const k of IMAGE_KEYS) {
+    const v = row[k];
+    if (typeof v === 'string' && isLikelyImageUrl(v)) return v.trim();
+  }
+  return null;
 }
 
 function isPhotoMediaRecord(v: unknown): v is Record<string, unknown> {
@@ -189,7 +228,8 @@ function collectKeysFromRows(rows: Record<string, unknown>[]): string[] {
   const set = new Set<string>();
   for (const row of rows) {
     for (const k of Object.keys(row)) {
-      if (k === '_id' || k === 'id' || k.startsWith('_')) continue;
+      if (HIDDEN_KEYS.has(k)) continue;
+      if (k.startsWith('_')) continue;
       set.add(k);
     }
   }
@@ -200,25 +240,62 @@ function collectKeysFromRows(rows: Record<string, unknown>[]): string[] {
   return [...ordered, ...rest];
 }
 
-/**
- * Tabela estilo “data grid” executivo: cabeçalho escuro, linhas alternadas, ring suave.
- */
+/* --------------------------------- cells --------------------------------- */
+
+function ImageThumb({ src, alt }: { src: string; alt?: string }) {
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block shrink-0 overflow-hidden rounded-md ring-1 ring-slate-200/70 shadow-sm hover:ring-amber-400/60 transition"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt ?? 'foto'}
+        loading="lazy"
+        className="h-14 w-14 object-cover print:h-20 print:w-20"
+      />
+    </a>
+  );
+}
+
+/** Célula de tabela: URL pública, registo de mídia (objeto) ou texto formatado. */
+function renderCell(k: string, v: unknown, row: Record<string, unknown>): React.ReactNode {
+  if (isPhotoMediaRecord(v)) {
+    return <PhotoMediaCell value={v as Record<string, unknown>} />;
+  }
+  if (IMAGE_KEYS.has(k) && typeof v === 'string' && isLikelyImageUrl(v)) {
+    const caption =
+      (typeof row.caption === 'string' && row.caption.trim()) ||
+      (typeof row.descricao === 'string' && row.descricao.trim()) ||
+      undefined;
+    return <ImageThumb src={v} alt={caption} />;
+  }
+  return (
+    <span className="text-[12.5px] leading-snug text-slate-800">
+      {formatCellValue(v)}
+    </span>
+  );
+}
+
+/* --------------------------------- tables --------------------------------- */
+
 function ItensTable({ rows }: { rows: Record<string, unknown>[] }) {
   const keys = useMemo(() => collectKeysFromRows(rows), [rows]);
   if (keys.length === 0) {
-    return (
-      <p className="text-sm text-slate-500 italic px-1 py-3">Nenhum campo registrado.</p>
-    );
+    return <p className="text-xs text-slate-400 italic py-2">Sem registros.</p>;
   }
   return (
-    <div className="overflow-x-auto rounded-xl ring-1 ring-slate-900/[0.06] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.6)]">
-      <table className="w-full min-w-[min(100%,480px)] text-left text-[13px] border-collapse">
+    <div className="overflow-x-auto rounded-lg ring-1 ring-slate-200/80 bg-white/90">
+      <table className="w-full text-left text-[12.5px] border-collapse">
         <thead>
-          <tr className="bg-[linear-gradient(180deg,rgb(15,23,42)_0%,rgb(30,41,59)_100%)] text-slate-100 print:!bg-slate-200 print:!text-slate-900 print:border-slate-400">
+          <tr className="bg-slate-50 text-slate-600 border-b border-slate-200">
             {keys.map((k) => (
               <th
                 key={k}
-                className="py-2.5 px-3.5 first:pl-4 last:pr-4 font-semibold text-[0.65rem] uppercase tracking-[0.12em] whitespace-nowrap border-b border-slate-700/50"
+                className="py-2 px-2.5 first:pl-3 last:pr-3 font-semibold text-[0.62rem] uppercase tracking-[0.1em] whitespace-nowrap"
               >
                 {KEY_LABELS[k] ?? k.replace(/_/g, ' ')}
               </th>
@@ -229,11 +306,14 @@ function ItensTable({ rows }: { rows: Record<string, unknown>[] }) {
           {rows.map((row, ri) => (
             <tr
               key={ri}
-              className="border-b border-slate-200/70 last:border-0 even:bg-slate-50/90 odd:bg-white text-slate-800 transition-colors"
+              className="border-b border-slate-100 last:border-0 hover:bg-amber-50/30 transition-colors"
             >
               {keys.map((k) => (
-                <td key={k} className="py-2.5 px-3.5 first:pl-4 last:pr-4 align-top text-[13px] leading-snug">
-                  {renderTableCell(row[k])}
+                <td
+                  key={k}
+                  className="py-1.5 px-2.5 first:pl-3 last:pr-3 align-middle"
+                >
+                  {renderCell(k, row[k], row)}
                 </td>
               ))}
             </tr>
@@ -244,38 +324,95 @@ function ItensTable({ rows }: { rows: Record<string, unknown>[] }) {
   );
 }
 
+/** Ocorrências com imagem viram galeria compacta com legenda (estilo dossiê). */
+function OccurrencesGallery({ rows }: { rows: Record<string, unknown>[] }) {
+  const withImages = rows.filter((r) => pickImageUrlFromRow(r));
+  const withoutImages = rows.filter((r) => !pickImageUrlFromRow(r));
+  return (
+    <div className="space-y-3">
+      {withImages.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          {withImages.map((r, i) => {
+            const src = pickImageUrlFromRow(r)!;
+            const caption =
+              (typeof r.caption === 'string' && r.caption.trim()) ||
+              (typeof r.descricao === 'string' && r.descricao.trim()) ||
+              (typeof r.alvo === 'string' && r.alvo.trim()) ||
+              'Ocorrência';
+            const meta: string[] = [];
+            if (typeof r.severidade === 'string' && r.severidade) meta.push(`Sev. ${r.severidade}`);
+            if (typeof r.incidencia === 'string' && r.incidencia) meta.push(`Incid. ${r.incidencia}`);
+            if (typeof r.nota !== 'undefined' && r.nota !== null && r.nota !== '')
+              meta.push(`Nota ${r.nota}`);
+            return (
+              <figure
+                key={i}
+                className="group relative overflow-hidden rounded-lg ring-1 ring-slate-200 bg-white shadow-sm"
+              >
+                <a href={src} target="_blank" rel="noopener noreferrer" className="block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt={caption}
+                    loading="lazy"
+                    className="aspect-[4/3] w-full object-cover group-hover:scale-[1.02] transition-transform"
+                  />
+                </a>
+                <figcaption className="px-2.5 py-1.5 border-t border-slate-100">
+                  <p className="text-[11.5px] font-semibold text-slate-800 truncate">{caption}</p>
+                  {meta.length > 0 && (
+                    <p className="text-[10.5px] text-slate-500 mt-0.5 truncate">{meta.join(' · ')}</p>
+                  )}
+                </figcaption>
+              </figure>
+            );
+          })}
+        </div>
+      )}
+      {withoutImages.length > 0 && <ItensTable rows={withoutImages} />}
+    </div>
+  );
+}
+
+/* ---------------------------- object rendering ---------------------------- */
+
 function DlBlock({ obj }: { obj: Record<string, unknown> }) {
   const entries = Object.entries(obj).filter(
-    ([k, v]) => !k.startsWith('_') && v !== null && v !== undefined && v !== '',
+    ([k, v]) =>
+      !HIDDEN_KEYS.has(k) &&
+      !k.startsWith('_') &&
+      v !== null &&
+      v !== undefined &&
+      v !== '',
   );
   if (entries.length === 0) {
-    return <p className="text-sm text-slate-500">—</p>;
+    return <p className="text-xs text-slate-400">—</p>;
   }
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+    <div className="grid grid-cols-2 gap-1.5">
       {entries.map(([k, v]) => {
-        if (isPlainObject(v) || Array.isArray(v)) {
+        if (isPlainObject(v) || (Array.isArray(v) && v.length > 0 && typeof v[0] === 'object')) {
           return (
             <div
               key={k}
-              className="sm:col-span-2 rounded-lg bg-white/60 p-3 ring-1 ring-slate-200/80 shadow-sm"
+              className="col-span-2 rounded-md bg-white/80 px-2.5 py-1.5 ring-1 ring-slate-200/70"
             >
-              <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em] text-slate-500">
+              <p className="text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500">
                 {KEY_LABELS[k] ?? k.replace(/_/g, ' ')}
               </p>
-              <div className="mt-2 pl-0 border-l-2 border-amber-500/50 pl-3">{renderValue(v, 1)}</div>
+              <div className="mt-1">{renderValue(v, 1)}</div>
             </div>
           );
         }
         return (
           <div
             key={k}
-            className="rounded-lg bg-white/90 px-3.5 py-2.5 ring-1 ring-slate-200/60 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            className="rounded-md bg-white/90 px-2.5 py-1.5 ring-1 ring-slate-200/70"
           >
-            <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-slate-500">
+            <dt className="text-[0.58rem] font-semibold uppercase tracking-wide text-slate-500">
               {KEY_LABELS[k] ?? k.replace(/_/g, ' ')}
             </dt>
-            <dd className="mt-1 text-sm font-medium text-slate-900 min-w-0 wrap-break-word">
+            <dd className="mt-0.5 text-[12.5px] font-medium text-slate-900 min-w-0 wrap-break-word">
               {isPhotoMediaRecord(v) ? <PhotoMediaCell value={v} /> : formatCellValue(v)}
             </dd>
           </div>
@@ -285,26 +422,30 @@ function DlBlock({ obj }: { obj: Record<string, unknown> }) {
   );
 }
 
-function renderValue(raw: unknown, depth: number): React.ReactNode {
+function renderValue(raw: unknown, depth: number, sectionId?: string): React.ReactNode {
   if (raw == null) return <span className="text-slate-400">—</span>;
   if (depth > 2) {
     return (
-      <pre className="text-[0.7rem] font-mono leading-relaxed text-slate-600 whitespace-pre-wrap wrap-break-word max-h-40 overflow-y-auto rounded-lg border border-slate-200/80 bg-slate-100/50 p-3 print:text-xs">
+      <pre className="text-[10.5px] font-mono leading-snug text-slate-600 whitespace-pre-wrap break-all max-h-28 overflow-y-auto rounded bg-slate-100/70 p-2 print:text-[9px]">
         {JSON.stringify(raw, null, 2)}
       </pre>
     );
   }
   if (Array.isArray(raw)) {
-    if (raw.length === 0) return <span className="text-slate-400">—</span>;
+    if (raw.length === 0) return <span className="text-slate-400 text-xs">—</span>;
     if (raw.every((x) => isPlainObject(x))) {
-      return <ItensTable rows={raw as Record<string, unknown>[]} />;
+      const rows = raw as Record<string, unknown>[];
+      if (sectionId === 'ocorrencias' || rows.some((r) => pickImageUrlFromRow(r))) {
+        return <OccurrencesGallery rows={rows} />;
+      }
+      return <ItensTable rows={rows} />;
     }
     return (
-      <ul className="space-y-2 text-sm text-slate-800">
+      <ul className="space-y-1 text-[12.5px] text-slate-800">
         {raw.map((x, i) => (
-          <li key={i} className="flex gap-2.5">
-            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" aria-hidden />
-            <span>{renderTableCell(x)}</span>
+          <li key={i} className="flex gap-2">
+            <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-slate-400" aria-hidden />
+            <span className="min-w-0">{renderTableCell(x)}</span>
           </li>
         ))}
       </ul>
@@ -313,59 +454,90 @@ function renderValue(raw: unknown, depth: number): React.ReactNode {
   if (isPlainObject(raw)) {
     const o = raw as Record<string, unknown>;
     if (Array.isArray(o.itens) && o.itens.length > 0 && o.itens.every((x) => isPlainObject(x))) {
-      return <ItensTable rows={o.itens as Record<string, unknown>[]} />;
+      const rows = o.itens as Record<string, unknown>[];
+      if (sectionId === 'ocorrencias' || rows.some((r) => pickImageUrlFromRow(r))) {
+        return <OccurrencesGallery rows={rows} />;
+      }
+      return <ItensTable rows={rows} />;
     }
     return <DlBlock obj={o} />;
   }
-  return <span className="text-sm text-slate-800 font-medium">{formatCellValue(raw)}</span>;
+  return <span className="text-[12.5px] text-slate-800 font-medium">{formatCellValue(raw)}</span>;
 }
 
-function SectionBlock({ title, value }: { title: string; value: unknown }) {
+/* --------------------------- side / section skin -------------------------- */
+
+const SIDE_SKIN: Record<
+  string,
+  { bg: string; bar: string; chip: string; label: string }
+> = {
+  A: {
+    bg: 'bg-blue-50/50 ring-1 ring-blue-100',
+    bar: 'from-blue-500 to-indigo-600',
+    chip: 'bg-blue-600/10 text-blue-800 ring-blue-500/20',
+    label: 'Manejo A',
+  },
+  B: {
+    bg: 'bg-emerald-50/50 ring-1 ring-emerald-100',
+    bar: 'from-emerald-500 to-teal-600',
+    chip: 'bg-emerald-600/10 text-emerald-800 ring-emerald-500/20',
+    label: 'Manejo B',
+  },
+};
+
+function sideSkin(letter: string) {
   return (
-    <div className="pt-0.5">
-      <h4 className="flex items-center gap-2.5 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-slate-600 mb-2.5">
-        <span
-          className="inline-block h-px w-6 bg-gradient-to-r from-amber-500/80 to-amber-400/20"
-          aria-hidden
-        />
-        {title}
-      </h4>
-      <div className="pl-1.5 sm:pl-2 border-l-2 border-slate-200/80 ml-0.5">
-        {renderValue(value, 0)}
+    SIDE_SKIN[letter] ?? {
+      bg: 'bg-slate-50 ring-1 ring-slate-200',
+      bar: 'from-slate-500 to-slate-700',
+      chip: 'bg-slate-200 text-slate-700 ring-slate-300',
+      label: `Manejo ${letter}`,
+    }
+  );
+}
+
+/* ------------------------------ side row cell ----------------------------- */
+
+function SideCell({
+  letter,
+  value,
+  sectionId,
+  empty,
+}: {
+  letter: string;
+  value: unknown;
+  sectionId: string;
+  empty?: boolean;
+}) {
+  const skin = sideSkin(letter);
+  return (
+    <div className={`rounded-lg ${skin.bg} p-2.5 sm:p-3 relative overflow-hidden min-w-0`}>
+      <div
+        className={`absolute left-0 top-0 h-full w-[3px] bg-gradient-to-b ${skin.bar}`}
+        aria-hidden
+      />
+      <div className="pl-2 min-w-0">
+        {empty ? (
+          <p className="text-xs text-slate-400 italic py-1">Sem registros.</p>
+        ) : (
+          renderValue(value, 0, sectionId)
+        )}
       </div>
     </div>
   );
 }
 
-const SIDE_SKIN: Record<string, { bar: string; panel: string; kicker: string; label: string }> = {
-  A: {
-    bar: 'from-blue-600 to-indigo-700',
-    panel:
-      'bg-gradient-to-b from-blue-50/80 via-white to-slate-50/30 ring-1 ring-blue-200/25 shadow-[0_4px_24px_-4px_rgba(30,58,138,0.12)]',
-    kicker: 'text-blue-800/80',
-    label: 'Referência / manejo padrão',
-  },
-  B: {
-    bar: 'from-emerald-600 to-teal-800',
-    panel:
-      'bg-gradient-to-b from-emerald-50/80 via-white to-slate-50/30 ring-1 ring-emerald-200/30 shadow-[0_4px_24px_-4px_rgba(6,78,59,0.1)]',
-    kicker: 'text-emerald-900/80',
-    label: 'Tratamento comparado',
-  },
+/* --------------------------------- types --------------------------------- */
+
+type FcmPoint = {
+  point_id?: string;
+  index?: number;
+  status?: string;
+  sides?: Record<string, Record<string, unknown>>;
 };
 
-function sideSkin(letter: string) {
-  return SIDE_SKIN[letter] ?? {
-    bar: 'from-slate-600 to-slate-800',
-    panel: 'bg-gradient-to-b from-slate-50/90 to-white ring-1 ring-slate-200/50 shadow-sm',
-    kicker: 'text-slate-700',
-    label: 'Tratamento',
-  };
-}
+/* -------------------------------- component ------------------------------- */
 
-/**
- * Bloco de coleta em campo — apresentação tipo deck executivo (não layout “CRUD básico”).
- */
 export default function FieldCollectionModulesSection({
   data,
   sectionId = 'coleta-campo-modulos',
@@ -385,53 +557,39 @@ export default function FieldCollectionModulesSection({
   const schemaVersion = fcm.schema_version;
 
   return (
-    <section
-      id={sectionId}
-      className="scroll-mt-28 print:break-inside-avoid relative isolate"
-    >
-      {/* Luz ambiente (só tela) */}
+    <section id={sectionId} className="scroll-mt-28 print:break-inside-avoid relative isolate">
       <div
-        className="absolute inset-0 -z-10 -mx-4 sm:-mx-6 h-[min(100%,32rem)] max-h-[50vh] opacity-70 sm:mx-0 pointer-events-none print:hidden"
-        aria-hidden
-      >
-        <div className="absolute top-0 left-1/2 h-48 w-[min(100%,64rem)] -translate-x-1/2 bg-[radial-gradient(ellipse_80%_100%_at_50%_-20%,rgba(15,23,42,0.07),transparent_60%)]" />
-      </div>
-
-      <div
-        className="relative overflow-hidden rounded-[1.25rem] sm:rounded-3xl
-          border border-slate-200/70
-          bg-gradient-to-b from-white via-slate-50/30 to-slate-100/20
-          shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_12px_40px_-12px_rgba(15,23,42,0.1)]
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/70
+          bg-gradient-to-b from-white via-slate-50/20 to-slate-100/10
+          shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_10px_32px_-12px_rgba(15,23,42,0.08)]
           print:shadow-none print:border print:rounded-lg"
       >
-        {/* Capa de secção estilo apresentação */}
-        <div
-          className="relative overflow-hidden border-b border-slate-200/50
-            bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800
-            px-6 py-6 sm:px-8 sm:py-7
-            print:!bg-slate-100 print:!border-slate-300 print:from-slate-100 print:via-slate-100 print:to-slate-100"
-        >
-          <div
-            className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl print:hidden"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute -left-10 bottom-0 h-32 w-32 rounded-full bg-blue-500/5 blur-2xl print:hidden"
-            aria-hidden
-          />
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.4em] text-slate-400 print:text-slate-600">
+        <div className="relative overflow-hidden border-b border-slate-200/60 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-5 py-5 sm:px-7 sm:py-6 print:!bg-slate-100 print:!border-slate-300">
+          <p className="text-[0.62rem] font-bold uppercase tracking-[0.3em] text-slate-400 print:text-slate-600">
             Dossiê técnico
           </p>
-          <h2 className="mt-2.5 text-xl sm:text-2xl font-light tracking-[-0.02em] text-white print:text-slate-900">
-            Coleta em campo
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-300 font-light print:text-slate-700">
-            Registos estruturados por ponto e por manejo, alinhados ao protocolo de avaliação. Dados
-            apresentados em formato de grelha para leitura executiva.
-            {schemaVersion != null && (
-              <span className="text-slate-500 print:text-slate-500"> · Schema v{schemaVersion}</span>
-            )}
-          </p>
+          <div className="mt-1.5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg sm:text-2xl font-light tracking-[-0.02em] text-white print:text-slate-900">
+                Coleta em campo — ponto a ponto
+              </h2>
+              <p className="mt-1 max-w-2xl text-xs sm:text-sm leading-relaxed text-slate-300 font-light print:text-slate-700">
+                Cada linha alinha o mesmo módulo agronómico nos dois manejos, para leitura
+                comparativa imediata. Fotos das ocorrências abrem em tamanho real ao clicar.
+                {schemaVersion != null && (
+                  <span className="text-slate-500 print:text-slate-500"> · Schema v{schemaVersion}</span>
+                )}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-blue-200 ring-1 ring-blue-400/30">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />A
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-emerald-200 ring-1 ring-emerald-400/30">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />B
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-8 px-4 py-7 sm:px-7 sm:py-8">
@@ -441,76 +599,80 @@ export default function FieldCollectionModulesSection({
             const sideKeys = Object.keys(sides).sort();
             if (sideKeys.length === 0) return null;
 
+            const secSet = new Set<string>();
+            for (const letter of sideKeys) {
+              for (const secId of Object.keys(sides[letter] ?? {})) {
+                secSet.add(secId);
+              }
+            }
+            const sectionIds = [...secSet].sort((a, b) => {
+              const order = ['identificacao', 'fenologia', 'aplicacoes', 'ocorrencias'];
+              const ai = order.indexOf(a);
+              const bi = order.indexOf(b);
+              if (ai !== -1 || bi !== -1)
+                return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+              return a.localeCompare(b, 'pt');
+            });
+
             return (
               <div
                 key={pt.point_id ?? `pt-${i}`}
-                className="group/point"
+                className="rounded-xl border border-slate-200/70 bg-white/70 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_4px_18px_-8px_rgba(15,23,42,0.08)]"
               >
-                <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <p className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-slate-400">
-                      Amostragem
-                    </p>
-                    <h3 className="mt-1 text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-3 bg-gradient-to-r from-slate-50/80 to-white">
+                  <div className="flex items-center gap-2.5">
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[11px] font-bold text-white shadow-sm">
+                      {typeof pt.index === 'number' ? pt.index : i + 1}
+                    </span>
+                    <h3 className="text-sm sm:text-base font-semibold tracking-tight text-slate-900">
                       {pLabel}
                     </h3>
                   </div>
                   {pt.status ? (
-                    <div className="inline-flex items-center gap-2 rounded-full bg-slate-100/80 px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200/60">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/90" />
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-200">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       {pt.status}
-                    </div>
+                    </span>
                   ) : null}
                 </div>
 
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6 lg:gap-7 items-start">
-                  {sideKeys.map((letter) => {
-                    const secMap = sides[letter];
-                    if (!secMap || typeof secMap !== 'object') return null;
-                    const sectionIds = Object.keys(secMap).sort();
-                    const skin = sideSkin(letter);
-                    if (sectionIds.length === 0) {
+                <div className="divide-y divide-slate-100">
+                  {sectionIds.map((secId) => {
+                    const title = titleForSection(secId, moduleLabels);
+                    const rowCells = sideKeys.map((letter) => {
+                      const secMap = sides[letter] ?? {};
+                      const v = secMap[secId];
+                      const empty =
+                        v == null ||
+                        (Array.isArray(v) && v.length === 0) ||
+                        (isPlainObject(v) && Object.keys(v).length === 0);
                       return (
-                        <div
+                        <SideCell
                           key={letter}
-                          className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 ${skin.panel}`}
-                        >
-                          <div
-                            className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${skin.bar}`}
-                            aria-hidden
-                          />
-                          <p className={`text-xs font-bold uppercase tracking-wide ${skin.kicker}`}>
-                            Tratamento {letter} · {skin.label}
-                          </p>
-                          <p className="mt-2 text-sm text-slate-500">Sem módulos preenchidos.</p>
-                        </div>
+                          letter={letter}
+                          value={v}
+                          sectionId={secId}
+                          empty={empty}
+                        />
                       );
-                    }
+                    });
                     return (
                       <div
-                        key={letter}
-                        className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 ${skin.panel}`}
+                        key={secId}
+                        className="grid gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 sm:py-4"
+                        style={{
+                          gridTemplateColumns: `minmax(7rem,10rem) repeat(${sideKeys.length},minmax(0,1fr))`,
+                        }}
                       >
-                        <div
-                          className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${skin.bar}`}
-                          aria-hidden
-                        />
-                        <div className="pl-3">
-                          <p className={`text-xs font-bold uppercase tracking-[0.12em] ${skin.kicker}`}>
-                            Tratamento {letter}
-                          </p>
-                          <p className="text-[0.7rem] text-slate-500 mt-0.5">{skin.label}</p>
-                          <div className="mt-5 space-y-0 divide-y divide-slate-200/80">
-                            {sectionIds.map((secId) => {
-                              const title = titleForSection(secId, moduleLabels);
-                              return (
-                                <div key={secId} className="py-4 first:pt-0 first:mt-0">
-                                  <SectionBlock title={title} value={secMap[secId]} />
-                                </div>
-                              );
-                            })}
-                          </div>
+                        <div className="flex flex-col justify-start pt-0.5">
+                          <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                            Módulo
+                          </span>
+                          <span className="mt-0.5 text-[13px] font-semibold text-slate-900 leading-tight">
+                            {title}
+                          </span>
                         </div>
+                        {rowCells}
                       </div>
                     );
                   })}

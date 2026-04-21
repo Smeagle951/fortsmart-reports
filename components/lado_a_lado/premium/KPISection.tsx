@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
+import PremiumSectionShell from './PremiumSectionShell';
 import { COLOR_SIDE_A, COLOR_SIDE_B, isCustoJson } from '@/components/lado_a_lado/ladoALadoHelpers';
 import { formatMetricDeltaLine } from '@/lib/decisionLayer';
 import { formatNumber } from '@/utils/format';
@@ -63,7 +64,7 @@ export default function KPISection({ data }: { data: SideBySideReportData }) {
       <motion.div
         key="prod"
         {...cardMotion}
-        className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm"
+        className="rounded-2xl border border-slate-200/60 bg-white/95 p-6 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)] ring-1 ring-slate-900/[0.04]"
       >
         <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Produtividade estimada</p>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
@@ -107,7 +108,7 @@ export default function KPISection({ data }: { data: SideBySideReportData }) {
         key="cost"
         {...cardMotion}
         transition={{ ...cardMotion.transition, delay: 0.05 }}
-        className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm"
+        className="rounded-2xl border border-slate-200/60 bg-white/95 p-6 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)] ring-1 ring-slate-900/[0.04]"
       >
         <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Custo / ha</p>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
@@ -144,7 +145,7 @@ export default function KPISection({ data }: { data: SideBySideReportData }) {
         key="margin"
         {...cardMotion}
         transition={{ ...cardMotion.transition, delay: 0.1 }}
-        className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm"
+        className="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/90 to-white p-6 shadow-[0_2px_12px_-4px_rgba(6,78,59,0.08)] ring-1 ring-emerald-900/[0.04]"
       >
         <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-800">
           Receita bruta estimada (variação)
@@ -166,7 +167,7 @@ export default function KPISection({ data }: { data: SideBySideReportData }) {
         key="pheno"
         {...cardMotion}
         transition={{ ...cardMotion.transition, delay: 0.12 }}
-        className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm"
+        className="rounded-2xl border border-slate-200/60 bg-white/95 p-6 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)] ring-1 ring-slate-900/[0.04]"
       >
         <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Fenologia</p>
         <p className="mt-4 text-3xl font-bold text-slate-900">{estadio}</p>
@@ -185,7 +186,7 @@ export default function KPISection({ data }: { data: SideBySideReportData }) {
         key="eff"
         {...cardMotion}
         transition={{ ...cardMotion.transition, delay: 0.14 }}
-        className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm"
+        className="rounded-2xl border border-slate-200/60 bg-white/95 p-6 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)] ring-1 ring-slate-900/[0.04]"
       >
         <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Eficiência de estande</p>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
@@ -220,18 +221,12 @@ export default function KPISection({ data }: { data: SideBySideReportData }) {
   if (cards.length === 0 && !dq?.usedEstimatedYield && metricLines.length === 0) return null;
 
   return (
-    <section id="kpis-premium" className="scroll-mt-28">
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        className="mb-8"
-      >
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Indicadores para decisão</h2>
-        <p className="mt-2 text-slate-600 text-sm max-w-2xl leading-relaxed">
-          Poucos números, alto contraste. Só entram blocos com dado publicado — sem preencher espaço vazio.
-        </p>
-      </motion.div>
+    <PremiumSectionShell
+      id="kpis-premium"
+      eyebrow="Painel decisório"
+      title="Indicadores para decisão"
+      subtitle="Síntese quantitativa publicada no relatório: produtividade, custos, fenologia e eficiência de estande quando disponíveis. Sem extrapolação além do JSON."
+    >
       {dq?.usedEstimatedYield ? (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <span className="font-semibold">Atenção: </span>
@@ -258,6 +253,6 @@ export default function KPISection({ data }: { data: SideBySideReportData }) {
       {cards.length > 0 ? (
         <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">{cards.slice(0, 5)}</div>
       ) : null}
-    </section>
+    </PremiumSectionShell>
   );
 }

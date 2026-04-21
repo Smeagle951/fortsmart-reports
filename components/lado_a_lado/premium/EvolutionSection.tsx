@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { COLOR_SIDE_A, COLOR_SIDE_B, evolutionSeriesFromApplications } from '@/components/lado_a_lado/ladoALadoHelpers';
+import PremiumSectionShell from './PremiumSectionShell';
 
 /** Só exibe quando há ≥2 DAA distintos com contagem real de eventos (sem curva sintética). */
 export default function EvolutionSection({ data }: { data: SideBySideReportData }) {
@@ -23,16 +24,17 @@ export default function EvolutionSection({ data }: { data: SideBySideReportData 
   const nameB = data.sideB?.name || 'Manejo B';
 
   return (
-    <section id="evolucao-premium" className="scroll-mt-28">
-      <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Evolução operacional</h2>
-      <p className="mt-1 text-sm text-slate-600 mb-6 max-w-2xl">
-        Número de aplicações registradas por DAA e por manejo — só aparece com série real no JSON.
-      </p>
+    <PremiumSectionShell
+      id="evolucao-premium"
+      eyebrow="Série temporal"
+      title="Evolução operacional"
+      subtitle="Contagem de aplicações por DAA e por manejo — exibida apenas quando há série real (≥2 DAA distintos) no JSON publicado."
+    >
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+        className="rounded-3xl border border-slate-200/60 bg-white/95 p-5 shadow-[0_2px_14px_-4px_rgba(15,23,42,0.07)] ring-1 ring-slate-900/[0.03]"
       >
         <div className="h-56 w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -48,6 +50,6 @@ export default function EvolutionSection({ data }: { data: SideBySideReportData 
           </ResponsiveContainer>
         </div>
       </motion.div>
-    </section>
+    </PremiumSectionShell>
   );
 }

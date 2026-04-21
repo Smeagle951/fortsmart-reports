@@ -5,6 +5,7 @@ import type { SideBySideReportData } from '@/components/SideBySideReportContent'
 import type { PlantEvaluationMetricJson } from '@/types/side-by-side-report';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { COLOR_SIDE_A, COLOR_SIDE_B } from '@/components/lado_a_lado/ladoALadoHelpers';
+import PremiumSectionShell from './PremiumSectionShell';
 
 type PlantMetric = PlantEvaluationMetricJson;
 
@@ -29,28 +30,27 @@ export default function PlantEvaluationSection({ data }: { data: SideBySideRepor
     B: m.meanB ?? 0,
   }));
 
-  return (
-    <motion.section
-      id="plantas-premium"
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-24px' }}
-      transition={{ duration: 0.35 }}
-      className="scroll-mt-36 space-y-6"
-    >
-      <div>
-        <h2 className="text-lg font-bold text-slate-900 border-l-4 border-teal-500 pl-3">Avaliação por planta</h2>
-        <p className="text-sm text-slate-600 mt-1">
-          Médias por manejo a partir de amostras em campo (não confundir com KPIs macro da visita).
-          {nA != null || nB != null ? (
-            <span className="block mt-1 text-xs text-slate-500">
-              Amostras: A {nA ?? '—'} · B {nB ?? '—'}
-            </span>
-          ) : null}
-        </p>
-      </div>
+  const sampleNote =
+    nA != null || nB != null
+      ? `Amostras por manejo: A ${nA ?? '—'} · B ${nB ?? '—'}.`
+      : undefined;
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+  return (
+    <PremiumSectionShell
+      id="plantas-premium"
+      eyebrow="Amostragem vegetal"
+      title="Avaliação por planta"
+      subtitle={`Médias por manejo a partir de plantas amostradas em campo — complementar aos KPIs macro da visita.${sampleNote ? ` ${sampleNote}` : ''}`}
+      className="scroll-mt-36"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-24px' }}
+        transition={{ duration: 0.35 }}
+        className="space-y-6"
+      >
+      <div className="overflow-x-auto rounded-xl border border-slate-200/60 bg-white/95 shadow-[0_1px_10px_-3px_rgba(15,23,42,0.06)] ring-1 ring-slate-900/[0.03]">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
             <tr>
@@ -110,7 +110,7 @@ export default function PlantEvaluationSection({ data }: { data: SideBySideRepor
         </table>
       </div>
 
-      <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="h-72 w-full rounded-xl border border-slate-200/60 bg-white/95 p-4 shadow-[0_1px_10px_-3px_rgba(15,23,42,0.06)] ring-1 ring-slate-900/[0.03]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartRows} margin={{ top: 8, right: 8, left: 0, bottom: 40 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -123,6 +123,7 @@ export default function PlantEvaluationSection({ data }: { data: SideBySideRepor
           </BarChart>
         </ResponsiveContainer>
       </div>
-    </motion.section>
+      </motion.div>
+    </PremiumSectionShell>
   );
 }

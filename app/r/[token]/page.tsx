@@ -1,10 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { insertReportViewEvent } from '@/lib/log-report-view-event';
-import {
-  getRelatorioByShareToken,
-  tokenLooksLikeRowIdUuid,
-  type RelatorioRow,
-} from '@/lib/supabase';
+import { getRelatorioByTokenHybrid } from '@/lib/get-relatorio-by-token-hybrid';
+import { type RelatorioRow } from '@/lib/supabase';
 import RelatorioContent from '@/components/RelatorioContent';
 import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitarioContent';
 import RelatorioResearchProContent from '@/components/research/RelatorioResearchProContent';
@@ -113,53 +110,30 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
   let row: RelatorioRow | null = null;
 
   try {
-    const supabaseAdmin = getSupabaseAdmin();
-    if (supabaseAdmin) {
-      try {
-        const t = token.trim();
-        let { data, error } = await supabaseAdmin
-          .from('relatorios')
-          .select('*')
-          .eq('share_token', t)
-          .maybeSingle();
-        if (!data && !error && tokenLooksLikeRowIdUuid(t)) {
-          const byId = await supabaseAdmin.from('relatorios').select('*').eq('id', t).maybeSingle();
-          data = byId.data;
-          error = byId.error;
-          if (data) {
-            console.log('[fortsmart-reports] /r/[token] admin: resolvido por id (compat); prefira share_token na URL');
-          }
-        }
-        console.log('[fortsmart-reports] /r/[token] admin query:', { error: error?.message ?? null, hasData: !!data, is_public: data?.is_public });
-        if (error) {
-          console.warn('[fortsmart-reports] /r/[token] admin error:', error.message);
-        } else if (data) {
-          if (data.is_public !== false && (!data.share_expires_at || new Date(data.share_expires_at) >= new Date())) {
-            const r = data as RelatorioRow & { json_data?: unknown; dados_json?: unknown };
-            const raw = r.dados ?? r.json_data ?? r.dados_json;
-            if (!r.dados && raw != null) {
-              const parsed = parsePayload(raw);
-              if (parsed) r.dados = parsed;
-            }
-            row = r;
-          } else {
-            console.warn('[fortsmart-reports] /r/[token] registro ignorado: is_public=', data.is_public, 'share_expires_at=', data.share_expires_at);
-          }
-        }
-      } catch (queryErr: any) {
-        console.error('[fortsmart-reports] /r/[token] query relatorios falhou:', queryErr?.message ?? queryErr);
-      }
-    } else {
-      console.warn('[fortsmart-reports] /r/[token] supabaseAdmin null (SUPABASE_SERVICE_ROLE_KEY ou URL?)');
+    const hybrid = await getRelatorioByTokenHybrid(token);
+    if (hybrid.ok) {
+      row = hybrid.row;
+      console.log('[fortsmart-reports] /r/[token] carregado', {
+        origem_dados: hybrid.origem,
+        supabase_mode: hybrid.supabaseMode,
+        circuit_skipped: hybrid.circuitSkipped ?? false,
+        postgres_http_status: hybrid.postgresHttpStatus,
+        postgres_error: hybrid.postgresError ?? null,
+      });
     }
 
-    if (!row) {
-      try {
-        row = await getRelatorioByShareToken(token);
-        console.log('[fortsmart-reports] /r/[token] fallback anon:', row ? 'encontrado' : 'não encontrado');
-      } catch (fallbackErr: any) {
-        console.error('[fortsmart-reports] /r/[token] fallback getRelatorioByShareToken falhou:', fallbackErr?.message ?? fallbackErr);
-      }
+    if (!hybrid.ok && hybrid.reason === 'postgres_forbidden') {
+      return (
+        <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
+          <div style={{ textAlign: 'center', maxWidth: 560 }}>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Relatório não disponível</h1>
+            <p style={{ color: '#6b7280' }}>
+              Este link não está partilhado publicamente na base principal, ou a partilha foi revogada.{' '}
+              <span style={{ fontSize: 13 }}>Se acredita que isto é um erro, contacte quem enviou o link.</span>
+            </p>
+          </div>
+        </main>
+      );
     }
 
     if (!row) {

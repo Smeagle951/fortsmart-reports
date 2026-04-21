@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { formatNumber } from '@/utils/format';
+import PremiumSectionShell from './PremiumSectionShell';
 
 function num(v: unknown): number | null {
   if (v == null) return null;
@@ -57,14 +58,20 @@ export default function SubareaCostsAndEvolutionSection({ data }: { data: SideBy
   };
 
   return (
-    <section id="custos-evolucao-visitas-premium" className="scroll-mt-28 space-y-10">
+    <PremiumSectionShell
+      id="custos-evolucao-visitas-premium"
+      eyebrow="Talhão e histórico"
+      title="Subáreas, custos e evolução"
+      subtitle="Custos alocados por subárea quando publicados, e indicadores de evolução entre visitas consecutivas no mesmo contexto (talhão, cultura, safra)."
+      contentClassName="space-y-10"
+    >
       {hasEvo && evo ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Evolução entre visitas</h2>
+          <h3 className="text-lg font-semibold text-slate-900 tracking-tight">Evolução entre visitas</h3>
           <p className="mt-1 text-sm text-slate-600 mb-4 max-w-2xl">
             Comparação com a visita anterior no mesmo talhão, safra e cultura, quando houver histórico.
           </p>
@@ -118,7 +125,7 @@ export default function SubareaCostsAndEvolutionSection({ data }: { data: SideBy
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Custos por subárea</h2>
+          <h3 className="text-lg font-semibold text-slate-900 tracking-tight">Custos por subárea</h3>
           <p className="mt-1 text-sm text-slate-600 mb-4 max-w-2xl">
             Itens calculados com a área da subárea vinculada ao tratamento (quando aplicável).
           </p>
@@ -163,6 +170,6 @@ export default function SubareaCostsAndEvolutionSection({ data }: { data: SideBy
           </div>
         </motion.div>
       ) : null}
-    </section>
+    </PremiumSectionShell>
   );
 }

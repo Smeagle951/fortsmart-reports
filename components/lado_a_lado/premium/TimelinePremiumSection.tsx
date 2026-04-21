@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { distinctApplicationDaas } from '@/components/lado_a_lado/ladoALadoHelpers';
 import { formatDate } from '@/utils/format';
+import PremiumSectionShell from './PremiumSectionShell';
 
 export default function TimelinePremiumSection({ data }: { data: SideBySideReportData }) {
   const coleta = data.coleta;
@@ -49,11 +50,12 @@ export default function TimelinePremiumSection({ data }: { data: SideBySideRepor
   if (steps.length === 0) return null;
 
   return (
-    <section id="timeline-premium" className="scroll-mt-28">
-      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Linha do tempo</h2>
-      <p className="mt-2 text-sm text-slate-600 mb-8 max-w-xl">
-        Contexto mínimo do ensaio — só o que foi publicado no relatório.
-      </p>
+    <PremiumSectionShell
+      id="timeline-premium"
+      eyebrow="Cronologia"
+      title="Linha do tempo"
+      subtitle="Marcos do ensaio e da aplicação (plantio, DAA, DAE) derivados exclusivamente do conteúdo publicado."
+    >
       <div className="grid sm:grid-cols-3 gap-4">
         {steps.map((s, i) => (
           <motion.div
@@ -62,7 +64,7 @@ export default function TimelinePremiumSection({ data }: { data: SideBySideRepor
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: i * 0.06 }}
-            className="relative rounded-2xl border border-slate-200 bg-slate-50/80 p-5 shadow-sm"
+            className="relative rounded-2xl border border-slate-200/60 bg-gradient-to-b from-white to-slate-50/90 p-5 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)] ring-1 ring-slate-900/[0.03]"
           >
             <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs uppercase tracking-wider">
               <span
@@ -77,6 +79,6 @@ export default function TimelinePremiumSection({ data }: { data: SideBySideRepor
           </motion.div>
         ))}
       </div>
-    </section>
+    </PremiumSectionShell>
   );
 }

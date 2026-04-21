@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '../../../lib/supabase-admin';
-import { getRelatorioByShareToken } from '../../../lib/supabase';
+import { getRelatorioByTokenHybrid, getRelatorioReadCutoverSnapshot } from '@/lib/get-relatorio-by-token-hybrid';
+import { resolveFortsmartApiBase } from '@/lib/fortsmart-api-base';
 
 /** Causas possíveis do 404 (em ordem de prioridade) */
 export type Causa404 =
@@ -9,7 +9,8 @@ export type Causa404 =
   | 'is_public_false'
   | 'rota_nextjs'
   | 'query_falhou'
-  | 'config_faltando';
+  | 'config_faltando'
+  | 'postgres_bloqueado';
 
 type Diagnostico = {
   causa_probavel: Causa404;
@@ -26,7 +27,7 @@ type Diagnostico = {
 
 function buildDiagnostico(
   causa: Causa404,
-  opts: { error?: string; hasConfig?: boolean; isPublic?: boolean; tokenExiste?: boolean }
+  opts: { error?: string; hasConfig?: boolean; isPublic?: boolean; tokenExiste?: boolean },
 ): Diagnostico {
   const checks = {
     config_ok: opts.hasConfig ?? false,
@@ -39,33 +40,39 @@ function buildDiagnostico(
   const map: Record<Causa404, { descricao: string; solucao: string }> = {
     token_nao_encontrado: {
       descricao:
-        'O token não foi encontrado. Pode ser: (a) nunca foi publicado, (b) Vercel está em outro projeto Supabase.',
+        'O token não foi encontrado. Pode ser: (a) nunca foi publicado, (b) Vercel está em outro projeto Supabase, (c) ainda não migrado para o Neon.',
       solucao:
-        'Confira no Supabase (mesmo projeto do .env do app) se o token existe com o SQL abaixo. Se existir lá mas a Vercel não acha, defina SUPABASE_URL igual ao do app na Vercel e faça redeploy.',
+        'Confira no Supabase (mesmo projeto do .env) ou em `fortsmart_web_relatorios` no Neon. Na Vercel, confira FORTSMART_API_URL (backend) e variáveis Supabase. Redeploy após alterar.',
     },
     projeto_errado: {
-      descricao: 'Vercel provavelmente aponta para outro projeto Supabase.',
+      descricao: 'A Vercel provavelmente aponta para outro projeto Supabase.',
       solucao:
-        'Vercel → Settings → Environment Variables: defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY do MESMO projeto do app (ex: qnujboesewzikwypidja.supabase.co). Redeploy após alterar.',
+        'Vercel → Environment Variables: SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY do mesmo projeto do app. Redeploy.',
     },
     is_public_false: {
-      descricao: 'O registro existe mas is_public = false. O código ignora para links públicos.',
+      descricao: 'O registo existe (Supabase) mas is_public = false. O link público ignora o registo.',
       solucao: `No Supabase SQL Editor: UPDATE relatorios SET is_public = true WHERE share_token = '<seu_token>';`,
     },
     rota_nextjs: {
-      descricao: 'A rota /r/[token] pode não estar sendo servida corretamente.',
-      solucao: 'Teste /r/TOKEN?debug=1 — se mostrar "Token (roteamento OK)", a rota está OK. Confira Root Directory na Vercel (deve ser ./ ou o diretório do Next).',
+      descricao: 'A rota /r/[token] pode não estar a ser servida corretamente.',
+      solucao:
+        'Teste /r/TOKEN?debug=1 — se mostrar o token, a rota está OK. Confira o Root Directory na Vercel.',
     },
     query_falhou: {
-      descricao: 'A query ao Supabase retornou erro.',
+      descricao: 'A query ao Supabase retornou erro (modo legado de diagnóstico).',
       solucao: opts.error
-        ? `Corrija o erro: ${opts.error}. Confira políticas RLS e se a tabela relatorios existe.`
+        ? `Corrija o erro: ${opts.error}. Confira RLS e a tabela relatorios.`
         : 'Verifique logs na Vercel e no Supabase.',
     },
     config_faltando: {
-      descricao: 'Variáveis de ambiente não configuradas na Vercel.',
+      descricao: 'Variáveis de ambiente em falta na Vercel (Supabase e/ou API).',
       solucao:
-        'Vercel → Settings → Environment Variables: adicione SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY. Faça redeploy.',
+        'Defina FORTSMART_API_URL (backend com Neon) e, para o legado, SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY. Redeploy.',
+    },
+    postgres_bloqueado: {
+      descricao: 'O relatório existe no PostgreSQL (Neon) mas está privado (is_public = false).',
+      solucao:
+        'Atualize a linha em fortsmart_web_relatorios: is_public = true, ou reabra a partilha a partir do app. Não existe fallback no Supabase para este caso (fonte canónica: Neon).',
     },
   };
 
@@ -75,14 +82,16 @@ function buildDiagnostico(
 
 /**
  * GET /api/relatorio-public?token=UUID
- * Diagnóstico: tenta buscar o relatório por share_token e detecta a causa do 404.
+ * Diagnóstico alinhado à mesma cadeia que /r/[token]: primeiro backend (Neon), depois Supabase.
+ * Opcional: `&with_cutover=1` inclui snapshot in-process de `postgres_success_rate` e `cutover_ready_candidate` (métricas do runtime).
  */
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token');
+  const withCutover = request.nextUrl.searchParams.get('with_cutover') === '1';
   if (!token || token.length < 10) {
     return NextResponse.json(
       { ok: false, error: 'Passe ?token=UUID do link (ex: /r/9283926a-31c1-4bb4-9d46-43e740492ba2)' },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -94,111 +103,144 @@ export async function GET(request: NextRequest) {
   const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
   const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const configOk = hasSupabaseUrl && (hasServiceKey || hasAnonKey);
+  const apiBasePreview = resolveFortsmartApiBase();
 
-  // Extrair project ref para conferência (ex: qnujboesewzikwypidja)
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.URL_SUPABASE || '';
-  const projectRef = supabaseUrl.includes('supabase.co') ? supabaseUrl.replace(/https?:\/\/([^.]+)\.supabase\.co.*/, '$1') : '(não configurado)';
+  const projectRef = supabaseUrl.includes('supabase.co')
+    ? supabaseUrl.replace(/https?:\/\/([^.]+)\.supabase\.co.*/, '$1')
+    : '(não configurado)';
 
-  let source: 'admin' | 'anon' | null = null;
-  let row: { id?: string; share_token?: string; titulo?: string; is_public?: boolean } | null = null;
-  let errorMsg: string | null = null;
+  const hybrid = await getRelatorioByTokenHybrid(token);
 
-  const supabaseAdmin = getSupabaseAdmin();
-  if (supabaseAdmin) {
-    const { data, error } = await supabaseAdmin
-      .from('relatorios')
-      .select('id, share_token, titulo, is_public, created_at')
-      .eq('share_token', token)
-      .maybeSingle();
+  console.log('[fortsmart-reports] /api/relatorio-public', {
+    token: token.slice(0, 8) + '…',
+    ok: hybrid.ok,
+    origem: hybrid.ok ? hybrid.origem : hybrid.reason,
+    postgres_http: hybrid.postgresHttpStatus,
+  });
 
-    console.log('[fortsmart-reports] /api/relatorio-public:', {
-      token: token.slice(0, 8) + '…',
-      error: error?.message ?? null,
-      hasData: !!data,
-      is_public: data?.is_public,
-    });
+  const env = {
+    hasSupabaseUrl,
+    hasServiceKey,
+    hasAnonKey,
+    hasApiBase: !!process.env.FORTSMART_API_URL?.trim(),
+    fortsmart_api_base_resolvida: apiBasePreview,
+    projectRef,
+  };
 
-    if (error) {
-      errorMsg = error.message;
-    } else if (data) {
-      source = 'admin';
-      row = data as any;
-    }
-  }
+  const cutoverSnapshot = withCutover ? getRelatorioReadCutoverSnapshot() : undefined;
+  const migracaoCommon = (h: {
+    postgresHttpStatus: number | null;
+    postgresError?: string;
+    circuitSkipped?: boolean;
+    postgresFailureClass?: string;
+    negativeCacheHit?: boolean;
+  }) => ({
+    postgres_http_status: h.postgresHttpStatus,
+    postgres_error: h.postgresError ?? null,
+    circuit_skipped: h.circuitSkipped ?? false,
+    postgres_failure_class: h.postgresFailureClass ?? null,
+    negative_cache_hit: h.negativeCacheHit ?? false,
+    ...(withCutover && cutoverSnapshot ? { cutover: cutoverSnapshot } : {}),
+  });
 
-  if (!row && !errorMsg) {
-    const fromAnon = await getRelatorioByShareToken(token);
-    if (fromAnon) {
-      source = 'anon';
-      row = { id: fromAnon.id, share_token: fromAnon.share_token || undefined, titulo: fromAnon.titulo || undefined, is_public: true };
-    }
-  }
-
-  // Encontrou registro
-  if (row) {
-    const isPublic = row.is_public === true;
-    if (!isPublic) {
-      const diagnostico = buildDiagnostico('is_public_false', {
-        hasConfig: configOk,
-        tokenExiste: true,
-        isPublic: false,
-      });
-      diagnostico.checks.supabase_project = projectRef;
-      return NextResponse.json(
-        {
-          ok: false,
-          found: false,
-          error: 'Registro existe mas is_public = false',
-          diagnostico,
-          env: { hasSupabaseUrl, hasServiceKey, hasAnonKey, projectRef },
-        },
-        { status: 404 }
-      );
-    }
-
+  if (hybrid.ok) {
+    const r = hybrid.row;
+    const row = {
+      id: r.id,
+      share_token: r.share_token ?? undefined,
+      titulo: r.titulo ?? undefined,
+      is_public: r.is_public !== false,
+      created_at: r.created_at,
+    };
     return NextResponse.json({
       ok: true,
       found: true,
-      source,
+      /** Fonte canónica do registo (`postgres` | `supabase`). */
+      source: hybrid.origem,
+      /** Quando `source === 'supabase'`: `admin` (service role) ou `anon`. Com `source === 'postgres'`, sempre `null`. */
+      supabase_mode: hybrid.supabaseMode,
       relatorio: row,
-      env: { hasSupabaseUrl, hasServiceKey, hasAnonKey, projectRef },
+      migracao: {
+        ...migracaoCommon({
+          postgresHttpStatus: hybrid.postgresHttpStatus,
+          postgresError: hybrid.postgresError,
+          circuitSkipped: hybrid.circuitSkipped,
+          negativeCacheHit: hybrid.negativeCacheHit,
+        }),
+      },
+      env,
     });
   }
 
-  // Não encontrou — determinar causa
+  if (hybrid.reason === 'postgres_forbidden') {
+    const diagnostico = buildDiagnostico('postgres_bloqueado', {
+      hasConfig: configOk,
+      tokenExiste: true,
+      isPublic: false,
+    });
+    diagnostico.checks.supabase_project = projectRef;
+    return NextResponse.json(
+      {
+        ok: false,
+        found: false,
+        error: 'Registo no PostgreSQL (Neon) com is_public = false',
+        source: 'postgres' as const,
+        supabase_mode: null,
+        reason: 'postgres_forbidden' as const,
+        migracao: {
+          ...migracaoCommon(hybrid),
+        },
+        diagnostico,
+        env,
+      },
+      { status: 403 },
+    );
+  }
+
   let causa: Causa404 = 'token_nao_encontrado';
-  if (errorMsg) {
-    causa = 'query_falhou';
-  } else if (!configOk) {
+  if (hybrid.reason === 'invalid_token') {
+    return NextResponse.json(
+      { ok: false, error: 'Token inválido', env },
+      { status: 400 },
+    );
+  }
+  if (!configOk) {
     causa = 'config_faltando';
-  } else if (configOk && !row) {
-    // Pode ser token nunca inserido OU projeto Supabase diferente
-    causa = 'token_nao_encontrado';
+  } else {
+    const pe = hybrid.postgresError;
+    if (pe && (hybrid.postgresHttpStatus === 503 || /fetch|abort|Failed/i.test(String(pe)))) {
+      causa = 'query_falhou';
+    }
   }
 
   const diagnostico = buildDiagnostico(causa, {
     hasConfig: configOk,
-    tokenExiste: row ? true : false,
-    error: errorMsg || undefined,
+    tokenExiste: false,
+    error: hybrid.postgresError ?? (causa === 'query_falhou' ? 'API backend indisponível ou timeout' : undefined),
   });
   diagnostico.checks.supabase_project = projectRef;
 
   const hint =
     causa === 'config_faltando'
-      ? 'Adicione SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY na Vercel.'
+      ? 'Defina FORTSMART_API_URL, SUPABASE_URL e chaves na Vercel.'
       : causa === 'query_falhou'
-        ? `Erro Supabase: ${errorMsg}`
-        : 'Token não encontrado. Confira se Vercel usa o mesmo projeto Supabase do app.';
+        ? `Erro/timeout na API: ${hybrid.postgresError}`
+        : 'Token não encontrado no backend nem no Supabase (ou migração incompleta).';
 
   return NextResponse.json(
     {
       ok: false,
       found: false,
-      error: errorMsg || 'Nenhum registro com este share_token.',
+      error: hybrid.postgresError || 'Nenhum registo com este share_token.',
       hint,
+      migracao: {
+        ...migracaoCommon(hybrid),
+        fortsmart_api_base_resolvida: apiBasePreview,
+      },
       diagnostico,
-      env: { hasSupabaseUrl, hasServiceKey, hasAnonKey, projectRef },
+      env,
     },
-    { status: 404 }
+    { status: 404 },
   );
 }
