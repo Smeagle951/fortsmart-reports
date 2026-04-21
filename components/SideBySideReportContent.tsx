@@ -222,6 +222,8 @@ export type SideBySideReportData = {
       sides?: Record<string, Record<string, unknown>>;
     }>;
   } | null;
+  /** Texto do agrônomo para o comparativo A/B (opcional, preenchido no app). */
+  comparativo_intro?: string | null;
 };
 
 type SideData = {

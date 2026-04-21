@@ -15,6 +15,14 @@ import { winnerFromJson } from './premiumInference';
 
 type Side = 'A' | 'B';
 
+const COMPARATIVO_SUBTITLE_DEFAULT =
+  'Comparação lado a lado na mesma hierarquia visual (A azul, B verde). O selo de melhor desempenho segue a conclusão técnica registada na avaliação; se não existir, o sistema pode destacar o manejo com melhor conjunto de indicadores, desde que não seja empate.';
+
+function comparativoSubtitle(data: SideBySideReportData): string {
+  const t = data.comparativo_intro?.trim();
+  return t && t.length > 0 ? t : COMPARATIVO_SUBTITLE_DEFAULT;
+}
+
 function Dot({ tone }: { tone: 'good' | 'mid' | 'bad' | 'neutral' }) {
   const cls =
     tone === 'good'
@@ -276,12 +284,7 @@ export default function CompareManejosSection({ data }: { data: SideBySideReport
         className="mb-8"
       >
         <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Comparativo visual</h2>
-        <p className="mt-2 text-slate-600 text-sm max-w-2xl leading-relaxed">
-          Dois manejos lado a lado: mesma hierarquia, leitura imediata. Cores fixas — A azul, B verde. O destaque
-          segue primeiro o registro técnico (<span className="font-medium text-slate-700">conclusion.winner</span>); na
-          ausência dele, o motor multifator (
-          <span className="font-medium text-slate-700">decision_layer.engineOverallWinner</span>) quando não for empate.
-        </p>
+        <p className="mt-2 text-slate-600 text-sm max-w-2xl leading-relaxed">{comparativoSubtitle(data)}</p>
       </motion.div>
       <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-stretch">
         <ManejoCard

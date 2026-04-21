@@ -22,6 +22,11 @@ const KEY_LABELS: Record<string, string> = {
   nome: 'Nome',
   quantidade: 'Quantidade',
   status: 'Status',
+  filePath: 'Ficheiro',
+  file_path: 'Ficheiro',
+  url: 'URL',
+  caption: 'Legenda',
+  id: 'ID',
   pressao: 'Pressão (hPa)',
   ur: 'U.R. (%)',
   temperatura: 'Temp. (°C)',
@@ -126,6 +131,60 @@ function isPlainObject(x: unknown): x is Record<string, unknown> {
   return x !== null && typeof x === 'object' && !Array.isArray(x);
 }
 
+function isPhotoMediaRecord(v: unknown): v is Record<string, unknown> {
+  if (!isPlainObject(v)) return false;
+  const url = (v.url ?? v.publicUrl ?? v.public_url)?.toString().trim() ?? '';
+  if (/^https?:\/\//i.test(url)) return true;
+  const fp = (v.filePath ?? v.file_path)?.toString().trim() ?? '';
+  if (!fp || fp.toLowerCase().startsWith('http')) return false;
+  const cap =
+    (v.caption ?? v.legenda ?? v.nome ?? v.nomeAlvo)?.toString().trim() ?? '';
+  const id = (v.id ?? v._id)?.toString().trim() ?? '';
+  return (
+    cap.length > 0 ||
+    id.length > 0 ||
+    fp.includes('evaluation_occurrences') ||
+    /\.(jpe?g|png|webp|heic|heif)$/i.test(fp)
+  );
+}
+
+function PhotoMediaCell({ value }: { value: Record<string, unknown> }) {
+  const url = (value.url ?? value.publicUrl ?? value.public_url)?.toString().trim() ?? '';
+  const caption =
+    (value.caption ?? value.legenda ?? value.nome ?? value.nomeAlvo)?.toString().trim() ?? '';
+  if (/^https?:\/\//i.test(url)) {
+    return (
+      <div className="space-y-1.5 min-w-0">
+        <div className="relative overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-900/[0.06]">
+          <img
+            src={url}
+            alt={caption || 'Registo fotográfico'}
+            className="max-h-44 w-full object-contain"
+            loading="lazy"
+          />
+        </div>
+        {caption ? <p className="text-[12px] text-slate-600">{caption}</p> : null}
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-amber-200/80 bg-amber-50/60 px-2.5 py-2 text-[12px] leading-snug text-amber-950">
+      <p className="font-semibold">Foto ainda no aparelho</p>
+      <p className="text-amber-900/90 mt-1">
+        O caminho local não abre no browser. Publique o relatório novamente com o app atualizado para enviar a imagem ao armazenamento na web.
+      </p>
+      {caption ? <p className="mt-1.5 font-medium text-slate-800">{caption}</p> : null}
+    </div>
+  );
+}
+
+function renderTableCell(value: unknown): React.ReactNode {
+  if (isPhotoMediaRecord(value)) {
+    return <PhotoMediaCell value={value} />;
+  }
+  return formatCellValue(value);
+}
+
 function collectKeysFromRows(rows: Record<string, unknown>[]): string[] {
   const set = new Set<string>();
   for (const row of rows) {
@@ -174,7 +233,7 @@ function ItensTable({ rows }: { rows: Record<string, unknown>[] }) {
             >
               {keys.map((k) => (
                 <td key={k} className="py-2.5 px-3.5 first:pl-4 last:pr-4 align-top text-[13px] leading-snug">
-                  {formatCellValue(row[k])}
+                  {renderTableCell(row[k])}
                 </td>
               ))}
             </tr>
@@ -217,7 +276,7 @@ function DlBlock({ obj }: { obj: Record<string, unknown> }) {
               {KEY_LABELS[k] ?? k.replace(/_/g, ' ')}
             </dt>
             <dd className="mt-1 text-sm font-medium text-slate-900 min-w-0 wrap-break-word">
-              {formatCellValue(v)}
+              {isPhotoMediaRecord(v) ? <PhotoMediaCell value={v} /> : formatCellValue(v)}
             </dd>
           </div>
         );
@@ -245,7 +304,7 @@ function renderValue(raw: unknown, depth: number): React.ReactNode {
         {raw.map((x, i) => (
           <li key={i} className="flex gap-2.5">
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" aria-hidden />
-            <span>{formatCellValue(x)}</span>
+            <span>{renderTableCell(x)}</span>
           </li>
         ))}
       </ul>
@@ -375,7 +434,7 @@ export default function FieldCollectionModulesSection({
           </p>
         </div>
 
-        <div className="space-y-10 px-4 py-8 sm:px-8 sm:py-10">
+        <div className="space-y-8 px-4 py-7 sm:px-7 sm:py-8">
           {points.map((pt, i) => {
             const pLabel = typeof pt.index === 'number' ? `Ponto ${pt.index}` : `Ponto ${i + 1}`;
             const sides = pt.sides && typeof pt.sides === 'object' ? pt.sides : {};
@@ -404,7 +463,7 @@ export default function FieldCollectionModulesSection({
                   ) : null}
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6 lg:gap-7 items-start">
                   {sideKeys.map((letter) => {
                     const secMap = sides[letter];
                     if (!secMap || typeof secMap !== 'object') return null;
@@ -414,7 +473,7 @@ export default function FieldCollectionModulesSection({
                       return (
                         <div
                           key={letter}
-                          className={`relative overflow-hidden rounded-2xl p-5 ${skin.panel}`}
+                          className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 ${skin.panel}`}
                         >
                           <div
                             className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${skin.bar}`}
@@ -430,7 +489,7 @@ export default function FieldCollectionModulesSection({
                     return (
                       <div
                         key={letter}
-                        className={`relative overflow-hidden rounded-2xl p-5 sm:p-6 ${skin.panel}`}
+                        className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 ${skin.panel}`}
                       >
                         <div
                           className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${skin.bar}`}
