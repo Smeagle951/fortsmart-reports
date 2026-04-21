@@ -90,32 +90,36 @@ export default function PremiumReport({
   const idStr = meta.reportId || reportId;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 print:bg-white">
-      <div className="sticky top-0 z-40 flex flex-wrap justify-end gap-2 px-4 py-2 bg-white/95 border-b border-slate-200 print:hidden backdrop-blur-md shadow-sm">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#f4f6f9] text-slate-900 print:bg-white">
+      <div
+        className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(15,23,42,0.06),transparent_50%)] print:hidden"
+        aria-hidden
+      />
+      <div className="sticky top-0 z-40 flex flex-wrap items-center justify-end gap-2 px-4 py-2.5 border-b border-slate-200/80 bg-white/90 print:hidden backdrop-blur-xl shadow-[0_4px_24px_-8px_rgba(15,23,42,0.08)]">
         <button
           type="button"
           onClick={handlePrint}
-          className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+          className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
         >
           Imprimir
         </button>
         <button
           type="button"
           onClick={handleExportPdf}
-          className="px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 border border-emerald-700 rounded-lg hover:bg-emerald-700"
+          className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white rounded-full bg-gradient-to-r from-slate-800 to-slate-900 shadow-md shadow-slate-900/15 hover:from-slate-700 hover:to-slate-800 transition-colors"
         >
           Exportar PDF
         </button>
       </div>
 
-      <nav className="sticky top-[49px] z-30 print:hidden border-b border-slate-200 bg-white/95 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 flex gap-1 overflow-x-auto py-2">
+      <nav className="sticky top-[52px] z-30 print:hidden border-b border-slate-200/60 bg-white/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 flex gap-1 overflow-x-auto py-2.5">
           {NAV_PREMIUM.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => scrollToId(item.id)}
-              className="shrink-0 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 whitespace-nowrap"
+              className="shrink-0 px-3.5 py-2 text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wide rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100/90 whitespace-nowrap transition-colors"
             >
               {item.label}
             </button>
@@ -128,7 +132,7 @@ export default function PremiumReport({
           <HeroSection data={data} />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-20 sm:space-y-24 py-14 sm:py-20 print:space-y-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-20 sm:space-y-24 py-14 sm:py-20 print:space-y-12 print:px-4">
           <KPISection data={data} />
           <FortSmartAiSection data={data} />
           <ExperimentDesignSection data={data} sectionId="ensaio-premium" />
