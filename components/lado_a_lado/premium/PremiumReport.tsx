@@ -18,9 +18,11 @@ import PlantEvaluationSection from './PlantEvaluationSection';
 import FortSmartAiSection from './FortSmartAiSection';
 import ExperimentDesignSection from './ExperimentDesignSection';
 import FieldCollectionModulesSection from './FieldCollectionModulesSection';
+import ExecutiveDeckSection from './ExecutiveDeckSection';
 
 const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'hero-premium', label: 'Início' },
+  { id: 'deck-executivo-premium', label: 'Painel' },
   { id: 'kpis-premium', label: 'Indicadores' },
   { id: 'fortsmart-ai-premium', label: 'FortSmart AI' },
   { id: 'ensaio-premium', label: 'Ensaio' },
@@ -133,6 +135,7 @@ export default function PremiumReport({
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-20 sm:space-y-24 py-14 sm:py-20 print:space-y-12 print:px-4">
+          <ExecutiveDeckSection data={data} />
           <KPISection data={data} />
           <FortSmartAiSection data={data} />
           <ExperimentDesignSection data={data} sectionId="ensaio-premium" />
