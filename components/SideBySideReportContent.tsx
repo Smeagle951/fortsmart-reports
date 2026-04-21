@@ -209,6 +209,19 @@ export type SideBySideReportData = {
   experiment_design?: ExperimentDesignJson | null;
   /** Layout de coleta (`paired_points` | `parcel_per_treatment` | …) — pode vir na raiz do export. */
   collection_layout?: string | null;
+  /**
+   * Módulos de coleta em campo por ponto/lado — chave JSON `field_collection_modules` (schema V1 do app).
+   */
+  field_collection_modules?: {
+    schema_version?: number;
+    module_labels?: Record<string, string>;
+    points?: Array<{
+      point_id?: string;
+      index?: number;
+      status?: string;
+      sides?: Record<string, Record<string, unknown>>;
+    }>;
+  } | null;
 };
 
 type SideData = {

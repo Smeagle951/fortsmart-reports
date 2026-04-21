@@ -42,6 +42,7 @@ import {
   vigorPctFromKpis,
 } from '@/components/lado_a_lado/ladoALadoHelpers';
 import ExperimentDesignSection from '@/components/lado_a_lado/premium/ExperimentDesignSection';
+import FieldCollectionModulesSection from '@/components/lado_a_lado/premium/FieldCollectionModulesSection';
 
 type SideData = NonNullable<SideBySideReportData['sideA']>;
 
@@ -200,6 +201,7 @@ function fitotoxCell(kpis?: SideData['kpis']) {
 const NAV_SECTIONS: { id: string; label: string }[] = [
   { id: 'visao-geral', label: 'Geral' },
   { id: 'ensaio-design', label: 'Ensaio' },
+  { id: 'coleta-campo-modulos', label: 'Coleta' },
   { id: 'comparativo', label: 'Comparativo' },
   { id: 'avaliacoes-daa', label: 'Avaliações' },
   { id: 'aplicacoes', label: 'Aplicações' },
@@ -1062,6 +1064,8 @@ export default function RelatorioLadoALadoDashboard({
           </motion.section>
 
           <ExperimentDesignSection data={data} sectionId="ensaio-design" />
+
+          <FieldCollectionModulesSection data={data} sectionId="coleta-campo-modulos" />
 
           <motion.section id="comparativo" {...fadeIn} className="scroll-mt-36">
             <h2 className="text-xl font-bold text-slate-900 mb-1 text-center tracking-tight">Comparativo de desempenho</h2>
