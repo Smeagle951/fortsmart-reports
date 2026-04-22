@@ -1,402 +1,561 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
+import React, { useMemo, useState } from 'react';
 import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  LabelList,
+  Legend,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
   Radar,
   RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
   ResponsiveContainer,
-  BarChart,
-  Bar,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  Legend,
-  LineChart,
-  Line,
-  CartesianGrid,
 } from 'recharts';
-import { formatDate, formatNumber, formatPercent, situacaoLabel } from '@/utils/format';
+import {
+  Bell,
+  Camera,
+  ClipboardList,
+  Printer,
+  ShieldAlert,
+  Sprout,
+  TriangleAlert,
+  UserCircle2,
+} from 'lucide-react';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
-import type { ReportApplicationEventV2Json, ReportPhotoWeb } from '@/types/side-by-side-report';
 import FortSmartLogo from '@/components/FortSmartLogo';
 import { postReportAnalytics } from '@/lib/report-analytics-client';
+import { formatDate, formatNumber } from '@/utils/format';
 import {
-  buildEvolucaoAvaliacaoRows,
   COLOR_SIDE_A,
   COLOR_SIDE_B,
-  distinctApplicationDaas,
-  evolutionSeriesFromApplications,
-  formatWind,
   isColheitaJson,
-  isCustoJson,
-  lastMeaningfulClimate,
-  performanceIndexFromKpis,
   pickHeroPhoto,
-  pressaoFitossanitariaMedia,
-  rootPctFromKpis,
-  vigorPctFromKpis,
 } from '@/components/lado_a_lado/ladoALadoHelpers';
-import ExperimentDesignSection from '@/components/lado_a_lado/premium/ExperimentDesignSection';
-import FieldCollectionModulesSection from '@/components/lado_a_lado/premium/FieldCollectionModulesSection';
 
-type SideData = NonNullable<SideBySideReportData['sideA']>;
+type SideKey = 'A' | 'B';
 
-const fadeIn = {
-  initial: { opacity: 0, y: 12 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: '-40px' },
-  transition: { duration: 0.35 },
+type MetricCard = {
+  label: string;
+  unit: string;
+  a: number | null;
+  b: number | null;
+  digits?: number;
 };
 
-function PlantEvaluationDashboardSection({
-  data,
-  sideAName,
-  sideBName,
-}: {
-  data: SideBySideReportData;
-  sideAName: string;
-  sideBName: string;
-}) {
-  const pe = data.plant_evaluation;
-  const metrics =
-    (pe?.metrics as
-      | Array<{
-          key?: string;
-          label?: string;
-          unit?: string;
-          meanA?: number;
-          meanB?: number;
-          diffAbs?: number;
-          diffPct?: number;
-          winner?: string;
-        }>
-      | undefined) ?? [];
-  const has = metrics.length > 0;
-  const nA = pe?.sampleSize && typeof pe.sampleSize === 'object' ? (pe.sampleSize as { A?: number }).A : undefined;
-  const nB = pe?.sampleSize && typeof pe.sampleSize === 'object' ? (pe.sampleSize as { B?: number }).B : undefined;
+type AlertRow = {
+  level: 'warning' | 'error' | 'info';
+  text: string;
+};
 
-  const chartRows = metrics.map((m) => ({
-    name: (m.label || m.key || '—').slice(0, 24),
-    A: m.meanA ?? 0,
-    B: m.meanB ?? 0,
-  }));
+type StatsRow = NonNullable<SideBySideReportData['criteriosEstatistica']>[number];
 
+type PlantRow = NonNullable<NonNullable<SideBySideReportData['plant_evaluation']>['metrics']>[number];
+
+const COLORS = {
+  bg: '#F0F2F5',
+  text: '#0F172A',
+  muted: '#64748B',
+  border: '#E2E8F0',
+  amber: '#D97706',
+  amberBg: '#FFF7ED',
+  red: '#DC2626',
+  redBg: '#FEF2F2',
+  green: '#15803D',
+  greenBg: '#F0FDF4',
+  blueBg: '#EFF6FF',
+  slateBg: '#F8FAFC',
+  nullBg: '#FEF3C7',
+  nullText: '#92400E',
+  yellow: '#EAB308',
+};
+
+const LEFT_TABS = ['Geral', 'Estatística', 'Aplicações', 'Fitossanidade', 'Diagnóstico', 'Fotos'] as const;
+const RIGHT_TABS = ['KPI', 'Estatística', 'Plantas', 'Fotos', 'Conclusão'] as const;
+
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(' ');
+}
+
+function isFiniteNumber(value: number | null | undefined): value is number {
+  return value != null && Number.isFinite(value);
+}
+
+function NullBadge({ label = 'null' }: { label?: string }) {
   return (
-    <motion.section id="avaliacao-plantas" {...fadeIn} className="scroll-mt-36 space-y-6">
-      <h2 className="text-lg font-bold text-slate-900 mb-1 border-l-4 border-teal-500 pl-3">Avaliação por planta</h2>
-      <p className="text-sm text-slate-600 mb-4">
-        Comparação quantitativa a partir de amostras por planta (vigor, pragas, doença, altura, stand). Separado dos KPIs
-        macro da visita.
-        {nA != null || nB != null ? (
-          <span className="block mt-1 text-xs text-slate-500">
-            n amostras: A {nA ?? '—'} · B {nB ?? '—'}
-          </span>
-        ) : null}
-      </p>
-      {!has ? (
-        <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
-          Sem dados de plantas neste relatório. No app: Aplicações → ícone de planta ao lado de cada evento.
-        </p>
-      ) : (
-        <>
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="px-4 py-3">Métrica</th>
-                  <th className="px-4 py-3">{sideAName}</th>
-                  <th className="px-4 py-3">{sideBName}</th>
-                  <th className="px-4 py-3">Δ %</th>
-                  <th className="px-4 py-3">Melhor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {metrics.map((m) => {
-                  const w = (m.winner || '').toUpperCase();
-                  const dp = m.diffPct;
-                  const deltaStr =
-                    dp != null && Number.isFinite(dp)
-                      ? `${dp > 0 ? '+' : ''}${dp.toFixed(0)}%`
-                      : m.diffAbs != null && Number.isFinite(m.diffAbs)
-                        ? `${m.diffAbs > 0 ? '+' : ''}${formatNumber(m.diffAbs, { decimals: 1 })}`
-                        : '—';
-                  const cellCls = (side: 'A' | 'B') => {
-                    if (w === 'TIE' || !w) return 'px-4 py-3 tabular-nums text-slate-700';
-                    if (w === side) return 'px-4 py-3 tabular-nums font-semibold text-emerald-800 bg-emerald-50/60';
-                    return 'px-4 py-3 tabular-nums text-rose-900/80 bg-rose-50/50';
-                  };
-                  return (
-                    <tr key={m.key || m.label} className="border-t border-slate-100">
-                      <td className="px-4 py-3 font-medium text-slate-800">
-                        {m.label || m.key}
-                        {m.unit ? <span className="text-slate-400 font-normal"> ({m.unit})</span> : null}
-                      </td>
-                      <td className={cellCls('A')}>{formatNumber(m.meanA, { decimals: 1 })}</td>
-                      <td className={cellCls('B')}>{formatNumber(m.meanB, { decimals: 1 })}</td>
-                      <td className="px-4 py-3 tabular-nums text-slate-600">{deltaStr}</td>
-                      <td className="px-4 py-3">
-                        {w === 'TIE' || !w ? (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">Empate</span>
-                        ) : (
-                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-900">
-                            {w}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="h-72 w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartRows} margin={{ top: 8, right: 8, left: 0, bottom: 48 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={52} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => formatNumber(v, { decimals: 1 })} />
-                <Legend />
-                <Bar dataKey="A" name={sideAName} fill={COLOR_SIDE_A} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="B" name={sideBName} fill={COLOR_SIDE_B} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </>
-      )}
-    </motion.section>
+    <span
+      className="inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold"
+      style={{ backgroundColor: COLORS.nullBg, color: COLORS.nullText, borderColor: '#FDE68A' }}
+    >
+      {label}
+    </span>
   );
 }
 
-/** Fontes internas/padrão: não exibir — o preço informado é do usuário ou da análise, sem “referência” de sistema. */
-const PRECO_FONTE_OCULTAR = new Set([
-  'padrao_sistema',
-  'padrao sistema',
-  'sistema',
-  'default',
-  'interno',
-  'internal',
-]);
-
-function showEconomiaFontePreco(fonte?: string | null): boolean {
-  const f = (fonte || '').trim().toLowerCase();
-  if (!f) return false;
-  return !PRECO_FONTE_OCULTAR.has(f);
-}
-
-function fitotoxCell(kpis?: SideData['kpis']) {
-  const ft = kpis?.fitotoxidez;
-  const sc = ft?.score;
-  const mx = ft?.max ?? 10;
-  if (sc == null || !Number.isFinite(sc)) return null;
-  return `${formatNumber(sc, { decimals: 0 })} / ${mx}`;
-}
-
-/** Âncoras da nav (scroll + destaque) — fluxo premium tipo produto. */
-const NAV_SECTIONS: { id: string; label: string }[] = [
-  { id: 'visao-geral', label: 'Geral' },
-  { id: 'ensaio-design', label: 'Ensaio' },
-  { id: 'coleta-campo-modulos', label: 'Coleta' },
-  { id: 'comparativo', label: 'Comparativo' },
-  { id: 'avaliacoes-daa', label: 'Avaliações' },
-  { id: 'aplicacoes', label: 'Aplicações' },
-  { id: 'avaliacao-plantas', label: 'Plantas' },
-  { id: 'kpis', label: 'KPIs' },
-  { id: 'radicular', label: 'Radicular' },
-  { id: 'fitossanidade', label: 'Fitossanidade' },
-  { id: 'evidencias', label: 'Evidências' },
-  { id: 'tratamento', label: 'Tratamento' },
-  { id: 'diagnostico', label: 'Diagnóstico' },
-  { id: 'economico', label: 'Econômico' },
-  { id: 'conclusao', label: 'Conclusão' },
-];
-
-function comparativoInsightText(
-  conclusionSummary: string | undefined,
-  resumoCurta: string | undefined,
-  kpisA: SideData['kpis'],
-  kpisB: SideData['kpis'],
-  sideAName: string,
-  sideBName: string,
-): string | null {
-  const t = conclusionSummary?.trim() || resumoCurta?.trim();
-  if (t) return t;
-  const ea = kpisA?.eficienciaPct;
-  const eb = kpisB?.eficienciaPct;
-  if (ea != null && eb != null && Math.abs(ea - eb) >= 1) {
-    return eb > ea
-      ? `${sideBName} apresentou maior eficiência de plantio (${eb.toFixed(0)}% frente a ${ea.toFixed(0)}%).`
-      : `${sideAName} apresentou maior eficiência de plantio (${ea.toFixed(0)}% frente a ${eb.toFixed(0)}%).`;
+function ValueOrNull({
+  value,
+  suffix = '',
+  digits = 0,
+  nullLabel = 'null',
+}: {
+  value: number | string | null | undefined;
+  suffix?: string;
+  digits?: number;
+  nullLabel?: string;
+}) {
+  if (value == null || value === '') {
+    return <NullBadge label={nullLabel} />;
   }
-  const ha = kpisA?.avgHeightCm;
-  const hb = kpisB?.avgHeightCm;
-  if (ha != null && hb != null && Math.abs(ha - hb) >= 5) {
-    return hb > ha
-      ? `${sideBName} com maior altura média (${formatNumber(hb, { decimals: 0 })} cm vs ${formatNumber(ha, { decimals: 0 })} cm).`
-      : `${sideAName} com maior altura média (${formatNumber(ha, { decimals: 0 })} cm vs ${formatNumber(hb, { decimals: 0 })} cm).`;
+  if (typeof value === 'number') {
+    return <>{`${formatNumber(value, { decimals: digits })}${suffix}`}</>;
+  }
+  return <>{`${value}${suffix}`}</>;
+}
+
+function firstText(...values: Array<string | null | undefined>): string | null {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
   }
   return null;
 }
 
-function vigorCell(kpis?: SideData['kpis'], phenologySide?: { vigor?: string }) {
-  if (phenologySide?.vigor) return phenologySide.vigor;
-  const vr = kpis?.vigorRating;
-  const vmax = vr?.max ?? 0;
-  if (vr && vmax > 0) return `${vr.score} / ${vmax}`;
-  return '—';
+function earliestDateByDaa(applications: SideBySideReportData['applications'], daa: number): string | null {
+  const hits = (applications ?? [])
+    .filter((item) => item.daa === daa && item.date?.trim())
+    .map((item) => item.date!.trim())
+    .sort();
+  return hits[0] ?? null;
 }
 
-function rootCell(kpis?: SideData['kpis']) {
-  const rr = kpis?.rootRating;
-  const rmax = rr?.max ?? 0;
-  if (rr && rmax > 0) return `${rr.score} / ${rmax}`;
-  return '—';
+function buildApplicationsSeries(applications: SideBySideReportData['applications']) {
+  if (!applications?.length) return null;
+  const daas = [...new Set(applications.map((item) => item.daa).filter(isFiniteNumber))].sort((a, b) => a - b);
+  if (daas.length === 0) return null;
+  return daas.map((daa) => {
+    const dateIso = earliestDateByDaa(applications, daa);
+    const dateLabel = dateIso ? formatDate(dateIso).slice(0, 5) : `${daa} DAA`;
+    return {
+      daa,
+      dateLabel,
+      sideA: applications.filter((item) => item.side === 'A' && item.daa === daa).length,
+      sideB: applications.filter((item) => item.side === 'B' && item.daa === daa).length,
+    };
+  });
 }
 
-function PhotoWithHotspots({
-  ph,
-  accentClass,
-  lightbox = true,
-  legendExtras,
-  structuredLegend = false,
-}: {
-  ph: ReportPhotoWeb;
-  accentClass: string;
-  /** Abre preview em tela cheia ao clicar (desligar para thumbs que não devem ampliar). */
-  lightbox?: boolean;
-  /** Bloco “premium” abaixo da foto: data/DAA, local, observação, destaque visual. */
-  legendExtras?: { daaLine?: string; regionLine?: string; technicalNote?: string };
-  /** Se true, legenda completa fica no bloco estruturado (evita legenda duplicada na miniatura). */
-  structuredLegend?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
+function deriveRisk(ocorrencias: SideBySideReportData['ocorrencias']): string | null {
+  if (!ocorrencias?.length) return null;
+  const maxIncidencia = Math.max(...ocorrencias.map((item) => item.incidenciaPct ?? 0));
+  const highSeverity = ocorrencias.some((item) => {
+    const severity = (item.severidade || '').toLowerCase();
+    return severity.includes('alta') || severity.includes('muito alta');
+  });
+  if (highSeverity || maxIncidencia > 30) return 'Alto';
+  if (maxIncidencia > 15) return 'Moderado';
+  return 'Baixo';
+}
 
-  useEffect(() => {
-    if (!open) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+function deriveEconomics(data: SideBySideReportData) {
+  const colheita = isColheitaJson(data.colheita) ? data.colheita : null;
+  const rowA = colheita?.sides?.find((item) => item.side === 'A');
+  const rowB = colheita?.sides?.find((item) => item.side === 'B');
+  const pricePerSack = data.economia?.preco_saca_brl ?? null;
+  const scA =
+    rowA?.yieldScHa ??
+    (isFiniteNumber(rowA?.yieldKgHa) && (colheita?.kgPerSack ?? 60) > 0 ? rowA!.yieldKgHa! / (colheita?.kgPerSack ?? 60) : null) ??
+    null;
+  const scB =
+    rowB?.yieldScHa ??
+    (isFiniteNumber(rowB?.yieldKgHa) && (colheita?.kgPerSack ?? 60) > 0 ? rowB!.yieldKgHa! / (colheita?.kgPerSack ?? 60) : null) ??
+    null;
+  const deltaScHa = isFiniteNumber(scA) && isFiniteNumber(scB) ? scB - scA : null;
+  const deltaReais = isFiniteNumber(deltaScHa) && isFiniteNumber(pricePerSack) ? Math.round(deltaScHa * pricePerSack) : null;
+  const roiA = data.decision_layer?.roiBySide?.A?.roiPct ?? null;
+  const roiB = data.decision_layer?.roiBySide?.B?.roiPct ?? null;
+  return { scA, scB, deltaScHa, deltaReais, roiA, roiB, pricePerSack };
+}
+
+function ratingValue(score?: number, max?: number): number | null {
+  if (!isFiniteNumber(score) || !isFiniteNumber(max) || max <= 0) return null;
+  return (score / max) * 100;
+}
+
+function metricCards(data: SideBySideReportData): MetricCard[] {
+  const kA = data.sideA?.kpis;
+  const kB = data.sideB?.kpis;
+
+  const estande: MetricCard =
+    isFiniteNumber(kA?.eficienciaPct) && isFiniteNumber(kB?.eficienciaPct)
+      ? { label: 'Estande', unit: '%', a: kA.eficienciaPct, b: kB.eficienciaPct }
+      : { label: 'Estande', unit: 'pl/ha', a: kA?.finalPopulationPlHa ?? null, b: kB?.finalPopulationPlHa ?? null };
+
+  const vigor: MetricCard =
+    isFiniteNumber(kA?.vigorCulturaPct) && isFiniteNumber(kB?.vigorCulturaPct)
+      ? { label: 'Vigor', unit: '%', a: kA.vigorCulturaPct, b: kB.vigorCulturaPct }
+      : {
+          label: 'Vigor',
+          unit: 'escala',
+          a: isFiniteNumber(kA?.vigorRating?.score) ? kA!.vigorRating!.score! : null,
+          b: isFiniteNumber(kB?.vigorRating?.score) ? kB!.vigorRating!.score! : null,
+          digits: 1,
+        };
+
+  const raiz: MetricCard =
+    isFiniteNumber(kA?.profundidadeRaizCm) && isFiniteNumber(kB?.profundidadeRaizCm)
+      ? { label: 'Raiz', unit: 'cm', a: kA.profundidadeRaizCm, b: kB.profundidadeRaizCm }
+      : {
+          label: 'Raiz',
+          unit: 'escala',
+          a: isFiniteNumber(kA?.rootRating?.score) ? kA!.rootRating!.score! : null,
+          b: isFiniteNumber(kB?.rootRating?.score) ? kB!.rootRating!.score! : null,
+          digits: 1,
+        };
+
+  return [estande, vigor, raiz];
+}
+
+function buildRadarRows(data: SideBySideReportData) {
+  const kA = data.sideA?.kpis;
+  const kB = data.sideB?.kpis;
+  const rows = [
+    {
+      subject: 'Estande',
+      A: kA?.eficienciaPct ?? null,
+      B: kB?.eficienciaPct ?? null,
+    },
+    {
+      subject: 'Vigor',
+      A: kA?.vigorCulturaPct ?? ratingValue(kA?.vigorRating?.score, kA?.vigorRating?.max ?? 5),
+      B: kB?.vigorCulturaPct ?? ratingValue(kB?.vigorRating?.score, kB?.vigorRating?.max ?? 5),
+    },
+    {
+      subject: 'Raiz',
+      A: ratingValue(kA?.rootRating?.score, kA?.rootRating?.max ?? 5),
+      B: ratingValue(kB?.rootRating?.score, kB?.rootRating?.max ?? 5),
+    },
+    {
+      subject: 'Vigor inf.',
+      A: ratingValue(kA?.vigorRating?.score, kA?.vigorRating?.max ?? 5),
+      B: ratingValue(kB?.vigorRating?.score, kB?.vigorRating?.max ?? 5),
+    },
+    {
+      subject: 'Sanidade',
+      A: kA?.controleDaninhasPct ?? (isFiniteNumber(kA?.fitotoxidez?.score) ? Math.max(0, 100 - (kA!.fitotoxidez!.score! / (kA!.fitotoxidez!.max ?? 10)) * 100) : null),
+      B: kB?.controleDaninhasPct ?? (isFiniteNumber(kB?.fitotoxidez?.score) ? Math.max(0, 100 - (kB!.fitotoxidez!.score! / (kB!.fitotoxidez!.max ?? 10)) * 100) : null),
+    },
+  ];
+
+  if (!rows.some((item) => isFiniteNumber(item.A) || isFiniteNumber(item.B))) {
+    return null;
+  }
+
+  return rows.map((item) => ({
+    ...item,
+    A: item.A ?? 0,
+    B: item.B ?? 0,
+  }));
+}
+
+function buildAiAlerts(data: SideBySideReportData): AlertRow[] {
+  const motorAlerts = data.decision_layer?.fortsmart_ai?.motor_alertas ?? [];
+  const mapped = motorAlerts
+    .map<AlertRow | null>((item) => {
+      const text = firstText(item.titulo, item.mensagem);
+      if (!text) return null;
+      const level =
+        item.nivel === 'critico' || item.nivel === 'atencao'
+          ? 'error'
+          : item.nivel === 'monitorar'
+            ? 'warning'
+            : 'info';
+      return { level, text };
+    })
+    .filter((item): item is AlertRow => Boolean(item));
+
+  if (mapped.length > 0) return mapped.slice(0, 3);
 
   return (
-    <figure className="rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow bg-white">
-      {ph.url ? (
-        <>
-          <div className="relative w-full aspect-[4/3] bg-slate-100">
-            <button
-              type="button"
-              onClick={() => lightbox && setOpen(true)}
-              disabled={!lightbox}
-              className={`absolute inset-0 z-0 block h-full w-full p-0 border-0 bg-transparent text-left ${
-                lightbox
-                  ? 'cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset'
-                  : 'cursor-default'
-              }`}
-              aria-label={lightbox ? 'Ampliar imagem' : undefined}
-            >
-              <img src={ph.url} alt={ph.caption || 'Evidência'} className="pointer-events-none h-full w-full object-cover" />
-            </button>
-            {ph.hotspots?.map((h, i) => (
-              <div
-                key={i}
-                className="absolute z-20 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-amber-400 shadow-md"
-                style={{ left: `${h.xPct}%`, top: `${h.yPct}%` }}
-                title={[h.label, h.detail].filter(Boolean).join(' — ') || undefined}
-                onClick={(e) => e.stopPropagation()}
-                role="presentation"
-              />
-            ))}
-          </div>
-          {lightbox &&
-            open &&
-            typeof document !== 'undefined' &&
-            createPortal(
-              <div
-                role="dialog"
-                aria-modal="true"
-                aria-label="Visualização ampliada da evidência"
-                className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/88 p-4 print:hidden"
-                onClick={() => setOpen(false)}
-              >
-                <button
-                  type="button"
-                  className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl font-light text-white backdrop-blur-sm transition hover:bg-white/20"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpen(false);
-                  }}
-                  aria-label="Fechar"
-                >
-                  ×
-                </button>
-                <img
-                  src={ph.url}
-                  alt={ph.caption || 'Evidência ampliada'}
-                  className="max-h-[min(88vh,100%)] max-w-full rounded-lg object-contain shadow-2xl"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                {ph.caption ? (
-                  <p className="mt-4 max-w-3xl text-center text-sm text-white/90">{ph.caption}</p>
-                ) : null}
-                <p className="mt-2 text-xs text-white/50">Clique fora ou Esc para fechar</p>
-              </div>,
-              document.body,
-            )}
-        </>
-      ) : (
-        <div className="flex aspect-[4/3] w-full items-center justify-center bg-slate-100 text-xs text-slate-400">Sem imagem</div>
+    data.diagnostics?.recommendations
+      ?.slice(0, 2)
+      .map<AlertRow>((text) => ({ level: 'warning', text })) ?? []
+  );
+}
+
+function tabButtonClass(active: boolean, accent: string) {
+  return active
+    ? `rounded-lg px-3 py-2 text-[11px] font-bold text-white shadow-sm`
+    : 'rounded-lg px-3 py-2 text-[11px] font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900';
+}
+
+function PanelHeader({
+  title,
+  subtitle,
+  onPrint,
+}: {
+  title: string;
+  subtitle: string | null;
+  onPrint: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 border-b border-slate-200 pb-3">
+      <FortSmartLogo size={34} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[1.05rem] font-bold text-slate-900">{title}</div>
+        <div className="truncate text-xs text-slate-500">{subtitle || 'Relatório comparativo lado a lado'}</div>
+      </div>
+      <div className="flex items-center gap-1.5 text-slate-500">
+        <button
+          type="button"
+          onClick={onPrint}
+          className="rounded-full border border-slate-200 bg-white p-2 transition hover:border-slate-300 hover:text-slate-900"
+          aria-label="Imprimir relatório"
+        >
+          <Printer className="h-4 w-4" />
+        </button>
+        <span className="rounded-full border border-slate-200 bg-white p-2">
+          <Bell className="h-4 w-4" />
+        </span>
+        <span className="rounded-full border border-slate-200 bg-white p-2">
+          <UserCircle2 className="h-4 w-4" />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ScoreBadge({
+  label,
+  value,
+  color,
+  compact = false,
+}: {
+  label: string;
+  value: number | null;
+  color: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-xl text-white shadow-sm',
+        compact ? 'flex items-center gap-2 px-3 py-2' : 'flex min-w-[120px] flex-col items-center px-4 py-3',
       )}
-      {structuredLegend &&
-      (legendExtras?.daaLine ||
-        legendExtras?.regionLine ||
-        legendExtras?.technicalNote ||
-        ph.caption ||
-        (ph.hotspots && ph.hotspots.length > 0)) ? (
-        <div className="border-t border-slate-100 bg-slate-50/90 px-3 py-2.5 text-left text-[11px] leading-snug text-slate-700 space-y-1.5">
-          {legendExtras?.daaLine ? (
-            <p>
-              <span className="font-semibold text-slate-600">Data · </span>
-              {legendExtras.daaLine}
-            </p>
-          ) : null}
-          {legendExtras?.regionLine ? (
-            <p>
-              <span className="font-semibold text-slate-600">Local · </span>
-              {legendExtras.regionLine}
-            </p>
-          ) : null}
-          {(legendExtras?.technicalNote || ph.caption) ? (
-            <p>
-              <span className="font-semibold text-slate-600">Observação técnica · </span>
-              {legendExtras?.technicalNote || ph.caption}
-            </p>
-          ) : null}
-          {ph.hotspots && ph.hotspots.length > 0 ? (
-            <p className="text-amber-900/90">
-              <span className="font-semibold">Destaque visual · </span>
-              {ph.hotspots
-                .map((h) => [h.label, h.detail].filter(Boolean).join(' — '))
-                .filter(Boolean)
-                .join(' · ') || 'Marcações na imagem (pontos de observação em campo).'}
-            </p>
-          ) : null}
+      style={{ backgroundColor: color }}
+    >
+      <span className={cn('font-black tabular-nums', compact ? 'text-2xl leading-none' : 'text-4xl leading-none')}>
+        {value != null ? Math.round(value) : '—'}
+      </span>
+      <span className={cn('font-bold uppercase tracking-[0.18em]', compact ? 'text-[10px] text-white/80' : 'mt-1 text-[11px] text-white/80')}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function MetricVsCard({ metric }: { metric: MetricCard }) {
+  const winnerA = isFiniteNumber(metric.a) && isFiniteNumber(metric.b) && metric.a >= metric.b;
+  const winnerB = isFiniteNumber(metric.a) && isFiniteNumber(metric.b) && metric.b >= metric.a;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+      <div className="text-[11px] font-semibold text-slate-500">{metric.label}</div>
+      <div className="mt-2 flex items-center justify-between gap-2 text-sm font-bold text-slate-800">
+        <span style={{ color: winnerA ? COLOR_SIDE_A : COLORS.text }}>
+          <ValueOrNull value={metric.a} digits={metric.digits ?? 0} nullLabel="null" />
+        </span>
+        <span className="text-xs font-semibold text-slate-300">vs</span>
+        <span style={{ color: winnerB ? COLOR_SIDE_B : COLORS.text }}>
+          <ValueOrNull value={metric.b} digits={metric.digits ?? 0} nullLabel="null" />
+        </span>
+      </div>
+      <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-slate-400">{metric.unit}</div>
+    </div>
+  );
+}
+
+function AlertBox({ alert }: { alert: AlertRow }) {
+  const isError = alert.level === 'error';
+  const isWarning = alert.level === 'warning';
+  return (
+    <div
+      className="flex items-start gap-3 rounded-xl border px-3 py-3 text-sm leading-relaxed"
+      style={{
+        backgroundColor: isError ? COLORS.redBg : isWarning ? COLORS.amberBg : COLORS.blueBg,
+        borderColor: isError ? '#FECACA' : isWarning ? '#FED7AA' : '#BFDBFE',
+      }}
+    >
+      <span className="mt-0.5">
+        {isError ? <ShieldAlert className="h-4 w-4 text-red-600" /> : isWarning ? <TriangleAlert className="h-4 w-4 text-amber-600" /> : <Sprout className="h-4 w-4 text-blue-600" />}
+      </span>
+      <p className="text-slate-800">{alert.text}</p>
+    </div>
+  );
+}
+
+function StatsTable({ rows }: { rows: StatsRow[] | undefined }) {
+  if (!rows?.length) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+        <NullBadge label="criteriosEstatistica: null" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-slate-200">
+      <table className="min-w-full text-left text-xs">
+        <thead className="bg-slate-50 text-slate-500">
+          <tr>
+            <th className="px-3 py-2 font-semibold">Critério</th>
+            <th className="px-3 py-2 font-semibold">A</th>
+            <th className="px-3 py-2 font-semibold">B</th>
+            <th className="px-3 py-2 font-semibold">CV A</th>
+            <th className="px-3 py-2 font-semibold">CV B</th>
+            <th className="px-3 py-2 font-semibold">Diferença</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={`${row.criterio}-${index}`} className="border-t border-slate-100 text-slate-700">
+              <td className="px-3 py-2 font-medium">
+                {row.criterio || 'Critério'}
+                {row.unidade ? <span className="text-slate-400"> ({row.unidade})</span> : null}
+              </td>
+              <td className="px-3 py-2 font-semibold" style={{ color: COLOR_SIDE_A }}>
+                <ValueOrNull value={row.mediaA} digits={1} />
+              </td>
+              <td className="px-3 py-2 font-semibold" style={{ color: COLOR_SIDE_B }}>
+                <ValueOrNull value={row.mediaB} digits={1} />
+              </td>
+              <td className="px-3 py-2">
+                <ValueOrNull value={row.cvPctA} suffix="%" digits={1} nullLabel="null" />
+              </td>
+              <td className="px-3 py-2">
+                <ValueOrNull value={row.cvPctB} suffix="%" digits={1} nullLabel="null" />
+              </td>
+              <td className="px-3 py-2">
+                {row.diferencaIndicativa ? (
+                  <span
+                    className="rounded-full px-2 py-1 font-semibold"
+                    style={{
+                      backgroundColor: row.diferencaIndicativa ? COLORS.greenBg : COLORS.slateBg,
+                      color: row.diferencaIndicativa ? COLORS.green : COLORS.muted,
+                    }}
+                  >
+                    {row.diferencaIndicativa ? 'Indicativa' : 'Neutra'}
+                  </span>
+                ) : (
+                  <NullBadge label="null" />
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PlantMetricsTable({ rows }: { rows: PlantRow[] | undefined }) {
+  if (!rows?.length) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+        <NullBadge label="plant_evaluation.metrics: null" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {rows.map((row, index) => (
+        <div key={`${row.label || row.key}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+          <div className="text-sm font-semibold text-slate-800">{row.label || row.key || 'Métrica'}</div>
+          <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-lg bg-white px-3 py-2">
+              <div className="text-[11px] font-semibold text-slate-500">Manejo A</div>
+              <div className="mt-1 font-bold" style={{ color: COLOR_SIDE_A }}>
+                <ValueOrNull value={row.meanA} digits={1} />
+                {row.unit ? <span className="ml-1 text-xs text-slate-400">{row.unit}</span> : null}
+              </div>
+            </div>
+            <div className="rounded-lg bg-white px-3 py-2">
+              <div className="text-[11px] font-semibold text-slate-500">Manejo B</div>
+              <div className="mt-1 font-bold" style={{ color: COLOR_SIDE_B }}>
+                <ValueOrNull value={row.meanB} digits={1} />
+                {row.unit ? <span className="ml-1 text-xs text-slate-400">{row.unit}</span> : null}
+              </div>
+            </div>
+          </div>
         </div>
-      ) : ph.caption && !structuredLegend ? (
-        <figcaption className={`truncate p-2 text-xs ${accentClass}`}>{ph.caption}</figcaption>
-      ) : null}
-    </figure>
+      ))}
+    </div>
+  );
+}
+
+function PhotosGrid({
+  sideAName,
+  sideBName,
+  photosA,
+  photosB,
+}: {
+  sideAName: string;
+  sideBName: string;
+  photosA: NonNullable<SideBySideReportData['sideA']>['photos'] | undefined;
+  photosB: NonNullable<SideBySideReportData['sideB']>['photos'] | undefined;
+}) {
+  const entries = [
+    { side: 'A', name: sideAName, color: COLOR_SIDE_A, photo: photosA?.[0] },
+    { side: 'B', name: sideBName, color: COLOR_SIDE_B, photo: photosB?.[0] },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {entries.map((entry) => (
+        <div key={entry.side} className="space-y-2">
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+            {entry.photo?.url ? (
+              <img src={entry.photo.url} alt={entry.photo.caption || entry.name} className="aspect-square w-full object-cover" />
+            ) : (
+              <div className="flex aspect-square items-center justify-center p-3 text-center text-xs text-slate-400">
+                <NullBadge label={`side${entry.side}.photos[0].url`} />
+              </div>
+            )}
+          </div>
+          <div className="space-y-1">
+            <div className="rounded-md px-2 py-1 text-center text-[11px] font-bold text-white" style={{ backgroundColor: entry.color }}>
+              {entry.name}
+            </div>
+            <div className="min-h-[28px] text-center text-[11px] text-slate-500">{entry.photo?.caption || 'Sem legenda publicada.'}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CompactKpiRow({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-2 text-sm">
+      <span className="mt-0.5 text-slate-500">{icon}</span>
+      <div className="text-slate-700">
+        <span className="font-semibold text-slate-900">{label}: </span>
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -409,2064 +568,485 @@ export default function RelatorioLadoALadoDashboard({
   reportId?: string;
   shareToken?: string;
 }) {
-  const meta = data.meta || {};
+  const [leftTab, setLeftTab] = useState<(typeof LEFT_TABS)[number]>('Geral');
+  const [rightTab, setRightTab] = useState<(typeof RIGHT_TABS)[number]>('KPI');
+
   const farm = data.farm || {};
   const coleta = data.coleta;
-  const sideA = data.sideA || ({} as SideData);
-  const sideB = data.sideB || ({} as SideData);
-  const conclusion = data.conclusion || {};
-  const kpisA = sideA.kpis || {};
-  const kpisB = sideB.kpis || {};
-  const phenology = data.phenology;
-  const diagnostics = data.diagnostics;
-  const diagnosis = data.diagnosis;
-  const ocorrencias = data.ocorrencias || [];
-  const aplicacoes = data.aplicacoes || [];
-  const applications = data.applications ?? [];
-  const points = data.points || [];
-  const photosA = sideA.photos || [];
-  const photosB = sideB.photos || [];
-  const resumo = data.resumo;
-  const custoParsed = isCustoJson(data.custo) ? data.custo : null;
-  const colheitaParsed = isColheitaJson(data.colheita) ? data.colheita : null;
-  const economia = data.economia;
+  const sideAName = data.sideA?.name || 'Manejo A';
+  const sideBName = data.sideB?.name || 'Manejo B';
+  const economics = deriveEconomics(data);
+  const risk = deriveRisk(data.ocorrencias);
+  const winner = data.conclusion?.winner ?? null;
+  const winnerName = winner === 'A' ? sideAName : winner === 'B' ? sideBName : null;
+  const scoreA = data.sideA?.kpis?.performanceScore ?? null;
+  const scoreB = data.sideB?.kpis?.performanceScore ?? null;
+  const deltaScore = isFiniteNumber(scoreA) && isFiniteNumber(scoreB) ? scoreB - scoreA : null;
+  const heroPhoto = pickHeroPhoto((winner === 'A' ? data.sideA?.photos : data.sideB?.photos) ?? data.sideB?.photos ?? data.sideA?.photos);
+  const radarRows = useMemo(() => buildRadarRows(data), [data]);
+  const applicationSeries = useMemo(() => buildApplicationsSeries(data.applications), [data.applications]);
+  const alerts = useMemo(() => buildAiAlerts(data), [data]);
+  const metrics = useMemo(() => metricCards(data), [data]);
+  const statisticalRows = data.criteriosEstatistica;
+  const plantRows = data.plant_evaluation?.metrics;
+  const leftSubtitle = firstText(data.branding?.subtitle, coleta?.ensaioName, farm.fieldName);
+  const rightSubtitle = firstText(coleta?.ensaioName, data.branding?.subtitle, farm.culture);
+  const subheaderBits = [
+    farm.culture ? `Cultura: ${farm.culture}` : null,
+    coleta?.estadio ? `Estádio: ${coleta.estadio}` : null,
+    coleta?.dae != null ? `${coleta.dae} DAA` : coleta?.dap != null ? `${coleta.dap} DAP` : null,
+  ].filter(Boolean);
 
-  const hasTreatment = (data.treatment_protocol?.sides?.length ?? 0) > 0;
-  const hasExec = applications.length > 0 || (applications.length === 0 && aplicacoes.length > 0);
-  const productsResult = data.products_result;
-  const hasEcon = !!(
-    custoParsed?.by_side?.length ||
-    colheitaParsed?.sides?.length ||
-    economia?.preco_saca_brl != null ||
-    (productsResult && productsResult.length > 0)
-  );
+  const summaryText =
+    data.conclusion?.summary?.trim() ||
+    (economics.deltaScHa != null
+      ? `${winnerName || 'O manejo favorecido'} apresenta ganho de ${formatNumber(economics.deltaScHa, { decimals: 0 })} sc/ha.`
+      : null) ||
+    data.resumo?.conclusaoCurta?.trim() ||
+    null;
 
-  const [activeNav, setActiveNav] = useState('visao-geral');
+  const recommendationText = data.conclusion?.recommendations?.[0] || data.diagnostics?.recommendations?.[0] || null;
 
-  useEffect(() => {
-    const els = NAV_SECTIONS.map((n) => document.getElementById(n.id)).filter(Boolean) as HTMLElement[];
-    if (els.length === 0) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const hit = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => (a.boundingClientRect.top < b.boundingClientRect.top ? -1 : 1))[0];
-        if (hit?.target?.id) setActiveNav(hit.target.id);
-      },
-      { rootMargin: '-42% 0px -42% 0px', threshold: [0, 0.1, 0.25] },
-    );
-    els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, []);
-
-  const hasCategoryInPhotos = [...photosA, ...photosB].some((p) => p?.category);
-  const categoryOrder = ['estande', 'raiz', 'sanidade', 'daninha', 'aplicacao', 'geral'] as const;
-  const categoryLabels: Record<string, string> = {
-    estande: 'Estande',
-    raiz: 'Raiz',
-    sanidade: 'Sanidade / doenças',
-    daninha: 'Daninhas',
-    aplicacao: 'Aplicação',
-    geral: 'Geral',
-  };
-  const photosByCategory = hasCategoryInPhotos
-    ? categoryOrder
-        .map((cat) => ({
-        category: cat,
-        label: categoryLabels[cat] || cat,
-        photosA: photosA.filter((p) => (p?.category || 'geral') === cat),
-        photosB: photosB.filter((p) => (p?.category || 'geral') === cat),
-        }))
-        .filter((g) => g.photosA.length > 0 || g.photosB.length > 0)
-    : [];
-
-  const sideAName = sideA.name || 'Lado A';
-  const sideBName = sideB.name || 'Lado B';
-  const popA = kpisA.finalPopulationPlHa ?? 0;
-  const popB = kpisB.finalPopulationPlHa ?? 0;
-  const yieldA = kpisA.estimatedYieldKgHa ?? 0;
-  const yieldB = kpisB.estimatedYieldKgHa ?? 0;
-  const diffYield = yieldA > 0 ? ((yieldB - yieldA) / yieldA) * 100 : null;
-
-  const climateHero = lastMeaningfulClimate(applications);
-  const evolutionData = evolutionSeriesFromApplications(applications);
-  const heroPhotoA = pickHeroPhoto(photosA);
-  const heroPhotoB = pickHeroPhoto(photosB);
-  const daaTimeline = distinctApplicationDaas(applications);
-  const daaSteps = useMemo(() => {
-    const steps: { key: 'pre' | number; label: string }[] = [];
-    if (coleta?.dataPlantio || daaTimeline.length > 0) {
-      steps.push({ key: 'pre', label: 'Pré-aplicação' });
-    }
-    for (const d of daaTimeline) {
-      steps.push({ key: d, label: `${d} DAA` });
-    }
-    return steps;
-  }, [coleta?.dataPlantio, daaTimeline]);
-
-  const perfIdxA = performanceIndexFromKpis(kpisA);
-  const perfIdxB = performanceIndexFromKpis(kpisB);
-  const pressaoFito = pressaoFitossanitariaMedia(ocorrencias);
-
-  const includePreEvo = !!(coleta?.dataPlantio || daaTimeline.length > 0);
-  const evolucaoPack = useMemo(
-    () =>
-      buildEvolucaoAvaliacaoRows({
-        applications,
-        daaSorted: daaTimeline,
-        includePre: includePreEvo,
-        kpisA,
-        kpisB,
-        pressaoFitoPct: pressaoFito,
-      }),
-    [applications, daaTimeline, includePreEvo, kpisA, kpisB, pressaoFito],
-  );
-
-  const evoTabs = useMemo(() => {
-    if (evolucaoPack?.rows?.length) {
-      return evolucaoPack.rows.map((r) => ({
-        key: r.matchKey,
-        label:
-          r.matchKey === 'pre'
-            ? 'Pré-aplicação'
-            : r.matchKey === 'consolidado'
-              ? 'Consolidado'
-              : `${r.matchKey} DAA`,
-        dateSub: r.dateIso,
-      }));
-    }
-    return daaSteps.map((s) => ({
-      key: s.key === 'pre' ? 'pre' : String(s.key),
-      label: s.label,
-      dateSub: undefined as string | undefined,
-    }));
-  }, [evolucaoPack, daaSteps]);
-
-  const [momentKey, setMomentKey] = useState<string>('pre');
-  useEffect(() => {
-    if (!evoTabs.length) return;
-    setMomentKey((prev) => (evoTabs.some((t) => t.key === prev) ? prev : evoTabs[0].key));
-  }, [evoTabs]);
-
-  const appsForMoment = useMemo(() => {
-    if (momentKey === 'pre' || momentKey === 'consolidado') return [] as ReportApplicationEventV2Json[];
-    const d = Number(momentKey);
-    if (!Number.isFinite(d)) return [];
-    return applications.filter((a) => a.daa === d);
-  }, [applications, momentKey]);
-
-  const momentLegendDaaLine = useMemo(() => {
-    if (momentKey === 'pre') {
-      return coleta?.dataPlantio
-        ? `Pré-aplicação · plantio ${formatDate(coleta.dataPlantio)}`
-        : 'Pré-aplicação';
-    }
-    if (momentKey === 'consolidado') return 'Consolidado (fechamento da série)';
-    const d = Number(momentKey);
-    if (!Number.isFinite(d)) return undefined;
-    const ev = applications.find((a) => a.daa === d && a.date);
-    return ev?.date ? `${formatDate(ev.date)} · ${d} DAA` : `${d} DAA`;
-  }, [momentKey, coleta?.dataPlantio, applications]);
-
-  const chartRowsEvo = useMemo(() => {
-    if (!evolucaoPack?.rows.length) return [];
-    return evolucaoPack.rows.map((r) => ({
-      name: r.matchKey,
-      xLabel:
-        r.dateIso && r.matchKey !== 'pre' && r.matchKey !== 'consolidado'
-          ? `${r.chartTick}\n${formatDate(r.dateIso)}`
-          : r.chartTick,
-      controle: r.controlePct,
-      vigor: r.vigorPct,
-    }));
-  }, [evolucaoPack]);
-
-  const evoYDomain = useMemo(() => {
-    if (!chartRowsEvo.length) return [60, 100] as [number, number];
-    const vals = chartRowsEvo.flatMap((r) => [r.controle, r.vigor]);
-    const lo = Math.min(...vals);
-    const hi = Math.max(...vals);
-    const pad = 6;
-    return [Math.max(0, Math.floor(lo - pad)), Math.min(100, Math.ceil(hi + pad))] as [number, number];
-  }, [chartRowsEvo]);
-
-  const insightComparativo = comparativoInsightText(
-    conclusion.summary,
-    resumo?.conclusaoCurta,
-    kpisA,
-    kpisB,
-    sideAName,
-    sideBName,
-  );
-  const subCaptionA = [coleta?.dae != null ? `${coleta.dae} DAE` : null, phenology?.sideA?.estadio]
-    .filter(Boolean)
-    .join(' · ');
-  const subCaptionB = [coleta?.dae != null ? `${coleta.dae} DAE` : null, phenology?.sideB?.estadio]
-    .filter(Boolean)
-    .join(' · ');
-
-  const comparativoDaaLine = useMemo(() => {
-    if (daaTimeline.length > 0) {
-      const maxD = Math.max(...daaTimeline);
-      const ev = applications.find((a) => a.daa === maxD && a.date);
-      const datePart = ev?.date ? formatDate(ev.date) : '';
-      return [datePart, `${maxD} DAA`].filter(Boolean).join(' · ');
-    }
-    if (coleta?.dae != null) return `${coleta.dae} DAE`;
-    if (coleta?.dap != null) return `${coleta.dap} DAP`;
-    return undefined;
-  }, [daaTimeline, applications, coleta?.dae, coleta?.dap]);
-
-  const regionLineFarm = [farm.city, farm.state].filter(Boolean).join(' — ') || undefined;
-
-  const comparativoMetricRows = useMemo(() => {
-    const rows: { label: string; a: string; b: string }[] = [];
-    const pushRow = (label: string, va: string | null | undefined, vb: string | null | undefined) => {
-      const a = (va ?? '—').trim() || '—';
-      const b = (vb ?? '—').trim() || '—';
-      if (a === '—' && b === '—') return;
-      rows.push({ label, a, b });
-    };
-    const pct = (n?: number | null) =>
-      n != null && Number.isFinite(n) ? `${formatNumber(n, { decimals: 0 })}%` : null;
-    pushRow('Controle de daninhas', pct(kpisA.controleDaninhasPct), pct(kpisB.controleDaninhasPct));
-    pushRow('Fitotoxidez', fitotoxCell(kpisA), fitotoxCell(kpisB));
-    pushRow('Cobertura (%)', pct(kpisA.coberturaAplicacaoPct), pct(kpisB.coberturaAplicacaoPct));
-    const vigorA =
-      kpisA.vigorCulturaPct != null ? pct(kpisA.vigorCulturaPct) : vigorCell(kpisA, phenology?.sideA);
-    const vigorB =
-      kpisB.vigorCulturaPct != null ? pct(kpisB.vigorCulturaPct) : vigorCell(kpisB, phenology?.sideB);
-    pushRow('Vigor da cultura', vigorA, vigorB);
-    pushRow('Rebrota (%)', pct(kpisA.rebrotaPct), pct(kpisB.rebrotaPct));
-    pushRow('Uniformidade', phenology?.sideA?.uniformidade ?? null, phenology?.sideB?.uniformidade ?? null);
-    pushRow('Eficiência de plantio', pct(kpisA.eficienciaPct), pct(kpisB.eficienciaPct));
-    pushRow(
-      'Altura média',
-      kpisA.avgHeightCm != null ? `${formatNumber(kpisA.avgHeightCm, { decimals: 0 })} cm` : null,
-      kpisB.avgHeightCm != null ? `${formatNumber(kpisB.avgHeightCm, { decimals: 0 })} cm` : null,
-    );
-    pushRow('Sanidade de raiz', rootCell(kpisA), rootCell(kpisB));
-    pushRow('Estádio (fenologia)', phenology?.sideA?.estadio ?? null, phenology?.sideB?.estadio ?? null);
-    return rows;
-  }, [kpisA, kpisB, phenology]);
-
-  const vigorNum = (v: string | undefined) =>
-    v === 'Alto' || v === 'alto' ? 100 : v === 'Médio' || v === 'medio' ? 60 : v ? 30 : 0;
-  const radarRows: { subject: string; A: number; B: number; fullMark: number }[] = [
-    {
-      subject: 'Vigor',
-      A: vigorNum(phenology?.sideA?.vigor) || vigorPctFromKpis(kpisA) || (kpisA.vigorRating?.score ?? 0) * 25,
-      B: vigorNum(phenology?.sideB?.vigor) || vigorPctFromKpis(kpisB) || (kpisB.vigorRating?.score ?? 0) * 25,
-      fullMark: 100,
-    },
-    {
-      subject: 'Uniformidade',
-      A: vigorNum(phenology?.sideA?.uniformidade),
-      B: vigorNum(phenology?.sideB?.uniformidade),
-      fullMark: 100,
-    },
-    {
-      subject: 'Raiz',
-      A: rootPctFromKpis(kpisA) || (kpisA.rootRating?.score ?? 0) * 20,
-      B: rootPctFromKpis(kpisB) || (kpisB.rootRating?.score ?? 0) * 20,
-      fullMark: 100,
-    },
-    {
-      subject: 'Altura',
-      A: Math.min(100, (kpisA.avgHeightCm ?? 0) * 2),
-      B: Math.min(100, (kpisB.avgHeightCm ?? 0) * 2),
-      fullMark: 100,
-    },
-    {
-      subject: 'Estande',
-      A: kpisA.eficienciaPct ?? 0,
-      B: kpisB.eficienciaPct ?? 0,
-      fullMark: 100,
-    },
-  ];
-  if (yieldA > 0 || yieldB > 0) {
-    const maxY = Math.max(yieldA, yieldB, 1);
-    radarRows.push({
-      subject: 'Produtividade',
-      A: yieldA > 0 ? Math.min(100, (yieldA / maxY) * 100) : 0,
-      B: yieldB > 0 ? Math.min(100, (yieldB / maxY) * 100) : 0,
-      fullMark: 100,
-    });
-  }
-  const radarData = radarRows.filter((r) => r.A > 0 || r.B > 0);
-
-  const barKpis = [
-    { name: 'Altura (cm)', a: kpisA.avgHeightCm ?? 0, b: kpisB.avgHeightCm ?? 0 },
-    { name: 'Pop. (pl/ha)', a: kpisA.finalPopulationPlHa ?? 0, b: kpisB.finalPopulationPlHa ?? 0 },
-    { name: 'Estande ef.', a: kpisA.estandeEfetivo ?? 0, b: kpisB.estandeEfetivo ?? 0 },
-    { name: 'Eficiência %', a: kpisA.eficienciaPct ?? 0, b: kpisB.eficienciaPct ?? 0 },
-    { name: 'Raiz (cm)', a: kpisA.profundidadeRaizCm ?? 0, b: kpisB.profundidadeRaizCm ?? 0 },
-    { name: 'Peso raiz (g)', a: kpisA.pesoRaizG ?? 0, b: kpisB.pesoRaizG ?? 0 },
-    { name: 'Prod. est. (kg/ha)', a: kpisA.estimatedYieldKgHa ?? 0, b: kpisB.estimatedYieldKgHa ?? 0 },
-  ].filter((r) => r.a > 0 || r.b > 0);
-
-  const ocorrenciasChart = ocorrencias.map((o, i) => ({
-    name: (o.nomeAlvo || `Ocorrência ${i + 1}`).slice(0, 12),
-    incidencia: o.incidenciaPct ?? 0,
-  }));
-
-  const kgPerSack = colheitaParsed?.kgPerSack ?? 60;
-  const precoSaca = economia?.preco_saca_brl;
-
-  const receitaPorLado = useMemo(() => {
-    if (precoSaca == null || precoSaca <= 0 || !colheitaParsed?.sides?.length) return null;
-    return colheitaParsed.sides.map((s) => {
-      let sc: number | null = s.yieldScHa ?? null;
-      if (sc == null && s.yieldKgHa != null && kgPerSack > 0) sc = s.yieldKgHa / kgPerSack;
-      const receita = sc != null ? sc * precoSaca : null;
-      return { side: s.side, sideName: s.sideName, sc, receita };
-    });
-  }, [colheitaParsed, precoSaca, kgPerSack]);
-
-  const handlePrint = () => window.print();
-  const handleExportPdf = async () => {
-    const el = document.getElementById('relatorio-lado-a-lado-content');
-    if (!el) {
-      window.print();
-      return;
-    }
-    try {
-      const { default: html2pdf } = await import('html2pdf.js');
-      await html2pdf()
-        .set({
-          margin: 10,
-          filename: `relatorio-lado-a-lado-${meta.reportId || reportId || 'report'}.pdf`,
-          image: { type: 'jpeg', quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        })
-        .from(el)
-        .save();
-      if (shareToken?.trim()) {
-        void postReportAnalytics({
-          shareToken: shareToken.trim(),
-          eventType: 'download',
-          module: 'avaliacao_lado_a_lado',
-        });
-      }
-    } catch {
-      window.print();
+  const handlePrint = async () => {
+    window.print();
+    if (shareToken?.trim()) {
+      void postReportAnalytics({
+        shareToken: shareToken.trim(),
+        eventType: 'download',
+        module: 'avaliacao_lado_a_lado',
+      });
     }
   };
-
-  const scrollToId = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const treatmentSides = [...(data.treatment_protocol?.sides ?? [])].sort((a, b) => {
-    if (a.side === 'A') return -1;
-    if (b.side === 'A') return 1;
-    return 0;
-  });
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 print:bg-white">
-      <div className="sticky top-0 z-30 flex justify-end gap-2 px-4 py-2 bg-white/95 border-b border-slate-200 print:hidden backdrop-blur-sm">
-        <button
-          type="button"
-          onClick={handlePrint}
-          className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
-        >
-          Imprimir
-        </button>
-        <button
-          type="button"
-          onClick={handleExportPdf}
-          className="px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 border border-emerald-700 rounded-lg hover:bg-emerald-700"
-        >
-          Exportar PDF
-        </button>
-      </div>
+    <div
+      className="min-h-screen px-4 py-6 sm:px-6"
+      style={{ backgroundColor: COLORS.bg, fontFamily: 'Inter, Roboto, sans-serif' }}
+    >
+      <div className="mx-auto flex max-w-[1400px] flex-col gap-6 xl:grid xl:grid-cols-2">
+        <section className="rounded-2xl bg-white p-5 shadow-md">
+          <PanelHeader title="Avaliação de Campo" subtitle={leftSubtitle} onPrint={handlePrint} />
 
-      <div id="relatorio-lado-a-lado-content" className="overflow-x-hidden print:overflow-visible">
-        <header className="relative border-b border-slate-200/80 print:border-slate-200 overflow-hidden">
-          <div
-            className="absolute inset-0 bg-gradient-to-br from-slate-200/90 via-emerald-50/40 to-blue-50/50 pointer-events-none"
-            aria-hidden
-          />
-          <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-10">
-            <div className="flex flex-wrap items-start justify-between gap-6">
-            <div className="flex items-center gap-4">
-                <FortSmartLogo size={52} />
-              <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-emerald-800/90">FortSmart Agro</p>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mt-1">
-                    RELATÓRIO AGRONÔMICO LADO A LADO
-                </h1>
+          <div className="mt-4 text-xs text-slate-500">{subheaderBits.length > 0 ? subheaderBits.join(' · ') : <NullBadge label="monitoramento_cultura: null" />}</div>
+
+          {data.comparativo_intro?.trim() ? (
+            <blockquote className="mt-4 rounded-r-xl border-l-4 border-green-600 bg-green-50 px-4 py-3 text-sm leading-relaxed text-slate-700">
+              {data.comparativo_intro.trim()}
+            </blockquote>
+          ) : null}
+
+          <div className="mt-5 rounded-2xl bg-[linear-gradient(90deg,#143B8A_0%,#15663A_100%)] p-4 text-white">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center">
+              <div className="flex items-center gap-3">
+                <ScoreBadge label={sideAName} value={scoreA} color={COLOR_SIDE_A} />
+              </div>
+              <div className="text-center">
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">Melhor desempenho</div>
+                <div className="mt-1 text-sm font-bold">
+                  {winnerName ? `${winnerName}` : <NullBadge label="conclusion.winner" />}
+                </div>
+                <div className="mt-1 text-xs text-white/70">« « comparação técnica publicada » »</div>
+              </div>
+              <div className="flex items-center justify-end gap-3">
+                <ScoreBadge label={sideBName} value={scoreB} color={COLOR_SIDE_B} />
               </div>
             </div>
-            </div>
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-              {farm.farmName && (
-                <div className="rounded-xl bg-white/90 border border-slate-200/80 px-4 py-3 shadow-sm">
-                  <span className="text-slate-500 text-xs uppercase">Fazenda</span>
-                  <p className="font-semibold text-slate-900">{farm.farmName}</p>
           </div>
-              )}
-              {farm.culture && (
-                <div className="rounded-xl bg-white/90 border border-slate-200/80 px-4 py-3 shadow-sm">
-                  <span className="text-slate-500 text-xs uppercase">Cultura</span>
-                  <p className="font-semibold text-slate-900">{farm.culture}</p>
-            </div>
-          )}
-              {farm.fieldName && (
-                <div className="rounded-xl bg-white/90 border border-slate-200/80 px-4 py-3 shadow-sm">
-                  <span className="text-slate-500 text-xs uppercase">Talhão</span>
-                  <p className="font-semibold text-slate-900">{farm.fieldName}</p>
-                </div>
-              )}
-              {coleta?.estadio && (
-                <div className="rounded-xl bg-white/90 border border-slate-200/80 px-4 py-3 shadow-sm ring-2 ring-blue-100">
-                  <span className="text-slate-500 text-xs uppercase">Estádio</span>
-                  <p className="font-semibold text-blue-900">{coleta.estadio}</p>
-                </div>
-              )}
-              {(farm.city || farm.state) && (
-                <div className="rounded-xl bg-white/90 border border-slate-200/80 px-4 py-3 shadow-sm">
-                  <span className="text-slate-500 text-xs uppercase">Região</span>
-                  <p className="font-semibold text-slate-900">
-                    {[farm.city, farm.state].filter(Boolean).join(' — ')}
-                  </p>
-                </div>
-              )}
-              {(coleta?.dae != null || coleta?.dap != null || coleta?.dataPlantio || meta.createdAt) && (
-                <div className="rounded-xl bg-white/90 border border-slate-200/80 px-4 py-3 shadow-sm">
-                  <span className="text-slate-500 text-xs uppercase">DAE / data</span>
-                  <p className="font-semibold text-slate-900">
-                    {coleta?.dae != null ? `${coleta.dae} DAE` : coleta?.dap != null ? `${coleta.dap} DAP` : ''}
-                    {coleta?.dataPlantio && (
-                      <span className="block text-sm font-normal text-slate-600 mt-0.5">
-                        Plantio: {formatDate(coleta.dataPlantio)}
-                      </span>
-                    )}
-                    {!coleta?.dataPlantio && meta.createdAt && (
-                      <span className="block text-sm font-normal text-slate-600 mt-0.5">
-                        Relatório: {formatDate(meta.createdAt)}
-                      </span>
-                    )}
-                  </p>
-                </div>
-              )}
-              {climateHero && (
-                <div className="rounded-xl bg-white/90 border border-slate-200/80 px-4 py-3 shadow-sm sm:col-span-2 lg:col-span-1">
-                  <span className="text-slate-500 text-xs uppercase">Clima (última aplicação registrada)</span>
-                  <p className="font-medium text-slate-800 mt-1">
-                    {[
-                      climateHero.temperature != null ? `${climateHero.temperature}°C` : null,
-                      climateHero.humidity != null ? `${climateHero.humidity}% umid.` : null,
-                      climateHero.wind != null ? `Vento ${formatWind(climateHero.wind)}` : null,
-                      climateHero.derivaRisco ? `Deriva: ${climateHero.derivaRisco}` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ') || '—'}
-                  </p>
-                </div>
-              )}
-            </div>
-        </div>
-      </header>
 
-        <nav className="sticky top-[49px] z-20 print:hidden border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-sm">
-          <div className="max-w-6xl mx-auto px-2 sm:px-4 flex flex-wrap gap-1 py-2">
-            {NAV_SECTIONS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => scrollToId(item.id)}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors border-b-2 -mb-px ${
-                  activeNav === item.id
-                    ? 'bg-emerald-50 text-emerald-900 border-emerald-600'
-                    : 'text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900'
-                }`}
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {metrics.map((metric) => (
+              <MetricVsCard key={`${metric.label}-${metric.unit}`} metric={metric} />
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+              <TrendingInline />
+              <span className="font-semibold text-slate-900">Previsão Produtividade:</span>
+              <span style={{ color: COLOR_SIDE_A }} className="font-bold">
+                <ValueOrNull value={economics.scA} suffix=" sc/ha" nullLabel="colheita.A" />
+              </span>
+              <span className="text-slate-300">→</span>
+              <span style={{ color: COLOR_SIDE_B }} className="font-bold">
+                <ValueOrNull value={economics.scB} suffix=" sc/ha" nullLabel="colheita.B" />
+              </span>
+              {economics.deltaScHa != null ? (
+                <span className="rounded-full px-2.5 py-1 text-xs font-bold" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+                  +{formatNumber(economics.deltaScHa, { decimals: 0 })} sc/ha
+                </span>
+              ) : null}
+              <span
+                className="rounded-full px-2.5 py-1 text-xs font-bold"
+                style={{
+                  backgroundColor: risk === 'Alto' ? COLORS.redBg : risk === 'Moderado' ? COLORS.amberBg : COLORS.greenBg,
+                  color: risk === 'Alto' ? COLORS.red : risk === 'Moderado' ? COLORS.amber : COLORS.green,
+                }}
               >
-                {item.label}
+                Risco {risk || 'null'}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+              <ClipboardList className="h-4 w-4 text-slate-500" />
+              <span className="font-semibold text-slate-900">ROI Ajustado:</span>
+              <span style={{ color: COLOR_SIDE_A }} className="font-bold">
+                <ValueOrNull value={economics.roiA} suffix="%" nullLabel="roi.A" />
+              </span>
+              <span className="text-slate-300">→</span>
+              <span style={{ color: COLOR_SIDE_B }} className="font-bold">
+                <ValueOrNull value={economics.roiB} suffix="%" nullLabel="roi.B" />
+              </span>
+              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
+                Alertas {alerts.length > 0 ? '!' : 'null'}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <div className="mb-2 text-sm font-bold text-slate-900">Insights &amp; Alertas</div>
+            <div className="space-y-2">
+              {alerts.length > 0 ? alerts.map((alert, index) => <AlertBox key={`${alert.level}-${index}`} alert={alert} />) : <NullBadge label="fortsmart_ai.motor_alertas" />}
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            {LEFT_TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setLeftTab(tab)}
+                className={tabButtonClass(leftTab === tab, COLOR_SIDE_A)}
+                style={leftTab === tab ? { backgroundColor: COLOR_SIDE_A } : undefined}
+              >
+                {tab}
               </button>
             ))}
           </div>
-        </nav>
 
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-14 print:space-y-8">
-          <motion.section id="visao-geral" {...fadeIn} className="scroll-mt-36 space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 border-l-4 border-emerald-600 pl-3">Visão geral do ensaio</h2>
-                <p className="text-sm text-slate-600 mt-2 max-w-xl leading-relaxed">
-                  Contexto executivo e condições — alinhado a relatório técnico profissional.
-                </p>
-              </div>
-            </div>
-            {(farm.fieldName ||
-              farm.culture ||
-              coleta?.estadio ||
-              regionLineFarm ||
-              (climateHero &&
-                (climateHero.temperature != null ||
-                  climateHero.humidity != null ||
-                  climateHero.wind != null ||
-                  climateHero.derivaRisco))) && (
-              <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-r from-slate-50 to-white px-4 py-3 shadow-sm">
-                <div className="flex flex-wrap items-baseline gap-x-1 gap-y-2 text-sm">
-                  {[
-                    farm.fieldName ? { k: 'Talhão', v: farm.fieldName } : null,
-                    [farm.culture, farm.season].filter(Boolean).length
-                      ? { k: 'Cultura', v: [farm.culture, farm.season].filter(Boolean).join(' · ') }
-                      : null,
-                    coleta?.estadio ? { k: 'Estádio', v: coleta.estadio, highlight: true } : null,
-                    regionLineFarm ? { k: 'Região', v: regionLineFarm } : null,
-                    climateHero &&
-                    (climateHero.temperature != null ||
-                      climateHero.humidity != null ||
-                      climateHero.wind != null ||
-                      climateHero.derivaRisco)
-                      ? {
-                          k: 'Condições',
-                          v: [
-                            climateHero.temperature != null ? `${climateHero.temperature}°C` : null,
-                            climateHero.humidity != null ? `${climateHero.humidity}%` : null,
-                            climateHero.wind != null ? `Vento ${formatWind(climateHero.wind)}` : null,
-                            climateHero.derivaRisco || null,
-                          ]
-                            .filter(Boolean)
-                            .join(' · '),
-                        }
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .map((item, idx) => {
-                      if (!item) return null;
-                      const hi = 'highlight' in item && item.highlight;
-                      return (
-                        <React.Fragment key={`${item.k}-${idx}`}>
-                          {idx > 0 ? <span className="text-slate-300 hidden sm:inline px-1 select-none">|</span> : null}
-                          <span className="inline-flex flex-wrap items-baseline gap-x-1.5 mr-2 sm:mr-0">
-                            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{item.k}</span>
-                            <span className={`font-semibold ${hi ? 'text-blue-700' : 'text-slate-900'}`}>{item.v}</span>
-                          </span>
-                        </React.Fragment>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {coleta?.ensaioName && (
-                <div className="rounded-2xl bg-white border border-slate-200/90 p-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase text-slate-500">Ensaio</p>
-                  <p className="font-semibold text-slate-900 mt-1">{coleta.ensaioName}</p>
-                </div>
-              )}
-              {(farm.culture || farm.season) && (
-                <div className="rounded-2xl bg-white border border-slate-200/90 p-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase text-slate-500">Cultura / safra</p>
-                  <p className="font-semibold text-slate-900 mt-1">
-                    {[farm.culture, farm.season].filter(Boolean).join(' · ') || '—'}
-              </p>
-            </div>
-              )}
-              {(meta.generatedBy?.name || meta.generatedBy?.role) && (
-                <div className="rounded-2xl bg-white border border-slate-200/90 p-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase text-slate-500">Responsável técnico</p>
-                  <p className="font-semibold text-slate-900 mt-1">{meta.generatedBy?.name || '—'}</p>
-                  {meta.generatedBy?.role && <p className="text-xs text-slate-600 mt-0.5">{meta.generatedBy.role}</p>}
-            </div>
-              )}
-              {farm.objective && (
-                <div className="rounded-2xl bg-white border border-slate-200/90 p-4 shadow-sm sm:col-span-2 lg:col-span-3">
-                  <p className="text-xs font-semibold uppercase text-slate-500">Objetivo do ensaio</p>
-                  <p className="text-sm text-slate-800 mt-1 leading-relaxed">{farm.objective}</p>
-                </div>
-              )}
-              {climateHero &&
-                (climateHero.temperature != null ||
-                  climateHero.humidity != null ||
-                  climateHero.wind != null ||
-                  climateHero.derivaRisco) && (
-                  <div className="rounded-2xl bg-white border border-slate-200/90 p-4 shadow-sm sm:col-span-2 lg:col-span-3">
-                    <p className="text-xs font-semibold uppercase text-slate-500">Condições (última aplicação com clima registrado)</p>
-                    <p className="text-sm text-slate-800 mt-1">
-                      {[
-                        climateHero.temperature != null ? `${climateHero.temperature}°C` : null,
-                        climateHero.humidity != null ? `${climateHero.humidity}% umidade` : null,
-                        climateHero.wind != null ? `Vento ${formatWind(climateHero.wind)}` : null,
-                        climateHero.derivaRisco ? `Deriva: ${climateHero.derivaRisco}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  </div>
-                )}
-              {daaTimeline.length > 0 && (
-                <div className="rounded-2xl bg-emerald-50/80 border border-emerald-200/80 p-4 shadow-sm sm:col-span-2 lg:col-span-3">
-                  <p className="text-xs font-semibold uppercase text-emerald-900">DAA registrados nas aplicações</p>
-                  <p className="text-sm text-emerald-950 mt-1 font-medium">{daaTimeline.map((d) => `${d} DAA`).join(' · ')}</p>
-                </div>
-              )}
-            </div>
-            <h3 className="text-base font-bold text-slate-900 border-l-4 border-slate-300 pl-3">Resumo executivo</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm space-y-4">
-                {(conclusion.summary || resumo?.conclusaoCurta) && (
+          <div className="mt-4">
+            {leftTab === 'Geral' ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase text-slate-500 mb-1">Resultado</p>
-                    <p className="text-lg font-semibold text-slate-900 leading-snug">
-                      {conclusion.summary || resumo?.conclusaoCurta}
-                    </p>
+                    <div className="text-sm font-bold text-slate-900">Eventos de Aplicação por DAA</div>
+                    <div className="mt-1 text-xs text-amber-700">Série real disponível no JSON: contagem de eventos por `applications[].daa`.</div>
+                  </div>
+                </div>
+                {applicationSeries?.length ? (
+                  <div className="mt-4 h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={applicationSeries} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                        <XAxis dataKey="dateLabel" tick={{ fontSize: 10, fill: COLORS.muted }} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: COLORS.muted }} />
+                        <Tooltip
+                          formatter={(value: number, name: string) => [value, name === 'sideA' ? sideAName : sideBName]}
+                          labelFormatter={(_, payload) => {
+                            const row = payload?.[0]?.payload as { daa?: number } | undefined;
+                            return row?.daa != null ? `DAA ${row.daa}` : 'DAA';
+                          }}
+                        />
+                        <Legend formatter={(value) => (value === 'sideA' ? sideAName : sideBName)} />
+                        <Area type="monotone" dataKey="sideA" name="sideA" stroke={COLORS.yellow} fill={COLORS.yellow} fillOpacity={0.18} strokeWidth={2}>
+                          <LabelList dataKey="sideA" position="top" fill={COLORS.yellow} fontSize={10} />
+                        </Area>
+                        <Area type="monotone" dataKey="sideB" name="sideB" stroke={COLOR_SIDE_A} fill={COLOR_SIDE_A} fillOpacity={0.08} strokeWidth={2}>
+                          <LabelList dataKey="sideB" position="top" fill={COLOR_SIDE_A} fontSize={10} />
+                        </Area>
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
+                    <NullBadge label="applications: null" />
                   </div>
                 )}
-                {diagnosis?.problemaPrincipal && (
-                  <p className="text-sm text-slate-700">
-                    <span className="font-semibold text-slate-800">Diagnóstico: </span>
-                    {diagnosis.problemaPrincipal}
-                  </p>
-                )}
-                {!conclusion.summary && !resumo?.conclusaoCurta && !diagnosis?.problemaPrincipal && (
-                  <p className="text-sm text-slate-500">Nenhum resumo textual registrado neste relatório.</p>
+              </div>
+            ) : null}
+
+            {leftTab === 'Estatística' ? <StatsTable rows={statisticalRows} /> : null}
+
+            {leftTab === 'Aplicações' ? (
+              <div className="space-y-2">
+                {data.applications?.length ? (
+                  data.applications.map((item, index) => {
+                    const names = item.products
+                      ?.map((product) => firstText(product.nomeComercial, product.nomeAtivo, product.classe))
+                      .filter(Boolean)
+                      .join(', ');
+                    return (
+                      <div
+                        key={`${item.side}-${item.daa}-${index}`}
+                        className="rounded-xl border px-3 py-3 text-sm"
+                        style={{
+                          backgroundColor: item.side === 'A' ? COLORS.blueBg : COLORS.greenBg,
+                          borderColor: item.side === 'A' ? '#BFDBFE' : '#BBF7D0',
+                        }}
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className="rounded-full px-2 py-1 text-[11px] font-bold text-white"
+                            style={{ backgroundColor: item.side === 'A' ? COLOR_SIDE_A : COLOR_SIDE_B }}
+                          >
+                            Lado {item.side}
+                          </span>
+                          <span className="font-semibold text-slate-900">DAA {item.daa ?? <NullBadge label="null" />}</span>
+                          <span className="text-slate-500">{item.type || <NullBadge label="type" />}</span>
+                          <span className="text-slate-500">{names || <NullBadge label="products" />}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <NullBadge label="applications: null" />
                 )}
               </div>
-              <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
-                <p className="text-xs font-semibold uppercase text-slate-500 mb-3">Indicadores-chave (KPIs)</p>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex justify-between gap-4">
-                    <span className="text-slate-600">Produtividade est. (kg/ha)</span>
-                    <span>
-                      <span className="font-semibold" style={{ color: COLOR_SIDE_A }}>
-                        {kpisA.estimatedYieldKgHa != null ? formatNumber(kpisA.estimatedYieldKgHa, { decimals: 0 }) : '—'}
+            ) : null}
+
+            {leftTab === 'Fitossanidade' ? (
+              <div className="space-y-2">
+                {data.ocorrencias?.length ? (
+                  data.ocorrencias.map((item, index) => (
+                    <div key={`${item.nomeAlvo}-${index}`} className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
+                      <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-bold text-amber-800">{item.tipo || 'Ocorrência'}</span>
+                      <span className="font-semibold text-slate-900">{item.nomeAlvo || <NullBadge label="nomeAlvo" />}</span>
+                      <span className="text-slate-500">
+                        <ValueOrNull value={item.incidenciaPct} suffix="% incidência" nullLabel="incidenciaPct" />
                       </span>
-                      {' vs '}
-                      <span className="font-semibold" style={{ color: COLOR_SIDE_B }}>
-                        {kpisB.estimatedYieldKgHa != null ? formatNumber(kpisB.estimatedYieldKgHa, { decimals: 0 }) : '—'}
-                      </span>
-                    </span>
-                  </li>
-                  {diffYield != null && Math.abs(diffYield) >= 0.5 && yieldA > 0 && (
-                    <li className="text-slate-700">
-                      Diferença entre tratamentos (base kg/ha):{' '}
-                      <strong>
-                        {diffYield > 0 ? '+' : ''}
-                        {diffYield.toFixed(1)}% ({sideBName} vs {sideAName})
-                      </strong>
-                    </li>
+                      <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">{item.severidade || <NullBadge label="severidade" />}</span>
+                    </div>
+                  ))
+                ) : (
+                  <NullBadge label="ocorrencias: null" />
+                )}
+              </div>
+            ) : null}
+
+            {leftTab === 'Diagnóstico' ? (
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                <div>
+                  <span className="font-semibold text-slate-900">Problema:</span>{' '}
+                  {firstText(data.diagnosis?.problemaPrincipal, data.resumo?.conclusaoCurta) || <NullBadge label="problemaPrincipal" />}
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-900">Causa provável:</span>{' '}
+                  {data.diagnosis?.causaProvavel || <NullBadge label="causaProvavel" />}
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-900">Urgência:</span>{' '}
+                  {data.diagnosis?.urgencia ? (
+                    <span className="rounded-full bg-red-100 px-2 py-1 text-[11px] font-bold text-red-700">{data.diagnosis.urgencia}</span>
+                  ) : (
+                    <NullBadge label="urgencia" />
                   )}
-                  <li className="flex justify-between gap-4">
-                    <span className="text-slate-600">População (pl/ha)</span>
-                    <span className="font-medium text-slate-800">
-                      {formatNumber(popA, { decimals: 0 })} / {formatNumber(popB, { decimals: 0 })}
-                    </span>
-                  </li>
-              </ul>
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-900">Plano:</span>{' '}
+                  {data.diagnosis?.planoAcao || <NullBadge label="planoAcao" />}
+                </div>
+              </div>
+            ) : null}
+
+            {leftTab === 'Fotos' ? (
+              <PhotosGrid sideAName={sideAName} sideBName={sideBName} photosA={data.sideA?.photos} photosB={data.sideB?.photos} />
+            ) : null}
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-2xl bg-white shadow-md">
+          <div className="p-5">
+            <PanelHeader title="Relatório de Avaliação" subtitle={rightSubtitle} onPrint={handlePrint} />
+          </div>
+
+          <div
+            className="relative min-h-[124px] overflow-hidden px-5 py-4 text-white"
+            style={{
+              backgroundImage: heroPhoto?.url
+                ? `linear-gradient(180deg, rgba(15,23,42,0.4), rgba(15,23,42,0.7)), url(${heroPhoto.url})`
+                : 'linear-gradient(90deg, #14532d 0%, #0f172a 100%)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          >
+            <div className="text-lg font-bold">
+              {data.conclusion?.headline || (winnerName ? `${winnerName} - Superioridade Técnica e Econômica` : <NullBadge label="conclusion.headline" />)}
+            </div>
+            <div className="mt-1 text-xs text-white/80">
+              {winner != null ? `Fonte visual: conclusion.winner = ${winner}` : <NullBadge label="conclusion.winner" />}
             </div>
           </div>
-          </motion.section>
 
-          <ExperimentDesignSection data={data} sectionId="ensaio-design" />
-
-          <FieldCollectionModulesSection data={data} sectionId="coleta-campo-modulos" />
-
-          <motion.section id="comparativo" {...fadeIn} className="scroll-mt-36">
-            <h2 className="text-xl font-bold text-slate-900 mb-1 text-center tracking-tight">Comparativo de desempenho</h2>
-            <p className="text-sm text-slate-500 text-center mb-6 max-w-2xl mx-auto leading-relaxed">
-              Fotos com legenda técnica e tabela única de indicadores — evita repetir os mesmos números nas duas colunas.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-white ring-1 ring-slate-200/80">
-                <div className="bg-blue-800 text-white px-4 py-2.5 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-95">Manejo padrão</p>
-                  <p className="font-bold text-base mt-0.5 leading-tight">{sideAName}</p>
-                  {subCaptionA ? <p className="text-[11px] opacity-90 mt-1 font-normal leading-snug">{subCaptionA}</p> : null}
-                </div>
-                <div className="p-2 sm:p-3">
-                  {heroPhotoA ? (
-                    <PhotoWithHotspots
-                      ph={heroPhotoA}
-                      accentClass="text-slate-600"
-                      structuredLegend
-                      legendExtras={{
-                        daaLine: comparativoDaaLine,
-                        regionLine: regionLineFarm,
-                        technicalNote: phenology?.sideA?.observacao,
-                      }}
-                    />
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 aspect-[4/3] flex items-center justify-center text-sm text-slate-400">
-                      Sem foto para este manejo
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-white ring-1 ring-slate-200/80">
-                <div className="bg-emerald-800 text-white px-4 py-2.5 text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-95">Manejo OFA</p>
-                  <p className="font-bold text-base mt-0.5 leading-tight">{sideBName}</p>
-                  {subCaptionB ? <p className="text-[11px] opacity-90 mt-1 font-normal leading-snug">{subCaptionB}</p> : null}
-                </div>
-                <div className="p-2 sm:p-3">
-                  {heroPhotoB ? (
-                    <PhotoWithHotspots
-                      ph={heroPhotoB}
-                      accentClass="text-slate-600"
-                      structuredLegend
-                      legendExtras={{
-                        daaLine: comparativoDaaLine,
-                        regionLine: regionLineFarm,
-                        technicalNote: phenology?.sideB?.observacao,
-                      }}
-                    />
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 aspect-[4/3] flex items-center justify-center text-sm text-slate-400">
-                      Sem foto para este manejo
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            {comparativoMetricRows.length > 0 ? (
-              <div className="mt-4 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">Indicadores — leitura lado a lado</p>
-                </div>
-            <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                <thead>
-                      <tr className="border-b border-slate-200 text-left text-[10px] text-slate-500 uppercase tracking-wide">
-                        <th className="py-2.5 pl-4 pr-2 font-semibold w-[40%]">Indicador</th>
-                        <th className="py-2.5 px-2 font-semibold" style={{ color: COLOR_SIDE_A }}>
-                          {sideAName}
-                        </th>
-                        <th className="py-2.5 pr-4 pl-2 font-semibold" style={{ color: COLOR_SIDE_B }}>
-                          {sideBName}
-                        </th>
-                  </tr>
-                </thead>
-                <tbody>
-                      {comparativoMetricRows.map((row, i) => (
-                        <tr key={i} className="border-b border-slate-100 last:border-0">
-                          <td className="py-2 pl-4 pr-2 text-slate-600 align-top">{row.label}</td>
-                          <td className="py-2 px-2 font-semibold align-top tabular-nums" style={{ color: COLOR_SIDE_A }}>
-                            {row.a}
-                      </td>
-                          <td className="py-2 pr-4 pl-2 font-semibold align-top tabular-nums" style={{ color: COLOR_SIDE_B }}>
-                            {row.b}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-              </div>
-            ) : null}
-            {insightComparativo ? (
-              <div className="mt-5 rounded-xl bg-slate-100 border border-slate-200 px-5 py-3.5 text-sm text-slate-800 text-center leading-relaxed">
-                {insightComparativo}
-              </div>
-            ) : null}
-            {(coleta?.dataPlantio || daaTimeline.length > 0) && (
-              <div className="mt-6">
-                <p className="text-xs font-semibold uppercase text-slate-500 text-center mb-2.5">Linha do tempo</p>
-                <div className="flex flex-wrap justify-center items-center gap-2">
-                  {coleta?.dataPlantio && (
-                    <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-white text-slate-700 border border-slate-200 shadow-sm">
-                      Pré · plantio {formatDate(coleta.dataPlantio)}
-                    </span>
-                  )}
-                  {daaTimeline.map((d) => (
-                    <span
-                      key={d}
-                      className="px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-600 text-white shadow-sm"
-                    >
-                      {d} DAA
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </motion.section>
-
-          <motion.section id="avaliacoes-daa" {...fadeIn} className="scroll-mt-36">
-            <h2 className="text-lg font-bold text-slate-900 mb-2 border-l-4 border-indigo-600 pl-3">Avaliações por momento (DAA)</h2>
-            <p className="text-sm text-slate-600 mb-6">
-              Linha do tempo, evolução visual e registro por momento. O comparativo numérico completo permanece consolidado nas demais seções até existir série por visita no JSON.
-            </p>
-            {evoTabs.length === 0 ? (
-              <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
-                Inclua <strong>applications</strong> com <strong>daa</strong> e data, ou KPIs no relatório, para ativar a linha do tempo e o gráfico de evolução.
-              </p>
-            ) : (
-              <div className="space-y-10">
-                {evolucaoPack && chartRowsEvo.length >= 2 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.45 }}
-                    className="relative overflow-hidden rounded-3xl border border-white/60 shadow-2xl shadow-slate-900/10"
-                  >
-                    <div
-                      className="absolute inset-0 scale-105"
-                      style={{
-                        background:
-                          'radial-gradient(ellipse 80% 60% at 20% 30%, rgb(34 197 94 / 0.22), transparent 50%), radial-gradient(ellipse 70% 50% at 85% 75%, rgb(59 130 246 / 0.2), transparent 45%), linear-gradient(115deg, rgb(15 23 42) 0%, rgb(20 83 45 / 0.55) 42%, rgb(30 58 138 / 0.58) 100%)',
-                      }}
-                      aria-hidden
-                    />
-                    <div className="relative p-4 sm:p-6 md:p-8">
-                      <div className="backdrop-blur-md bg-white/80 rounded-2xl border border-white/70 shadow-lg px-4 py-5 sm:px-6 sm:py-6 space-y-6">
-                        <div className="text-center space-y-1">
-                          <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Evolução da avaliação</h3>
-                          <p className="text-xs text-slate-500">
-                            {evolucaoPack.labelSerieControle} · {evolucaoPack.labelSerieVigor} — escala 0 a 100
-                          </p>
-                        </div>
-
-                        <div className="flex justify-center">
-                          <div className="inline-flex flex-wrap justify-center gap-1 rounded-full bg-slate-200/90 p-1 shadow-inner">
-                            {evoTabs.map((t) => {
-                              const active = momentKey === t.key;
-                              return (
-                                <motion.button
-                                  key={t.key}
-                                  type="button"
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                  onClick={() => setMomentKey(t.key)}
-                                  className={`rounded-full px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all min-w-[7rem] ${
-                                    active
-                                      ? 'bg-blue-600 text-white shadow-md'
-                                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
-                                  }`}
-                                >
-                                  <span className="block leading-tight">{t.label}</span>
-                                  {t.dateSub ? (
-                                    <span className={`block text-[10px] font-normal mt-0.5 ${active ? 'text-blue-100' : 'text-slate-500'}`}>
-                                      {formatDate(t.dateSub)}
-                                    </span>
-                                  ) : null}
-                                </motion.button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        <div className="h-[280px] w-full">
-                          <ResponsiveContainer width="100%" height={280}>
-                            <LineChart data={chartRowsEvo} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="rgb(148 163 184 / 0.35)" vertical={false} />
-                              <XAxis
-                                dataKey="xLabel"
-                                tick={{ fontSize: 10, fill: '#64748b' }}
-                                interval={0}
-                                height={48}
-                                tickLine={false}
-                              />
-                              <YAxis domain={evoYDomain} tick={{ fontSize: 10, fill: '#64748b' }} width={36} />
-                              <Tooltip
-                                contentStyle={{
-                                  borderRadius: 12,
-                                  border: '1px solid rgb(226 232 240)',
-                                  boxShadow: '0 10px 40px -10px rgb(0 0 0 / 0.2)',
-                                }}
-                              />
-                              <Legend wrapperStyle={{ fontSize: 12 }} />
-                              <Line
-                                type="natural"
-                                dataKey="controle"
-                                name={evolucaoPack.labelSerieControle}
-                                stroke={COLOR_SIDE_A}
-                                strokeWidth={2.5}
-                                dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
-                                activeDot={{ r: 6 }}
-                              />
-                              <Line
-                                type="natural"
-                                dataKey="vigor"
-                                name={evolucaoPack.labelSerieVigor}
-                                stroke={COLOR_SIDE_B}
-                                strokeWidth={2.5}
-                                dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
-                                activeDot={{ r: 6 }}
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-
-                        {evolucaoPack.usesInterpolation && (
-                          <p className="text-[11px] text-slate-500 text-center leading-relaxed px-2">
-                            Trajetória entre os pontos da linha do tempo usa <strong>interpolação</strong> a partir dos KPIs consolidados do relatório.
-                            Com <strong>avaliações por DAA</strong> no JSON, cada aba poderá refletir medições reais da visita.
-              </p>
-            )}
-
-                        <div className="border-t border-slate-200/90 pt-6">
-                          <p className="text-xs font-semibold uppercase text-slate-500 mb-4 text-center">Linha do tempo — contexto</p>
-                          <div className="space-y-0 max-w-xl mx-auto">
-                            {chartRowsEvo.map((row, idx) => {
-                              const active = momentKey === row.name;
-                              const activeIdx = chartRowsEvo.findIndex((r) => r.name === momentKey);
-                              const isPast = activeIdx >= 0 && idx < activeIdx;
-                              const line =
-                                row.name === 'pre'
-                                  ? 'Avaliação inicial antes da aplicação do manejo (linha de base).'
-                                  : row.name === 'consolidado'
-                                    ? 'Fechamento com os indicadores consolidados registrados no relatório.'
-                                    : `Aproximadamente ${row.name} dias após a aplicação — confira abaixo as aplicações e o clima deste momento, quando houver.`;
-                              return (
-                                <motion.div
-                                  key={row.name}
-                                  initial={{ opacity: 0, x: -8 }}
-                                  whileInView={{ opacity: 1, x: 0 }}
-                                  viewport={{ once: true }}
-                                  className="flex gap-4"
-                                >
-                                  <div className="flex flex-col items-center w-8 shrink-0 pt-1">
-                                    <motion.div
-                                      whileHover={{ scale: 1.15 }}
-                                      className={`w-3.5 h-3.5 rounded-full border-2 shadow-sm z-10 ${
-                                        active
-                                          ? 'bg-blue-600 border-blue-200 scale-110'
-                                          : isPast
-                                            ? 'bg-slate-300 border-white'
-                                            : 'bg-white border-slate-300'
-                                      }`}
-                                    />
-                                    {idx < chartRowsEvo.length - 1 ? (
-                                      <div className="w-0.5 flex-1 min-h-[32px] bg-gradient-to-b from-slate-200 to-slate-100" />
-                                    ) : null}
-                                  </div>
-                                  <div className={`pb-6 ${active ? 'ring-2 ring-blue-100 rounded-xl -mx-2 px-2 -mt-1 pt-1 bg-blue-50/40' : ''}`}>
-                                    <p className="text-sm font-semibold text-slate-900 whitespace-pre-line">{row.xLabel}</p>
-                                    <p className="text-sm text-slate-600 mt-1 leading-relaxed">{line}</p>
-                                    {active && insightComparativo ? (
-                                      <p className="text-xs text-slate-500 mt-2 italic border-l-2 border-blue-200 pl-2">{insightComparativo}</p>
-                                    ) : null}
-                                  </div>
-                                </motion.div>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {(heroPhotoA?.url || heroPhotoB?.url) && (
-                          <motion.div
-                            whileHover={{ scale: 1.005 }}
-                            className="rounded-2xl overflow-hidden border border-slate-200/80 shadow-md bg-slate-100"
-                          >
-                            <div className="relative w-full aspect-[21/9] min-h-[140px]">
-                              <img
-                                src={(heroPhotoA?.url || heroPhotoB?.url) as string}
-                                alt="Evidência em campo"
-                                className="absolute inset-0 w-full h-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 to-transparent pointer-events-none" />
-                              <p className="absolute bottom-3 left-4 right-4 text-xs sm:text-sm text-white font-medium drop-shadow">
-                                Evidência visual do ensaio (foto principal registrada no relatório)
-                              </p>
-                            </div>
-                          </motion.div>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
+          <div className="space-y-4 p-5">
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+              <ScoreBadge label="Manejo A" value={scoreA} color={COLOR_SIDE_A} compact />
+              <div className="flex-1 text-center text-sm text-slate-600">
+                {deltaScore != null ? (
+                  <>
+                    <span className="font-semibold text-slate-900">↔ {Math.abs(deltaScore)} pontos</span>
+                    <div className="mt-1 text-xs text-slate-500">{deltaScore > 0 ? 'B > A' : deltaScore < 0 ? 'A > B' : 'A = B'}</div>
+                  </>
+                ) : (
+                  <NullBadge label="score delta" />
                 )}
+              </div>
+              <ScoreBadge label="Manejo B" value={scoreB} color={COLOR_SIDE_B} compact />
+            </div>
 
-                {!evolucaoPack && (
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {evoTabs.map((t) => {
-                      const active = momentKey === t.key;
-                      return (
-                        <motion.button
-                          key={t.key}
-                          type="button"
-                          whileHover={{ scale: 1.03 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => setMomentKey(t.key)}
-                          className={`px-4 py-2.5 rounded-xl text-sm font-semibold border shadow-sm transition-colors ${
-                            active
-                              ? 'bg-blue-600 text-white border-blue-700 ring-2 ring-blue-200'
-                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                          }`}
-                        >
-                          {t.label}
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                )}
+            <div className="space-y-2">
+              <CompactKpiRow icon={<Sprout className="h-4 w-4" />} label="Previsão de Produtividade">
+                <span style={{ color: COLOR_SIDE_A }} className="font-bold">
+                  <ValueOrNull value={economics.scA} suffix=" sc/ha" nullLabel="A" />
+                </span>{' '}
+                vs{' '}
+                <span style={{ color: COLOR_SIDE_B }} className="font-bold">
+                  <ValueOrNull value={economics.scB} suffix=" sc/ha" nullLabel="B" />
+                </span>
+                {economics.deltaScHa != null ? (
+                  <span className="ml-2 font-bold text-green-700">(+{formatNumber(economics.deltaScHa, { decimals: 0 })} sc/ha)</span>
+                ) : null}
+              </CompactKpiRow>
+              <CompactKpiRow icon={<ClipboardList className="h-4 w-4" />} label="ROI Ajustado">
+                <span className="font-bold text-green-700">
+                  <ValueOrNull value={economics.roiA} suffix="%" nullLabel="roi.A" />
+                </span>{' '}
+                vs{' '}
+                <span className="font-bold text-green-700">
+                  <ValueOrNull value={economics.roiB} suffix="%" nullLabel="roi.B" />
+                </span>
+              </CompactKpiRow>
+              <CompactKpiRow icon={<TriangleAlert className="h-4 w-4" />} label="Risco">
+                {risk || <NullBadge label="ocorrencias" />}
+              </CompactKpiRow>
+            </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-                  {momentKey === 'pre' ? (
-                    <div className="text-sm text-slate-700 space-y-2">
-                      <p className="font-semibold text-slate-900">Referência pré-aplicação</p>
-                      {coleta?.dataPlantio ? (
-                        <p>
-                          Data de plantio: <strong>{formatDate(coleta.dataPlantio)}</strong>
-                          {coleta.dae != null && <span className="text-slate-600"> · {coleta.dae} DAE</span>}
-                          {coleta.dap != null && <span className="text-slate-600"> · {coleta.dap} DAP</span>}
-                        </p>
-                      ) : (
-                        <p className="text-slate-500">Sem data de plantio registrada — ponto de leitura antes dos DAA com aplicações.</p>
-                      )}
-                    </div>
-                  ) : momentKey === 'consolidado' ? (
-                    <div className="text-sm text-slate-700 space-y-2">
-                      <p className="font-semibold text-slate-900">Visão consolidada</p>
-                      <p className="text-slate-600">
-                        Corresponde ao fechamento da série exibida no gráfico. Detalhes numéricos A vs B estão em <strong>Comparativo</strong> e{' '}
-                        <strong>KPIs</strong>.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <p className="text-sm font-semibold text-slate-900">
-                        Aplicações em <span className="text-blue-700">{momentKey} DAA</span>
-                      </p>
-                      {appsForMoment.length === 0 ? (
-                        <p className="text-sm text-slate-500">Nenhum evento de aplicação com este DAA no JSON.</p>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-xs font-bold uppercase mb-2" style={{ color: COLOR_SIDE_A }}>
-                              {sideAName}
-                            </p>
-                            <div className="space-y-3">
-                              {appsForMoment
-                                .filter((e) => e.side === 'A')
-                                .map((ev, i) => (
-                                  <ExecutionEventCard key={ev.id || `a-${i}`} ev={ev} compact />
-                                ))}
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold uppercase mb-2" style={{ color: COLOR_SIDE_B }}>
-                              {sideBName}
-                            </p>
-                            <div className="space-y-3">
-                              {appsForMoment
-                                .filter((e) => e.side === 'B')
-                                .map((ev, i) => (
-                                  <ExecutionEventCard key={ev.id || `b-${i}`} ev={ev} compact />
-                                ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+            <div className="flex flex-wrap gap-2">
+              {RIGHT_TABS.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setRightTab(tab)}
+                  className={tabButtonClass(rightTab === tab, COLOR_SIDE_A)}
+                  style={rightTab === tab ? { backgroundColor: COLOR_SIDE_A } : undefined}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
 
-                  {(heroPhotoA?.url || heroPhotoB?.url) && (
-                    <div className="border-t border-slate-100 pt-5 space-y-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 text-center">
-                        Evidência no momento selecionado · legenda técnica
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white">
-                          <div className="bg-blue-800 text-white text-center text-[10px] font-semibold uppercase tracking-wider py-2">
-                            Manejo padrão · {sideAName}
-                          </div>
-                          <div className="p-2">
-                            {heroPhotoA ? (
-                              <PhotoWithHotspots
-                                ph={heroPhotoA}
-                                accentClass="text-slate-600"
-                                structuredLegend
-                                legendExtras={{
-                                  daaLine: momentLegendDaaLine,
-                                  regionLine: regionLineFarm,
-                                  technicalNote: phenology?.sideA?.observacao,
-                                }}
-                              />
-                            ) : (
-                              <div className="aspect-[4/3] flex items-center justify-center text-xs text-slate-400 bg-slate-50 rounded-lg">
-                                Sem foto
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white">
-                          <div className="bg-emerald-800 text-white text-center text-[10px] font-semibold uppercase tracking-wider py-2">
-                            Manejo OFA · {sideBName}
-                          </div>
-                          <div className="p-2">
-                            {heroPhotoB ? (
-                              <PhotoWithHotspots
-                                ph={heroPhotoB}
-                                accentClass="text-slate-600"
-                                structuredLegend
-                                legendExtras={{
-                                  daaLine: momentLegendDaaLine,
-                                  regionLine: regionLineFarm,
-                                  technicalNote: phenology?.sideB?.observacao,
-                                }}
-                              />
-                            ) : (
-                              <div className="aspect-[4/3] flex items-center justify-center text-xs text-slate-400 bg-slate-50 rounded-lg">
-                                Sem foto
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {evolutionData && evolutionData.length >= 2 && (
-                  <motion.div
-                    whileHover={{ boxShadow: '0 12px 40px -12px rgb(0 0 0 / 0.12)' }}
-                    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm transition-shadow"
-                  >
-                    <h3 className="text-base font-semibold text-slate-900 mb-1">Aplicações registradas por DAA (contagem)</h3>
-                    <p className="text-xs text-slate-500 mb-4">Eventos por lado e por dias após aplicação — métrica operacional, distinta das curvas de desempenho acima.</p>
-                    <div className="h-56 w-full" style={{ minHeight: 200 }}>
-                      <ResponsiveContainer width="100%" height={200}>
-                        <LineChart data={evolutionData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                          <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                          <Tooltip />
+            {rightTab === 'KPI' ? (
+              <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-sm font-bold text-slate-900">Comparativo de Desempenho</div>
+                  <div className="mt-1 text-xs text-slate-500">Radar normalizado com base nos KPIs reais publicados.</div>
+                  {radarRows ? (
+                    <div className="mt-4 h-72 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart data={radarRows}>
+                          <PolarGrid stroke="#E2E8F0" />
+                          <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: COLORS.muted }} />
+                          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9 }} />
+                          <Radar name={sideAName} dataKey="A" stroke={COLOR_SIDE_A} fill={COLOR_SIDE_A} fillOpacity={0.18} strokeWidth={2} />
+                          <Radar name={sideBName} dataKey="B" stroke={COLOR_SIDE_B} fill={COLOR_SIDE_B} fillOpacity={0.18} strokeWidth={2} />
                           <Legend />
-                          <Line type="monotone" dataKey="A" name={`${sideAName} (nº)`} stroke={COLOR_SIDE_A} strokeWidth={2} dot />
-                          <Line type="monotone" dataKey="B" name={`${sideBName} (nº)`} stroke={COLOR_SIDE_B} strokeWidth={2} dot />
-                        </LineChart>
+                        </RadarChart>
                       </ResponsiveContainer>
                     </div>
-                  </motion.div>
-                )}
-              </div>
-            )}
-          </motion.section>
-
-          <motion.section id="aplicacoes" {...fadeIn} className="scroll-mt-36">
-            <h2 className="text-lg font-bold text-slate-900 mb-2 border-l-4 border-amber-500 pl-3">Aplicações em campo</h2>
-            <p className="text-sm text-slate-600 mb-6">
-              Rastreabilidade por data, estágio, responsável, clima e produtos (inclui classe, ativo, dose e custo/ha quando informados).
-            </p>
-            {!hasExec ? (
-              <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
-                Nenhuma aplicação registrada neste relatório.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {applications.length > 0 ? (
-                  applications.map((ev, i) => (
-                    <ExecutionEventCard key={ev.id || i} ev={ev} />
-                  ))
-                ) : (
-                  aplicacoes.map((a, i) => (
-                    <div
-                      key={i}
-                      className="flex gap-4 items-start border-l-4 border-slate-300 pl-4 py-3 bg-white rounded-r-xl border border-slate-200 shadow-sm"
-                    >
-                      <div className="text-sm font-medium text-slate-600 shrink-0 w-28">{formatDate(a.data)}</div>
-                      <div className="text-sm min-w-0">
-                        <span className="font-semibold text-slate-900">{a.tipo || 'Aplicação'}</span>
-                        {a.classe && <span className="text-slate-500"> · {a.classe}</span>}
-                        {a.doseResumo && <span className="text-slate-600"> · Dose: {a.doseResumo}</span>}
-                        <p className="text-slate-600 mt-1 break-words">{a.produtos || '—'}</p>
-                        <p className="text-xs text-amber-700 mt-2">Formato resumido (legado) — sem detalhe climático/técnico no JSON.</p>
-                      </div>
+                  ) : (
+                    <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
+                      <NullBadge label="kpis: null" />
                     </div>
-                  ))
-                )}
-              </div>
-            )}
-          </motion.section>
+                  )}
+                </div>
 
-          <PlantEvaluationDashboardSection data={data} sideAName={sideAName} sideBName={sideBName} />
-
-          <motion.section id="kpis" {...fadeIn} className="scroll-mt-36 space-y-10">
-            <h2 className="text-lg font-bold text-slate-900 border-l-4 border-violet-600 pl-3">KPIs e análise agronômica</h2>
-            <p className="text-sm text-slate-600">
-              Indicadores consolidados, radar comparativo e critérios numéricos — leitura técnica centralizada.
-            </p>
-
-            {(perfIdxA != null || perfIdxB != null || pressaoFito != null) && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {perfIdxA != null && (
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className="rounded-2xl border border-blue-100 bg-gradient-to-br from-white to-blue-50/80 p-5 shadow-sm"
-                  >
-                    <p className="text-xs font-semibold uppercase text-slate-500">Índice geral (A)</p>
-                    <p className="text-3xl font-bold mt-1" style={{ color: COLOR_SIDE_A }}>
-                      {perfIdxA.toFixed(0)}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-2">Peso: estande 40% · vigor 30% · raiz 30% (calculado no relatório web).</p>
-                  </motion.div>
-                )}
-                {perfIdxB != null && (
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50/80 p-5 shadow-sm"
-                  >
-                    <p className="text-xs font-semibold uppercase text-slate-500">Índice geral (B)</p>
-                    <p className="text-3xl font-bold mt-1" style={{ color: COLOR_SIDE_B }}>
-                      {perfIdxB.toFixed(0)}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-2">Mesma fórmula do lado A para comparar manejos.</p>
-                  </motion.div>
-                )}
-                {pressaoFito != null && (
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className="rounded-2xl border border-orange-100 bg-white p-5 shadow-sm"
-                  >
-                    <p className="text-xs font-semibold uppercase text-slate-500">Pressão fitossanitária (média)</p>
-                    <p className="text-3xl font-bold text-orange-700 mt-1">{pressaoFito.toFixed(0)}%</p>
-                    <p className="text-xs text-slate-500 mt-2">Média das incidências declaradas nas ocorrências.</p>
-                  </motion.div>
-                )}
-              </div>
-            )}
-
-            <div>
-              <h3 className="text-base font-semibold text-slate-800 mb-4">Indicadores agronômicos</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'Altura média (cm)', a: kpisA.avgHeightCm, b: kpisB.avgHeightCm },
-              { label: 'População final (pl/ha)', a: kpisA.finalPopulationPlHa, b: kpisB.finalPopulationPlHa },
-              { label: 'Estande efetivo', a: kpisA.estandeEfetivo, b: kpisB.estandeEfetivo },
-              { label: 'Eficiência (%)', a: kpisA.eficienciaPct, b: kpisB.eficienciaPct },
-              { label: 'Profundidade raiz (cm)', a: kpisA.profundidadeRaizCm, b: kpisB.profundidadeRaizCm },
-              { label: 'Peso raiz (g)', a: kpisA.pesoRaizG, b: kpisB.pesoRaizG },
-                  {
-                    label: 'Vigor',
-                    a: phenology?.sideA?.vigor || kpisA.vigorRating?.label,
-                    b: phenology?.sideB?.vigor || kpisB.vigorRating?.label,
-                    isText: true,
-                  },
-              { label: 'Produtividade est. (kg/ha)', a: kpisA.estimatedYieldKgHa, b: kpisB.estimatedYieldKgHa },
-                ]
-                  .filter((r) => r.a != null || r.b != null)
-                  .map((item, i) => (
-                    <motion.div
-                      key={i}
-                      whileHover={{ scale: 1.01 }}
-                      className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm"
-                    >
-                <p className="text-xs font-medium text-slate-500 mb-2">{item.label}</p>
-                      {'isText' in item && item.isText ? (
-                  <div className="flex justify-between text-sm">
-                          <span style={{ color: COLOR_SIDE_A }}>{String(item.a || '—')}</span>
-                          <span style={{ color: COLOR_SIDE_B }}>{String(item.b || '—')}</span>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <Camera className="h-4 w-4 text-slate-500" />
+                    Fotos de Campo
                   </div>
-                ) : (
-                  <>
-                    <div className="flex justify-between text-sm font-medium mb-1">
-                            <span style={{ color: COLOR_SIDE_A }}>
-                              {item.a != null ? formatNumber(item.a as number, { decimals: 1 }) : '—'}
-                            </span>
-                            <span style={{ color: COLOR_SIDE_B }}>
-                              {item.b != null ? formatNumber(item.b as number, { decimals: 1 }) : '—'}
-                            </span>
-                    </div>
-                    <div className="flex gap-1 h-2 rounded overflow-hidden bg-slate-100">
-                      <div
-                              className="h-full rounded-l"
-                        style={{
-                                backgroundColor: COLOR_SIDE_A,
-                          width:
-                            item.a != null && item.b != null
-                              ? (() => {
-                                  const numA = Number(item.a);
-                                  const numB = Number(item.b);
-                                  return numA + numB > 0 ? `${(numA / (numA + numB)) * 100}%` : '50%';
-                                })()
-                              : '50%',
-                        }}
-                      />
-                            <div
-                              className="h-full rounded-r flex-1"
-                              style={{ backgroundColor: COLOR_SIDE_B }}
-                            />
-                    </div>
-                  </>
-                )}
-                <div className="flex justify-between text-xs text-slate-400 mt-1">
-                  <span>{sideAName}</span>
-                  <span>{sideBName}</span>
+                  <PhotosGrid sideAName={sideAName} sideBName={sideBName} photosA={data.sideA?.photos} photosB={data.sideB?.photos} />
                 </div>
-                    </motion.div>
-                  ))}
-              </div>
-            </div>
-
-            {Array.isArray(data.criteriosEstatistica) && data.criteriosEstatistica.length > 0 && (
-              <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-5 shadow-sm">
-                <h3 className="text-base font-semibold text-slate-900 mb-1">Critérios numéricos (entre pontos)</h3>
-                <p className="text-xs text-slate-600 mb-4">
-                  Indicativo — não substitui delineamento experimental formal.
-                </p>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm border-collapse">
-                    <thead>
-                      <tr className="border-b border-amber-300/80 text-left text-slate-600">
-                        <th className="py-2 pr-3">Critério</th>
-                        <th className="py-2 pr-3">Média A</th>
-                        <th className="py-2 pr-3">Média B</th>
-                        <th className="py-2 pr-3">DP A</th>
-                        <th className="py-2 pr-3">DP B</th>
-                        <th className="py-2 pr-3">CV% A</th>
-                        <th className="py-2 pr-3">CV% B</th>
-                        <th className="py-2 pr-3">Destaque</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.criteriosEstatistica.map((row, i) => (
-                        <tr key={i} className="border-b border-amber-200/60">
-                          <td className="py-2 pr-3 font-medium text-slate-800">
-                            {row.criterio || '—'}
-                            {row.unidade ? <span className="text-slate-500 font-normal"> ({row.unidade})</span> : null}
-                          </td>
-                          <td className="py-2 pr-3">{row.mediaA != null ? formatNumber(row.mediaA, { decimals: 2 }) : '—'}</td>
-                          <td className="py-2 pr-3">{row.mediaB != null ? formatNumber(row.mediaB, { decimals: 2 }) : '—'}</td>
-                          <td className="py-2 pr-3">{row.dpA != null ? formatNumber(row.dpA, { decimals: 2 }) : '—'}</td>
-                          <td className="py-2 pr-3">{row.dpB != null ? formatNumber(row.dpB, { decimals: 2 }) : '—'}</td>
-                          <td className="py-2 pr-3">{row.cvPctA != null ? `${row.cvPctA.toFixed(1)}%` : '—'}</td>
-                          <td className="py-2 pr-3">{row.cvPctB != null ? `${row.cvPctB.toFixed(1)}%` : '—'}</td>
-                          <td className="py-2 pr-3">
-                            {row.diferencaIndicativa ? (
-                              <span className="text-amber-800 font-semibold">Sim</span>
-                            ) : (
-                              <span className="text-slate-500">Não</span>
-                            )}
-                            {row.estabilidadeDpDiff != null && (
-                              <div className="text-xs text-slate-500 mt-0.5">
-                                Estab. (DP B−A): {formatNumber(row.estabilidadeDpDiff, { decimals: 2 })}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-          </div>
-                {data.criteriosEstatistica.some((r) => r.notaRegra) && (
-                  <p className="text-xs text-slate-500 mt-3 italic">
-                    {data.criteriosEstatistica.find((r) => r.notaRegra)?.notaRegra}
-                  </p>
-                )}
-              </div>
-            )}
-
-        {radarData.length > 0 && (
-              <motion.div
-                whileHover={{ y: -3 }}
-                transition={{ duration: 0.2 }}
-                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm overflow-hidden"
-              >
-                <h3 className="text-base font-semibold text-slate-900 mb-1">Radar agronômico (A vs B)</h3>
-                <p className="text-xs text-slate-500 mb-4">Eixos normalizados no front a partir dos KPIs e fenologia — mesmo contrato JSON.</p>
-                <div className="h-64 w-full" style={{ minHeight: 240 }}>
-                  <ResponsiveContainer width="100%" height={240}>
-                <RadarChart data={radarData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
-                  <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                      <Radar name={sideAName} dataKey="A" stroke={COLOR_SIDE_A} fill={COLOR_SIDE_A} fillOpacity={0.25} strokeWidth={2} />
-                      <Radar name={sideBName} dataKey="B" stroke={COLOR_SIDE_B} fill={COLOR_SIDE_B} fillOpacity={0.25} strokeWidth={2} />
-                  <Legend />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-              </motion.div>
-            )}
-
-            {(coleta?.espacamento != null ||
-              coleta?.populacaoAlvo != null ||
-              kpisA.finalPopulationPlHa != null ||
-              kpisB.finalPopulationPlHa != null) && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <h3 className="text-base font-semibold text-slate-900 mb-4">Contexto de plantio</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm">
-              {coleta?.espacamento != null && (
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">{formatNumber(coleta.espacamento, { decimals: 1 })} cm</p>
-                  <p className="text-xs text-slate-500">Espaçamento</p>
-                </div>
-              )}
-              {coleta?.populacaoAlvo != null && (
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">{formatNumber(coleta.populacaoAlvo, { decimals: 0 })}</p>
-                  <p className="text-xs text-slate-500">Pop. alvo (pl/ha)</p>
-                </div>
-              )}
-              {kpisA.finalPopulationPlHa != null && (
-                <div>
-                      <p className="text-2xl font-bold" style={{ color: COLOR_SIDE_A }}>
-                        {formatNumber(kpisA.finalPopulationPlHa, { decimals: 0 })}
-                      </p>
-                      <p className="text-xs text-slate-500">{sideAName}</p>
-                </div>
-              )}
-              {kpisB.finalPopulationPlHa != null && (
-                <div>
-                      <p className="text-2xl font-bold" style={{ color: COLOR_SIDE_B }}>
-                        {formatNumber(kpisB.finalPopulationPlHa, { decimals: 0 })}
-                      </p>
-                      <p className="text-xs text-slate-500">{sideBName}</p>
-                </div>
-              )}
-            </div>
-              </div>
-        )}
-
-        {points.length > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <h3 className="text-base font-semibold text-slate-900 mb-4">Pontos de avaliação</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left py-2 font-medium text-slate-600">Ponto</th>
-                    <th className="text-left py-2 font-medium text-slate-600">Nome</th>
-                    <th className="text-left py-2 font-medium text-slate-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {points.map((p, i) => (
-                    <tr key={i} className="border-b border-slate-100">
-                      <td className="py-2">{p.indexNo ?? i + 1}</td>
-                      <td className="py-2">{p.name || '—'}</td>
-                      <td className="py-2">
-                            <span
-                              className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
-                                (p.status || '').toLowerCase() === 'ok'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : (p.status || '').toLowerCase() === 'monitorar'
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : 'bg-red-100 text-red-800'
-                              }`}
-                            >
-                          {situacaoLabel(p.status)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-              </div>
-        )}
-
-        {phenology && (phenology.sideA || phenology.sideB) && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                <h3 className="text-base font-semibold text-slate-900 mb-4">Fenologia</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {phenology.sideA && (
-                    <div className="border rounded-xl p-4" style={{ borderColor: `${COLOR_SIDE_A}44`, background: `${COLOR_SIDE_A}0d` }}>
-                      <p className="font-medium mb-2" style={{ color: COLOR_SIDE_A }}>
-                        {sideAName}
-                      </p>
-                  <ul className="text-sm space-y-1">
-                        {phenology.sideA.estadio && (
-                          <li>
-                            <span className="text-slate-500">Estádio:</span> {phenology.sideA.estadio}
-                          </li>
-                        )}
-                        {phenology.sideA.vigor && (
-                          <li>
-                            <span className="text-slate-500">Vigor:</span> {phenology.sideA.vigor}
-                          </li>
-                        )}
-                        {phenology.sideA.uniformidade && (
-                          <li>
-                            <span className="text-slate-500">Uniformidade:</span> {phenology.sideA.uniformidade}
-                          </li>
-                        )}
-                        {phenology.sideA.observacao && (
-                          <li>
-                            <span className="text-slate-500">Obs.:</span> {phenology.sideA.observacao}
-                          </li>
-                        )}
-                  </ul>
-                </div>
-              )}
-              {phenology.sideB && (
-                    <div className="border rounded-xl p-4" style={{ borderColor: `${COLOR_SIDE_B}44`, background: `${COLOR_SIDE_B}0d` }}>
-                      <p className="font-medium mb-2" style={{ color: COLOR_SIDE_B }}>
-                        {sideBName}
-                      </p>
-                  <ul className="text-sm space-y-1">
-                        {phenology.sideB.estadio && (
-                          <li>
-                            <span className="text-slate-500">Estádio:</span> {phenology.sideB.estadio}
-                          </li>
-                        )}
-                        {phenology.sideB.vigor && (
-                          <li>
-                            <span className="text-slate-500">Vigor:</span> {phenology.sideB.vigor}
-                          </li>
-                        )}
-                        {phenology.sideB.uniformidade && (
-                          <li>
-                            <span className="text-slate-500">Uniformidade:</span> {phenology.sideB.uniformidade}
-                          </li>
-                        )}
-                        {phenology.sideB.observacao && (
-                          <li>
-                            <span className="text-slate-500">Obs.:</span> {phenology.sideB.observacao}
-                          </li>
-                        )}
-                  </ul>
-                </div>
-              )}
-            </div>
-              </div>
-            )}
-
-          </motion.section>
-
-          <motion.section id="radicular" {...fadeIn} className="scroll-mt-36 space-y-6">
-            <h2 className="text-lg font-bold text-slate-900 border-l-4 border-teal-600 pl-3">Sistema radicular</h2>
-            <p className="text-sm text-slate-600">Profundidade, peso e sanidade radicular comparados entre os manejos.</p>
-
-            {(kpisA.profundidadeRaizCm != null ||
-              kpisB.profundidadeRaizCm != null ||
-              kpisA.pesoRaizG != null ||
-              kpisB.pesoRaizG != null ||
-              kpisA.rootRating ||
-              kpisB.rootRating) ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-            {barKpis.filter((r) => r.name.includes('Raiz') || r.name.includes('Peso')).length > 0 ? (
-                  <div className="h-56 w-full overflow-x-auto" style={{ minHeight: 200 }}>
-                <ResponsiveContainer width="100%" height={200} minWidth={280}>
-                      <BarChart
-                        data={barKpis.filter((r) => r.name.includes('Raiz') || r.name.includes('Peso'))}
-                        layout="vertical"
-                        margin={{ left: 80 }}
-                      >
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Legend />
-                        <Bar dataKey="a" name={sideAName} fill={COLOR_SIDE_A} radius={[0, 4, 4, 0]} />
-                        <Bar dataKey="b" name={sideBName} fill={COLOR_SIDE_B} radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
               </div>
             ) : null}
-                <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
-              {kpisA.rootRating && (
-                    <div>
-                      <span className="text-slate-500">Sanidade raiz {sideAName}: </span>
-                      {kpisA.rootRating.label} ({kpisA.rootRating.score}/{kpisA.rootRating.max})
-                    </div>
-              )}
-              {kpisB.rootRating && (
-                    <div>
-                      <span className="text-slate-500">Sanidade raiz {sideBName}: </span>
-                      {kpisB.rootRating.label} ({kpisB.rootRating.score}/{kpisB.rootRating.max})
-                    </div>
-              )}
-            </div>
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
-                Nenhum dado radicular (profundidade, peso ou sanidade) foi registrado neste relatório.
-              </p>
-            )}
-          </motion.section>
 
-          <motion.section id="fitossanidade" {...fadeIn} className="scroll-mt-36 space-y-6">
-            <h2 className="text-lg font-bold text-slate-900 border-l-4 border-orange-600 pl-3">Fitossanidade</h2>
-            <p className="text-sm text-slate-600">Principais problemas e incidência declarada no relatório.</p>
-          {ocorrencias.length > 0 ? (
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[...ocorrencias]
-                    .sort((a, b) => (b.incidenciaPct ?? 0) - (a.incidenciaPct ?? 0))
-                    .map((o, i) => (
-                      <motion.div
-                        key={i}
-                        whileHover={{ y: -3 }}
-                        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                      >
-                        <p className="text-xs font-semibold uppercase text-slate-500">Problema / alvo</p>
-                        <p className="text-lg font-bold text-slate-900 mt-1">{o.nomeAlvo || 'Alvo não nomeado'}</p>
-                        {o.tipo && <p className="text-sm text-slate-600 mt-1">Tipo: {o.tipo}</p>}
-                        <div className="mt-3 flex flex-wrap gap-3 text-sm">
-                          {o.incidenciaPct != null && (
-                            <span className="inline-flex items-center rounded-lg bg-orange-50 text-orange-900 px-3 py-1 font-semibold border border-orange-100">
-                              {formatPercent(o.incidenciaPct)} incidência
-                            </span>
-                          )}
-                          {o.severidade && (
-                            <span className="inline-flex items-center rounded-lg bg-slate-100 text-slate-800 px-3 py-1 font-medium border border-slate-200">
-                              Severidade: {o.severidade}
-                            </span>
-                          )}
-                        </div>
-                        {o.recomendacao && (
-                          <p className="text-sm text-slate-700 mt-3 pt-3 border-t border-slate-100">
-                            <span className="font-medium text-slate-800">Recomendação: </span>
-                            {o.recomendacao}
-                          </p>
-                        )}
-                      </motion.div>
-                    ))}
-              </div>
-              {ocorrenciasChart.length > 0 && (
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <h3 className="text-sm font-semibold text-slate-800 mb-3">Distribuição (incidência %)</h3>
-                    <div className="h-44 w-full" style={{ minHeight: 160 }}>
-                      <ResponsiveContainer width="100%" height={160}>
-                        <BarChart data={ocorrenciasChart}>
-                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                      <YAxis tick={{ fontSize: 10 }} />
-                      <Tooltip />
-                      <Bar dataKey="incidencia" name="Incidência %" fill="#E65100" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                    </div>
-                </div>
-              )}
-              </div>
-            ) : (
-              <p className="text-slate-500 text-sm rounded-2xl border border-dashed border-slate-200 bg-white p-6">
-                Nenhuma ocorrência registrada.
-              </p>
-            )}
-          </motion.section>
+            {rightTab === 'Estatística' ? <StatsTable rows={statisticalRows} /> : null}
 
-          <motion.section id="evidencias" {...fadeIn} className="scroll-mt-36 space-y-4">
-            <h2 className="text-lg font-bold text-slate-900 border-l-4 border-sky-600 pl-3">Evidências fotográficas</h2>
-            <p className="text-sm text-slate-600">Comparativo visual por categoria, quando as fotos estão classificadas no JSON.</p>
-            {photosA.length > 0 || photosB.length > 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm overflow-hidden">
-            {photosByCategory.length > 0 ? (
-                  <div className="space-y-8">
-                {photosByCategory.map((group) => (
-                  <div key={group.category}>
-                        <h4 className="text-sm font-medium text-slate-600 mb-3">{group.label}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                            <p className="text-xs font-semibold mb-2" style={{ color: COLOR_SIDE_A }}>
-                              {sideAName}
-                            </p>
-                            <div className="grid grid-cols-2 gap-2">
-                          {group.photosA.map((ph, i) => (
-                                <PhotoWithHotspots key={i} ph={ph} accentClass="text-slate-600" />
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                            <p className="text-xs font-semibold mb-2" style={{ color: COLOR_SIDE_B }}>
-                              {sideBName}
-                            </p>
-                            <div className="grid grid-cols-2 gap-2">
-                          {group.photosB.map((ph, i) => (
-                                <PhotoWithHotspots key={i} ph={ph} accentClass="text-slate-600" />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                      <p className="font-medium mb-3" style={{ color: COLOR_SIDE_A }}>
-                        {sideAName}
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                    {photosA.map((ph, i) => (
-                          <PhotoWithHotspots key={i} ph={ph} accentClass="text-slate-600" />
-                    ))}
-                  </div>
+            {rightTab === 'Plantas' ? (
+              <div>
+                <div className="mb-3 text-xs text-slate-500">
+                  Amostras:{' '}
+                  {typeof data.plant_evaluation?.sampleSize === 'object' ? (
+                    <>
+                      A {data.plant_evaluation?.sampleSize?.A ?? '—'} · B {data.plant_evaluation?.sampleSize?.B ?? '—'}
+                    </>
+                  ) : (
+                    <NullBadge label="sampleSize" />
+                  )}
                 </div>
-                <div>
-                      <p className="font-medium mb-3" style={{ color: COLOR_SIDE_B }}>
-                        {sideBName}
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                    {photosB.map((ph, i) => (
-                          <PhotoWithHotspots key={i} ph={ph} accentClass="text-slate-600" />
-                    ))}
-                  </div>
+                <PlantMetricsTable rows={plantRows} />
+              </div>
+            ) : null}
+
+            {rightTab === 'Fotos' ? (
+              <PhotosGrid sideAName={sideAName} sideBName={sideBName} photosA={data.sideA?.photos} photosB={data.sideB?.photos} />
+            ) : null}
+
+            {rightTab === 'Conclusão' ? (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-4 text-sm leading-relaxed text-slate-700">
+                  {summaryText || <NullBadge label="conclusion.summary" />}
+                </div>
+                <div className="text-sm font-bold text-slate-900">Recomendações</div>
+                <div className="space-y-2">
+                  {data.conclusion?.recommendations?.length ? (
+                    data.conclusion.recommendations.map((item, index) => (
+                      <div key={`${item}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+                        <span className="mr-2 font-bold text-green-700">{index + 1}.</span>
+                        {item}
+                      </div>
+                    ))
+                  ) : (
+                    <NullBadge label="conclusion.recommendations" />
+                  )}
                 </div>
               </div>
-            )}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
-                Nenhuma foto de evidência foi anexada a este relatório.
-              </p>
-            )}
-          </motion.section>
+            ) : null}
 
-          <motion.section id="tratamento" {...fadeIn} className="scroll-mt-36">
-            <h2 className="text-lg font-bold text-slate-900 mb-2 border-l-4 border-blue-600 pl-3">Protocolo do ensaio (plano)</h2>
-            <p className="text-sm text-slate-600 mb-6">Tratamento planejado antes da execução em campo.</p>
-            {!hasTreatment ? (
-              <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
-                Nenhum protocolo planejado foi registrado para este relatório.
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {treatmentSides.map((s) => {
-                  const isA = s.side === 'A';
-                  const headerBg = isA ? 'bg-blue-800' : 'bg-emerald-800';
-                  const borderRing = isA ? 'ring-blue-200' : 'ring-emerald-200';
-                  const plannedSum = (s.products ?? []).reduce((acc, p) => acc + (p.cost_per_ha ?? 0), 0);
-                  const protocolPhoto = pickHeroPhoto(isA ? photosA : photosB);
-                  return (
-                    <motion.div
-                      key={s.side + s.name}
-                      whileHover={{ y: -2 }}
-                      className={`rounded-2xl overflow-hidden border border-slate-200 shadow-md ring-2 ${borderRing} bg-white`}
-                    >
-                      <div className={`${headerBg} text-white px-4 py-2.5 text-center`}>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-95">
-                          {isA ? 'Manejo padrão' : 'Manejo OFA'}
-                        </p>
-                        <p className="font-bold text-base mt-0.5 leading-tight">{s.name}</p>
-                        <p className="text-[11px] opacity-85 mt-0.5">Tratamento {s.side}</p>
-                      </div>
-                      {protocolPhoto?.url ? (
-                        <div className="px-3 pt-3">
-                          <PhotoWithHotspots ph={protocolPhoto} accentClass="text-slate-500" />
-                        </div>
-                      ) : null}
-                      <div className="p-5 space-y-3 text-sm">
-                        {s.description && (
-                          <p>
-                            <span className="text-slate-500">Descrição: </span>
-                            {s.description}
-                          </p>
-                        )}
-                        {s.expected_result && (
-                          <p>
-                            <span className="text-slate-500">Resultado esperado: </span>
-                            {s.expected_result}
-                          </p>
-                        )}
-                        <div>
-                          <p className="text-xs font-semibold uppercase text-slate-500 mb-2">Produtos</p>
-                          <ul className="space-y-3">
-                            {(s.products ?? []).map((p, i) => (
-                              <li key={i} className="border border-slate-100 rounded-lg p-3 bg-slate-50/80">
-                                <p className="font-semibold text-slate-900">{p.name}</p>
-                                {p.active_ingredient && (
-                                  <p className="text-xs text-slate-600 mt-0.5">Ingrediente ativo: {p.active_ingredient}</p>
-                                )}
-                                <p className="text-xs text-slate-600 mt-1">
-                                  Dose: {p.dose != null ? String(p.dose) : '—'}
-                                  {p.cost_per_ha != null && (
-                                    <span className="ml-2 font-medium text-slate-800">
-                                      · R$ {formatNumber(p.cost_per_ha, { decimals: 2 })}/ha
-                                    </span>
-                                  )}
-                                </p>
-                              </li>
-                            ))}
-                </ul>
-                        </div>
-                        {plannedSum > 0 && (
-                          <p className="text-sm font-medium text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 inline-block">
-                            Soma custos planejados (itens): R$ {formatNumber(plannedSum, { decimals: 2 })}/ha
-                          </p>
-              )}
-            </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.section>
-
-          <motion.section id="diagnostico" {...fadeIn} className="scroll-mt-36">
-            <h2 className="text-lg font-bold text-slate-900 mb-2 border-l-4 border-rose-600 pl-3">Diagnóstico técnico</h2>
-            <p className="text-sm text-slate-600 mb-6">Síntese estruturada para decisão em campo.</p>
-            {diagnosis?.problemaPrincipal ||
-            diagnosis?.causaProvavel ||
-            diagnosis?.urgencia ||
-            diagnosis?.planoAcao ||
-            (diagnosis?.problemasSecundarios && diagnosis.problemasSecundarios.length > 0) ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {diagnosis?.problemaPrincipal && (
-                  <motion.div
-                    whileHover={{ y: -2 }}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-2"
-                  >
-                    <p className="text-xs font-semibold uppercase text-slate-500">Problema principal</p>
-                    <p className="text-base font-semibold text-slate-900 mt-1">{diagnosis.problemaPrincipal}</p>
-                  </motion.div>
-                )}
-                {diagnosis?.problemasSecundarios && diagnosis.problemasSecundarios.length > 0 && (
-                  <motion.div whileHover={{ y: -2 }} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-2">
-                    <p className="text-xs font-semibold uppercase text-slate-500">Problemas secundários</p>
-                    <ul className="mt-2 list-disc list-inside text-sm text-slate-800 space-y-1">
-                      {diagnosis.problemasSecundarios.map((x, i) => (
-                        <li key={i}>{x}</li>
-                      ))}
-                    </ul>
-                  </motion.div>
-                )}
-                {diagnosis?.causaProvavel && (
-                  <motion.div whileHover={{ y: -2 }} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <p className="text-xs font-semibold uppercase text-slate-500">Causa provável</p>
-                    <p className="text-sm text-slate-800 mt-2 leading-relaxed">{diagnosis.causaProvavel}</p>
-                  </motion.div>
-                )}
-                {diagnosis?.urgencia && (
-                  <motion.div whileHover={{ y: -2 }} className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 shadow-sm">
-                    <p className="text-xs font-semibold uppercase text-amber-900">Urgência</p>
-                    <p className="text-sm font-semibold text-amber-950 mt-2">{diagnosis.urgencia}</p>
-                  </motion.div>
-                )}
-                {diagnosis?.planoAcao && (
-                  <motion.div
-                    whileHover={{ y: -2 }}
-                    className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm md:col-span-2"
-                  >
-                    <p className="text-xs font-semibold uppercase text-emerald-900">Plano de ação</p>
-                    <p className="text-sm text-slate-800 mt-2 leading-relaxed">{diagnosis.planoAcao}</p>
-                  </motion.div>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
-                Nenhum bloco de diagnóstico estruturado foi enviado neste relatório.
-              </p>
-            )}
-          </motion.section>
-
-          <motion.section id="economico" {...fadeIn} className="scroll-mt-36">
-            <h2 className="text-lg font-bold text-slate-900 mb-6 border-l-4 border-amber-600 pl-3">Econômico</h2>
-            {!hasEcon ? (
-              <p className="text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200 bg-white p-6">
-                Nenhum dado econômico disponível neste relatório (custos, colheita, preço de saca ou resultado por produto).
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {custoParsed?.by_side && custoParsed.by_side.length > 0 && (
-                  <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm space-y-4">
-                    <h3 className="font-semibold text-slate-900">Custos</h3>
-                    {custoParsed.by_side.map((row, i) => (
-                      <div
-                        key={i}
-                        className="border border-slate-100 rounded-xl p-4"
-                        style={{
-                          borderLeftWidth: 4,
-                          borderLeftColor: row.side === 'A' ? COLOR_SIDE_A : COLOR_SIDE_B,
-                        }}
-                      >
-                        <p className="font-medium text-slate-900">
-                          [{row.side}] {row.sideName || `Tratamento ${row.side}`}
-                        </p>
-                        {row.costPerHa != null && (
-                          <p className="text-sm text-slate-700 mt-1">R$ {formatNumber(row.costPerHa, { decimals: 2 })}/ha</p>
-                        )}
-                        {row.totalCost != null && (
-                          <p className="text-xs text-slate-500">Total: R$ {formatNumber(row.totalCost, { decimals: 2 })}</p>
-                        )}
-                      </div>
-                    ))}
-                    {custoParsed.deltaCostPerHa_B_vs_A != null && (
-                      <p className="text-sm font-medium text-slate-800 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
-                        Δ custo (B − A): R$ {formatNumber(custoParsed.deltaCostPerHa_B_vs_A, { decimals: 2 })}/ha
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {colheitaParsed?.sides && colheitaParsed.sides.length > 0 && (
-                  <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm space-y-3">
-                    <h3 className="font-semibold text-slate-900">Colheita / produtividade</h3>
-                    {colheitaParsed.sides.map((s, i) => (
-                      <div key={i} className="text-sm border-b border-slate-100 pb-2 last:border-0">
-                        <p className="font-medium text-slate-800">
-                          [{s.side}] {s.sideName || `Tratamento ${s.side}`}
-                        </p>
-                        {s.yieldScHa != null && <p>Produtividade: {formatNumber(s.yieldScHa, { decimals: 2 })} sc/ha</p>}
-                        {s.yieldKgHa != null && <p>Produtividade: {formatNumber(s.yieldKgHa, { decimals: 0 })} kg/ha</p>}
-                        {s.areaHa != null && <p className="text-slate-500 text-xs">Área: {formatNumber(s.areaHa, { decimals: 2 })} ha</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {economia?.preco_saca_brl != null && (
-                  <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm md:col-span-2">
-                    <h3 className="font-semibold text-slate-900 mb-2">Preço de referência (saca)</h3>
-                    <p className="text-lg font-bold text-emerald-800">
-                      R$ {formatNumber(economia.preco_saca_brl, { decimals: 2 })}/sc
+            <div className="border-t border-slate-200 pt-4">
+              <div className="text-base font-bold text-slate-900">Resumo Executivo</div>
+              <div className="mt-3 space-y-2">
+                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-slate-800">
+                  <div className="flex items-start gap-2">
+                    <Sprout className="mt-0.5 h-4 w-4 text-green-700" />
+                    <p>
+                      {summaryText || (
+                        <>
+                          {winnerName || 'O manejo vencedor'} demonstra melhor desempenho técnico e econômico.
+                          {economics.deltaScHa != null ? ` Projeção de ganho de ${formatNumber(economics.deltaScHa, { decimals: 0 })} sc/ha.` : ''}
+                          {economics.deltaReais != null ? ` (+R$ ${formatNumber(economics.deltaReais, { decimals: 0 })}/ha).` : ''}
+                        </>
+                      )}
                     </p>
-                    {showEconomiaFontePreco(economia.fonte_preco) ? (
-                      <p className="text-xs text-slate-500 mt-1">Fonte: {economia.fonte_preco}</p>
-        ) : null}
-                    {receitaPorLado && receitaPorLado.some((r) => r.receita != null) && (
-                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {receitaPorLado.map((r, i) =>
-                          r.receita != null ? (
-                            <div key={i} className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-sm">
-                              <p className="font-medium text-slate-800">{r.sideName || `Lado ${r.side}`}</p>
-                              <p>
-                                Receita bruta estimada: <strong>R$ {formatNumber(r.receita, { decimals: 2 })}/ha</strong>
-                              </p>
-                              {r.sc != null && (
-                                <p className="text-xs text-slate-500">Base: {formatNumber(r.sc, { decimals: 2 })} sc/ha</p>
-                              )}
-                            </div>
-                          ) : null,
-                        )}
-                      </div>
-                    )}
                   </div>
-                )}
-
-                {productsResult && productsResult.length > 0 && (
-                  <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm md:col-span-2">
-                    <h3 className="font-semibold text-slate-900 mb-2">Resultado por produto (`products_result`)</h3>
-                    <pre className="text-xs bg-slate-50 border border-slate-200 rounded-lg p-4 overflow-x-auto max-h-64 overflow-y-auto">
-                      {JSON.stringify(productsResult, null, 2)}
-                    </pre>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-slate-800">
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert className="mt-0.5 h-4 w-4 text-amber-700" />
+                    <p>{recommendationText || <NullBadge label="recommendation" />}</p>
                   </div>
-                )}
+                </div>
               </div>
-            )}
-          </motion.section>
+            </div>
 
-          <motion.section id="conclusao" {...fadeIn} className="scroll-mt-36">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 border-l-4 border-slate-800 pl-3">Conclusão</h2>
-            <p className="text-sm text-slate-600 mb-4">Síntese final, recomendações e assinatura técnica.</p>
-            <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-sm space-y-4 text-sm">
-              {conclusion.summary && <p className="text-slate-800 leading-relaxed">{conclusion.summary}</p>}
-              {diagnostics?.recommendations && diagnostics.recommendations.length > 0 && (
-                <ul className="list-disc list-inside text-slate-700 space-y-1">
-                  {diagnostics.recommendations.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              )}
-          {conclusion.recommendations && conclusion.recommendations.length > 0 && (
-                <div>
-                  <p className="font-medium text-slate-800 mb-2">Recomendações</p>
-              <ol className="list-decimal list-inside text-slate-700 space-y-1">
-                    {conclusion.recommendations.map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-              </ol>
+            <div className="text-[11px] text-slate-400">
+              ID {data.meta?.reportId || reportId || '—'} · Layout reconstruído para leitura web lado a lado
             </div>
-          )}
-          {conclusion.signature && (conclusion.signature.name || conclusion.signature.crea || conclusion.signature.city) && (
-            <div className="pt-4 border-t border-slate-200">
-              <p className="font-semibold text-slate-900">{conclusion.signature.name}</p>
-              {conclusion.signature.crea && <p className="text-sm text-slate-600">CREA: {conclusion.signature.crea}</p>}
-              {conclusion.signature.city && <p className="text-sm text-slate-600">{conclusion.signature.city}</p>}
-            </div>
-          )}
-            </div>
-          </motion.section>
-
-          <footer className="text-center text-sm text-slate-500 py-8 border-t border-slate-200">
-          <p>Relatório gerado pelo FortSmart Agro</p>
-          <p className="mt-1">
-              {formatDate(meta.createdAt)} · {meta.appVersion || '—'} · ID: {meta.reportId || reportId || '—'}
-          </p>
-        </footer>
-      </main>
+          </div>
+        </section>
       </div>
     </div>
   );
 }
 
-function ExecutionEventCard({ ev, compact }: { ev: ReportApplicationEventV2Json; compact?: boolean }) {
-  const c = ev.climate;
-  const t = ev.applicationTech;
-  const pad = compact ? 'p-3' : 'p-4';
-  const sideBar = ev.side === 'A' ? 'border-blue-500' : 'border-emerald-500';
-  return (
-    <motion.div
-      whileHover={{ y: -1 }}
-      className={`relative pl-4 border-l-[3px] ${sideBar} border-y border-r border-slate-200/90 bg-white rounded-r-xl shadow-sm ${pad}`}
-    >
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        <span className="font-semibold text-slate-900 tabular-nums">{ev.date ? formatDate(ev.date) : '—'}</span>
-        {ev.daa != null && (
-          <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">{ev.daa} DAA</span>
-        )}
-        <span
-          className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${
-            ev.side === 'A' ? 'bg-blue-100 text-blue-900' : 'bg-emerald-100 text-emerald-900'
-          }`}
-        >
-          {ev.side === 'A' ? 'Manejo padrão' : 'Manejo OFA'}
-        </span>
-      </div>
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-        <span className="font-medium text-slate-800">{ev.type || 'Aplicação'}</span>
-        {ev.stage ? (
-          <span className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200/80 px-1.5 py-0.5 rounded">
-            {ev.stage}
-          </span>
-        ) : null}
-      </div>
-      {ev.responsible ? <p className="text-[11px] text-slate-500 mt-1">{ev.responsible}</p> : null}
-      {!compact && ev.scope ? <p className="text-[11px] text-slate-500 mt-0.5">Escopo {ev.scope}</p> : null}
-      {!compact && ev.point_ids && ev.point_ids.length > 0 ? (
-        <p className="text-[11px] text-slate-500 mt-0.5">Pontos {ev.point_ids.join(', ')}</p>
-      ) : null}
-      {c && (c.temperature != null || c.humidity != null || c.wind != null || c.derivaRisco) && (
-        <p className="mt-2 text-[11px] leading-snug text-slate-700 bg-slate-50 rounded-md px-2 py-1.5 border border-slate-100">
-          <span className="font-semibold text-slate-600">Clima </span>
-          {[
-            c.temperature != null ? `${c.temperature}°C` : null,
-            c.humidity != null ? `${c.humidity}%` : null,
-            c.wind != null ? `Vento ${formatWind(c.wind)}` : null,
-            c.derivaRisco || null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      )}
-      {(t?.bico != null || t?.vazao != null || t?.pressao != null) && (
-        <p className="mt-1.5 text-[11px] text-slate-700 leading-snug">
-          <span className="font-semibold text-slate-600">Tecnologia </span>
-          {[t?.bico && `Bico ${t.bico}`, t?.vazao != null && `${t.vazao} L/min`, t?.pressao != null && `${t.pressao} bar`]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      )}
-      {ev.products && ev.products.length > 0 && (
-        <ul className={`mt-2 space-y-1.5 ${compact ? '' : 'mt-3'}`}>
-          {ev.products.map((p, j) => (
-            <li key={j} className="text-[11px] sm:text-xs border border-slate-100 rounded-lg px-2 py-1.5 bg-slate-50/90 leading-snug">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                <span className="font-semibold text-slate-900">{p.nomeComercial || 'Produto'}</span>
-                {p.classe ? (
-                  <span className="text-[10px] font-medium text-slate-600 whitespace-nowrap">{p.classe}</span>
-                ) : null}
-              </div>
-              <div className="text-slate-600 mt-0.5">
-                {p.nomeAtivo ? <span>Ativo {p.nomeAtivo}</span> : null}
-                {p.nomeAtivo && (p.dose != null || p.custoHa != null) ? <span className="text-slate-300 mx-1">·</span> : null}
-                {p.dose != null ? (
-                  <span>
-                    {p.dose}
-                    {p.unidade ? ` ${p.unidade}` : ''}
-                  </span>
-                ) : null}
-                {p.custoHa != null ? (
-                  <span className="text-slate-700 font-medium">
-                    {p.dose != null ? ' · ' : ''}R$ {formatNumber(p.custoHa, { decimals: 2 })}/ha
-                  </span>
-                ) : null}
-              </div>
-              {p.linkedProtocolItemId ? (
-                <span className="inline-block mt-1 text-[10px] font-medium text-emerald-800 bg-emerald-100/80 px-1.5 py-0.5 rounded">
-                  Protocolo
-                </span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-    </motion.div>
-  );
+function TrendingInline() {
+  return <span className="text-slate-500">📈</span>;
 }

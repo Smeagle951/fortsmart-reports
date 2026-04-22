@@ -2,7 +2,6 @@
 
 import React from 'react';
 import RelatorioLadoALadoDashboard from '@/components/lado_a_lado/RelatorioLadoALadoDashboard';
-import PremiumReport from '@/components/lado_a_lado/premium/PremiumReport';
 import type { DecisionLayerJson } from '@/lib/decisionLayer';
 
 export type MarketReferenceJson = {
@@ -264,8 +263,5 @@ interface SideBySideReportContentProps {
 }
 
 export default function SideBySideReportContent({ data, reportId, shareToken }: SideBySideReportContentProps) {
-  if (data.branding?.reportLayout === 'dashboard') {
-    return <RelatorioLadoALadoDashboard data={data} reportId={reportId} shareToken={shareToken} />;
-  }
-  return <PremiumReport data={data} reportId={reportId} shareToken={shareToken} />;
+  return <RelatorioLadoALadoDashboard data={data} reportId={reportId} shareToken={shareToken} />;
 }
