@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '*.esri.com' },
     ],
   },
-  transpilePackages: ['leaflet', '@fortsmart/report-contract'],
+  transpilePackages: ['leaflet'],
   outputFileTracingIncludes: {
     '/api/**/*': ['./data/**/*'],
   },
