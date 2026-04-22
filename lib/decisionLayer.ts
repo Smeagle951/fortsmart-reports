@@ -16,6 +16,8 @@ export type DecisionLayerDataQuality = {
   hasRealHarvest?: boolean;
   usedEstimatedYield?: boolean;
   missingCostData?: boolean;
+  /** Quando a produtividade veio de KPI (estimada) e não há colheita real, o app suprime fechamento econômico. */
+  enterpriseEconomicsSuppressed?: boolean;
 };
 
 export type RoiSideSnapshot = {
@@ -27,6 +29,7 @@ export type RoiSideSnapshot = {
   revenueBrlHa?: number;
   marginBrlHa?: number;
   roiPct?: number;
+  economicsSuppressed?: boolean;
 };
 
 /** Resumo económico opcional espelhado pelo motor FortSmart (derivado de `roiBySide`). */

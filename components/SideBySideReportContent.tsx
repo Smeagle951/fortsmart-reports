@@ -2,6 +2,7 @@
 
 import React from 'react';
 import RelatorioLadoALadoDashboard from '@/components/lado_a_lado/RelatorioLadoALadoDashboard';
+import PremiumReport from '@/components/lado_a_lado/premium/PremiumReport';
 import type { DecisionLayerJson } from '@/lib/decisionLayer';
 
 export type MarketReferenceJson = {
@@ -88,6 +89,10 @@ export type SideBySideReportData = {
     createdAt?: string;
     appVersion?: string;
     generatedBy?: { name?: string; role?: string };
+    /** 0–100 — transparência sobre completude do payload. */
+    confidenceScore?: number;
+    /** Lacunas a completar (preço, colheita, etc.). */
+    missingData?: string[];
   };
   branding?: {
     title?: string;
@@ -223,6 +228,16 @@ export type SideBySideReportData = {
   } | null;
   /** Texto do agrônomo para o comparativo A/B (opcional, preenchido no app). */
   comparativo_intro?: string | null;
+  /** Ponte canônica para análise econômica (sem duplicar números) — `economic_analysis`. */
+  economic_analysis?: Record<string, unknown> | null;
+  /** Metadados unificados da galeria (sem base64) — `media_gallery`. */
+  media_gallery?: Array<Record<string, unknown>> | null;
+  /** Alias canônico de linha do tempo (agrega `economic_timeline` + `evolucao`) — `evolution_timeline`. */
+  evolution_timeline?: Record<string, unknown> | null;
+  /** Preenchido no publish com notas de qualidade (sem bloqueio de relatório). */
+  quality_check?: { warnings?: string[]; notes?: string } | null;
+  /** Resultado de [ReportQualityGate] (app Flutter). */
+  quality_gate?: Record<string, unknown> | null;
 };
 
 type SideData = {
@@ -263,5 +278,8 @@ interface SideBySideReportContentProps {
 }
 
 export default function SideBySideReportContent({ data, reportId, shareToken }: SideBySideReportContentProps) {
-  return <RelatorioLadoALadoDashboard data={data} reportId={reportId} shareToken={shareToken} />;
+  if (data.branding?.reportLayout === 'dashboard') {
+    return <RelatorioLadoALadoDashboard data={data} reportId={reportId} shareToken={shareToken} />;
+  }
+  return <PremiumReport data={data} reportId={reportId} shareToken={shareToken} />;
 }

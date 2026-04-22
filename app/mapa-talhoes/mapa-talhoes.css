@@ -1,0 +1,15 @@
+/* Leaflet: melhor rolagem e gestos no telemóvel (área do mapa de talhões) */
+.mapa-talhoes-root .leaflet-container {
+  touch-action: pan-x pan-y;
+}
+
+/* Tooltip rápida (não conflitua com popup) */
+.mapa-talhoes-root .fs-map-tooltip {
+  border: 1px solid rgba(71, 85, 105, 0.9);
+  border-radius: 4px;
+  background: rgba(2, 6, 23, 0.95);
+  color: #f1f5f9;
+  padding: 4px 8px;
+  font-size: 11px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}

@@ -3,6 +3,7 @@
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { postReportAnalytics } from '@/lib/report-analytics-client';
 import HeroSection from './HeroSection';
+import DecisionLayerSummarySection from './DecisionLayerSummarySection';
 import KPISection from './KPISection';
 import TimelinePremiumSection from './TimelinePremiumSection';
 import EconomicSection from './EconomicSection';
@@ -15,10 +16,13 @@ import FortSmartAiSection from './FortSmartAiSection';
 import ExperimentDesignSection from './ExperimentDesignSection';
 import FieldCollectionModulesSection from './FieldCollectionModulesSection';
 import ExecutiveDeckSection from './ExecutiveDeckSection';
+import SidePhotoGallerySection from './SidePhotoGallerySection';
 
 const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'hero-premium', label: 'Início' },
+  { id: 'decisao-executiva-premium', label: 'Decisão' },
   { id: 'deck-executivo-premium', label: 'Painel' },
+  { id: 'fotos-premium', label: 'Fotos' },
   { id: 'kpis-premium', label: 'Indicadores' },
   { id: 'fortsmart-ai-premium', label: 'FortSmart AI' },
   { id: 'ensaio-premium', label: 'Ensaio' },
@@ -86,6 +90,18 @@ export default function PremiumReport({
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#F0F2F5] text-slate-900 print:bg-white">
+      <style jsx global>{`
+        @media print {
+          .fs-l2-page-break {
+            page-break-after: always;
+            break-inside: avoid;
+          }
+          .fs-l2-avoid {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+        }
+      `}</style>
       <div
         className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(15,23,42,0.06),transparent_50%)] print:hidden"
         aria-hidden
@@ -123,12 +139,19 @@ export default function PremiumReport({
       </nav>
 
       <div id="relatorio-lado-a-lado-content" className="overflow-x-hidden print:overflow-visible">
-        <div id="hero-premium" className="scroll-mt-36">
+        <div id="hero-premium" className="scroll-mt-36 fs-l2-avoid print:break-inside-avoid">
           <HeroSection data={data} />
         </div>
 
+        <div className="pt-6 sm:pt-8 fs-l2-avoid print:break-inside-avoid">
+          <DecisionLayerSummarySection data={data} />
+        </div>
+
+        <div className="fs-l2-page-break print:break-after-page" aria-hidden />
         <div className="mx-auto max-w-[1400px] space-y-20 px-4 py-14 sm:space-y-24 sm:px-6 sm:py-20 print:space-y-12 print:px-4">
           <ExecutiveDeckSection data={data} />
+          <div className="fs-l2-page-break print:hidden" aria-hidden />
+          <SidePhotoGallerySection data={data} />
           <KPISection data={data} />
           <FortSmartAiSection data={data} />
           <ExperimentDesignSection data={data} sectionId="ensaio-premium" />

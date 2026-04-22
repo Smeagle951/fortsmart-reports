@@ -4,7 +4,7 @@
  */
 export async function postReportAnalytics(opts: {
   shareToken: string;
-  eventType: 'download' | 'share';
+  eventType: 'download' | 'share' | 'quality_check';
   module: string;
 }): Promise<void> {
   const { shareToken, eventType, module } = opts;

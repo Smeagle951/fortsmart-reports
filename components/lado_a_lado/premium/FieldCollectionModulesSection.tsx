@@ -121,7 +121,8 @@ function hasFieldCollectionData(data: SideBySideReportData): boolean {
   return Array.isArray(pts) && pts.length > 0;
 }
 
-function formatCellValue(raw: unknown): string {
+function formatCellValue(raw: unknown, depth = 0): string {
+  if (depth > 10) return '…';
   if (raw == null) return '—';
   if (typeof raw === 'string') {
     const t = raw.trim();
@@ -146,14 +147,15 @@ function formatCellValue(raw: unknown): string {
   if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
     return raw.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
-  if (Array.isArray(raw)) return raw.map((x) => formatCellValue(x)).filter(Boolean).join(' · ') || '—';
+  if (Array.isArray(raw))
+    return raw.map((x) => formatCellValue(x, depth + 1)).filter(Boolean).join(' · ') || '—';
   if (typeof raw === 'object') {
     const keys = Object.keys(raw as object).filter((k) => !HIDDEN_KEYS.has(k));
     if (keys.length <= 3) {
       return keys
         .map((k) => {
           const v = (raw as Record<string, unknown>)[k];
-          return `${KEY_LABELS[k] ?? k}: ${formatCellValue(v)}`;
+          return `${KEY_LABELS[k] ?? k}: ${formatCellValue(v, depth + 1)}`;
         })
         .join('; ');
     }

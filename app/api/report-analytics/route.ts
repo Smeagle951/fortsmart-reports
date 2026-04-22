@@ -35,7 +35,7 @@ type Body = {
 };
 
 /**
- * POST { shareToken, eventType: 'download' | 'share', module? }
+ * POST { shareToken, eventType: 'download' | 'share' | 'quality_check', module? }
  * Valida token na tabela relatorios e grava ai_report_events (service role).
  */
 export async function POST(req: NextRequest) {
@@ -51,7 +51,10 @@ export async function POST(req: NextRequest) {
   }
 
   const token = typeof body.shareToken === 'string' ? body.shareToken.trim() : '';
-  const eventType = body.eventType === 'download' || body.eventType === 'share' ? body.eventType : null;
+  const eventType =
+    body.eventType === 'download' || body.eventType === 'share' || body.eventType === 'quality_check'
+      ? body.eventType
+      : null;
   const module = typeof body.module === 'string' && body.module.trim() ? body.module.trim() : 'relatorio_web';
 
   if (!token || !eventType) {

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /** Métricas de produto em `ai_report_events` (não são dataset IA). */
-export type ReportAnalyticsEventType = 'view' | 'download' | 'share';
+export type ReportAnalyticsEventType = 'view' | 'download' | 'share' | 'quality_check';
 
 /**
  * Insere linha em `public.ai_report_events`. Falhas só em log.

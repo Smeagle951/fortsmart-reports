@@ -100,10 +100,14 @@ export default function EconomicSection({ data }: { data: SideBySideReportData }
   const dl = data.decision_layer;
   const roiA = dl?.roiBySide?.A;
   const roiB = dl?.roiBySide?.B;
+  const economicsSuppressed = dl?.dataQuality?.enterpriseEconomicsSuppressed === true;
 
   const motorComplete =
+    !economicsSuppressed &&
     roiA != null &&
     roiB != null &&
+    roiA.economicsSuppressed !== true &&
+    roiB.economicsSuppressed !== true &&
     roiA.revenueBrlHa != null &&
     roiB.revenueBrlHa != null &&
     roiA.costBrlHa != null &&
@@ -144,6 +148,9 @@ export default function EconomicSection({ data }: { data: SideBySideReportData }
         })()
       : null;
 
+  const econAnalysis = data.economic_analysis;
+  const evoTl = data.evolution_timeline;
+
   return (
     <PremiumSectionShell
       id="economico-premium"
@@ -151,6 +158,44 @@ export default function EconomicSection({ data }: { data: SideBySideReportData }
       title="Fechamento econômico"
       subtitle="Valores do motor econômico e referências de mercado conforme publicados no JSON. Uso decisório sujeito à validação do responsável técnico e ao contexto comercial da propriedade."
     >
+
+      {econAnalysis && typeof econAnalysis === 'object' ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-sm"
+        >
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Pacote econômico (enterprise)</p>
+          <p className="mt-2 text-sm text-slate-700">
+            Este bloco (`economic_analysis`) é uma ponte de contrato: aponta quais seções estão preenchidas no JSON, sem recalcular
+            números fora do motor.
+          </p>
+          {(() => {
+            const p = (econAnalysis as { pointers?: Record<string, unknown> }).pointers;
+            if (!p) return null;
+            const entries = Object.entries(p).filter(([, v]) => v != null);
+            if (entries.length === 0) return null;
+            return (
+              <div className="mt-3 grid sm:grid-cols-2 gap-2 text-sm">
+                {entries.map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between gap-3 rounded-xl bg-white/70 border border-slate-200/70 px-3 py-2">
+                    <span className="text-slate-500">{k}</span>
+                    <span className="font-semibold text-slate-900">{String(v)}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </motion.div>
+      ) : null}
+
+      {evoTl && typeof evoTl === 'object' ? (
+        <p className="mb-6 text-xs text-slate-500">
+          Também foi publicado um bloco canônico <span className="font-semibold">evolution_timeline</span> (além de{' '}
+          <span className="font-semibold">economic_timeline</span> e <span className="font-semibold">evolucao</span>).
+        </p>
+      ) : null}
 
       {mr && (mr.price_sack_brl != null || mr.kg_per_sack != null) ? (
         <motion.div
@@ -209,7 +254,12 @@ export default function EconomicSection({ data }: { data: SideBySideReportData }
         </motion.div>
       ) : null}
 
-      {dl?.dataQuality?.usedEstimatedYield ? (
+      {economicsSuppressed ? (
+        <p className="mb-4 text-sm text-slate-800 bg-slate-100 border border-slate-200 rounded-xl px-4 py-2">
+          <strong>Modo lacunas (enterprise):</strong> produtividade estimada foi publicada (auditável), porém{' '}
+          <strong>margem/ROI</strong> não foi fechada sem colheita real — isso evita exibir fechamento econômico enganoso.
+        </p>
+      ) : dl?.dataQuality?.usedEstimatedYield ? (
         <p className="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
           Parte da produtividade usada no motor foi <strong>estimada em campo</strong> — resultados econômicos podem mudar após colheita real.
         </p>

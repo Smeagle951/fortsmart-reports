@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { insertReportViewEvent } from '@/lib/log-report-view-event';
+import { insertReportAnalyticsEvent, insertReportViewEvent } from '@/lib/log-report-view-event';
 import { getRelatorioByTokenHybrid } from '@/lib/get-relatorio-by-token-hybrid';
 import { type RelatorioRow } from '@/lib/supabase';
 import RelatorioContent from '@/components/RelatorioContent';
@@ -345,12 +345,18 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const ownerUidTemporal = (row.owner_firebase_uid ?? '').trim();
     if (adminTemporal && ownerUidTemporal && relatorioUuidStr.length > 0) {
       try {
-        const prevRow = await fetchPreviousRelatorioForTemporal(adminTemporal, {
-          currentId: relatorioUuidStr,
-          ownerUid: ownerUidTemporal,
-          preferTipo: typeof tipo === 'string' ? tipo : undefined,
-          preferTalhaoKey: extractTalhaoChave(payloadSafe),
-        });
+        // Não bloquear a página se o Supabase demorar ou ficar preso (evita "loading" infinito no browser).
+        const prevRow = await Promise.race([
+          fetchPreviousRelatorioForTemporal(adminTemporal, {
+            currentId: relatorioUuidStr,
+            ownerUid: ownerUidTemporal,
+            preferTipo: typeof tipo === 'string' ? tipo : undefined,
+            preferTalhaoKey: extractTalhaoChave(payloadSafe),
+          }),
+          new Promise<null>((resolve) => {
+            setTimeout(() => resolve(null), 5000);
+          }),
+        ]);
         if (prevRow) {
           const currSnap = parseAiSnapshotFromRelatorio(payloadSafe);
           const prevSnap = parseAiSnapshotFromRelatorio(prevRow.dados);
@@ -381,12 +387,30 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
       const metricUserId = ownerUid.length > 0 ? ownerUid : 'anonymous_viewer';
       const moduleMetric =
         typeof tipo === 'string' && tipo.length > 0 ? tipo : 'relatorio_web';
-      await insertReportViewEvent({
-        client: supabaseAdminForMetric,
-        reportId: relatorioUuidStr,
-        userId: metricUserId,
-        module: moduleMetric,
-      });
+      const qc = (payloadSafe as { quality_check?: unknown }).quality_check;
+      const warnings = qc && typeof qc === 'object' && qc !== null ? (qc as { warnings?: unknown }).warnings : null;
+      // Métricas de produto: não await — a rota pública não deve depender de insert em ai_report_events (evita spinner eterno se o Supabase travar).
+      void (async () => {
+        try {
+          await insertReportViewEvent({
+            client: supabaseAdminForMetric,
+            reportId: relatorioUuidStr,
+            userId: metricUserId,
+            module: moduleMetric,
+          });
+          if (Array.isArray(warnings) && warnings.length > 0) {
+            await insertReportAnalyticsEvent({
+              client: supabaseAdminForMetric,
+              reportId: relatorioUuidStr,
+              userId: metricUserId,
+              module: moduleMetric,
+              eventType: 'quality_check',
+            });
+          }
+        } catch (metricErr) {
+          console.warn('[fortsmart-reports] /r/[token] métricas (view/quality):', metricErr);
+        }
+      })();
     }
 
     let relatorioVisitaNormalizado: PayloadVisitaTecnica | null = null;
