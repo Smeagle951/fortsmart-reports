@@ -26,6 +26,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@fortsmart/report-contract": [
+        "./lib/report-contract.ts"
       ]
     },
     "strictNullChecks": true
