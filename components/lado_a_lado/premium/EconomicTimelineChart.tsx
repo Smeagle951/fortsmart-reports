@@ -50,10 +50,15 @@ export default function EconomicTimelineChart({
   timeline,
   nameA,
   nameB,
+  strokeA = COLOR_SIDE_A,
+  strokeB = COLOR_SIDE_B,
 }: {
   timeline: EconomicTimelineJson;
   nameA: string;
   nameB: string;
+  /** Sobrescreve cor da série A (ex.: legenda local do painel executivo). */
+  strokeA?: string;
+  strokeB?: string;
 }) {
   const data = buildRows(timeline);
   if (data.length < 2) return null;
@@ -76,8 +81,8 @@ export default function EconomicTimelineChart({
             labelFormatter={(daa) => `DAA ${daa}`}
           />
           <Legend />
-          <Line type="stepAfter" dataKey="costA" name={nameA} stroke={COLOR_SIDE_A} strokeWidth={2} dot />
-          <Line type="stepAfter" dataKey="costB" name={nameB} stroke={COLOR_SIDE_B} strokeWidth={2} dot />
+          <Line type="stepAfter" dataKey="costA" name={nameA} stroke={strokeA} strokeWidth={2} dot />
+          <Line type="stepAfter" dataKey="costB" name={nameB} stroke={strokeB} strokeWidth={2} dot />
         </LineChart>
       </ResponsiveContainer>
     </div>

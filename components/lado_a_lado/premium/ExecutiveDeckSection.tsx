@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
+  Bar,
+  BarChart,
+  CartesianGrid,
   Legend,
   PolarAngleAxis,
   PolarGrid,
@@ -10,11 +13,14 @@ import {
   RadarChart,
   ResponsiveContainer,
   Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
+import { Bell, Printer, UserRound } from 'lucide-react';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
+import type { ReportApplicationEventV2Json } from '@/types/side-by-side-report';
 import {
-  COLOR_SIDE_A,
-  COLOR_SIDE_B,
+  evolutionSeriesFromApplications,
   isColheitaJson,
   pickHeroPhoto,
   pressaoFitossanitariaMedia,
@@ -23,6 +29,12 @@ import { formatNumber } from '@/utils/format';
 import { buildPremiumRadarRows } from './evaluationRadar';
 import EconomicTimelineChart from './EconomicTimelineChart';
 import { heroFinancialSnapshot, scoresFromJson, winnerFromJson } from './premiumInference';
+
+/** Legenda local do painel executivo (mock): A verde material, B azul escuro. Resto do relatório premium mantém A azul / B verde em `ladoALadoHelpers`. */
+const DECK_SIDE_A = '#2E7D32';
+const DECK_SIDE_B = '#1565C0';
+const DECK_SIDE_A_SOFT = '#e8f5e9';
+const DECK_SIDE_B_SOFT = '#e3f2fd';
 
 type ComparableMetric = {
   key: string;
@@ -43,15 +55,10 @@ type EvidenceRow = {
 
 type ExecutiveCardTone = 'emerald' | 'blue' | 'amber' | 'slate';
 
-const TAB_TARGETS: { id: string; label: string }[] = [
-  { id: 'deck-executivo-premium', label: 'Resumo' },
-  { id: 'kpis-premium', label: 'KPIs' },
-  { id: 'comparativo-premium', label: 'Comparativo' },
-  { id: 'coleta-modulos-premium', label: 'Coleta' },
-  { id: 'execucao-premium', label: 'Aplicações' },
-  { id: 'avaliacao-premium', label: 'Evidências' },
-  { id: 'conclusao-premium', label: 'Conclusão' },
-];
+const LEFT_TABS = ['Geral', 'Estatística', 'Aplicações', 'Fitossanidade', 'Diagnóstico'] as const;
+const RIGHT_TABS = ['KPI', 'Estatística', 'Plantas', 'Fotos', 'Conclusão'] as const;
+type LeftTab = (typeof LEFT_TABS)[number];
+type RightTab = (typeof RIGHT_TABS)[number];
 
 function isFiniteNumber(value: number | null | undefined): value is number {
   return value != null && Number.isFinite(value);
@@ -82,43 +89,43 @@ function toComparableScore(
   formatValue: (value: number) => string,
 ): ComparableMetric | null {
   if (!isFiniteNumber(a) || !isFiniteNumber(b)) return null;
-  return { key: label.toLowerCase(), label, sourceLabel, a, b, formatValue };
+  return { key: `${label}-${sourceLabel}`.toLowerCase(), label, sourceLabel, a, b, formatValue };
 }
 
-function buildComparableMetrics(data: SideBySideReportData): ComparableMetric[] {
+/**
+ * Cada par A/B na sua própria linha — não mistura pl/ha com % na mesma linha.
+ */
+function buildAllComparableMetrics(data: SideBySideReportData): ComparableMetric[] {
   const kA = data.sideA?.kpis;
   const kB = data.sideB?.kpis;
   const rows: ComparableMetric[] = [];
+  const push = (m: ComparableMetric | null) => {
+    if (m) rows.push(m);
+  };
 
-  const standMetric =
-    toComparableScore(
-      'Estande',
-      'Eficiência de estande publicada',
-      kA?.eficienciaPct,
-      kB?.eficienciaPct,
-      (value) => `${formatNumber(value, { decimals: 0 })}%`,
-    ) ||
-    toComparableScore(
-      'Estande efetivo',
-      'Estande efetivo publicado',
-      kA?.estandeEfetivo,
-      kB?.estandeEfetivo,
-      (value) => `${formatNumber(value, { decimals: 0 })}%`,
-    ) ||
+  push(
     toComparableScore(
       'População final',
-      'População final publicada',
+      'kpis.finalPopulationPlHa',
       kA?.finalPopulationPlHa,
       kB?.finalPopulationPlHa,
       (value) => `${formatNumber(value, { decimals: 0 })} pl/ha`,
-    );
-
-  if (standMetric) rows.push(standMetric);
+    ),
+  );
+  push(
+    toComparableScore(
+      'Eficiência de estande',
+      'kpis.eficienciaPct',
+      kA?.eficienciaPct,
+      kB?.eficienciaPct,
+      (value) => `${formatNumber(value, { decimals: 0 })}%`,
+    ),
+  );
 
   const vigorMetric =
     toComparableScore(
-      'Vigor',
-      'Vigor da cultura publicado',
+      'Vigor da cultura',
+      'kpis.vigorCulturaPct',
       kA?.vigorCulturaPct,
       kB?.vigorCulturaPct,
       (value) => `${formatNumber(value, { decimals: 0 })}%`,
@@ -132,15 +139,14 @@ function buildComparableMetrics(data: SideBySideReportData): ComparableMetric[] 
         return null;
       }
       return toComparableScore(
-        'Vigor',
-        `Escala publicada ${maxA}`,
+        'Vigor (escala)',
+        `kpis.vigorRating.score (max ${maxA})`,
         aScore,
         bScore,
         (value) => `${formatNumber(value, { decimals: 1 })}/${maxA}`,
       );
     })();
-
-  if (vigorMetric) rows.push(vigorMetric);
+  push(vigorMetric);
 
   const rootMetric =
     (() => {
@@ -152,8 +158,8 @@ function buildComparableMetrics(data: SideBySideReportData): ComparableMetric[] 
         return null;
       }
       return toComparableScore(
-        'Raiz',
-        `Escala radicular ${maxA}`,
+        'Raiz (escala)',
+        `kpis.rootRating.score (max ${maxA})`,
         aScore,
         bScore,
         (value) => `${formatNumber(value, { decimals: 1 })}/${maxA}`,
@@ -161,13 +167,12 @@ function buildComparableMetrics(data: SideBySideReportData): ComparableMetric[] 
     })() ||
     toComparableScore(
       'Profundidade de raiz',
-      'Profundidade radicular publicada',
+      'kpis.profundidadeRaizCm',
       kA?.profundidadeRaizCm,
       kB?.profundidadeRaizCm,
       (value) => `${formatNumber(value, { decimals: 0 })} cm`,
     );
-
-  if (rootMetric) rows.push(rootMetric);
+  push(rootMetric);
 
   return rows;
 }
@@ -183,7 +188,7 @@ function productivitySnapshot(data: SideBySideReportData): {
   const rowB = colheita?.sides?.find((side) => side.side === 'B');
 
   if (isFiniteNumber(rowA?.yieldScHa) && isFiniteNumber(rowB?.yieldScHa)) {
-    return { a: rowA.yieldScHa, b: rowB.yieldScHa, sourceLabel: 'Colheita publicada' };
+    return { a: rowA.yieldScHa, b: rowB.yieldScHa, sourceLabel: 'Colheita publicada (sc/ha)' };
   }
 
   if (isFiniteNumber(rowA?.yieldKgHa) && isFiniteNumber(rowB?.yieldKgHa) && kgPerSack > 0) {
@@ -197,7 +202,7 @@ function productivitySnapshot(data: SideBySideReportData): {
   const a = data.sideA?.kpis?.estimatedYieldKgHa;
   const b = data.sideB?.kpis?.estimatedYieldKgHa;
   if (isFiniteNumber(a) && isFiniteNumber(b) && kgPerSack > 0) {
-    return { a: a / kgPerSack, b: b / kgPerSack, sourceLabel: 'Produtividade estimada nos KPIs' };
+    return { a: a / kgPerSack, b: b / kgPerSack, sourceLabel: 'kpis.estimatedYieldKgHa → sc/ha' };
   }
 
   return null;
@@ -290,6 +295,25 @@ function buildNarrativeLines(data: SideBySideReportData): string[] {
   return [...unique].slice(0, 4);
 }
 
+/** Risco para badge de KPI — só a partir de ocorrências (incidência + severidade). */
+function deriveRiskFromOcorrencias(
+  ocorrencias: SideBySideReportData['ocorrencias'],
+): 'Alto' | 'Moderado' | 'Baixo' | null {
+  if (!Array.isArray(ocorrencias) || ocorrencias.length === 0) return null;
+  const max = Math.max(
+    ...ocorrencias.map((o) =>
+      typeof o.incidenciaPct === 'number' && Number.isFinite(o.incidenciaPct) ? o.incidenciaPct : 0,
+    ),
+  );
+  const sevHigh = ocorrencias.some((o) => {
+    const s = `${o.severidade || ''}`.toLowerCase();
+    return s.includes('alta') || s.includes('muito');
+  });
+  if (sevHigh || max > 30) return 'Alto';
+  if (max > 15) return 'Moderado';
+  return 'Baixo';
+}
+
 function riskSummary(data: SideBySideReportData): { title: string; detail: string; tone: ExecutiveCardTone } {
   if (data.diagnosis?.problemaPrincipal?.trim()) {
     const urgency = data.diagnosis.urgencia?.trim();
@@ -334,52 +358,117 @@ function riskSummary(data: SideBySideReportData): { title: string; detail: strin
 
   return {
     title: 'Risco não consolidado',
-    detail: 'O JSON publicado não trouxe uma leitura objetiva de risco para este resumo.',
+    detail: 'O JSON publicado não trouxe ocorrências nem leitura objetiva de risco para este resumo.',
     tone: 'slate',
   };
 }
 
-function MetaChip({ children }: { children: React.ReactNode }) {
+/** Série de barras: contagem de aplicações por DAA (lado A/B). Inclui 1 DAA se necessário. */
+function daaApplicationBarRows(
+  applications: ReportApplicationEventV2Json[] | undefined,
+): { daa: number; name: string; A: number; B: number }[] | null {
+  const fromLib = evolutionSeriesFromApplications(applications);
+  if (fromLib) return fromLib;
+  const apps = applications ?? [];
+  if (!apps.length) return null;
+  const byDaa = new Map<number, { A: number; B: number }>();
+  for (const ev of apps) {
+    if (ev.daa == null || !Number.isFinite(Number(ev.daa))) continue;
+    const d = Number(ev.daa);
+    const cur = byDaa.get(d) ?? { A: 0, B: 0 };
+    if (ev.side === 'A') cur.A += 1;
+    else if (ev.side === 'B') cur.B += 1;
+    byDaa.set(d, cur);
+  }
+  if (byDaa.size === 0) return null;
+  return [...byDaa.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([daa, v]) => ({ daa, name: `${daa} DAA`, A: v.A, B: v.B }));
+}
+
+function NullChip({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-medium text-white/88 backdrop-blur-sm">
-      {children}
+    <span className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-amber-900">
+      {label}
     </span>
   );
 }
 
-function ScorePlate({
+function DeckCardHeader({
   title,
-  value,
-  accent,
-  accentSoft,
+  subtitle,
 }: {
   title: string;
-  value: number | null;
-  accent: string;
-  accentSoft: string;
+  subtitle?: string | null;
 }) {
   return (
-    <div
-      className="relative overflow-hidden rounded-[1.6rem] border px-5 py-5 shadow-[0_18px_34px_-22px_rgba(15,23,42,0.4)]"
-      style={{
-        borderColor: accentSoft,
-        background: `linear-gradient(160deg, ${accent} 0%, ${accentSoft} 100%)`,
-      }}
-    >
+    <div className="flex items-center gap-3 border-b border-slate-200/90 pb-3">
       <div
-        className="absolute inset-0 opacity-20"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base shadow-sm ring-2 ring-white"
         style={{
-          background:
-            'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.35), transparent 40%), radial-gradient(circle at 80% 0%, rgba(255,255,255,0.22), transparent 35%)',
+          background: 'linear-gradient(135deg,#166534,#15803d)',
         }}
         aria-hidden
-      />
-      <p className="relative text-[0.65rem] font-bold uppercase tracking-[0.28em] text-white/70">{title}</p>
-      <p className="relative mt-3 text-5xl font-black leading-none tracking-tight text-white tabular-nums">
-        {value != null ? Math.round(value) : '—'}
-      </p>
+      >
+        🌿
+      </div>
+      <div className="min-w-0 flex-1">
+        <h2 className="text-sm font-bold tracking-tight text-slate-900 sm:text-base">{title}</h2>
+        {subtitle ? <p className="mt-0.5 truncate text-xs text-slate-500">{subtitle}</p> : null}
+      </div>
+      <div className="flex shrink-0 items-center gap-2 text-slate-400">
+        <button
+          type="button"
+          className="rounded-lg p-2 transition-colors hover:bg-slate-100 hover:text-slate-700 print:hidden"
+          aria-label="Imprimir"
+          onClick={() => window.print()}
+        >
+          <Printer className="h-4 w-4" />
+        </button>
+        <span className="rounded-lg p-2 opacity-50" aria-hidden title="Notificações">
+          <Bell className="h-4 w-4" />
+        </span>
+        <span className="rounded-lg p-2 opacity-50" aria-hidden title="Perfil">
+          <UserRound className="h-4 w-4" />
+        </span>
+      </div>
     </div>
   );
+}
+
+function TabBar<T extends string = string>({
+  tabs,
+  active,
+  onSelect,
+  accentClass,
+}: {
+  tabs: readonly T[];
+  active: T;
+  onSelect: (t: T) => void;
+  accentClass: string;
+}): React.ReactElement {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {tabs.map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onSelect(t)}
+          className={`rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors ${
+            active === t ? `${accentClass} text-white shadow-sm` : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+          }`}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function winnerBadgeLabel(winner: 'A' | 'B' | null, nameA: string, nameB: string): string | null {
+  if (winner === 'A') return nameA;
+  if (winner === 'B') return nameB;
+  return null;
 }
 
 function SnapshotCard({
@@ -394,18 +483,77 @@ function SnapshotCard({
   tone: ExecutiveCardTone;
 }) {
   return (
-    <div className={`rounded-2xl border px-4 py-4 shadow-sm ${cardToneClasses(tone)}`}>
+    <div className={`rounded-2xl border px-4 py-3 shadow-sm ${cardToneClasses(tone)}`}>
       <p className="text-[0.62rem] font-bold uppercase tracking-[0.22em] opacity-75">{eyebrow}</p>
-      <p className="mt-2 text-base font-semibold leading-snug">{title}</p>
-      <p className="mt-1.5 text-sm leading-relaxed opacity-85">{detail}</p>
+      <p className="mt-1.5 text-sm font-semibold leading-snug">{title}</p>
+      <p className="mt-1 text-xs leading-relaxed opacity-85">{detail}</p>
     </div>
   );
 }
 
-function winnerBadgeLabel(winner: 'A' | 'B' | null, nameA: string, nameB: string): string | null {
-  if (winner === 'A') return `${nameA} lidera a conclusão técnica publicada`;
-  if (winner === 'B') return `${nameB} lidera a conclusão técnica publicada`;
-  return null;
+function StatsTableBlock({ rows }: { rows: NonNullable<SideBySideReportData['criteriosEstatistica']> | undefined }) {
+  if (!rows?.length) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+        <NullChip label="criteriosEstatistica: null" />
+      </div>
+    );
+  }
+  return (
+    <div className="overflow-x-auto rounded-xl border border-slate-200">
+      <table className="min-w-full text-left text-xs">
+        <thead className="bg-slate-50 text-slate-500">
+          <tr>
+            <th className="px-3 py-2 font-semibold">Critério</th>
+            <th className="px-3 py-2 font-semibold">A</th>
+            <th className="px-3 py-2 font-semibold">B</th>
+            <th className="px-3 py-2 font-semibold">CV A</th>
+            <th className="px-3 py-2 font-semibold">CV B</th>
+            <th className="px-3 py-2 font-semibold">Indicativo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={`${row.criterio}-${index}`} className="border-t border-slate-100 text-slate-700">
+              <td className="px-3 py-2 font-medium">
+                {row.criterio || 'Critério'}
+                {row.unidade ? <span className="text-slate-400"> ({row.unidade})</span> : null}
+              </td>
+              <td className="px-3 py-2 font-semibold" style={{ color: DECK_SIDE_A }}>
+                {isFiniteNumber(row.mediaA) ? formatNumber(row.mediaA, { decimals: 1 }) : <NullChip label="null" />}
+              </td>
+              <td className="px-3 py-2 font-semibold" style={{ color: DECK_SIDE_B }}>
+                {isFiniteNumber(row.mediaB) ? formatNumber(row.mediaB, { decimals: 1 }) : <NullChip label="null" />}
+              </td>
+              <td className="px-3 py-2">
+                {isFiniteNumber(row.cvPctA) ? `${formatNumber(row.cvPctA, { decimals: 1 })}%` : <NullChip label="null" />}
+              </td>
+              <td className="px-3 py-2">
+                {isFiniteNumber(row.cvPctB) ? `${formatNumber(row.cvPctB, { decimals: 1 })}%` : <NullChip label="null" />}
+              </td>
+              <td className="px-3 py-2">
+                {row.diferencaIndicativa != null ? (
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-800">
+                    {row.diferencaIndicativa ? 'Sim' : 'Não'}
+                  </span>
+                ) : (
+                  <NullChip label="null" />
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function productLine(products: ReportApplicationEventV2Json['products']): string {
+  if (!products?.length) return '—';
+  return products
+    .map((p) => p.nomeComercial?.trim() || p.nomeAtivo?.trim() || 'produto')
+    .filter(Boolean)
+    .join(', ');
 }
 
 export default function ExecutiveDeckSection({
@@ -415,42 +563,39 @@ export default function ExecutiveDeckSection({
   data: SideBySideReportData;
   sectionId?: string;
 }) {
+  const [leftTab, setLeftTab] = useState<LeftTab>('Geral');
+  const [rightTab, setRightTab] = useState<RightTab>('KPI');
+
   const farm = data.farm || {};
   const coleta = data.coleta;
   const nameA = data.sideA?.name || 'Manejo A';
   const nameB = data.sideB?.name || 'Manejo B';
   const winner = winnerFromJson(data);
-  const winnerName = winner === 'A' ? nameA : winner === 'B' ? nameB : null;
-  const winnerLabel = winnerBadgeLabel(winner, nameA, nameB);
-  const engineWinner = data.decision_layer?.engineOverallWinner;
-  const roiWinner = data.decision_layer?.engineRoiWinner;
+  const winnerName = winnerBadgeLabel(winner, nameA, nameB);
   const financial = heroFinancialSnapshot(data);
   const scorePair = scoresFromJson(data);
   const productivity = productivitySnapshot(data);
   const roi = roiSnapshot(data);
   const radarRows = useMemo(() => buildPremiumRadarRows(data), [data]);
-  const comparableMetrics = useMemo(() => buildComparableMetrics(data), [data]);
+  const comparableMetrics = useMemo(() => buildAllComparableMetrics(data), [data]);
   const evidenceRows = useMemo(() => buildEvidenceRows(data), [data]);
   const narrativeLines = useMemo(() => buildNarrativeLines(data), [data]);
-  const risk = riskSummary(data);
+  const riskContext = riskSummary(data);
   const photoA = pickHeroPhoto(data.sideA?.photos);
   const photoB = pickHeroPhoto(data.sideB?.photos);
+  const bannerPhoto = photoB?.url ? photoB : photoA;
+  const daaBarData = useMemo(() => daaApplicationBarRows(data.applications), [data.applications]);
+  const riskFromOcc = deriveRiskFromOcorrencias(data.ocorrencias);
 
-  const metaTitle =
-    [farm.farmName, farm.fieldName].filter(Boolean).join(' · ') ||
-    coleta?.ensaioName ||
-    farm.objective ||
-    'Avaliação agronômica lado a lado';
+  const subTitle = data.branding?.subtitle?.trim() || null;
 
-  const subTitle =
-    [coleta?.ensaioName, farm.culture, farm.season]
-      .filter((item) => typeof item === 'string' && item.trim().length > 0)
-      .join(' · ') || 'Painel executivo para leitura rápida de campo';
-
-  const introText =
-    data.comparativo_intro?.trim() ||
-    data.branding?.subtitle?.trim() ||
-    'Estrutura web consolidada para leitura comparativa, usando apenas o que foi efetivamente publicado no JSON do relatório.';
+  const cultureLine = [
+    farm.culture ? `Cultura: ${farm.culture}` : null,
+    coleta?.estadio ? `Estádio: ${coleta.estadio}` : null,
+    coleta?.dae != null ? `${coleta.dae} DAE` : coleta?.dap != null ? `${coleta.dap} DAP` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   const scoreDelta =
     isFiniteNumber(scorePair.a) && isFiniteNumber(scorePair.b) ? Math.round(scorePair.b - scorePair.a) : null;
@@ -464,322 +609,557 @@ export default function ExecutiveDeckSection({
   const productivityDetail =
     productivity && isFiniteNumber(productivity.a) && isFiniteNumber(productivity.b)
       ? `Fonte: ${productivity.sourceLabel}.${productivity.b !== productivity.a ? ` Δ ${formatSignedDelta(productivity.b - productivity.a, 1)} sc/ha (B − A).` : ''}`
-      : 'O painel preserva a ausência de produtividade consolidada quando colheita ou estimativa comparável não vierem no payload.';
+      : 'Quando colheita ou estimativa comparável não existir no payload, o painel exibe ausência explícita.';
 
   const roiTitle = roi
     ? `${formatNumber(roi.a ?? 0, { decimals: 0 })}% vs ${formatNumber(roi.b ?? 0, { decimals: 0 })}%`
     : 'ROI não publicado';
 
   const roiDetail = roi
-    ? `ROI por lado publicado em decision_layer.roiBySide.${roiWinner === 'A' || roiWinner === 'B' ? ` O melhor ROI do motor está com ${roiWinner === 'A' ? nameA : nameB}.` : ''}`
+    ? 'Valores exclusivamente de decision_layer.roiBySide.A/B.roiPct.'
     : 'Sem roiBySide completo no JSON publicado.';
 
-  const engineTitle =
-    engineWinner === 'A'
-      ? `Motor favorece ${nameA}`
-      : engineWinner === 'B'
-        ? `Motor favorece ${nameB}`
-        : 'Motor sem vencedor fechado';
+  const melhorDesempenhoTexto =
+    winnerName != null
+      ? `Melhor desempenho (conclusão): ${winnerName}`
+      : 'Sem conclusion.winner no JSON — não exibimos vencedor inferido.';
 
-  const engineDetail =
-    isFiniteNumber(financial.gainBrlHa)
-      ? `Receita bruta estimada: ${financial.gainBrlHa >= 0 ? '+' : '-'}R$ ${formatNumber(Math.abs(financial.gainBrlHa), {
-          decimals: 0,
-        })}/ha (B − A).`
-      : isFiniteNumber(financial.deltaScHa)
-        ? `Diferença consolidada de ${formatSignedDelta(financial.deltaScHa, 1)} sc/ha (B − A).`
-        : 'Sem fechamento econômico consolidado para diferença monetária neste resumo.';
-
-  const scoreBannerText =
-    winnerLabel ||
-    (scoreDelta != null
-      ? `${scoreDelta > 0 ? nameB : scoreDelta < 0 ? nameA : 'Os dois manejos'} ${scoreDelta === 0 ? 'mantêm o mesmo score publicado' : `abrem ${Math.abs(scoreDelta)} ponto${Math.abs(scoreDelta) === 1 ? '' : 's'} no score publicado`}`
-      : 'Score técnico disponível apenas quando performanceScore é publicado para ambos os lados.');
-
-  const scrollTo = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  const motorAlerts = data.decision_layer?.fortsmart_ai?.motor_alertas ?? [];
 
   return (
     <section id={sectionId} className="scroll-mt-36 print:break-inside-avoid">
-      <div className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_28px_80px_-36px_rgba(15,23,42,0.28)] ring-1 ring-slate-900/[0.04]">
-        <div className="relative overflow-hidden border-b border-slate-200/70 bg-[linear-gradient(135deg,#0f172a_0%,#132b44_35%,#114c3d_100%)] px-5 py-7 sm:px-8 sm:py-9 text-white">
+      <div className="mx-auto max-w-[1400px] space-y-3">
+        <p className="rounded-lg border border-slate-200/80 bg-white px-3 py-2 text-center text-[11px] leading-snug text-slate-600 shadow-sm print:hidden">
+          Legenda local deste painel:{' '}
+          <strong style={{ color: DECK_SIDE_A }}>Manejo A</strong> verde ·{' '}
+          <strong style={{ color: DECK_SIDE_B }}>Manejo B</strong> azul escuro. Nas demais secções do relatório, os gráficos usam{' '}
+          <span className="font-mono text-[10px] text-slate-500">A = azul · B = verde</span>.
+        </p>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        {/* Painel esquerdo */}
+        <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-md print:border print:shadow-none">
+          <DeckCardHeader title="Avaliação de campo" subtitle={subTitle} />
+
+          <p className="text-xs text-slate-500">
+            {cultureLine || <NullChip label="cultura/estádio/DAA: null" />}
+          </p>
+
+          {data.comparativo_intro?.trim() ? (
+            <blockquote className="border-l-4 border-emerald-600 bg-emerald-50/40 py-2 pl-3 text-xs italic leading-relaxed text-slate-600">
+              {data.comparativo_intro.trim()}
+            </blockquote>
+          ) : null}
+
+          <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            <span className="rounded-full px-2 py-0.5" style={{ backgroundColor: DECK_SIDE_A_SOFT, color: DECK_SIDE_A }}>
+              {nameA}
+            </span>
+            <span className="rounded-full px-2 py-0.5" style={{ backgroundColor: DECK_SIDE_B_SOFT, color: DECK_SIDE_B }}>
+              {nameB}
+            </span>
+          </div>
+
           <div
-            className="absolute inset-0 opacity-35"
+            className="flex items-center gap-3 rounded-2xl px-4 py-3 text-white"
             style={{
-              background:
-                'radial-gradient(circle at 18% 18%, rgba(59,130,246,0.28), transparent 30%), radial-gradient(circle at 82% 0%, rgba(16,185,129,0.24), transparent 28%), linear-gradient(180deg, rgba(255,255,255,0.06), transparent 50%)',
+              background: 'linear-gradient(90deg, #1e3a8a 0%, #14532d 100%)',
             }}
-            aria-hidden
-          />
-          <div className="relative">
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.34em] text-emerald-200/90">Painel executivo web</p>
-            <div className="mt-4 grid gap-6 xl:grid-cols-[1.35fr_0.95fr] xl:items-end">
-              <div>
-                <h2 className="text-2xl sm:text-[2rem] font-semibold leading-tight tracking-tight text-white">{metaTitle}</h2>
-                <p className="mt-2 text-sm sm:text-base text-white/72">{subTitle}</p>
-                <p className="mt-4 max-w-3xl text-sm sm:text-[15px] leading-relaxed text-white/86">{introText}</p>
-              </div>
-              <div className="flex flex-wrap gap-2 xl:justify-end">
-                {[farm.city && farm.state ? `${farm.city}/${farm.state}` : null, coleta?.estadio, farm.areaHa != null ? `${formatNumber(farm.areaHa, { decimals: 1 })} ha` : null, coleta?.dae != null ? `${coleta.dae} DAE` : coleta?.dap != null ? `${coleta.dap} DAP` : null]
-                  .filter(Boolean)
-                  .map((label) => (
-                    <MetaChip key={label}>{label}</MetaChip>
-                  ))}
-              </div>
+          >
+            <div
+              className="min-w-[3.25rem] rounded-xl px-3 py-2 text-center text-2xl font-black tabular-nums"
+              style={{ backgroundColor: DECK_SIDE_A }}
+            >
+              {scorePair.a != null ? Math.round(scorePair.a) : '—'}
+            </div>
+            <div className="min-w-0 flex-1 text-center">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-sky-200/90">Melhor desempenho</p>
+              <p className="mt-1 text-sm font-bold leading-tight">{melhorDesempenhoTexto}</p>
+              <p className="mt-1 font-mono text-[9px] text-emerald-200/90">Fonte: conclusion.winner · kpis.performanceScore</p>
+            </div>
+            <div
+              className="min-w-[3.25rem] rounded-xl px-3 py-2 text-center text-2xl font-black tabular-nums"
+              style={{ backgroundColor: DECK_SIDE_B }}
+            >
+              {scorePair.b != null ? Math.round(scorePair.b) : '—'}
             </div>
           </div>
-        </div>
+          {scorePair.a == null || scorePair.b == null ? (
+            <p className="text-center text-[10px] text-amber-800">
+              <NullChip label="performanceScore ausente num lado" /> — sem badge de score completo.
+            </p>
+          ) : null}
 
-        <div className="bg-[linear-gradient(180deg,#f8fafc_0%,#f3f6fb_100%)] px-4 py-5 sm:px-7 sm:py-7">
-          <div className="grid gap-5 xl:grid-cols-[1.4fr_0.9fr]">
-            <div className="rounded-[1.75rem] border border-slate-200/80 bg-white/90 p-4 shadow-[0_18px_44px_-30px_rgba(15,23,42,0.25)] sm:p-5">
-              <div className="rounded-[1.4rem] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 sm:p-5">
-                <div className="flex flex-col gap-4">
-                  <div className="rounded-full border border-slate-200/80 bg-slate-50 px-4 py-2 text-center text-sm font-semibold text-slate-700 shadow-sm">
-                    {scoreBannerText}
-                  </div>
-                  <div className="grid items-center gap-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-                    <ScorePlate title={nameA} value={scorePair.a} accent={COLOR_SIDE_A} accentSoft="#1d4ed8" />
-                    <div className="flex justify-center">
-                      <div className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-center shadow-sm">
-                        <p className="text-[0.62rem] font-bold uppercase tracking-[0.24em] text-slate-500">Delta</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-800">
-                          {scoreDelta != null ? `${scoreDelta > 0 ? 'B' : scoreDelta < 0 ? 'A' : 'A = B'}${scoreDelta === 0 ? '' : ` ${scoreDelta > 0 ? '>' : '<'} ${scoreDelta > 0 ? 'A' : 'B'}`}` : 'Sem score'}
-                        </p>
-                        {scoreDelta != null ? (
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            {scoreDelta > 0 ? '+' : ''}
-                            {scoreDelta} pts
-                          </p>
-                        ) : null}
-                      </div>
+          <div className="flex flex-col gap-2">
+            {comparableMetrics.length > 0 ? (
+              comparableMetrics.map((metric) => {
+                const delta = metric.b - metric.a;
+                const betterSide = delta === 0 ? null : delta > 0 ? 'B' : 'A';
+                return (
+                  <div
+                    key={metric.key}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold text-slate-700">{metric.label}</p>
+                      <p className="font-mono text-[9px] text-amber-900/80">{metric.sourceLabel}</p>
                     </div>
-                    <ScorePlate title={nameB} value={scorePair.b} accent={COLOR_SIDE_B} accentSoft="#15803d" />
+                    <div className="flex items-baseline gap-2 text-sm font-bold tabular-nums">
+                      <span style={{ color: DECK_SIDE_A }}>{metric.formatValue(metric.a)}</span>
+                      <span className="text-xs font-normal text-slate-300">vs</span>
+                      <span style={{ color: DECK_SIDE_B }}>{metric.formatValue(metric.b)}</span>
+                    </div>
+                    <p className="w-full text-[10px] text-slate-500">
+                      {betterSide ? `Vantagem numérica lado ${betterSide} neste critério.` : 'Empate numérico.'}
+                    </p>
                   </div>
-                </div>
+                );
+              })
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-500">
+                Sem pares A/B comparáveis com a mesma unidade no JSON.
               </div>
+            )}
+          </div>
 
-              {comparableMetrics.length > 0 ? (
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  {comparableMetrics.map((metric) => {
-                    const delta = metric.b - metric.a;
-                    const betterSide = delta === 0 ? null : delta > 0 ? 'B' : 'A';
-                    return (
-                      <div key={metric.key} className="rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm">
-                        <p className="text-[0.62rem] font-bold uppercase tracking-[0.24em] text-slate-500">{metric.label}</p>
-                        <div className="mt-2 flex items-baseline justify-between gap-4">
-                          <div>
-                            <p className="text-[11px] font-medium text-slate-500">A</p>
-                            <p className="text-base font-semibold" style={{ color: COLOR_SIDE_A }}>
-                              {metric.formatValue(metric.a)}
-                            </p>
-                          </div>
-                          <span className="text-xs text-slate-300">vs</span>
-                          <div className="text-right">
-                            <p className="text-[11px] font-medium text-slate-500">B</p>
-                            <p className="text-base font-semibold" style={{ color: COLOR_SIDE_B }}>
-                              {metric.formatValue(metric.b)}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="mt-2 text-xs text-slate-500">
-                          {metric.sourceLabel}
-                          {betterSide ? ` · vantagem ${betterSide}` : ' · empate técnico'}
-                        </p>
-                      </div>
-                    );
-                  })}
+          <div className="grid gap-2 sm:grid-cols-2">
+            <SnapshotCard eyebrow="Produtividade" title={productivityTitle} detail={productivityDetail} tone="emerald" />
+            <SnapshotCard eyebrow="ROI ajustado" title={roiTitle} detail={roiDetail} tone="blue" />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs">
+            <span className="font-semibold text-slate-500">Risco (ocorrências):</span>
+            {riskFromOcc != null ? (
+              <span
+                className={`rounded-full px-2 py-0.5 font-bold ${
+                  riskFromOcc === 'Alto'
+                    ? 'bg-red-100 text-red-800'
+                    : riskFromOcc === 'Moderado'
+                      ? 'bg-orange-100 text-orange-900'
+                      : 'bg-emerald-100 text-emerald-900'
+                }`}
+              >
+                {riskFromOcc}
+              </span>
+            ) : (
+              <NullChip label="ocorrencias: null" />
+            )}
+            <span className="text-[10px] text-slate-400">Derivado de incidência % e severidade publicadas.</span>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-bold text-slate-800">Insights e alertas</p>
+            <p className="mb-2 font-mono text-[9px] text-slate-500">decision_layer.fortsmart_ai.motor_alertas</p>
+            {motorAlerts.length > 0 ? (
+              <ul className="flex flex-col gap-2">
+                {motorAlerts.map((a, i) => {
+                  const crit = a.nivel === 'critico';
+                  const att = a.nivel === 'atencao';
+                  return (
+                    <li
+                      key={`${a.id ?? i}`}
+                      className={`rounded-xl border px-3 py-2 text-sm leading-relaxed ${
+                        crit
+                          ? 'border-red-200 bg-red-50 text-red-950'
+                          : att
+                            ? 'border-amber-200 bg-amber-50 text-amber-950'
+                            : 'border-slate-200 bg-slate-50 text-slate-800'
+                      }`}
+                    >
+                      {a.titulo ? <span className="font-bold">{a.titulo}</span> : <NullChip label="titulo: null" />}
+                      {a.mensagem ? <span className="mt-1 block text-xs opacity-90">{a.mensagem}</span> : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <NullChip label="motor_alertas: null" />
+            )}
+          </div>
+
+          <TabBar<LeftTab> tabs={LEFT_TABS} active={leftTab} onSelect={setLeftTab} accentClass="bg-slate-800" />
+
+          {leftTab === 'Geral' ? (
+            <div>
+              <p className="text-xs font-bold text-slate-800">Eventos de aplicação por DAA</p>
+              <p className="mt-1 text-[10px] font-medium text-amber-800">
+                Série real: contagem de eventos em applications por DAA — não é evolução de score por data.
+              </p>
+              {daaBarData && daaBarData.length > 0 ? (
+                <div className="mt-2 h-40 w-full min-w-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={daaBarData} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#64748b' }} width={28} />
+                      <Tooltip
+                        formatter={(val: number, name: string) => [val ?? '—', `Aplicações ${name}`]}
+                        contentStyle={{ borderRadius: 8, fontSize: 11 }}
+                      />
+                      <Bar dataKey="A" name="A" fill={DECK_SIDE_A} radius={[4, 4, 0, 0]} maxBarSize={22} />
+                      <Bar dataKey="B" name="B" fill={DECK_SIDE_B} radius={[4, 4, 0, 0]} maxBarSize={22} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-3 text-sm text-slate-500">
-                  Estande, vigor e raiz só entram aqui quando os dois lados trazem a mesma métrica com unidade comparável.
+                <div className="mt-2 flex h-28 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+                  <NullChip label="applications: null ou sem DAA" />
                 </div>
               )}
             </div>
+          ) : null}
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <SnapshotCard eyebrow="Produtividade" title={productivityTitle} detail={productivityDetail} tone="emerald" />
-              <SnapshotCard eyebrow="ROI" title={roiTitle} detail={roiDetail} tone="blue" />
-              <SnapshotCard eyebrow="Risco" title={risk.title} detail={risk.detail} tone={risk.tone} />
-              <SnapshotCard eyebrow="Motor" title={engineTitle} detail={engineDetail} tone="slate" />
+          {leftTab === 'Estatística' ? <StatsTableBlock rows={data.criteriosEstatistica} /> : null}
+
+          {leftTab === 'Aplicações' ? (
+            <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto text-xs">
+              {(data.applications ?? []).length ? (
+                data.applications!.map((ev, i) => (
+                  <li
+                    key={ev.id ?? i}
+                    className="rounded-lg border border-slate-200 px-3 py-2"
+                    style={{ borderLeftWidth: 4, borderLeftColor: ev.side === 'A' ? DECK_SIDE_A : DECK_SIDE_B }}
+                  >
+                    <span className="font-bold">Lado {ev.side}</span>
+                    {ev.daa != null ? <span className="text-slate-500"> · DAA {ev.daa}</span> : null}
+                    {ev.type ? <span> · {ev.type}</span> : null}
+                    <p className="mt-1 text-slate-600">{productLine(ev.products)}</p>
+                  </li>
+                ))
+              ) : (
+                <NullChip label="applications: null" />
+              )}
+            </ul>
+          ) : null}
+
+          {leftTab === 'Fitossanidade' ? (
+            <ul className="flex flex-col gap-2 text-xs">
+              {(data.ocorrencias ?? []).length ? (
+                data.ocorrencias!.map((o, i) => (
+                  <li key={i} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <span className="font-semibold">{o.tipo ?? '—'}</span> · {o.nomeAlvo ?? '—'}
+                    <span className="text-slate-500">
+                      {' '}
+                      · incidência{' '}
+                      {isFiniteNumber(o.incidenciaPct) ? `${formatNumber(o.incidenciaPct, { decimals: 0 })}%` : <NullChip label="null" />}
+                    </span>
+                    {o.severidade ? <span className="block text-slate-600">Severidade: {o.severidade}</span> : null}
+                  </li>
+                ))
+              ) : (
+                <NullChip label="ocorrencias: null" />
+              )}
+            </ul>
+          ) : null}
+
+          {leftTab === 'Diagnóstico' ? (
+            <div className="space-y-2 text-sm text-slate-800">
+              <p>
+                <span className="font-semibold">Problema:</span>{' '}
+                {data.diagnosis?.problemaPrincipal?.trim() || <NullChip label="diagnosis.problemaPrincipal: null" />}
+              </p>
+              <p>
+                <span className="font-semibold">Secundários:</span>{' '}
+                {data.diagnosis?.problemasSecundarios?.length
+                  ? data.diagnosis.problemasSecundarios.join(', ')
+                  : <NullChip label="null" />}
+              </p>
+              <p>
+                <span className="font-semibold">Urgência:</span>{' '}
+                {data.diagnosis?.urgencia?.trim() || <NullChip label="null" />}
+              </p>
+              <p>
+                <span className="font-semibold">Plano:</span>{' '}
+                {data.diagnosis?.planoAcao?.trim() || <NullChip label="diagnosis.planoAcao: null" />}
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Painel direito */}
+        <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-md print:border print:shadow-none">
+          <div className="space-y-4 p-5">
+            <DeckCardHeader title="Relatório de avaliação" subtitle={subTitle} />
+          </div>
+
+          <div className="relative min-h-[140px] w-full overflow-hidden">
+            {bannerPhoto?.url ? (
+              <img
+                src={bannerPhoto.url}
+                alt={bannerPhoto.caption || 'Campo'}
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div
+                className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-700 to-emerald-900"
+                aria-hidden
+              />
+            )}
+            <div className="absolute inset-0 bg-slate-900/45" />
+            <div className="relative z-10 flex min-h-[140px] flex-col justify-end p-5">
+              <p className="text-lg font-bold leading-snug text-white drop-shadow-sm">
+                {data.conclusion?.headline?.trim() || (
+                  <span className="text-white/70">
+                    Sem headline publicada <NullChip label="conclusion.headline: null" />
+                  </span>
+                )}
+              </p>
             </div>
           </div>
 
-          <div className="mt-5 overflow-x-auto rounded-full border border-slate-200/80 bg-white/90 px-2 py-2 shadow-sm">
-            <div className="flex min-w-max gap-1">
-              {TAB_TARGETS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => scrollTo(tab.id)}
-                  className="shrink-0 rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.95fr]">
-            <div className="space-y-5">
-              <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-4 shadow-[0_20px_42px_-32px_rgba(15,23,42,0.24)] sm:p-5">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <p className="text-[0.68rem] font-bold uppercase tracking-[0.3em] text-slate-500">Comparativo visual</p>
-                    <h3 className="mt-1 text-lg font-semibold text-slate-900">Radar de desempenho consolidado</h3>
-                    <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                      O gráfico usa apenas eixos que o front conseguiu compor a partir dos KPIs e da fenologia publicados.
-                    </p>
-                  </div>
-                  {winnerName ? (
-                    <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900">
-                      Conclusão publicada: {winnerName}
-                    </div>
-                  ) : null}
-                </div>
-
-                {radarRows.length > 0 ? (
-                  <div className="mt-4 h-[21rem] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={radarRows} margin={{ top: 12, right: 22, bottom: 12, left: 22 }}>
-                        <PolarGrid stroke="#d7dee9" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: '#475569', fontWeight: 600 }} />
-                        <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                        <Radar name={nameA} dataKey="A" stroke={COLOR_SIDE_A} fill={COLOR_SIDE_A} fillOpacity={0.24} strokeWidth={2.5} />
-                        <Radar name={nameB} dataKey="B" stroke={COLOR_SIDE_B} fill={COLOR_SIDE_B} fillOpacity={0.18} strokeWidth={2.5} />
-                        <Legend />
-                        <Tooltip />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
+          <div className="space-y-4 p-5">
+            <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
+              <div
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-white"
+                style={{ backgroundColor: DECK_SIDE_A }}
+              >
+                <span className="text-xl font-black tabular-nums">{scorePair.a != null ? Math.round(scorePair.a) : '—'}</span>
+                <span className="text-[10px] font-bold uppercase text-white/90">Manejo A</span>
+              </div>
+              <div className="shrink-0 text-center text-[11px] text-slate-600">
+                <span className="tabular-nums">«</span>
+                {scoreDelta != null ? (
+                  <span className="mx-1 font-bold text-slate-800">
+                    {scoreDelta > 0 ? 'B' : scoreDelta < 0 ? 'A' : '='} · {scoreDelta > 0 ? '+' : ''}
+                    {scoreDelta} pts
+                  </span>
                 ) : (
-                  <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-10 text-center text-sm text-slate-500">
-                    O JSON publicado ainda não oferece base suficiente para montar um radar comparável.
-                  </div>
+                  <NullChip label="Δ: null" />
+                )}
+                <span className="tabular-nums">»</span>
+              </div>
+              <div
+                className="flex min-w-0 flex-1 items-center justify-end gap-2 rounded-lg px-2 py-1.5 text-white"
+                style={{ backgroundColor: DECK_SIDE_B }}
+              >
+                <span className="text-[10px] font-bold uppercase text-white/90">Manejo B</span>
+                <span className="text-xl font-black tabular-nums">{scorePair.b != null ? Math.round(scorePair.b) : '—'}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <span aria-hidden>🌱</span>
+                <span className="text-slate-500">Previsão / colheita (sc/ha):</span>
+                <span className="font-bold" style={{ color: DECK_SIDE_A }}>
+                  {productivity && isFiniteNumber(productivity.a)
+                    ? `${formatNumber(productivity.a, { decimals: 0 })} sc/ha`
+                    : '—'}
+                </span>
+                <span className="text-slate-300">vs</span>
+                <span className="font-bold" style={{ color: DECK_SIDE_B }}>
+                  {productivity && isFiniteNumber(productivity.b)
+                    ? `${formatNumber(productivity.b, { decimals: 0 })} sc/ha`
+                    : '—'}
+                </span>
+                {isFiniteNumber(financial.deltaScHa) ? (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
+                    {formatSignedDelta(financial.deltaScHa, 0)} sc/ha
+                  </span>
+                ) : (
+                  <NullChip label="Δ sc/ha: null" />
                 )}
               </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span aria-hidden>✅</span>
+                <span className="text-slate-500">ROI ajustado:</span>
+                <span className="font-bold" style={{ color: DECK_SIDE_A }}>
+                  {roi && isFiniteNumber(roi.a) ? `${formatNumber(roi.a, { decimals: 0 })}%` : '—'}
+                </span>
+                <span className="text-slate-300">vs</span>
+                <span className="font-bold" style={{ color: DECK_SIDE_B }}>
+                  {roi && isFiniteNumber(roi.b) ? `${formatNumber(roi.b, { decimals: 0 })}%` : '—'}
+                </span>
+                <span className="font-mono text-[9px] text-amber-900">decision_layer.roiBySide</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-slate-600">
+                <span aria-hidden>❓</span>
+                <span>Contexto de risco (diagnóstico / fito):</span>
+                <span className="font-medium">{riskContext.title}</span>
+                <span className="text-xs opacity-80">— {riskContext.detail}</span>
+              </div>
+            </div>
 
-              {data.economic_timeline?.sides?.length ? (
-                <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-4 shadow-[0_20px_42px_-32px_rgba(15,23,42,0.24)] sm:p-5">
-                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.3em] text-slate-500">Curva econômica</p>
-                  <h3 className="mt-1 text-lg font-semibold text-slate-900">Custo acumulado por DAA</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                    Quando o relatório publica `economic_timeline`, o painel mostra a evolução de custo acumulado sem simular produtividade temporal.
+            <TabBar<RightTab> tabs={RIGHT_TABS} active={rightTab} onSelect={setRightTab} accentClass="bg-emerald-800" />
+
+            {rightTab === 'KPI' ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-xs font-bold text-slate-800">Radar comparativo</p>
+                  <p className="mt-1 text-[10px] text-amber-900">
+                    Eixos normalizados no front (0–100) a partir de KPIs e fenologia publicados — ver composição em{' '}
+                    <span className="font-mono">evaluationRadar.ts</span>.
                   </p>
-                  <EconomicTimelineChart timeline={data.economic_timeline} nameA={nameA} nameB={nameB} />
+                  {radarRows.length > 0 ? (
+                    <div className="mt-2 h-56 w-full min-w-0 sm:h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart data={radarRows} margin={{ top: 8, right: 16, bottom: 8, left: 16 }}>
+                          <PolarGrid stroke="#e2e8f0" />
+                          <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: '#64748b' }} />
+                          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: '#94a3b8' }} />
+                          <Radar name={nameA} dataKey="A" stroke={DECK_SIDE_A} fill={DECK_SIDE_A} fillOpacity={0.22} strokeWidth={2} />
+                          <Radar name={nameB} dataKey="B" stroke={DECK_SIDE_B} fill={DECK_SIDE_B} fillOpacity={0.2} strokeWidth={2} />
+                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                          <Tooltip />
+                        </RadarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="mt-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 py-8 text-center text-sm text-slate-500">
+                      Dados insuficientes para radar.
+                    </div>
+                  )}
                 </div>
-              ) : null}
-            </div>
-
-            <div className="space-y-5">
-              <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-4 shadow-[0_20px_42px_-32px_rgba(15,23,42,0.24)] sm:p-5">
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <p className="text-[0.68rem] font-bold uppercase tracking-[0.3em] text-slate-500">Evidência de campo</p>
-                    <h3 className="mt-1 text-lg font-semibold text-slate-900">Fotos lado a lado</h3>
-                  </div>
-                  <p className="text-xs text-slate-500">A azul · B verde</p>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="overflow-hidden rounded-[1.35rem] border border-slate-200 bg-slate-100">
-                    <div className="relative aspect-[4/5] overflow-hidden">
-                      {photoA?.url ? (
-                        <img src={photoA.url} alt={photoA.caption || nameA} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-slate-400">
-                          Foto não publicada para o lado A
+                <div>
+                  <p className="text-xs font-bold text-slate-800">Fotos de campo</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {[photoA, photoB].map((ph, idx) => {
+                      const side = idx === 0 ? 'A' : 'B';
+                      const nm = idx === 0 ? nameA : nameB;
+                      const col = idx === 0 ? DECK_SIDE_A : DECK_SIDE_B;
+                      return (
+                        <div key={side} className="overflow-hidden rounded-lg border border-slate-200">
+                          <div className="aspect-square bg-slate-100">
+                            {ph?.url ? (
+                              <img src={ph.url} alt={ph.caption || nm} className="h-full w-full object-cover" loading="lazy" />
+                            ) : (
+                              <div className="flex h-full items-center justify-center p-2 text-center text-[10px] text-slate-400">
+                                <NullChip label={`foto lado ${side}: null`} />
+                              </div>
+                            )}
+                          </div>
+                          <p className="bg-slate-50 py-1 text-center text-[10px] font-bold text-white" style={{ backgroundColor: col }}>
+                            {nm}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                    <div className="border-t border-slate-200 bg-white px-3 py-2">
-                      <p className="text-[0.62rem] font-bold uppercase tracking-[0.24em]" style={{ color: COLOR_SIDE_A }}>
-                        {nameA}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">{photoA?.caption || 'Sem legenda publicada.'}</p>
-                    </div>
-                  </div>
-
-                  <div className="overflow-hidden rounded-[1.35rem] border border-slate-200 bg-slate-100">
-                    <div className="relative aspect-[4/5] overflow-hidden">
-                      {photoB?.url ? (
-                        <img src={photoB.url} alt={photoB.caption || nameB} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-slate-400">
-                          Foto não publicada para o lado B
-                        </div>
-                      )}
-                    </div>
-                    <div className="border-t border-slate-200 bg-white px-3 py-2">
-                      <p className="text-[0.62rem] font-bold uppercase tracking-[0.24em]" style={{ color: COLOR_SIDE_B }}>
-                        {nameB}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">{photoB?.caption || 'Sem legenda publicada.'}</p>
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
+            ) : null}
 
-              <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-4 shadow-[0_20px_42px_-32px_rgba(15,23,42,0.24)] sm:p-5">
-                <p className="text-[0.68rem] font-bold uppercase tracking-[0.3em] text-slate-500">Resumo executivo</p>
-                <h3 className="mt-1 text-lg font-semibold text-slate-900">Leituras priorizadas</h3>
-                {narrativeLines.length > 0 ? (
-                  <div className="mt-4 space-y-2.5">
-                    {narrativeLines.map((line) => (
-                      <div key={line} className="rounded-2xl border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm leading-relaxed text-slate-700">
-                        {line}
+            {rightTab === 'Estatística' ? <StatsTableBlock rows={data.criteriosEstatistica} /> : null}
+
+            {rightTab === 'Plantas' ? (
+              <div>
+                <p className="mb-2 text-xs text-slate-500">
+                  Amostras: A {data.plant_evaluation?.sampleSize?.A ?? '—'} · B {data.plant_evaluation?.sampleSize?.B ?? '—'}
+                </p>
+                <div className="flex flex-col gap-2">
+                  {(data.plant_evaluation?.metrics ?? []).length ? (
+                    data.plant_evaluation!.metrics!.map((m, i) => {
+                      const label = m.label || m.key || 'Métrica';
+                      const unit = m.unit ? ` (${m.unit})` : '';
+                      const a = m.meanA;
+                      const b = m.meanB;
+                      const ok = isFiniteNumber(a) && isFiniteNumber(b);
+                      return (
+                        <div key={`${label}-${i}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                          <p className="text-[11px] font-semibold text-slate-600">
+                            {label}
+                            {unit}
+                          </p>
+                          <p className="mt-1 font-mono text-[9px] text-slate-400">plant_evaluation.metrics[{i}]</p>
+                          {ok ? (
+                            <p className="mt-1 font-bold">
+                              <span style={{ color: DECK_SIDE_A }}>{formatNumber(a, { decimals: 1 })}</span>
+                              <span className="mx-2 text-slate-300">vs</span>
+                              <span style={{ color: DECK_SIDE_B }}>{formatNumber(b, { decimals: 1 })}</span>
+                            </p>
+                          ) : (
+                            <NullChip label="meanA/meanB: null" />
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <NullChip label="plant_evaluation.metrics: null" />
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {rightTab === 'Fotos' ? (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {(['A', 'B'] as const).flatMap((side) => {
+                  const s = side === 'A' ? data.sideA : data.sideB;
+                  const list = s?.photos ?? [];
+                  return list.map((p, i) => (
+                    <div key={`${side}-${i}`} className="overflow-hidden rounded-lg border border-slate-200">
+                      <div className="aspect-square bg-slate-100">
+                        {p.url ? (
+                          <img src={p.url} alt={p.caption || ''} className="h-full w-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center p-1">
+                            <NullChip label="url: null" />
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-4 text-sm text-slate-500">
-                    O relatório ainda não trouxe texto narrativo suficiente para compor este resumo.
-                  </div>
-                )}
-              </div>
-
-              {evidenceRows.length > 0 ? (
-                <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-4 shadow-[0_20px_42px_-32px_rgba(15,23,42,0.24)] sm:p-5">
-                  <div className="flex items-end justify-between gap-3">
-                    <div>
-                      <p className="text-[0.68rem] font-bold uppercase tracking-[0.3em] text-slate-500">Evidência quantitativa</p>
-                      <h3 className="mt-1 text-lg font-semibold text-slate-900">
-                        {data.criteriosEstatistica?.length ? 'Recorte estatístico' : 'Recorte por planta'}
-                      </h3>
+                      <p className="truncate px-1 py-0.5 text-center text-[9px] text-slate-500">{p.caption || '—'}</p>
                     </div>
-                    {data.plant_evaluation?.sampleSize ? (
-                      <p className="text-xs text-slate-500">
-                        Amostras: A {data.plant_evaluation.sampleSize.A ?? '—'} · B {data.plant_evaluation.sampleSize.B ?? '—'}
-                      </p>
-                    ) : null}
-                  </div>
+                  ));
+                })}
+              </div>
+            ) : null}
 
-                  <div className="mt-4 space-y-2.5">
+            {rightTab === 'Conclusão' ? (
+              <div className="space-y-3 text-sm">
+                <p className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-slate-800">
+                  {data.conclusion?.summary?.trim() || <NullChip label="conclusion.summary: null" />}
+                </p>
+                <p className="text-xs font-bold text-slate-700">Recomendações</p>
+                <ul className="list-inside list-decimal space-y-1 text-slate-700">
+                  {(data.conclusion?.recommendations ?? []).length ? (
+                    data.conclusion!.recommendations!.map((r, i) => <li key={i}>{r}</li>)
+                  ) : (
+                    <NullChip label="conclusion.recommendations: null" />
+                  )}
+                </ul>
+              </div>
+            ) : null}
+
+            {data.economic_timeline?.sides?.length ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                <p className="text-xs font-bold text-slate-800">Custo acumulado por DAA</p>
+                <p className="text-[10px] text-slate-500">Fonte: economic_timeline no JSON.</p>
+                <EconomicTimelineChart
+                  timeline={data.economic_timeline}
+                  nameA={nameA}
+                  nameB={nameB}
+                  strokeA={DECK_SIDE_A}
+                  strokeB={DECK_SIDE_B}
+                />
+              </div>
+            ) : null}
+
+            <div className="border-t border-slate-200 pt-4">
+              <p className="text-sm font-bold text-slate-900">Resumo executivo</p>
+              {narrativeLines.length > 0 ? (
+                <ul className="mt-2 space-y-2">
+                  {narrativeLines.map((line) => (
+                    <li key={line} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-700">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-xs text-slate-500">
+                  <NullChip label="texto narrativo: null" />
+                </p>
+              )}
+              {evidenceRows.length > 0 ? (
+                <div className="mt-4">
+                  <p className="text-xs font-bold text-slate-700">Evidência quantitativa</p>
+                  <div className="mt-2 space-y-2">
                     {evidenceRows.map((row) => (
-                      <div key={`${row.label}-${row.aValue}-${row.bValue}`} className="rounded-2xl border border-slate-200/80 bg-slate-50/80 px-4 py-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">{row.label}</p>
-                            {row.note ? <p className="mt-1 text-xs leading-relaxed text-slate-500">{row.note}</p> : null}
-                          </div>
-                          <div className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 border border-slate-200">
-                            {row.winner === 'A' ? nameA : row.winner === 'B' ? nameB : 'Empate'}
-                          </div>
-                        </div>
-                        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                          <div className="rounded-xl bg-white px-3 py-2 shadow-sm">
-                            <p className="text-[11px] font-medium text-slate-500">A</p>
-                            <p className="mt-1 font-semibold" style={{ color: COLOR_SIDE_A }}>
-                              {row.aValue}
-                            </p>
-                          </div>
-                          <div className="rounded-xl bg-white px-3 py-2 shadow-sm">
-                            <p className="text-[11px] font-medium text-slate-500">B</p>
-                            <p className="mt-1 font-semibold" style={{ color: COLOR_SIDE_B }}>
-                              {row.bValue}
-                            </p>
-                          </div>
+                      <div key={`${row.label}-${row.aValue}`} className="rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                        <p className="font-semibold text-slate-800">{row.label}</p>
+                        <div className="mt-1 grid grid-cols-2 gap-2">
+                          <span style={{ color: DECK_SIDE_A }}>{row.aValue}</span>
+                          <span className="text-right" style={{ color: DECK_SIDE_B }}>
+                            {row.bValue}
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -789,17 +1169,7 @@ export default function ExecutiveDeckSection({
             </div>
           </div>
         </div>
-
-        {(data.conclusion?.headline?.trim() || winnerName || data.diagnosis?.planoAcao?.trim()) && (
-          <div className="border-t border-slate-200/70 bg-[linear-gradient(120deg,#0f172a_0%,#0b3a68_42%,#14532d_100%)] px-5 py-4 sm:px-8 sm:py-5 text-white">
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.3em] text-emerald-200/85">Fecho executivo</p>
-            <p className="mt-2 max-w-4xl text-sm sm:text-base leading-relaxed text-white/90">
-              {data.conclusion?.headline?.trim() ||
-                data.diagnosis?.planoAcao?.trim() ||
-                (winnerName ? `${winnerName} aparece como manejo favorecido na conclusão técnica publicada.` : '')}
-            </p>
-          </div>
-        )}
+        </div>
       </div>
     </section>
   );

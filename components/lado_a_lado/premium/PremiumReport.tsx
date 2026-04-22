@@ -4,15 +4,11 @@ import type { SideBySideReportData } from '@/components/SideBySideReportContent'
 import { postReportAnalytics } from '@/lib/report-analytics-client';
 import HeroSection from './HeroSection';
 import KPISection from './KPISection';
-import CompareManejosSection from './CompareManejosSection';
-import InsightSection from './InsightSection';
 import TimelinePremiumSection from './TimelinePremiumSection';
 import EconomicSection from './EconomicSection';
 import ConclusionSection from './ConclusionSection';
 import TreatmentSection from './TreatmentSection';
 import ExecutionSection from './ExecutionSection';
-import EvolutionSection from './EvolutionSection';
-import EvaluationSection from './EvaluationSection';
 import SubareaCostsAndEvolutionSection from './SubareaCostsAndEvolutionSection';
 import PlantEvaluationSection from './PlantEvaluationSection';
 import FortSmartAiSection from './FortSmartAiSection';
@@ -27,7 +23,6 @@ const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'fortsmart-ai-premium', label: 'FortSmart AI' },
   { id: 'ensaio-premium', label: 'Ensaio' },
   { id: 'coleta-modulos-premium', label: 'Coleta' },
-  { id: 'comparativo-premium', label: 'Comparativo' },
   { id: 'timeline-premium', label: 'Linha do tempo' },
   { id: 'economico-premium', label: 'Econômico' },
   { id: 'custos-evolucao-visitas-premium', label: 'Subáreas / visitas' },
@@ -35,8 +30,6 @@ const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'tratamento-premium', label: 'Protocolo' },
   { id: 'execucao-premium', label: 'Execução' },
   { id: 'plantas-premium', label: 'Plantas' },
-  { id: 'evolucao-premium', label: 'Evolução' },
-  { id: 'avaliacao-premium', label: 'Evidências' },
 ];
 
 export default function PremiumReport({
@@ -92,7 +85,7 @@ export default function PremiumReport({
   const idStr = meta.reportId || reportId;
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#f4f6f9] text-slate-900 print:bg-white">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#F0F2F5] text-slate-900 print:bg-white">
       <div
         className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(15,23,42,0.06),transparent_50%)] print:hidden"
         aria-hidden
@@ -115,7 +108,7 @@ export default function PremiumReport({
       </div>
 
       <nav className="sticky top-[52px] z-30 print:hidden border-b border-slate-200/60 bg-white/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 flex gap-1 overflow-x-auto py-2.5">
+        <div className="mx-auto flex max-w-[1400px] gap-1 overflow-x-auto px-2 py-2.5 sm:px-4">
           {NAV_PREMIUM.map((item) => (
             <button
               key={item.id}
@@ -134,14 +127,12 @@ export default function PremiumReport({
           <HeroSection data={data} />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-20 sm:space-y-24 py-14 sm:py-20 print:space-y-12 print:px-4">
+        <div className="mx-auto max-w-[1400px] space-y-20 px-4 py-14 sm:space-y-24 sm:px-6 sm:py-20 print:space-y-12 print:px-4">
           <ExecutiveDeckSection data={data} />
           <KPISection data={data} />
           <FortSmartAiSection data={data} />
           <ExperimentDesignSection data={data} sectionId="ensaio-premium" />
           <FieldCollectionModulesSection data={data} sectionId="coleta-modulos-premium" />
-          <CompareManejosSection data={data} />
-          <InsightSection data={data} />
           <TimelinePremiumSection data={data} />
           <EconomicSection data={data} />
           <SubareaCostsAndEvolutionSection data={data} />
@@ -149,8 +140,6 @@ export default function PremiumReport({
           <TreatmentSection data={data} />
           <ExecutionSection data={data} />
           <PlantEvaluationSection data={data} />
-          <EvolutionSection data={data} />
-          <EvaluationSection data={data} />
         </div>
 
         <footer className="text-center text-sm text-slate-500 py-12 border-t border-slate-200 print:mt-8">
