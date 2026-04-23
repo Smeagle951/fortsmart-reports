@@ -1,6 +1,11 @@
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import type { ReportApplicationEventV2Json } from '@/types/side-by-side-report';
-import { isColheitaJson } from '@/components/lado_a_lado/ladoALadoHelpers';
+import {
+  clampPct,
+  isColheitaJson,
+  performanceIndexFromKpis,
+  type KpisLike,
+} from '@/components/lado_a_lado/ladoALadoHelpers';
 
 /** Só retorna se `conclusion.winner` existir no JSON — sem heurística no front. */
 export function winnerFromJson(data: SideBySideReportData): 'A' | 'B' | null {
@@ -9,13 +14,52 @@ export function winnerFromJson(data: SideBySideReportData): 'A' | 'B' | null {
   return null;
 }
 
-/** Scores exibidos no herói: apenas `kpis.performanceScore` do payload. */
+/** Destaque “melhor desempenho”: conclusão do técnico ou maior índice publicado/inferido. */
+export function displayWinnerLetter(data: SideBySideReportData): 'A' | 'B' | null {
+  const w = winnerFromJson(data);
+  if (w) return w;
+  const { a, b } = scoresFromJson(data);
+  if (a != null && b != null && a !== b) return b > a ? 'B' : 'A';
+  return null;
+}
+
+type SideKpis = NonNullable<SideBySideReportData['sideA']>['kpis'];
+
+function asKpisLike(k?: SideKpis): KpisLike | undefined {
+  if (!k) return undefined;
+  return k as unknown as KpisLike;
+}
+
+/**
+ * Scores no herói / painel: `performanceScore` do app; se ausente, índice sintético a partir dos KPIs;
+ * por último posição relativa B↔A em produtividade estimada ou população (0–100).
+ */
+function inferScoreOneSide(mine?: SideKpis, peer?: SideKpis): number | null {
+  const explicit = mine?.performanceScore;
+  if (explicit != null && Number.isFinite(explicit)) return Math.round(clampPct(explicit));
+  const idx = performanceIndexFromKpis(asKpisLike(mine));
+  if (idx != null) return Math.round(idx);
+  const y1 = mine?.estimatedYieldKgHa;
+  const y2 = peer?.estimatedYieldKgHa;
+  if (y1 != null && y2 != null && Number.isFinite(y1) && Number.isFinite(y2)) {
+    const maxY = Math.max(y1, y2, 1);
+    return Math.round(clampPct((y1 / maxY) * 78 + 22));
+  }
+  const p1 = mine?.finalPopulationPlHa;
+  const p2 = peer?.finalPopulationPlHa;
+  if (p1 != null && p2 != null && Number.isFinite(p1) && Number.isFinite(p2)) {
+    const maxP = Math.max(p1, p2, 1);
+    return Math.round(clampPct((p1 / maxP) * 78 + 22));
+  }
+  if (y1 != null && Number.isFinite(y1) && y1 > 0) return 62;
+  if (p1 != null && Number.isFinite(p1) && p1 > 0) return 58;
+  return null;
+}
+
 export function scoresFromJson(data: SideBySideReportData): { a: number | null; b: number | null } {
-  const a = data.sideA?.kpis?.performanceScore;
-  const b = data.sideB?.kpis?.performanceScore;
   return {
-    a: a != null && Number.isFinite(a) ? a : null,
-    b: b != null && Number.isFinite(b) ? b : null,
+    a: inferScoreOneSide(data.sideA?.kpis, data.sideB?.kpis),
+    b: inferScoreOneSide(data.sideB?.kpis, data.sideA?.kpis),
   };
 }
 

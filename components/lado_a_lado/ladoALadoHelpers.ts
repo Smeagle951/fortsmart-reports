@@ -101,6 +101,8 @@ export type KpisLike = {
   rootRating?: { score?: number; max?: number };
   controleDaninhasPct?: number;
   vigorCulturaPct?: number;
+  estimatedYieldKgHa?: number;
+  finalPopulationPlHa?: number;
 };
 
 export function hasExplicitControleDaninhas(kpisA?: KpisLike, kpisB?: KpisLike): boolean {
@@ -144,7 +146,10 @@ export function rootPctFromKpis(kpis?: KpisLike): number {
 export function performanceIndexFromKpis(kpis?: KpisLike): number | null {
   if (!kpis) return null;
   const stand = kpis.eficienciaPct;
-  const vig = vigorPctFromKpis(kpis);
+  let vig = vigorPctFromKpis(kpis);
+  if (kpis.vigorCulturaPct != null && Number.isFinite(kpis.vigorCulturaPct)) {
+    vig = clampPct(kpis.vigorCulturaPct);
+  }
   const root = rootPctFromKpis(kpis);
   const hasStand = stand != null && Number.isFinite(stand);
   if (!hasStand && vig === 0 && root === 0) return null;

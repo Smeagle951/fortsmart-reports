@@ -2,7 +2,7 @@
 
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { postReportAnalytics } from '@/lib/report-analytics-client';
-import HeroSection from './HeroSection';
+import EnterpriseReportLayout from './enterprise/EnterpriseReportLayout';
 import DecisionLayerSummarySection from './DecisionLayerSummarySection';
 import KPISection from './KPISection';
 import TimelinePremiumSection from './TimelinePremiumSection';
@@ -16,11 +16,14 @@ import FortSmartAiSection from './FortSmartAiSection';
 import ExperimentDesignSection from './ExperimentDesignSection';
 import FieldCollectionModulesSection from './FieldCollectionModulesSection';
 import ExecutiveDeckSection from './ExecutiveDeckSection';
-import SidePhotoGallerySection from './SidePhotoGallerySection';
-
 const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'hero-premium', label: 'Início' },
+  { id: 'ficha-ensaio-premium', label: 'Ficha' },
+  { id: 'economia-resumo-premium', label: 'Economia (resumo)' },
+  { id: 'enterprise-resumo', label: 'Resumo executivo' },
   { id: 'decisao-executiva-premium', label: 'Decisão' },
+  { id: 'tratamento-premium', label: 'Tratamento' },
+  { id: 'execucao-premium', label: 'Aplicações' },
   { id: 'deck-executivo-premium', label: 'Painel' },
   { id: 'fotos-premium', label: 'Fotos' },
   { id: 'kpis-premium', label: 'Indicadores' },
@@ -28,11 +31,9 @@ const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'ensaio-premium', label: 'Ensaio' },
   { id: 'coleta-modulos-premium', label: 'Coleta' },
   { id: 'timeline-premium', label: 'Linha do tempo' },
-  { id: 'economico-premium', label: 'Econômico' },
+  { id: 'economico-premium', label: 'Colheita · custos · ROI' },
   { id: 'custos-evolucao-visitas-premium', label: 'Subáreas / visitas' },
   { id: 'conclusao-premium', label: 'Conclusão' },
-  { id: 'tratamento-premium', label: 'Protocolo' },
-  { id: 'execucao-premium', label: 'Execução' },
   { id: 'plantas-premium', label: 'Plantas' },
 ];
 
@@ -139,8 +140,8 @@ export default function PremiumReport({
       </nav>
 
       <div id="relatorio-lado-a-lado-content" className="overflow-x-hidden print:overflow-visible">
-        <div id="hero-premium" className="scroll-mt-36 fs-l2-avoid print:break-inside-avoid">
-          <HeroSection data={data} />
+        <div className="fs-l2-avoid print:break-inside-avoid">
+          <EnterpriseReportLayout data={data} reportId={reportId} shareToken={shareToken} onPrint={handlePrint} />
         </div>
 
         <div className="pt-6 sm:pt-8 fs-l2-avoid print:break-inside-avoid">
@@ -149,9 +150,10 @@ export default function PremiumReport({
 
         <div className="fs-l2-page-break print:break-after-page" aria-hidden />
         <div className="mx-auto max-w-[1400px] space-y-20 px-4 py-14 sm:space-y-24 sm:px-6 sm:py-20 print:space-y-12 print:px-4">
+          <TreatmentSection data={data} />
+          <ExecutionSection data={data} />
           <ExecutiveDeckSection data={data} />
           <div className="fs-l2-page-break print:hidden" aria-hidden />
-          <SidePhotoGallerySection data={data} />
           <KPISection data={data} />
           <FortSmartAiSection data={data} />
           <ExperimentDesignSection data={data} sectionId="ensaio-premium" />
@@ -160,16 +162,11 @@ export default function PremiumReport({
           <EconomicSection data={data} />
           <SubareaCostsAndEvolutionSection data={data} />
           <ConclusionSection data={data} />
-          <TreatmentSection data={data} />
-          <ExecutionSection data={data} />
           <PlantEvaluationSection data={data} />
         </div>
 
-        <footer className="text-center text-sm text-slate-500 py-12 border-t border-slate-200 print:mt-8">
-          <p className="font-medium text-slate-700">FortSmart Agro · relatório decisório</p>
-          <p className="mt-2 text-xs text-slate-500">
-            {[createdStr, idStr ? `ID ${idStr}` : null].filter(Boolean).join(' · ') || ' '}
-          </p>
+        <footer className="border-t border-slate-200 py-8 text-center text-xs text-slate-400 print:mt-6">
+          {[createdStr, idStr ? `ID ${idStr}` : null].filter(Boolean).join(' · ') || 'FortSmart'}
         </footer>
       </div>
     </div>

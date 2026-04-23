@@ -30,6 +30,8 @@ import { buildPremiumRadarRows } from './evaluationRadar';
 import EconomicTimelineChart from './EconomicTimelineChart';
 import { heroFinancialSnapshot, scoresFromJson, winnerFromJson } from './premiumInference';
 
+const SHOW_DATA_DEBUG = process.env.NODE_ENV === 'development';
+
 /** Legenda local do painel executivo (mock): A verde material, B azul escuro. Resto do relatório premium mantém A azul / B verde em `ladoALadoHelpers`. */
 const DECK_SIDE_A = '#2E7D32';
 const DECK_SIDE_B = '#1565C0';
@@ -208,11 +210,23 @@ function productivitySnapshot(data: SideBySideReportData): {
   return null;
 }
 
-function roiSnapshot(data: SideBySideReportData): { a: number | null; b: number | null } | null {
-  const a = data.decision_layer?.roiBySide?.A?.roiPct;
-  const b = data.decision_layer?.roiBySide?.B?.roiPct;
+function roiPctFromFortsmartAiEconomic(data: SideBySideReportData): { a: number | null; b: number | null } | null {
+  const sides = data.decision_layer?.fortsmart_ai?.economic?.sides as
+    | Record<string, { roiPct?: number }>
+    | undefined;
+  if (!sides || typeof sides !== 'object') return null;
+  const a = sides.A?.roiPct ?? sides.a?.roiPct;
+  const b = sides.B?.roiPct ?? sides.b?.roiPct;
   if (!isFiniteNumber(a) || !isFiniteNumber(b)) return null;
   return { a, b };
+}
+
+function roiSnapshot(data: SideBySideReportData): { a: number | null; b: number | null } | null {
+  const rb = data.decision_layer?.roiBySide;
+  const a = rb?.A?.roiPct ?? (rb as Record<string, { roiPct?: number }> | undefined)?.a?.roiPct;
+  const b = rb?.B?.roiPct ?? (rb as Record<string, { roiPct?: number }> | undefined)?.b?.roiPct;
+  if (isFiniteNumber(a) && isFiniteNumber(b)) return { a, b };
+  return roiPctFromFortsmartAiEconomic(data);
 }
 
 function buildEvidenceRows(data: SideBySideReportData): EvidenceRow[] {
@@ -387,11 +401,14 @@ function daaApplicationBarRows(
 }
 
 function NullChip({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-amber-900">
-      {label}
-    </span>
-  );
+  if (SHOW_DATA_DEBUG) {
+    return (
+      <span className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-amber-900">
+        {label}
+      </span>
+    );
+  }
+  return <span className="text-slate-400">—</span>;
 }
 
 function DeckCardHeader({
@@ -494,8 +511,13 @@ function SnapshotCard({
 function StatsTableBlock({ rows }: { rows: NonNullable<SideBySideReportData['criteriosEstatistica']> | undefined }) {
   if (!rows?.length) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
-        <NullChip label="criteriosEstatistica: null" />
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
+        <p>Nenhuma tabela estatística foi incluída nesta publicação.</p>
+        {SHOW_DATA_DEBUG ? (
+          <p className="mt-2">
+            <NullChip label="criteriosEstatistica vazio" />
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -641,7 +663,7 @@ export default function ExecutiveDeckSection({
           <DeckCardHeader title="Avaliação de campo" subtitle={subTitle} />
 
           <p className="text-xs text-slate-500">
-            {cultureLine || <NullChip label="cultura/estádio/DAA: null" />}
+            {cultureLine || <span className="text-slate-400">Metadados de cultura / estádio não preenchidos.</span>}
           </p>
 
           {data.comparativo_intro?.trim() ? (
@@ -674,7 +696,9 @@ export default function ExecutiveDeckSection({
             <div className="min-w-0 flex-1 text-center">
               <p className="text-[9px] font-bold uppercase tracking-widest text-sky-200/90">Melhor desempenho</p>
               <p className="mt-1 text-sm font-bold leading-tight">{melhorDesempenhoTexto}</p>
-              <p className="mt-1 font-mono text-[9px] text-emerald-200/90">Fonte: conclusion.winner · kpis.performanceScore</p>
+              <p className="mt-1 text-[9px] text-emerald-200/85">
+                Com base na conclusão do técnico e nos indicadores publicados (índice 0–100).
+              </p>
             </div>
             <div
               className="min-w-[3.25rem] rounded-xl px-3 py-2 text-center text-2xl font-black tabular-nums"
@@ -684,8 +708,8 @@ export default function ExecutiveDeckSection({
             </div>
           </div>
           {scorePair.a == null || scorePair.b == null ? (
-            <p className="text-center text-[10px] text-amber-800">
-              <NullChip label="performanceScore ausente num lado" /> — sem badge de score completo.
+            <p className="text-center text-[10px] text-slate-500">
+              Pontuação comparativa indisponível — publique mais indicadores ou reenvie o relatório a partir do app.
             </p>
           ) : null}
 
@@ -701,7 +725,9 @@ export default function ExecutiveDeckSection({
                   >
                     <div className="min-w-0">
                       <p className="text-[11px] font-semibold text-slate-700">{metric.label}</p>
-                      <p className="font-mono text-[9px] text-amber-900/80">{metric.sourceLabel}</p>
+                      {SHOW_DATA_DEBUG ? (
+                        <p className="font-mono text-[9px] text-amber-900/80">{metric.sourceLabel}</p>
+                      ) : null}
                     </div>
                     <div className="flex items-baseline gap-2 text-sm font-bold tabular-nums">
                       <span style={{ color: DECK_SIDE_A }}>{metric.formatValue(metric.a)}</span>
@@ -741,14 +767,16 @@ export default function ExecutiveDeckSection({
                 {riskFromOcc}
               </span>
             ) : (
-              <NullChip label="ocorrencias: null" />
+              <span className="text-sm text-slate-500">Sem ocorrências fitossanitárias registadas.</span>
             )}
             <span className="text-[10px] text-slate-400">Derivado de incidência % e severidade publicadas.</span>
           </div>
 
           <div>
             <p className="mb-2 text-xs font-bold text-slate-800">Insights e alertas</p>
-            <p className="mb-2 font-mono text-[9px] text-slate-500">decision_layer.fortsmart_ai.motor_alertas</p>
+            {SHOW_DATA_DEBUG ? (
+              <p className="mb-2 font-mono text-[9px] text-slate-500">decision_layer.fortsmart_ai.motor_alertas</p>
+            ) : null}
             {motorAlerts.length > 0 ? (
               <ul className="flex flex-col gap-2">
                 {motorAlerts.map((a, i) => {
@@ -765,14 +793,14 @@ export default function ExecutiveDeckSection({
                             : 'border-slate-200 bg-slate-50 text-slate-800'
                       }`}
                     >
-                      {a.titulo ? <span className="font-bold">{a.titulo}</span> : <NullChip label="titulo: null" />}
+                      {a.titulo ? <span className="font-bold">{a.titulo}</span> : <span className="font-bold text-slate-600">Alerta</span>}
                       {a.mensagem ? <span className="mt-1 block text-xs opacity-90">{a.mensagem}</span> : null}
                     </li>
                   );
                 })}
               </ul>
             ) : (
-              <NullChip label="motor_alertas: null" />
+              <p className="text-sm text-slate-500">Nenhum alerta automático adicional para este relatório.</p>
             )}
           </div>
 
@@ -801,8 +829,8 @@ export default function ExecutiveDeckSection({
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="mt-2 flex h-28 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
-                  <NullChip label="applications: null ou sem DAA" />
+                <div className="mt-2 flex h-28 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 text-center text-sm text-slate-500">
+                  Sem eventos de aplicação com DAA no JSON publicado. Confirme no app se as aplicações foram registadas.
                 </div>
               )}
             </div>
@@ -826,7 +854,7 @@ export default function ExecutiveDeckSection({
                   </li>
                 ))
               ) : (
-                <NullChip label="applications: null" />
+                <p className="text-sm text-slate-500">Nenhuma aplicação publicada neste relatório.</p>
               )}
             </ul>
           ) : null}
@@ -846,7 +874,7 @@ export default function ExecutiveDeckSection({
                   </li>
                 ))
               ) : (
-                <NullChip label="ocorrencias: null" />
+                <p className="text-sm text-slate-500">Sem ocorrências publicadas.</p>
               )}
             </ul>
           ) : null}
@@ -899,9 +927,7 @@ export default function ExecutiveDeckSection({
             <div className="relative z-10 flex min-h-[140px] flex-col justify-end p-5">
               <p className="text-lg font-bold leading-snug text-white drop-shadow-sm">
                 {data.conclusion?.headline?.trim() || (
-                  <span className="text-white/70">
-                    Sem headline publicada <NullChip label="conclusion.headline: null" />
-                  </span>
+                  <span className="text-white/80">Resumo executivo disponível na secção de conclusão.</span>
                 )}
               </p>
             </div>
@@ -924,7 +950,7 @@ export default function ExecutiveDeckSection({
                     {scoreDelta} pts
                   </span>
                 ) : (
-                  <NullChip label="Δ: null" />
+                  <span className="mx-1 text-xs text-slate-500">—</span>
                 )}
                 <span className="tabular-nums">»</span>
               </div>
@@ -957,7 +983,7 @@ export default function ExecutiveDeckSection({
                     {formatSignedDelta(financial.deltaScHa, 0)} sc/ha
                   </span>
                 ) : (
-                  <NullChip label="Δ sc/ha: null" />
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">Δ sc/ha indisponível</span>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -970,7 +996,9 @@ export default function ExecutiveDeckSection({
                 <span className="font-bold" style={{ color: DECK_SIDE_B }}>
                   {roi && isFiniteNumber(roi.b) ? `${formatNumber(roi.b, { decimals: 0 })}%` : '—'}
                 </span>
-                <span className="font-mono text-[9px] text-amber-900">decision_layer.roiBySide</span>
+                {SHOW_DATA_DEBUG ? (
+                  <span className="font-mono text-[9px] text-amber-900">decision_layer.roiBySide</span>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-2 text-slate-600">
                 <span aria-hidden>❓</span>
@@ -986,9 +1014,8 @@ export default function ExecutiveDeckSection({
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <p className="text-xs font-bold text-slate-800">Radar comparativo</p>
-                  <p className="mt-1 text-[10px] text-amber-900">
-                    Eixos normalizados no front (0–100) a partir de KPIs e fenologia publicados — ver composição em{' '}
-                    <span className="font-mono">evaluationRadar.ts</span>.
+                  <p className="mt-1 text-[10px] text-slate-500">
+                    Eixos normalizados (0–100) a partir dos KPIs e da fenologia publicados no relatório.
                   </p>
                   {radarRows.length > 0 ? (
                     <div className="mt-2 h-56 w-full min-w-0 sm:h-64">
@@ -1060,7 +1087,9 @@ export default function ExecutiveDeckSection({
                             {label}
                             {unit}
                           </p>
-                          <p className="mt-1 font-mono text-[9px] text-slate-400">plant_evaluation.metrics[{i}]</p>
+                          {SHOW_DATA_DEBUG ? (
+                            <p className="mt-1 font-mono text-[9px] text-slate-400">plant_evaluation.metrics[{i}]</p>
+                          ) : null}
                           {ok ? (
                             <p className="mt-1 font-bold">
                               <span style={{ color: DECK_SIDE_A }}>{formatNumber(a, { decimals: 1 })}</span>
@@ -1074,7 +1103,7 @@ export default function ExecutiveDeckSection({
                       );
                     })
                   ) : (
-                    <NullChip label="plant_evaluation.metrics: null" />
+                    <p className="text-sm text-slate-500">Sem métricas por planta publicadas.</p>
                   )}
                 </div>
               </div>
@@ -1144,9 +1173,7 @@ export default function ExecutiveDeckSection({
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-xs text-slate-500">
-                  <NullChip label="texto narrativo: null" />
-                </p>
+                <p className="mt-2 text-xs text-slate-500">Sem texto narrativo adicional gerado para este bloco.</p>
               )}
               {evidenceRows.length > 0 ? (
                 <div className="mt-4">
