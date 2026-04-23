@@ -10,7 +10,7 @@ function vigorLabelToNum(v: string | undefined): number {
   return 35;
 }
 
-/** Linhas para RadarChart Recharts (0–100). */
+/** Linhas para RadarChart Recharts (0–100), só a partir de KPIs / fenologia / produtividade publicados — sem eixos sintéticos. */
 export function buildPremiumRadarRows(data: SideBySideReportData): {
   subject: string;
   A: number;
@@ -60,36 +60,13 @@ export function buildPremiumRadarRows(data: SideBySideReportData): {
     });
   }
 
-  const bothSidesKpi = kpisA != null && kpisB != null;
   const withSignal = rows.filter((r) => r.A > 0 || r.B > 0);
-  if (withSignal.length >= 3) return withSignal;
+  if (withSignal.length > 0) return withSignal;
 
   const sc = scoresFromJson(data);
-  const scorePad =
-    sc.a != null && sc.b != null && Number.isFinite(sc.a) && Number.isFinite(sc.b)
-      ? ([
-          { subject: 'Índice técnico', A: sc.a, B: sc.b, fullMark: 100 },
-          {
-            subject: 'Referência A',
-            A: Math.max(12, Math.round(sc.a * 0.88)),
-            B: Math.max(12, Math.round(sc.b * 0.92)),
-            fullMark: 100,
-          },
-          {
-            subject: 'Referência B',
-            A: Math.max(12, Math.round(sc.a * 0.92)),
-            B: Math.max(12, Math.round(sc.b * 0.88)),
-            fullMark: 100,
-          },
-        ] as const)
-      : null;
-
-  if (withSignal.length >= 2) return withSignal;
-  if (withSignal.length === 1 && scorePad) {
-    const merged = [withSignal[0], ...scorePad.filter((p) => p.subject !== withSignal[0].subject)];
-    return merged.slice(0, 6);
+  if (sc.a != null && sc.b != null && Number.isFinite(sc.a) && Number.isFinite(sc.b)) {
+    return [{ subject: 'Índice técnico (0–100)', A: sc.a, B: sc.b, fullMark: 100 }];
   }
-  if (scorePad) return [...scorePad];
 
-  return bothSidesKpi ? rows : withSignal;
+  return [];
 }

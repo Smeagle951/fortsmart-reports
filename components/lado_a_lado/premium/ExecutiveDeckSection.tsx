@@ -32,7 +32,7 @@ import { displayWinnerLetter, heroFinancialSnapshot, scoresFromJson, winnerFromJ
 
 const SHOW_DATA_DEBUG = process.env.NODE_ENV === 'development';
 
-/** Legenda local do painel executivo (mock): A verde material, B azul escuro. Resto do relatório premium mantém A azul / B verde em `ladoALadoHelpers`. */
+/** Cores do painel executivo: A verde material, B azul escuro. Resto do relatório premium mantém A azul / B verde em `ladoALadoHelpers`. */
 const DECK_SIDE_A = '#2E7D32';
 const DECK_SIDE_B = '#1565C0';
 const DECK_SIDE_A_SOFT = '#e8f5e9';
@@ -1053,7 +1053,7 @@ export default function ExecutiveDeckSection({
                     Eixos normalizados (0–100) a partir dos KPIs e da fenologia publicados no relatório.
                   </p>
                   {radarRows.length > 0 ? (
-                    <div className="mt-2 h-56 w-full min-w-0 sm:h-64">
+                    <div className="mt-2 h-56 w-full min-w-0 sm:h-64 [&_svg.recharts-surface]:relative">
                       <ResponsiveContainer width="100%" height="100%">
                         <RadarChart data={radarRows} margin={{ top: 8, right: 16, bottom: 8, left: 16 }}>
                           <PolarGrid stroke="#e2e8f0" />

@@ -43,38 +43,55 @@ export default function ChartsEnterpriseGrid({ data }: Props) {
           >
             <h3 className="text-sm font-bold text-slate-900">Comparativo de desempenho</h3>
             <p className="mt-0.5 text-xs text-slate-500">Radar técnico normalizado (0–100)</p>
-            <div className="mt-3 h-[280px] w-full sm:h-[320px]">
-              {radarRows.length >= 2 ? (
+            <div className="mt-3 h-[280px] w-full sm:h-[320px] [&_svg.recharts-surface]:relative">
+              {radarRows.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarRows} margin={{ top: 8, right: 16, bottom: 8, left: 16 }}>
-                    <PolarGrid stroke="#e2e8f0" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10 }} tickCount={4} />
+                  <RadarChart data={radarRows} margin={{ top: 12, right: 20, bottom: 12, left: 20 }}>
+                    <PolarGrid
+                      gridType="polygon"
+                      stroke="#cbd5e1"
+                      strokeOpacity={0.9}
+                    />
+                    <PolarAngleAxis
+                      dataKey="subject"
+                      tick={{ fontSize: 11, fill: '#475569' }}
+                      tickLine={false}
+                    />
+                    <PolarRadiusAxis
+                      angle={90}
+                      domain={[0, 100]}
+                      tick={{ fontSize: 9, fill: '#94a3b8' }}
+                      tickCount={5}
+                      stroke="#e2e8f0"
+                    />
                     <Radar
                       name={nameA}
                       dataKey="A"
                       stroke={ENT.green}
                       fill={ENT.green}
-                      fillOpacity={0.22}
-                      strokeWidth={2}
-                      isAnimationActive
+                      fillOpacity={0.12}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, fill: ENT.green, stroke: '#fff', strokeWidth: 1.5 }}
+                      isAnimationActive={false}
                     />
                     <Radar
                       name={nameB}
                       dataKey="B"
                       stroke={ENT.blue}
                       fill={ENT.blue}
-                      fillOpacity={0.18}
-                      strokeWidth={2}
-                      isAnimationActive
+                      fillOpacity={0.1}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, fill: ENT.blue, stroke: '#fff', strokeWidth: 1.5 }}
+                      isAnimationActive={false}
                     />
-                    <Tooltip />
+                    <Tooltip contentStyle={{ borderRadius: 10, fontSize: 12 }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                   </RadarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-full items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">
-                  Dados insuficientes para o radar (publique KPIs em ambos os lados).
+                <div className="flex h-full items-center justify-center rounded-xl bg-slate-50 px-4 text-center text-sm text-slate-500">
+                  Ainda sem eixos de KPI publicados (fenologia, estande, índice). Publique os indicadores
+                  A/B para ver o “mapa” de desempenho.
                 </div>
               )}
             </div>
@@ -90,22 +107,47 @@ export default function ChartsEnterpriseGrid({ data }: Props) {
           >
             <h3 className="text-sm font-bold text-slate-900">Evolução das avaliações (DAA)</h3>
             <p className="mt-0.5 text-xs text-slate-500">Índice consolidado ao longo do ensaio</p>
-            <div className="mt-3 h-[280px] w-full sm:h-[320px]">
+            <div className="mt-3 h-[280px] w-full sm:h-[320px] [&_svg.recharts-surface]:relative">
               {lineRows.length >= 2 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={lineRows} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="tick" tick={{ fontSize: 10 }} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} label={{ value: 'Índice', angle: -90, position: 'insideLeft', fontSize: 10 }} />
-                    <Tooltip />
+                  <LineChart data={lineRows} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis dataKey="tick" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} />
+                    <YAxis
+                      domain={[0, 100]}
+                      tick={{ fontSize: 10, fill: '#64748b' }}
+                      axisLine={false}
+                      width={40}
+                      label={{ value: 'Índice', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#94a3b8' }}
+                    />
+                    <Tooltip contentStyle={{ borderRadius: 10, fontSize: 12 }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Line type="monotone" dataKey="iA" name={nameA} stroke={ENT.green} strokeWidth={2} dot={{ r: 3 }} isAnimationActive />
-                    <Line type="monotone" dataKey="iB" name={nameB} stroke={ENT.blue} strokeWidth={2} dot={{ r: 3 }} isAnimationActive />
+                    <Line
+                      type="monotone"
+                      dataKey="iA"
+                      name={nameA}
+                      stroke={ENT.green}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, strokeWidth: 0 }}
+                      activeDot={{ r: 5 }}
+                      isAnimationActive={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="iB"
+                      name={nameB}
+                      stroke={ENT.blue}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, strokeWidth: 0 }}
+                      activeDot={{ r: 5 }}
+                      isAnimationActive={false}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-full items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">
-                  Índice não disponível para evolução temporal.
+                <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 text-center text-sm leading-relaxed text-slate-500">
+                  Não foi possível montar a série (índice A/B indisponível). Com KPIs publicados em ambos
+                  os lados, o gráfico liga o “início do ensaio” à leitura atual.
                 </div>
               )}
             </div>
