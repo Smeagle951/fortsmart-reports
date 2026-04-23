@@ -11,6 +11,20 @@ function isFeatureCollection(x: unknown): x is FeatureCollection {
   );
 }
 
+/** Alguns drivers devolvem `jsonb` já como objeto; raros casos como string JSON. */
+function geojsonFromCell(cell: unknown): FeatureCollection | null {
+  if (isFeatureCollection(cell)) return cell;
+  if (typeof cell === 'string' && cell.trim()) {
+    try {
+      const parsed = JSON.parse(cell) as unknown;
+      return isFeatureCollection(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 /** Lê snapshot público por id (rota /mapa-talhoes/m/[token]). */
 export async function getMapaTalhoesShareById(id: string): Promise<FeatureCollection | null> {
   const raw = String(id ?? '').trim();
@@ -32,6 +46,5 @@ export async function getMapaTalhoesShareById(id: string): Promise<FeatureCollec
     return null;
   }
 
-  const gj = data.geojson;
-  return isFeatureCollection(gj) ? gj : null;
+  return geojsonFromCell(data.geojson);
 }

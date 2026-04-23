@@ -1,8 +1,8 @@
 'use client';
 
-import type { FeatureCollection } from 'geojson';
+import type { FeatureCollection, GeoJsonObject } from 'geojson';
 import dynamic from 'next/dynamic';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   decodeGeoJsonFromQuery,
@@ -10,6 +10,7 @@ import {
   downloadGeoJson,
   filterByCulturaSafra,
   filterBySelectedTalhoes,
+  isFeatureCollectionGj,
   listTalhoesFromFc,
 } from './geojsonUtils';
 import { MapSummaryBar } from './MapSummaryBar';
@@ -37,6 +38,7 @@ export function MapaTalhoesClient({
   initialFeatureCollection = null,
 }: MapaTalhoesClientProps) {
   const sp = useSearchParams();
+  const pathname = usePathname();
   const [raw, setRaw] = useState<FeatureCollection | null>(null);
   const [cultura, setCultura] = useState('all');
   const [safra, setSafra] = useState('all');
@@ -65,6 +67,55 @@ export function MapaTalhoesClient({
       );
     }
   }, [sp, initialFeatureCollection]);
+
+  /** Fallback quando o SSR não entrega GeoJSON mas a URL tem `/mapa-talhoes/m/:id`. */
+  useEffect(() => {
+    if (initialFeatureCollection != null) return;
+    if (raw != null) return;
+
+    const m = pathname.match(/^\/mapa-talhoes\/m\/([^/]+)\/?$/);
+    const token = m?.[1]?.trim();
+    if (!token) return;
+
+    let cancelled = false;
+    const ac = new AbortController();
+
+    void (async () => {
+      try {
+        setErr(null);
+        const res = await fetch(
+          `/api/mapa-talhoes/snapshot/${encodeURIComponent(token)}`,
+          { signal: ac.signal },
+        );
+        if (cancelled) return;
+        if (!res.ok) {
+          setErr(
+            res.status === 404
+              ? 'Link expirado ou inválido. Gere um novo mapa na app FortSmart (Plantio → Exportar KML / mapa web).'
+              : `Não foi possível carregar o mapa partilhado (${res.status}).`,
+          );
+          return;
+        }
+        const data = (await res.json()) as unknown;
+        if (cancelled) return;
+        if (isFeatureCollectionGj(data as GeoJsonObject)) {
+          setRaw(data as FeatureCollection);
+          setErr(null);
+        } else {
+          setErr('Resposta do servidor sem GeoJSON válido.');
+        }
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        setErr('Falha de rede ao carregar o mapa partilhado.');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [initialFeatureCollection, raw, pathname]);
 
   const baseFiltered = useMemo(() => {
     if (!raw) return null;

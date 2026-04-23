@@ -39,6 +39,12 @@ export function middleware(req: NextRequest) {
   // Se já está no host canônico, segue.
   if (hostname === canonicalHost) return NextResponse.next();
 
+  // Mapa de talhões (link curto / dados Supabase): sempre no host canónico dos relatórios.
+  if (pathname.startsWith('/mapa-talhoes')) {
+    const url = new URL(req.nextUrl.pathname + req.nextUrl.search, canonicalOrigin);
+    return NextResponse.redirect(url, 308);
+  }
+
   // Redirecionar principalmente quando entra por vercel.app (ou qualquer outro alias),
   // preservando path + query.
   const shouldRedirect = hostname.endsWith('.vercel.app') || hostname === 'fortsmart-reports.vercel.app';
