@@ -26,7 +26,7 @@ export default function ExecutionSection({ data }: { data: SideBySideReportData 
         id="execucao-premium"
         eyebrow="Registros de aplicação"
         title="Execução em campo"
-        subtitle="Formato legado (resumo). Para linha do tempo completa com clima, DAA e vínculo ao protocolo, o JSON deve incluir o array applications."
+        subtitle="Formato resumido. A linha do tempo completa (clima, DAA, vínculo ao protocolo) aparece quando houver registros detalhados de aplicações."
       >
         <ul className="space-y-3">
           {legacy.map((a, i) => (

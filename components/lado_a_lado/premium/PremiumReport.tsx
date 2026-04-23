@@ -16,15 +16,13 @@ import ExperimentDesignSection from './ExperimentDesignSection';
 import FieldCollectionModulesSection from './FieldCollectionModulesSection';
 import ExecutiveDeckSection from './ExecutiveDeckSection';
 const NAV_PREMIUM: { id: string; label: string }[] = [
-  { id: 'hero-premium', label: 'Início' },
-  { id: 'ficha-ensaio-premium', label: 'Ficha' },
-  { id: 'economia-resumo-premium', label: 'Economia (resumo)' },
-  { id: 'enterprise-resumo', label: 'Resumo executivo' },
-  { id: 'decisao-executiva-premium', label: 'Decisão' },
+  { id: 'hero-decision', label: 'Decisão' },
+  { id: 'enterprise-hero-compare', label: 'Resumo' },
+  { id: 'enterprise-kpis', label: 'Indicadores' },
+  { id: 'economia-resumo-premium', label: 'Económico' },
+  { id: 'fotos-premium', label: 'Evidências' },
   { id: 'tratamento-execucao-premium', label: 'Tratamento e aplicações' },
   { id: 'deck-executivo-premium', label: 'Painel' },
-  { id: 'fotos-premium', label: 'Fotos' },
-  { id: 'kpis-premium', label: 'Indicadores' },
   { id: 'fortsmart-ai-premium', label: 'FortSmart AI' },
   { id: 'ensaio-premium', label: 'Ensaio' },
   { id: 'coleta-modulos-premium', label: 'Coleta' },

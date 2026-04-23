@@ -225,7 +225,7 @@ export default function KPISection({ data }: { data: SideBySideReportData }) {
       id="kpis-premium"
       eyebrow="Painel decisório"
       title="Indicadores para decisão"
-      subtitle="Síntese quantitativa publicada no relatório: produtividade, custos, fenologia e eficiência de estande quando disponíveis. Sem extrapolação além do JSON."
+      subtitle="Síntese quantitativa do relatório: produtividade, custos, fenologia e eficiência de estande quando disponíveis."
     >
       {dq?.usedEstimatedYield ? (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">

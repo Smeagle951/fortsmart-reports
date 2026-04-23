@@ -84,7 +84,7 @@ export default function ExecutiveSummaryEnterprise({ data }: Props) {
             ) : null}
             {roiLead ? (
               <Bullet icon={DollarSign} tone="blue" delay={0.06}>
-                <span className="font-semibold text-slate-900">{roiLead}</span> concentra o melhor ROI ajustado entre os manejos quando o motor económico está completo no JSON.
+                <span className="font-semibold text-slate-900">{roiLead}</span> concentra o melhor ROI ajustado entre os manejos comparados.
               </Bullet>
             ) : null}
             <Bullet icon={Shield} tone="amber" delay={0.1}>

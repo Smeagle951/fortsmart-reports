@@ -51,7 +51,7 @@ export default function SidePhotoGallerySection({ data }: { data: SideBySideRepo
       id="fotos-premium"
       eyebrow="Evidências"
       title="Galeria (A/B)"
-      subtitle="Fotos publicadas no JSON. Categorias vêm do app quando existirem."
+      subtitle="Registro fotográfico por manejo. Categorias derivadas das coletas de campo."
     >
       <div className="grid gap-4 lg:grid-cols-2 print:grid-cols-2">
         <div className="space-y-3">

@@ -20,10 +20,10 @@ type Props = {
   data: SideBySideReportData;
   reportId?: string;
   shareToken?: string;
-  onPrint: () => void;
+  onPrint?: () => void;
 };
 
-export default function EnterpriseReportLayout({ data, onPrint }: Props) {
+export default function EnterpriseReportLayout({ data }: Props) {
   return (
     <motion.div
       id="hero-premium"
@@ -33,7 +33,7 @@ export default function EnterpriseReportLayout({ data, onPrint }: Props) {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
       {/* Capa / Header */}
-      <ReportHeader data={data} onPrint={onPrint} />
+      <ReportHeader data={data} />
 
       {/* ▸ Decisão no topo — impacto imediato */}
       <HeroDecisionBanner data={data} />

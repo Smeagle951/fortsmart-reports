@@ -673,27 +673,11 @@ export default function ExecutiveDeckSection({
       : 'Valores calculados pelo motor económico publicado para cada manejo.'
     : 'Motor económico incompleto neste relatório — ROI comparável não disponível.';
 
-  const melhorDesempenhoTexto =
-    winnerName != null ? `Melhor desempenho: ${winnerName}` : 'Empate ou dados insuficientes para destacar um manejo.';
-
-  const melhorDesempenhoFonte =
-    winnerDeclared != null
-      ? 'Indicado na conclusão técnica do relatório.'
-      : winnerInferred != null
-        ? 'Ordenação automática pelo maior índice técnico consolidado quando a conclusão não nomeia um vencedor.'
-        : 'Complete a conclusão ou os indicadores nos dois lados para o ranking aparecer.';
-
   const motorAlerts = data.decision_layer?.fortsmart_ai?.motor_alertas ?? [];
 
   return (
     <section id={sectionId} className="scroll-mt-36 print:break-inside-avoid">
       <div className="mx-auto max-w-[1400px] space-y-3">
-        <p className="rounded-lg border border-slate-200/80 bg-white px-3 py-2 text-center text-[11px] leading-snug text-slate-600 shadow-sm print:hidden">
-          Legenda local deste painel:{' '}
-          <strong style={{ color: DECK_SIDE_A }}>Manejo A</strong> verde ·{' '}
-          <strong style={{ color: DECK_SIDE_B }}>Manejo B</strong> azul escuro. Nas demais secções do relatório, os gráficos usam{' '}
-          <span className="font-mono text-[10px] text-slate-500">A = azul · B = verde</span>.
-        </p>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* Painel esquerdo */}
         <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-md print:border print:shadow-none">
@@ -719,27 +703,42 @@ export default function ExecutiveDeckSection({
           </div>
 
           <div
-            className="flex items-center gap-3 rounded-2xl px-4 py-3 text-white"
+            className="relative overflow-hidden rounded-2xl px-4 py-4 text-white shadow-lg"
             style={{
-              background: 'linear-gradient(90deg, #1e3a8a 0%, #14532d 100%)',
+              background:
+                winnerInferred === 'A' || winnerDeclared === 'A'
+                  ? 'linear-gradient(120deg, #065f46 0%, #047857 55%, #0f2a5c 100%)'
+                  : 'linear-gradient(120deg, #0f2a5c 0%, #1e3a8a 55%, #065f46 100%)',
             }}
           >
-            <div
-              className="min-w-[3.25rem] rounded-xl px-3 py-2 text-center text-2xl font-black tabular-nums"
-              style={{ backgroundColor: DECK_SIDE_A }}
-            >
-              {scorePair.a != null ? Math.round(scorePair.a) : '—'}
+            <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" aria-hidden />
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.22em] text-slate-900 shadow">
+                Vencedor
+              </span>
+              <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/75">Melhor desempenho</p>
             </div>
-            <div className="min-w-0 flex-1 text-center">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-sky-200/90">Melhor desempenho</p>
-              <p className="mt-1 text-sm font-bold leading-tight">{melhorDesempenhoTexto}</p>
-              <p className="mt-1 text-[9px] text-emerald-200/85">{melhorDesempenhoFonte}</p>
-            </div>
-            <div
-              className="min-w-[3.25rem] rounded-xl px-3 py-2 text-center text-2xl font-black tabular-nums"
-              style={{ backgroundColor: DECK_SIDE_B }}
-            >
-              {scorePair.b != null ? Math.round(scorePair.b) : '—'}
+            <p className="mt-2 text-lg font-black leading-tight sm:text-xl">{winnerName ?? 'Empate técnico'}</p>
+            {scoreDelta != null && scoreDelta !== 0 ? (
+              <p className="mt-1 text-[11px] text-white/80">
+                Vantagem de <span className="font-bold text-white">{Math.abs(scoreDelta)} pontos</span> no índice técnico consolidado
+              </p>
+            ) : null}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-lg bg-white/10 px-3 py-2 backdrop-blur">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/70">{nameA}</p>
+                <p className="mt-0.5 text-xl font-black tabular-nums">
+                  {scorePair.a != null ? Math.round(scorePair.a) : '—'}
+                </p>
+              </div>
+              <div
+                className={`rounded-lg px-3 py-2 ${winnerInferred === 'B' || winnerDeclared === 'B' ? 'bg-amber-400/25 ring-1 ring-amber-300/60' : 'bg-white/10'} backdrop-blur`}
+              >
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/70">{nameB}</p>
+                <p className="mt-0.5 text-xl font-black tabular-nums">
+                  {scorePair.b != null ? Math.round(scorePair.b) : '—'}
+                </p>
+              </div>
             </div>
           </div>
           {scorePair.a == null || scorePair.b == null ? (

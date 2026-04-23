@@ -1,16 +1,16 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Bell, Printer, UserRound } from 'lucide-react';
+import { UserRound } from 'lucide-react';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { ENT } from './enterpriseTheme';
 
 type Props = {
   data: SideBySideReportData;
-  onPrint: () => void;
+  onPrint?: () => void;
 };
 
-export default function ReportHeader({ data, onPrint }: Props) {
+export default function ReportHeader({ data }: Props) {
   const farm = data.farm ?? {};
   const coleta = data.coleta;
   const meta = data.meta ?? {};
@@ -52,23 +52,6 @@ export default function ReportHeader({ data, onPrint }: Props) {
               <p className="truncate text-xs text-slate-500">{sig?.crea?.trim() ? `CREA ${sig.crea}` : meta.generatedBy?.role || 'Responsável técnico'}</p>
               {created ? <p className="text-xs text-slate-400">{created}</p> : null}
             </div>
-          </div>
-          <div className="flex items-center justify-end gap-1 print:hidden">
-            <button
-              type="button"
-              onClick={onPrint}
-              className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 shadow-sm transition hover:scale-[1.03] hover:border-slate-300 hover:shadow-md"
-              aria-label="Imprimir relatório"
-            >
-              <Printer className="h-4 w-4" />
-            </button>
-            <span
-              className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-slate-300"
-              aria-hidden
-              title="Notificações"
-            >
-              <Bell className="h-4 w-4" />
-            </span>
           </div>
         </div>
       </div>

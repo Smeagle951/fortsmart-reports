@@ -56,7 +56,7 @@ function ProtocolProductsTable({
   );
 }
 
-function ApplicationBlock({ ev }: { ev: ReportApplicationEventV2Json }) {
+function ApplicationBlock({ ev, accent }: { ev: ReportApplicationEventV2Json; accent: string }) {
   const c = ev.climate;
   const t = ev.applicationTech;
   const badge = protocolBadge(ev);
@@ -65,36 +65,69 @@ function ApplicationBlock({ ev }: { ev: ReportApplicationEventV2Json }) {
       initial={{ opacity: 0, y: 8 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-sm"
+      className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-sm"
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <span className="absolute inset-y-2 left-0 w-1 rounded-r-full" style={{ backgroundColor: accent }} aria-hidden />
+      <div className="flex flex-wrap items-center gap-2 pl-2">
         <span className="font-bold text-slate-900">{ev.date ? formatDate(ev.date) : '—'}</span>
-        {ev.daa != null ? <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold">{ev.daa} DAA</span> : null}
-        <span className="text-[10px] font-bold uppercase text-slate-500">{ev.type || 'Aplicação'}</span>
+        {ev.daa != null ? (
+          <span
+            className="rounded-md px-2 py-0.5 text-[10px] font-black tabular-nums text-white"
+            style={{ backgroundColor: accent }}
+          >
+            {ev.daa} DAA
+          </span>
+        ) : null}
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{ev.type || 'Aplicação'}</span>
+        <span
+          className={`ml-auto inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${badge.ok ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900'}`}
+        >
+          {badge.ok ? '✓' : '⚠'} {badge.label}
+        </span>
       </div>
-      {c && (c.temperature != null || c.humidity != null || c.wind != null) ? (
-        <p className="mt-2 text-[11px] text-slate-600">
-          Clima:{' '}
-          {[c.temperature != null ? `${c.temperature}°C` : null, c.humidity != null ? `${c.humidity}%` : null, c.wind != null ? `Vento ${formatWind(c.wind)}` : null]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      ) : null}
-      {(t?.bico != null || t?.vazao != null || t?.pressao != null) && (
-        <p className="mt-1 text-[11px] text-slate-600">
-          Equipamento:{' '}
-          {[t?.bico && `Bico ${t.bico}`, t?.vazao != null && `Vazão ${t.vazao} L/min`, t?.pressao != null && `Pressão ${t.pressao}`].filter(Boolean).join(' · ')}
-        </p>
-      )}
+
+      {/* Grid técnico: clima + equipamento */}
+      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 border-y border-slate-100 py-1.5 pl-2 text-[11px]">
+        {c?.temperature != null ? (
+          <p>
+            <span className="text-slate-500">Temp.:</span> <span className="font-semibold text-slate-800">{c.temperature}°C</span>
+          </p>
+        ) : null}
+        {c?.humidity != null ? (
+          <p>
+            <span className="text-slate-500">U.R.:</span> <span className="font-semibold text-slate-800">{c.humidity}%</span>
+          </p>
+        ) : null}
+        {c?.wind != null ? (
+          <p>
+            <span className="text-slate-500">Vento:</span> <span className="font-semibold text-slate-800">{formatWind(c.wind)}</span>
+          </p>
+        ) : null}
+        {t?.bico ? (
+          <p>
+            <span className="text-slate-500">Bico:</span> <span className="font-semibold text-slate-800">{t.bico}</span>
+          </p>
+        ) : null}
+        {t?.vazao != null ? (
+          <p>
+            <span className="text-slate-500">Vazão:</span> <span className="font-semibold text-slate-800">{t.vazao} L/min</span>
+          </p>
+        ) : null}
+        {t?.pressao != null ? (
+          <p>
+            <span className="text-slate-500">Pressão:</span> <span className="font-semibold text-slate-800">{t.pressao}</span>
+          </p>
+        ) : null}
+      </div>
+
       {ev.products && ev.products.length > 0 ? (
-        <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-[11px]">
+        <ul className="mt-2 space-y-1 pl-2 text-[11px]">
           {ev.products.map((p, j) => (
-            <li key={j} className="text-slate-800">
-              <span className="font-semibold">{p.nomeComercial || 'Produto'}</span>
-              {p.nomeAtivo ? <span className="text-slate-500"> ({p.nomeAtivo})</span> : null}
+            <li key={j} className="flex flex-wrap items-baseline gap-x-2 text-slate-800">
+              <span className="font-bold">{p.nomeComercial || 'Produto'}</span>
+              {p.nomeAtivo ? <span className="text-slate-500">({p.nomeAtivo})</span> : null}
               <span className="text-slate-600">
-                {' '}
-                · dose {p.dose != null ? p.dose : '—'}
+                · {p.dose != null ? p.dose : '—'}
                 {p.unidade ? ` ${p.unidade}` : ''}
                 {p.custoHa != null ? ` · R$ ${formatNumber(p.custoHa, { decimals: 2 })}/ha` : ''}
               </span>
@@ -102,13 +135,6 @@ function ApplicationBlock({ ev }: { ev: ReportApplicationEventV2Json }) {
           ))}
         </ul>
       ) : null}
-      <div className="mt-2">
-        <span
-          className={`inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${badge.ok ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900'}`}
-        >
-          {badge.ok ? '✓' : '⚠'} {badge.label}
-        </span>
-      </div>
     </motion.div>
   );
 }
@@ -165,46 +191,58 @@ export default function TreatmentExecutionCombinedSection({ data }: { data: Side
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className={`flex flex-col gap-4 rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm ring-2 ${ring}`}
+              className={`flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md ring-2 ${ring}`}
             >
-              <div className={`${headerBg} text-white px-4 py-3 text-center`}>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-95">Manejo {sideKey}</p>
-                <p className="font-bold text-lg">{side?.name ?? name}</p>
-                <p className="text-[11px] opacity-85">Plano e execução</p>
+              <div className={`${headerBg} px-4 py-3 text-center text-white`}>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-95">Manejo {sideKey}</p>
+                <p className="text-lg font-black">{side?.name ?? name}</p>
+                <p className="text-[11px] opacity-85">
+                  {(side?.products?.length ?? 0)} produto{(side?.products?.length ?? 0) === 1 ? '' : 's'} no plano · {sideApps.length} aplicação{sideApps.length === 1 ? '' : 'ões'} em campo
+                </p>
               </div>
-              <div className="space-y-4 px-4 pb-4 pt-2 sm:px-5">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Plano (protocolo)</p>
+
+              {(side?.objective || side?.expected_result) && (
+                <div className="space-y-2 border-b border-slate-100 bg-slate-50/60 px-4 py-3 text-[12px] leading-snug text-slate-700 sm:px-5">
+                  {side?.objective ? (
+                    <p>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Objetivo: </span>
+                      {side.objective}
+                    </p>
+                  ) : null}
+                  {side?.expected_result ? (
+                    <p>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Resultado esperado: </span>
+                      {side.expected_result}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+
+              {/* Plano + Aplicações lado a lado */}
+              <div className="grid gap-4 px-4 py-4 sm:px-5 lg:grid-cols-2">
+                <div className="min-w-0">
+                  <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-900/5 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-700">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} aria-hidden />
+                    Plano (protocolo)
+                  </p>
                   {side ? (
-                    <div className="mt-2 space-y-2 text-sm text-slate-700">
-                      {side.objective ? (
-                        <p>
-                          <span className="text-xs font-semibold text-slate-500">Objetivo</span>
-                          <br />
-                          {side.objective}
-                        </p>
-                      ) : null}
-                      {side.expected_result ? (
-                        <p>
-                          <span className="text-xs font-semibold text-slate-500">Resultado esperado</span>
-                          <br />
-                          {side.expected_result}
-                        </p>
-                      ) : null}
-                      <ProtocolProductsTable products={side.products ?? []} accent={accent} />
-                    </div>
+                    <ProtocolProductsTable products={side.products ?? []} accent={accent} />
                   ) : (
-                    <p className="mt-2 text-xs text-slate-500">Sem protocolo publicado para este lado.</p>
+                    <p className="text-xs text-slate-500">Sem protocolo publicado para este lado.</p>
                   )}
                 </div>
-                <div className="border-t border-slate-200 pt-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Aplicações realizadas</p>
+
+                <div className="min-w-0">
+                  <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-900/5 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-700">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+                    Aplicações realizadas
+                  </p>
                   {sideApps.length === 0 ? (
-                    <p className="mt-2 text-xs text-slate-500">Nenhuma aplicação com este manejo no período publicado.</p>
+                    <p className="text-xs text-slate-500">Nenhuma aplicação com este manejo no período publicado.</p>
                   ) : (
-                    <div className="mt-2 space-y-3">
+                    <div className="space-y-2">
                       {sideApps.map((ev, i) => (
-                        <ApplicationBlock key={ev.id || `${ev.date}-${ev.daa}-${i}`} ev={ev} />
+                        <ApplicationBlock key={ev.id || `${ev.date}-${ev.daa}-${i}`} ev={ev} accent={accent} />
                       ))}
                     </div>
                   )}
