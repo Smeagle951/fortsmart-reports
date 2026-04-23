@@ -13,7 +13,10 @@ export const ENT = {
   redSoft: '#fee2e2',
   amber: '#b45309',
   amberSoft: '#fef3c7',
-  surface: '#F0F2F5',
+  /** Página (referência SaaS: off-white) */
+  surface: '#F8F9FA',
+  /** Legado: cinza ligeiramente mais frio (PDF / impressão) */
+  surfaceAlt: '#F0F2F5',
   card: '#ffffff',
   text: '#0f172a',
   textMuted: '#64748b',

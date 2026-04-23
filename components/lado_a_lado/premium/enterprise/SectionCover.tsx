@@ -12,36 +12,41 @@ type Props = {
   tone?: 'slate' | 'emerald' | 'blue';
 };
 
+/**
+ * Título de secção contínuo (referência: linha e texto, sem “capítulo” pesado).
+ */
 export default function SectionCover({ number, title, subtitle, icon: Icon, tone = 'slate' }: Props) {
   const accent = tone === 'emerald' ? ENT.green : tone === 'blue' ? ENT.blue : '#0f172a';
   return (
     <motion.div
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-20px' }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="mx-auto flex max-w-[1400px] items-center gap-4 px-4 pt-10 pb-2 sm:px-6 sm:pt-14 print:break-before-page"
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="mx-auto max-w-[1400px] px-4 pt-8 pb-1 sm:px-6 sm:pt-10 print:pt-6"
     >
-      <div
-        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-md sm:h-16 sm:w-16"
-        style={{ backgroundColor: accent, boxShadow: ENT.shadowCard }}
-      >
-        {Icon ? <Icon className="h-6 w-6" strokeWidth={2} /> : (
-          <span className="text-xl font-black tabular-nums">{number}</span>
+      <div className="flex items-start gap-3 border-b border-slate-200/90 pb-3">
+        {Icon ? (
+          <div
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white shadow-sm"
+            style={{ backgroundColor: accent }}
+          >
+            <Icon className="h-4 w-4" strokeWidth={2.2} />
+          </div>
+        ) : (
+          <span
+            className="mt-1 flex h-7 min-w-7 items-center justify-center rounded-md text-[10px] font-black tabular-nums text-white"
+            style={{ backgroundColor: accent }}
+          >
+            {number}
+          </span>
         )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Secção {number}</p>
+          <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">{title}</h2>
+          {subtitle ? <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p> : null}
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500">Secção {number}</p>
-        <h2 className="mt-0.5 text-xl font-black leading-tight tracking-tight text-slate-900 sm:text-2xl">{title}</h2>
-        {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
-      </div>
-      <div
-        className="hidden h-[2px] flex-1 rounded-full sm:block"
-        style={{
-          background: `linear-gradient(90deg, ${accent}33 0%, transparent 100%)`,
-        }}
-        aria-hidden
-      />
     </motion.div>
   );
 }

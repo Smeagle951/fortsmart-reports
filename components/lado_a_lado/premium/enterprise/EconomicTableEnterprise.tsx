@@ -87,7 +87,7 @@ export default function EconomicTableEnterprise({ data }: Props) {
           : null;
 
   return (
-    <section id="economia-resumo-premium" className="scroll-mt-36 print:break-inside-avoid">
+    <section id="economia-resumo-premium" className="scroll-mt-36 print:break-inside-avoid" dir="ltr">
       <motion.div
         initial={{ opacity: 0, y: 18 }}
         whileInView={{ opacity: 1, y: 0 }}

@@ -1,11 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { BarChart3, Camera, Coins, Gauge } from 'lucide-react';
+import { BarChart3, Camera, Coins } from 'lucide-react';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import FieldContextStrip from '../FieldContextStrip';
 import ReportHeader from './ReportHeader';
-import HeroDecisionBanner from './HeroDecisionBanner';
 import HeroComparison from './HeroComparison';
 import EnterpriseKPIStrip from './EnterpriseKPIStrip';
 import ReportConfidenceBadge from './ReportConfidenceBadge';
@@ -14,15 +13,15 @@ import ChartsEnterpriseGrid from './ChartsEnterpriseGrid';
 import EconomicTableEnterprise from './EconomicTableEnterprise';
 import ExecutiveSummaryEnterprise from './ExecutiveSummaryEnterprise';
 import PhotoGalleryEnterprise from './PhotoGalleryEnterprise';
-import ReportFooterEnterprise from './ReportFooterEnterprise';
 
 type Props = {
   data: SideBySideReportData;
-  reportId?: string;
-  shareToken?: string;
-  onPrint?: () => void;
 };
 
+/**
+ * Ordem alinhada à referência visual: cabeçalho → ficha 6 colunas → herói A|troféu|B → KPIs
+ * (sem banner duplicado “decisão” acima do comparativo; os deltas ficam no strip de KPIs).
+ */
 export default function EnterpriseReportLayout({ data }: Props) {
   return (
     <motion.div
@@ -32,44 +31,31 @@ export default function EnterpriseReportLayout({ data }: Props) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
-      {/* Capa / Header */}
       <ReportHeader data={data} />
 
-      {/* ▸ Decisão no topo — impacto imediato */}
-      <HeroDecisionBanner data={data} />
-
-      {/* Contexto técnico */}
       <FieldContextStrip data={data} />
 
-      {/* Confiança do relatório (auditoria executiva) */}
-      <ReportConfidenceBadge data={data} />
-
-      {/* SECÇÃO 01 — Resumo executivo */}
-      <SectionCover
-        number="01"
-        title="Resumo executivo"
-        subtitle="Indicadores-chave do ensaio comparados lado a lado"
-        icon={Gauge}
-        tone="emerald"
-      />
       <HeroComparison data={data} />
+
       <EnterpriseKPIStrip data={data} />
 
-      {/* SECÇÃO 02 — Comparativo técnico */}
+      <div className="mx-auto max-w-[1400px] px-4 pt-2 pb-4 sm:px-6 sm:pt-3 sm:pb-6">
+        <ReportConfidenceBadge data={data} />
+      </div>
+
       <SectionCover
-        number="02"
+        number="01"
         title="Comparativo técnico"
-        subtitle="Índices técnicos multidimensionais e curva de evolução"
+        subtitle="Desempenho multidimensional e evolução por DAA"
         icon={BarChart3}
         tone="blue"
       />
       <ChartsEnterpriseGrid data={data} />
 
-      {/* SECÇÃO 03 — Análise económica */}
       <SectionCover
-        number="03"
-        title="Análise económica"
-        subtitle="Receita, custo, margem e retorno sobre o investimento"
+        number="02"
+        title="Análise económica e síntese"
+        subtitle="Margem, retorno e leitura executiva"
         icon={Coins}
         tone="emerald"
       />
@@ -82,17 +68,14 @@ export default function EnterpriseReportLayout({ data }: Props) {
         </div>
       </div>
 
-      {/* SECÇÃO 04 — Evidências de campo */}
       <SectionCover
-        number="04"
+        number="03"
         title="Evidências de campo"
-        subtitle="Registo fotográfico auditável por manejo"
+        subtitle="Registo fotográfico por manejo"
         icon={Camera}
         tone="blue"
       />
       <PhotoGalleryEnterprise data={data} />
-
-      <ReportFooterEnterprise data={data} />
     </motion.div>
   );
 }

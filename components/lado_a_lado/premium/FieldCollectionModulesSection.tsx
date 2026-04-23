@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
+import { sideKeysInPresentationOrder } from '@/components/lado_a_lado/ladoALadoHelpers';
 
 /* ----------------------------- labels & order ----------------------------- */
 
@@ -646,7 +647,7 @@ export default function FieldCollectionModulesSection({
   const schemaVersion = fcm.schema_version;
 
   return (
-    <section id={sectionId} className="scroll-mt-28 print:break-inside-avoid relative isolate">
+    <section id={sectionId} className="scroll-mt-28 print:break-inside-avoid relative isolate" dir="ltr">
       <div
         className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/70
           bg-gradient-to-b from-white via-slate-50/20 to-slate-100/10
@@ -670,12 +671,14 @@ export default function FieldCollectionModulesSection({
                 )}
               </p>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-blue-200 ring-1 ring-blue-400/30">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />A
-              </span>
+            <div className="flex items-center gap-1.5" title="Sempre: esquerda = A, direita = B">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-emerald-200 ring-1 ring-emerald-400/30">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />B
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+                A
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-blue-200 ring-1 ring-blue-400/30">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" aria-hidden />
+                B
               </span>
             </div>
           </div>
@@ -685,7 +688,7 @@ export default function FieldCollectionModulesSection({
           {points.map((pt, i) => {
             const pLabel = typeof pt.index === 'number' ? `Ponto ${pt.index}` : `Ponto ${i + 1}`;
             const sides = pt.sides && typeof pt.sides === 'object' ? pt.sides : {};
-            const sideKeys = Object.keys(sides).sort();
+            const sideKeys = sideKeysInPresentationOrder(sides);
             if (sideKeys.length === 0) return null;
 
             const secSet = new Set<string>();

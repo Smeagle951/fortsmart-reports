@@ -8,6 +8,17 @@ import type {
 export const COLOR_SIDE_A = '#2563eb';
 export const COLOR_SIDE_B = '#16a34a';
 
+/**
+ * Ordem de apresentação no relatório: **sempre** esquerda / 1.ª coluna = Manejo A, direita / 2.ª = Manejo B
+ * (lado a lado “verdadeiro”, independentemente das chaves virem fora de ordem no JSON).
+ */
+export const PRESENTATION_SIDE_ORDER: readonly ('A' | 'B')[] = ['A', 'B'] as const;
+
+export function sideKeysInPresentationOrder(sides: Record<string, unknown> | null | undefined): ('A' | 'B')[] {
+  if (!sides) return [];
+  return PRESENTATION_SIDE_ORDER.filter((k) => Object.prototype.hasOwnProperty.call(sides, k));
+}
+
 export function isCustoJson(v: unknown): v is CustoJson {
   if (!v || typeof v !== 'object') return false;
   const o = v as Record<string, unknown>;

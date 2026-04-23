@@ -106,7 +106,7 @@ export default function PhotoGalleryEnterprise({ data }: Props) {
   const nameB = data.sideB?.name || 'Manejo B';
 
   return (
-    <section id="fotos-premium" className="scroll-mt-36 print:break-inside-avoid">
+    <section id="fotos-premium" className="scroll-mt-36 print:break-inside-avoid" dir="ltr">
       <div className="mx-auto max-w-[1400px] px-4 pb-10 sm:px-6 sm:pb-12">
         <h3 className="text-base font-bold text-slate-900">Registro fotográfico</h3>
         <p className="mt-1 text-sm text-slate-500">Toque na imagem para ampliar</p>

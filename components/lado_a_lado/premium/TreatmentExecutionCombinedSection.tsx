@@ -4,9 +4,10 @@ import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import type { ReportApplicationEventV2Json } from '@/types/side-by-side-report';
 import type { TreatmentProtocolSideJson } from '@/types/side-by-side-report';
-import { COLOR_SIDE_A, COLOR_SIDE_B, formatWind } from '@/components/lado_a_lado/ladoALadoHelpers';
+import { formatWind } from '@/components/lado_a_lado/ladoALadoHelpers';
 import { formatDate, formatNumber } from '@/utils/format';
 import PremiumSectionShell from './PremiumSectionShell';
+import { ENT } from './enterprise/enterpriseTheme';
 
 function protocolBadge(ev: ReportApplicationEventV2Json): { label: string; ok: boolean } {
   const prods = ev.products ?? [];
@@ -176,13 +177,14 @@ export default function TreatmentExecutionCombinedSection({ data }: { data: Side
       title="Tratamento planejado e aplicações em campo"
       subtitle="Plano por manejo (produtos e doses) e, abaixo, as aplicações realizadas com data, DAA, clima, equipamento e produtos aplicados — alinhado ao registo detalhado no app."
     >
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2" dir="ltr">
         {(['A', 'B'] as const).map((sideKey) => {
           const side = sides.find((s) => s.side === sideKey);
           const name = sideKey === 'A' ? data.sideA?.name || 'Manejo A' : data.sideB?.name || 'Manejo B';
-          const headerBg = sideKey === 'A' ? 'bg-blue-800' : 'bg-emerald-800';
-          const ring = sideKey === 'A' ? 'ring-blue-100' : 'ring-emerald-100';
-          const accent = sideKey === 'A' ? COLOR_SIDE_A : COLOR_SIDE_B;
+          /* Esquerda = A (verde), direita = B (azul) — alinhado ao herói e galeria */
+          const headerBg = sideKey === 'A' ? 'bg-emerald-800' : 'bg-blue-900';
+          const ring = sideKey === 'A' ? 'ring-emerald-100' : 'ring-blue-100';
+          const accent = sideKey === 'A' ? ENT.green : ENT.blue;
           const sideApps = sortedApps.filter((e) => e.side === sideKey);
 
           return (
