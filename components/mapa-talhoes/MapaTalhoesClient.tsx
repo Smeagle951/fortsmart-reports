@@ -11,7 +11,6 @@ import {
   filterByCulturaSafra,
   filterBySelectedTalhoes,
   listTalhoesFromFc,
-  parseJsonFileText,
 } from './geojsonUtils';
 import { MapSummaryBar } from './MapSummaryBar';
 import { strokeForProperties } from './materialColor';
@@ -19,19 +18,24 @@ import { SeedCalculatorTable } from './SeedCalculatorTable';
 
 const MapView = dynamic(
   () => import('./MapView').then((m) => m.MapView),
-  { ssr: false, loading: () => <div className="flex h-full min-h-[360px] items-center justify-center bg-slate-800 text-slate-400">Carregando mapa…</div> }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full min-h-[360px] items-center justify-center bg-slate-800 text-slate-400">
+        Carregando mapa…
+      </div>
+    ),
+  },
 );
 
-/** Base64-URL, compatível com `dart:convert` base64Url (Flutter). */
-function utf8ToB64Url(s: string): string {
-  const bytes = new TextEncoder().encode(s);
-  let bin = '';
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]!);
-  const b64 = btoa(bin);
-  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
+export type MapaTalhoesClientProps = {
+  /** Quando definido (rota /mapa-talhoes/m/[token]), ignora ?d= na primeira carga. */
+  initialFeatureCollection?: FeatureCollection | null;
+};
 
-export function MapaTalhoesClient() {
+export function MapaTalhoesClient({
+  initialFeatureCollection = null,
+}: MapaTalhoesClientProps) {
   const sp = useSearchParams();
   const [raw, setRaw] = useState<FeatureCollection | null>(null);
   const [cultura, setCultura] = useState('all');
@@ -40,10 +44,15 @@ export function MapaTalhoesClient() {
   const [staged, setStaged] = useState<Set<string>>(new Set());
   const [onMap, setOnMap] = useState<Set<string>>(new Set());
   const [err, setErr] = useState<string | null>(null);
-  const [paste, setPaste] = useState('');
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [tip, setTip] = useState<string | null>(null);
 
-  // Query ?d= (base64url GeoJSON) — p.ex. a partir do app Flutter
   useEffect(() => {
+    if (initialFeatureCollection != null) {
+      setRaw(initialFeatureCollection);
+      setErr(null);
+      return;
+    }
     const d = sp.get('d');
     if (!d) return;
     const fc = decodeGeoJsonFromQuery(d);
@@ -51,9 +60,11 @@ export function MapaTalhoesClient() {
       setRaw(fc);
       setErr(null);
     } else {
-      setErr('Parâmetro d= inválido ou payload demasiado grande. Use ficheiro ou export do app com partilha.');
+      setErr(
+        'O parâmetro d= na URL está incompleto ou inválido (navegadores cortam URLs muito longas). Use o link curto gerado pela app FortSmart ou exporte o .geojson.',
+      );
     }
-  }, [sp]);
+  }, [sp, initialFeatureCollection]);
 
   const baseFiltered = useMemo(() => {
     if (!raw) return null;
@@ -61,19 +72,28 @@ export function MapaTalhoesClient() {
   }, [raw, cultura, safra]);
 
   const { culturas, safras } = useMemo(
-    () => (raw ? distinctCulturasSafas(raw) : { culturas: ['all'] as string[], safras: ['all'] as string[] }),
-    [raw]
+    () =>
+      raw
+        ? distinctCulturasSafas(raw)
+        : { culturas: ['all'] as string[], safras: ['all'] as string[] },
+    [raw],
   );
 
-  const talhoes = useMemo(() => (baseFiltered ? listTalhoesFromFc(baseFiltered) : []), [baseFiltered]);
+  const talhoes = useMemo(
+    () => (baseFiltered ? listTalhoesFromFc(baseFiltered) : []),
+    [baseFiltered],
+  );
 
   const listFiltered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return talhoes;
-    return talhoes.filter((t) => t.label.toLowerCase().includes(q) || t.talhaoId.toLowerCase().includes(q));
+    return talhoes.filter(
+      (t) =>
+        t.label.toLowerCase().includes(q) ||
+        t.talhaoId.toLowerCase().includes(q),
+    );
   }, [talhoes, search]);
 
-  // Ao mudar o conjunto filtrado (cultura/safra / ficheiro), re-seleccionar todos
   useEffect(() => {
     if (!baseFiltered) {
       setStaged(new Set());
@@ -135,50 +155,37 @@ export function MapaTalhoesClient() {
     setOnMap(new Set(staged));
   }, [staged]);
 
-  const onFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
-      const t = r.result;
-      if (typeof t !== 'string') {
-        setErr('Ficheiro inválido.');
+  const copiarLinkCurto = useCallback(async () => {
+    if (!raw) return;
+    setErr(null);
+    setLinkBusy(true);
+    try {
+      const res = await fetch('/api/mapa-talhoes/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(raw),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        url?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.ok || !data.url) {
+        setErr(
+          data.error ??
+            `Não foi possível criar link curto (${res.status}). Confirme a migração Supabase e variáveis do servidor.`,
+        );
         return;
       }
-      const fc = parseJsonFileText(t);
-      if (fc) {
-        setRaw(fc);
-        setErr(null);
-      } else {
-        setErr('JSON não é um FeatureCollection GeoJSON válido.');
-      }
-    };
-    r.readAsText(f);
-    e.target.value = '';
-  }, []);
-
-  const aplicarColar = useCallback(() => {
-    const fc = parseJsonFileText(paste);
-    if (fc) {
-      setRaw(fc);
+      await navigator.clipboard.writeText(data.url);
       setErr(null);
-    } else {
-      setErr('Cola um GeoJSON FeatureCollection JSON válido.');
+      setTip('Link curto copiado para a área de transferência.');
+      window.setTimeout(() => setTip(null), 5000);
+    } catch {
+      setErr('Rede indisponível ao criar link curto.');
+    } finally {
+      setLinkBusy(false);
     }
-  }, [paste]);
-
-  const copiarLink = useCallback(() => {
-    if (!raw) return;
-    const str = JSON.stringify(raw);
-    const b64 = utf8ToB64Url(str);
-    if (b64.length > 100_000) {
-      setErr('GeoJSON acima de ~100k caracteres no link — partilhe o ficheiro ou reabra a exportação do app (modo ficheiro).');
-      return;
-    }
-    const u = new URL(window.location.origin + window.location.pathname);
-    u.searchParams.set('d', b64);
-    setErr(null);
-    void navigator.clipboard.writeText(u.toString());
   }, [raw]);
 
   return (
@@ -187,34 +194,34 @@ export function MapaTalhoesClient() {
         <div className="mx-auto flex max-w-[1920px] flex-wrap items-center justify-between gap-2">
           <div>
             <h1 className="font-['Poppins'] text-lg font-bold tracking-tight text-white md:text-xl">
-              FortSmart Agrointeligência — Mapa de talhões
+              FortSmart — Mapa de talhões
             </h1>
-            <p className="text-xs text-slate-400">GeoJSON a partir do app (plantio, estande, subáreas)</p>
+            <p className="text-xs text-slate-400">
+              Partilha web (link curto) a partir do app — GeoJSON do plantio e subáreas
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <a
-              className="rounded-md border border-slate-600 px-2 py-1.5 text-slate-200 hover:bg-slate-800"
-              href="https://fortsmart-agro.com.br"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Abrir site
-            </a>
+            {tip ? (
+              <span className="text-emerald-300">{tip}</span>
+            ) : null}
             {raw && (
               <>
                 <button
                   className="rounded-md border border-slate-600 px-2 py-1.5 text-slate-200 hover:bg-slate-800"
                   type="button"
-                  onClick={() => downloadGeoJson(raw, 'fortsmart-mapa-talhoes.geojson')}
+                  onClick={() =>
+                    downloadGeoJson(raw, 'fortsmart-mapa-talhoes.geojson')
+                  }
                 >
                   Exportar GeoJSON
                 </button>
                 <button
-                  className="rounded-md border border-slate-600 px-2 py-1.5 text-slate-200 hover:bg-slate-800"
+                  className="rounded-md border border-emerald-700/60 bg-emerald-900/30 px-2 py-1.5 text-emerald-100 hover:bg-emerald-900/50 disabled:opacity-50"
+                  disabled={linkBusy}
                   type="button"
-                  onClick={copiarLink}
+                  onClick={() => void copiarLinkCurto()}
                 >
-                  Copiar link
+                  {linkBusy ? 'A gerar…' : 'Copiar link curto'}
                 </button>
               </>
             )}
@@ -223,67 +230,65 @@ export function MapaTalhoesClient() {
       </header>
 
       <div className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-2 p-2 md:flex-row md:p-3">
-        {/* Painel esquerdo */}
         <aside className="order-2 flex w-full max-w-md flex-col gap-2 md:order-1">
-          <div className="rounded-lg border border-slate-700/80 bg-slate-900/70 p-3 shadow-inner">
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">Dados</h2>
-            {err && <p className="mb-2 rounded border border-amber-700/50 bg-amber-900/20 px-2 py-1 text-xs text-amber-200">{err}</p>}
-            <label className="mb-2 block text-xs text-slate-400">
-              Carregar ficheiro .geojson
-              <input
-                accept=".json,.geojson,application/geo+json,application/json"
-                className="mt-1 block w-full text-xs text-slate-300"
-                type="file"
-                onChange={onFile}
-              />
-            </label>
-            <div className="mb-2">
-              <p className="text-xs text-slate-500">ou colar JSON</p>
-              <textarea
-                className="mt-1 h-20 w-full rounded border border-slate-600 bg-slate-950/80 p-1.5 text-[11px] text-slate-200"
-                value={paste}
-                onChange={(e) => setPaste(e.target.value)}
-                placeholder="FeatureCollection…"
-              />
-              <button
-                className="mt-1 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200"
-                type="button"
-                onClick={aplicarColar}
-              >
-                Aplicar
-              </button>
+          {!raw && (
+            <div className="rounded-lg border border-slate-700/80 bg-slate-900/70 p-4 text-sm text-slate-400 shadow-inner">
+              {err ? (
+                <p className="mb-3 rounded border border-amber-700/50 bg-amber-900/20 px-2 py-1.5 text-xs text-amber-200">
+                  {err}
+                </p>
+              ) : null}
+              <p className="mb-2 text-slate-200">
+                Nenhum mapa carregado nesta página.
+              </p>
+              <p>
+                Use o botão <strong>Visualizar mapa (web)</strong> no módulo Plantio da app
+                FortSmart — é gerado um <strong>link curto</strong> (como nos relatórios
+                partilháveis), sem colar JSON na URL.
+              </p>
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-              <label className="text-slate-400">
-                Cultura
-                <select
-                  className="mt-0.5 w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-slate-200"
-                  value={cultura}
-                  onChange={(e) => setCultura(e.target.value)}
-                >
-                  {culturas.map((c) => (
-                    <option key={c} value={c}>
-                      {c === 'all' ? 'Todas' : c}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-slate-400">
-                Safra
-                <select
-                  className="mt-0.5 w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-slate-200"
-                  value={safra}
-                  onChange={(e) => setSafra(e.target.value)}
-                >
-                  {safras.map((s) => (
-                    <option key={s} value={s}>
-                      {s === 'all' ? 'Todas' : s}
-                    </option>
-                  ))}
-                </select>
-              </label>
+          )}
+
+          {raw ? (
+            <div className="rounded-lg border border-slate-700/80 bg-slate-900/70 p-3 shadow-inner">
+              <h2 className="mb-2 text-sm font-semibold text-slate-200">Filtros</h2>
+              {err && (
+                <p className="mb-2 rounded border border-amber-700/50 bg-amber-900/20 px-2 py-1 text-xs text-amber-200">
+                  {err}
+                </p>
+              )}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <label className="text-slate-400">
+                  Cultura
+                  <select
+                    className="mt-0.5 w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-slate-200"
+                    value={cultura}
+                    onChange={(e) => setCultura(e.target.value)}
+                  >
+                    {culturas.map((c) => (
+                      <option key={c} value={c}>
+                        {c === 'all' ? 'Todas' : c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-slate-400">
+                  Safra
+                  <select
+                    className="mt-0.5 w-full rounded border border-slate-600 bg-slate-950 px-1 py-1 text-slate-200"
+                    value={safra}
+                    onChange={(e) => setSafra(e.target.value)}
+                  >
+                    {safras.map((s) => (
+                      <option key={s} value={s}>
+                        {s === 'all' ? 'Todas' : s}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-slate-700/80 bg-slate-900/70 p-2 shadow-inner">
             <div className="mb-2 flex items-center justify-between">
@@ -336,7 +341,9 @@ export function MapaTalhoesClient() {
               ))}
             </ul>
             {search.trim() !== '' && (
-              <p className="pt-1 text-center text-[10px] text-slate-500">({listFiltered.length} resultados)</p>
+              <p className="pt-1 text-center text-[10px] text-slate-500">
+                ({listFiltered.length} resultados)
+              </p>
             )}
             <button
               className="mt-2 w-full rounded-md bg-[#2E7D32] py-2.5 text-sm font-semibold text-white shadow hover:bg-[#1B5E20]"
@@ -348,29 +355,37 @@ export function MapaTalhoesClient() {
           </div>
         </aside>
 
-        {/* Mapa + legenda + calculadora */}
         <div className="order-1 flex min-h-0 flex-1 flex-col gap-2 md:order-2">
           <div className="relative min-h-[44vh] flex-1 overflow-hidden rounded-lg border border-slate-700/60 bg-slate-900/40 shadow-inner">
             {mapData && mapData.features.length > 0 ? <MapSummaryBar data={mapData} /> : null}
             {mapData && mapData.features.length > 0 ? (
               <MapView data={mapData} />
             ) : (
-              <div className="flex h-full min-h-[360px] items-center justify-center text-sm text-slate-500">
-                Carregue ou receba um GeoJSON (app → export / parâmetro d=) e clique &quot;Visualizar no mapa&quot;.
+              <div className="flex h-full min-h-[360px] items-center justify-center px-4 text-center text-sm text-slate-500">
+                {raw
+                  ? 'Marque talhões à esquerda e toque em «Visualizar no mapa».'
+                  : 'Abra um link partilhado pela app FortSmart (mapa de talhões).'}
               </div>
             )}
             {materialsLegend.length > 0 && (
               <div className="pointer-events-none absolute bottom-2 left-2 max-w-sm rounded border border-slate-600/80 bg-slate-950/90 p-2 text-[10px] text-slate-200 shadow">
-                <p className="mb-1 font-semibold text-slate-100">Híbrido / material (contorno talhão)</p>
+                <p className="mb-1 font-semibold text-slate-100">
+                  Híbrido / material (contorno talhão)
+                </p>
                 <ul className="flex flex-wrap gap-2">
                   {materialsLegend.map(({ k, c }) => (
                     <li key={k} className="flex items-center gap-1">
-                      <span className="h-2 w-4 rounded-sm" style={{ background: c }} />
+                      <span
+                        className="h-2 w-4 rounded-sm"
+                        style={{ background: c }}
+                      />
                       {k}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-1 text-slate-500">Subáreas: hachurado 4×4, preenchimento 25&nbsp;%</p>
+                <p className="mt-1 text-slate-500">
+                  Subáreas: hachurado 4×4, preenchimento 25&nbsp;%
+                </p>
               </div>
             )}
           </div>

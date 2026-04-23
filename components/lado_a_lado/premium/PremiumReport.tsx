@@ -8,8 +8,7 @@ import KPISection from './KPISection';
 import TimelinePremiumSection from './TimelinePremiumSection';
 import EconomicSection from './EconomicSection';
 import ConclusionSection from './ConclusionSection';
-import TreatmentSection from './TreatmentSection';
-import ExecutionSection from './ExecutionSection';
+import TreatmentExecutionCombinedSection from './TreatmentExecutionCombinedSection';
 import SubareaCostsAndEvolutionSection from './SubareaCostsAndEvolutionSection';
 import PlantEvaluationSection from './PlantEvaluationSection';
 import FortSmartAiSection from './FortSmartAiSection';
@@ -22,8 +21,7 @@ const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'economia-resumo-premium', label: 'Economia (resumo)' },
   { id: 'enterprise-resumo', label: 'Resumo executivo' },
   { id: 'decisao-executiva-premium', label: 'Decisão' },
-  { id: 'tratamento-premium', label: 'Tratamento' },
-  { id: 'execucao-premium', label: 'Aplicações' },
+  { id: 'tratamento-execucao-premium', label: 'Tratamento e aplicações' },
   { id: 'deck-executivo-premium', label: 'Painel' },
   { id: 'fotos-premium', label: 'Fotos' },
   { id: 'kpis-premium', label: 'Indicadores' },
@@ -150,8 +148,7 @@ export default function PremiumReport({
 
         <div className="fs-l2-page-break print:break-after-page" aria-hidden />
         <div className="mx-auto max-w-[1400px] space-y-20 px-4 py-14 sm:space-y-24 sm:px-6 sm:py-20 print:space-y-12 print:px-4">
-          <TreatmentSection data={data} />
-          <ExecutionSection data={data} />
+          <TreatmentExecutionCombinedSection data={data} />
           <ExecutiveDeckSection data={data} />
           <div className="fs-l2-page-break print:hidden" aria-hidden />
           <KPISection data={data} />

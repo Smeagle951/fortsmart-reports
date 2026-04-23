@@ -44,7 +44,7 @@ export default function ChartsEnterpriseGrid({ data }: Props) {
             <h3 className="text-sm font-bold text-slate-900">Comparativo de desempenho</h3>
             <p className="mt-0.5 text-xs text-slate-500">Radar técnico normalizado (0–100)</p>
             <div className="mt-3 h-[280px] w-full sm:h-[320px]">
-              {radarRows.length >= 3 ? (
+              {radarRows.length >= 2 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart data={radarRows} margin={{ top: 8, right: 16, bottom: 8, left: 16 }}>
                     <PolarGrid stroke="#e2e8f0" />

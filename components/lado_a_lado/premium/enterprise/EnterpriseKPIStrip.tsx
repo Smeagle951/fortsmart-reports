@@ -1,9 +1,19 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Calculator, LineChart, ShieldCheck, Sprout } from 'lucide-react';
+import {
+  Calculator,
+  LineChart,
+  ShieldCheck,
+  Sprout,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+} from 'lucide-react';
+import type { ElementType } from 'react';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { heroFinancialSnapshot } from '../premiumInference';
+import { useCountUp } from '../useCountUp';
 import { formatNumber } from '@/utils/format';
 import {
   costPerHaPair,
@@ -16,46 +26,97 @@ import { ENT } from './enterpriseTheme';
 
 type Props = { data: SideBySideReportData };
 
+type Tone = 'emerald' | 'blue' | 'amber' | 'slate';
+type DeltaDirection = 'up' | 'down' | 'flat';
+
 function KpiCard({
   icon: Icon,
   label,
-  value,
+  numericValue,
+  textValue,
+  decimals = 0,
+  suffix = '',
+  prefix = '',
   delta,
-  deltaTone,
+  deltaDir,
+  deltaGood,
+  tone,
   delay,
+  hint,
 }: {
-  icon: typeof Sprout;
+  icon: ElementType;
   label: string;
-  value: string;
+  numericValue?: number | null;
+  textValue?: string | null;
+  decimals?: number;
+  suffix?: string;
+  prefix?: string;
   delta?: string | null;
-  deltaTone?: 'up' | 'down' | 'neutral';
+  deltaDir?: DeltaDirection;
+  deltaGood?: boolean;
+  tone: Tone;
   delay: number;
+  hint?: string | null;
 }) {
-  const deltaCls =
-    deltaTone === 'up'
-      ? 'text-emerald-700'
-      : deltaTone === 'down'
-        ? 'text-emerald-700'
-        : 'text-slate-500';
+  const accent =
+    tone === 'emerald' ? ENT.green : tone === 'blue' ? ENT.blue : tone === 'amber' ? ENT.gold : ENT.textMuted;
+  const softBg =
+    tone === 'emerald'
+      ? 'bg-emerald-50 text-emerald-700'
+      : tone === 'blue'
+        ? 'bg-blue-50 text-blue-700'
+        : tone === 'amber'
+          ? 'bg-amber-50 text-amber-700'
+          : 'bg-slate-50 text-slate-700';
+  const deltaColor = deltaGood
+    ? 'text-emerald-700 bg-emerald-50'
+    : deltaGood === false
+      ? 'text-rose-700 bg-rose-50'
+      : 'text-slate-600 bg-slate-100';
+  const DeltaIcon = deltaDir === 'up' ? TrendingUp : deltaDir === 'down' ? TrendingDown : Minus;
+
+  const anim = useCountUp(numericValue ?? 0, 950, decimals);
+  const valueText = textValue
+    ? textValue
+    : numericValue == null
+      ? '—'
+      : `${prefix}${formatNumber(anim, { decimals })}${suffix}`;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay, duration: 0.4 }}
-      whileHover={{ scale: 1.02, boxShadow: ENT.shadowHover }}
-      className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-md sm:p-5"
+      whileHover={{ y: -3, boxShadow: ENT.shadowHover }}
+      className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm"
       style={{ boxShadow: ENT.shadowCard }}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-700 ring-1 ring-slate-100">
-          <Icon className="h-5 w-5" strokeWidth={2} />
+      {/* Borda colorida à esquerda */}
+      <span
+        className="absolute inset-y-4 left-0 w-1 rounded-r-full"
+        style={{ backgroundColor: accent }}
+        aria-hidden
+      />
+      <div className="flex items-start justify-between gap-3 pl-2">
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${softBg}`}>
+          <Icon className="h-[22px] w-[22px]" strokeWidth={2} />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-[28px]">{value}</p>
-          {delta ? <p className={`mt-1 text-sm font-semibold ${deltaCls}`}>{delta}</p> : null}
-        </div>
+        {delta ? (
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${deltaColor}`}
+          >
+            <DeltaIcon className="h-3 w-3" strokeWidth={2.5} />
+            {delta}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 pl-2">
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+        <p className="mt-1 text-[28px] font-black tabular-nums leading-none tracking-tight text-slate-900 sm:text-[32px]">
+          {valueText}
+        </p>
+        {hint ? <p className="mt-1.5 text-[11px] font-medium text-slate-500">{hint}</p> : null}
       </div>
     </motion.div>
   );
@@ -69,73 +130,88 @@ export default function EnterpriseKPIStrip({ data }: Props) {
   const risk = riskFromOcorrencias(data);
 
   const prodDelta =
-    prod && isFiniteNumber(prod.a) && isFiniteNumber(prod.b)
-      ? `${prod.b >= prod.a ? '+' : ''}${formatNumber(prod.b - prod.a, { decimals: 1 })} sc/ha`
-      : null;
-
+    prod && isFiniteNumber(prod.a) && isFiniteNumber(prod.b) ? prod.b - prod.a : null;
   const roiDelta =
-    roi && isFiniteNumber(roi.a) && isFiniteNumber(roi.b)
-      ? `${roi.b >= roi.a ? '+' : ''}${formatNumber(roi.b - roi.a, { decimals: 0 })} p.p.`
-      : null;
-
+    roi && isFiniteNumber(roi.a) && isFiniteNumber(roi.b) ? roi.b - roi.a : null;
   const costDelta =
-    cost && isFiniteNumber(cost.a) && isFiniteNumber(cost.b)
-      ? `${cost.b <= cost.a ? '' : '+'}R$ ${formatNumber(Math.abs(cost.b - cost.a), { decimals: 0 })}/ha`
-      : null;
+    cost && isFiniteNumber(cost.a) && isFiniteNumber(cost.b) ? cost.b - cost.a : null;
 
-  const riskLabel = risk ? `${risk}` : '—';
-  const riskSub = risk === 'Moderado' || risk === 'Baixo' ? 'Controlado' : risk === 'Alto' ? 'Requer atenção' : '';
+  const prodDeltaText = prodDelta != null ? `${prodDelta >= 0 ? '+' : '−'}${formatNumber(Math.abs(prodDelta), { decimals: 1 })} sc/ha` : null;
+  const roiDeltaText = roiDelta != null ? `${roiDelta >= 0 ? '+' : '−'}${formatNumber(Math.abs(roiDelta), { decimals: 0 })} p.p.` : null;
+  const costDeltaText = costDelta != null ? `${costDelta <= 0 ? '−' : '+'} R$ ${formatNumber(Math.abs(costDelta), { decimals: 0 })}/ha` : null;
+
+  const riskTone: Tone =
+    risk === 'Alto' ? 'amber' : risk === 'Moderado' ? 'amber' : risk === 'Baixo' ? 'emerald' : 'slate';
+  const riskHint =
+    risk === 'Alto'
+      ? 'Requer atenção imediata'
+      : risk === 'Moderado'
+        ? 'Controlo reforçado recomendado'
+        : risk === 'Baixo'
+          ? 'Cenário controlado'
+          : 'Sem ocorrências publicadas';
+
+  const costHint =
+    costDelta == null && fin.deltaScHa != null
+      ? `Receita sacas: ${fin.deltaScHa > 0 ? '+' : ''}${formatNumber(fin.deltaScHa, { decimals: 1 })} sc/ha`
+      : costDelta != null
+        ? costDelta <= 0
+          ? 'Mais barato que A'
+          : 'Mais caro que A'
+        : null;
 
   return (
     <section id="enterprise-kpis" className="scroll-mt-36 print:break-inside-avoid">
       <div className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 sm:pb-10">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:gap-3">
-          <div className="lg:col-span-3">
-            <KpiCard
-              icon={Sprout}
-              label="Produtividade estimada"
-              value={prod && isFiniteNumber(prod.b) ? `${formatNumber(prod.b, { decimals: 0 })} sc/ha` : '—'}
-              delta={prodDelta ? `${prodDelta} (B − A)` : null}
-              deltaTone="up"
-              delay={0}
-            />
-          </div>
-          <div className="lg:col-span-3">
-            <KpiCard
-              icon={LineChart}
-              label="ROI ajustado"
-              value={roi && isFiniteNumber(roi.b) ? `${formatNumber(roi.b, { decimals: 0 })}%` : '—'}
-              delta={roiDelta ? `${roiDelta} (B − A)` : null}
-              deltaTone="up"
-              delay={0.06}
-            />
-          </div>
-          <div className="lg:col-span-3">
-            <KpiCard
-              icon={Calculator}
-              label="Custo total"
-              value={cost && isFiniteNumber(cost.b) ? `R$ ${formatNumber(cost.b, { decimals: 0 })}/ha` : '—'}
-              delta={
-                costDelta && cost && isFiniteNumber(cost.a) && isFiniteNumber(cost.b)
-                  ? `${cost.b <= cost.a ? '−' : '+'} R$ ${formatNumber(Math.abs(cost.b - cost.a), { decimals: 0 })}/ha (B vs A)`
-                  : fin.deltaScHa != null
-                    ? `Receita sacas: ${fin.deltaScHa > 0 ? '+' : ''}${formatNumber(fin.deltaScHa, { decimals: 1 })} sc/ha`
-                    : null
-              }
-              deltaTone={cost && isFiniteNumber(cost.a) && isFiniteNumber(cost.b) && cost.b <= cost.a ? 'down' : 'neutral'}
-              delay={0.12}
-            />
-          </div>
-          <div className="lg:col-span-3">
-            <KpiCard
-              icon={ShieldCheck}
-              label="Risco agronómico"
-              value={riskLabel}
-              delta={riskSub || null}
-              deltaTone={risk === 'Alto' ? 'neutral' : 'up'}
-              delay={0.18}
-            />
-          </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard
+            icon={Sprout}
+            label="Produtividade"
+            numericValue={prod && isFiniteNumber(prod.b) ? prod.b : null}
+            decimals={0}
+            suffix=" sc/ha"
+            delta={prodDeltaText}
+            deltaDir={prodDelta == null ? 'flat' : prodDelta > 0 ? 'up' : prodDelta < 0 ? 'down' : 'flat'}
+            deltaGood={prodDelta == null ? undefined : prodDelta >= 0}
+            tone="emerald"
+            delay={0}
+            hint="Manejo B (comparado com A)"
+          />
+          <KpiCard
+            icon={LineChart}
+            label="ROI ajustado"
+            numericValue={roi && isFiniteNumber(roi.b) ? roi.b : null}
+            decimals={0}
+            suffix="%"
+            delta={roiDeltaText}
+            deltaDir={roiDelta == null ? 'flat' : roiDelta > 0 ? 'up' : roiDelta < 0 ? 'down' : 'flat'}
+            deltaGood={roiDelta == null ? undefined : roiDelta >= 0}
+            tone="blue"
+            delay={0.06}
+            hint="Retorno sobre o investimento"
+          />
+          <KpiCard
+            icon={Calculator}
+            label="Custo total"
+            numericValue={cost && isFiniteNumber(cost.b) ? cost.b : null}
+            decimals={0}
+            prefix="R$ "
+            suffix="/ha"
+            delta={costDeltaText}
+            deltaDir={costDelta == null ? 'flat' : costDelta > 0 ? 'up' : costDelta < 0 ? 'down' : 'flat'}
+            deltaGood={costDelta == null ? undefined : costDelta <= 0}
+            tone="amber"
+            delay={0.12}
+            hint={costHint}
+          />
+          <KpiCard
+            icon={ShieldCheck}
+            label="Risco agronómico"
+            textValue={risk ?? 'Sem leitura'}
+            tone={riskTone}
+            delay={0.18}
+            hint={riskHint}
+          />
         </div>
       </div>
     </section>
