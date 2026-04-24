@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import RelatorioLadoALadoDashboard from '@/components/lado_a_lado/RelatorioLadoALadoDashboard';
 import PremiumReport from '@/components/lado_a_lado/premium/PremiumReport';
+import RelatorioLadoALadoDashboard from '@/components/lado_a_lado/RelatorioLadoALadoDashboard';
 import type { DecisionLayerJson } from '@/lib/decisionLayer';
 
 export type MarketReferenceJson = {
@@ -132,6 +132,12 @@ export type SideBySideReportData = {
     espacamento?: number;
     populacaoAlvo?: number;
     pointCount?: number;
+    /** Soja — grupo de maturidade (export / DTO). */
+    soyMaturityGroup?: string;
+    /** Milho — ciclo sugerido pelo contexto de campo. */
+    milhoCicloHint?: string;
+    gduCumProxy?: number;
+    plantVigorMean?: number;
   };
   points?: Array<{ name?: string; indexNo?: number; status?: string }>;
   phenology?: {
@@ -178,6 +184,8 @@ export type SideBySideReportData = {
   custo?: CustoJson | null;
   economia?: EconomiaJson | null;
   products_result?: Record<string, unknown>[] | null;
+  /** Linhas do export (`summary_rows`) — republicação pelo app preenche; o normalizador web deriva KPIs extra. */
+  summary_rows?: Array<Record<string, unknown>>;
   criteriosEstatistica?: Array<{
     criterio?: string;
     unidade?: string;

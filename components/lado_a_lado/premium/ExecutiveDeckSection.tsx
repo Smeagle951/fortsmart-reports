@@ -27,8 +27,9 @@ import {
 } from '@/components/lado_a_lado/ladoALadoHelpers';
 import { formatNumber } from '@/utils/format';
 import { buildPremiumRadarRows } from './evaluationRadar';
+import { radarAxisWinSummary } from './premiumChartInsights';
 import EconomicTimelineChart from './EconomicTimelineChart';
-import { displayWinnerLetter, heroFinancialSnapshot, scoresFromJson, winnerFromJson } from './premiumInference';
+import { heroFinancialSnapshot, scoresFromJson, winnerFromJson } from './premiumInference';
 
 const SHOW_DATA_DEBUG = process.env.NODE_ENV === 'development';
 
@@ -176,30 +177,6 @@ function buildAllComparableMetrics(data: SideBySideReportData): ComparableMetric
     );
   push(rootMetric);
 
-  push(
-    toComparableScore(
-      'Produtividade estimada',
-      'kpis.estimatedYieldKgHa',
-      kA?.estimatedYieldKgHa,
-      kB?.estimatedYieldKgHa,
-      (value) => `${formatNumber(value, { decimals: 0 })} kg/ha`,
-    ),
-  );
-
-  if (rows.length === 0) {
-    const sc = scoresFromJson(data);
-    if (isFiniteNumber(sc.a) && isFiniteNumber(sc.b)) {
-      rows.push({
-        key: 'idx-consolidado',
-        label: 'Índice técnico (0–100)',
-        sourceLabel: 'Consolidado a partir dos KPIs publicados',
-        a: sc.a,
-        b: sc.b,
-        formatValue: (v) => formatNumber(v, { decimals: 0 }),
-      });
-    }
-  }
-
   return rows;
 }
 
@@ -253,7 +230,7 @@ function roiSnapshot(data: SideBySideReportData): { a: number | null; b: number 
   return roiPctFromFortsmartAiEconomic(data);
 }
 
-function buildEvidenceRows(data: SideBySideReportData): EvidenceRow[] {
+export function buildEvidenceRows(data: SideBySideReportData): EvidenceRow[] {
   const stats =
     data.criteriosEstatistica
       ?.filter((item) => isFiniteNumber(item.mediaA) && isFiniteNumber(item.mediaB))
@@ -396,7 +373,7 @@ function riskSummary(data: SideBySideReportData): { title: string; detail: strin
 
   return {
     title: 'Risco não consolidado',
-    detail: 'Não há ocorrências fitossanitárias nem leitura de risco disponível para este resumo.',
+    detail: 'O JSON publicado não trouxe ocorrências nem leitura objetiva de risco para este resumo.',
     tone: 'slate',
   };
 }
@@ -506,6 +483,12 @@ function TabBar<T extends string = string>({
   );
 }
 
+function winnerBadgeLabel(winner: 'A' | 'B' | null, nameA: string, nameB: string): string | null {
+  if (winner === 'A') return nameA;
+  if (winner === 'B') return nameB;
+  return null;
+}
+
 function SnapshotCard({
   eyebrow,
   title,
@@ -553,8 +536,20 @@ function StatsTableBlock({ rows }: { rows: NonNullable<SideBySideReportData['cri
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => (
-            <tr key={`${row.criterio}-${index}`} className="border-t border-slate-100 text-slate-700">
+          {rows.map((row, index) => {
+            const crit = (row.criterio || '').toLowerCase();
+            const highlight =
+              crit.includes('produt') ||
+              crit.includes('colheita') ||
+              crit.includes('sever') ||
+              crit.includes('doença') ||
+              crit.includes('doenca') ||
+              crit.includes('sanidade');
+            return (
+            <tr
+              key={`${row.criterio}-${index}`}
+              className={`border-t border-slate-100 text-slate-700 ${highlight ? 'bg-emerald-50/50' : ''}`}
+            >
               <td className="px-3 py-2 font-medium">
                 {row.criterio || 'Critério'}
                 {row.unidade ? <span className="text-slate-400"> ({row.unidade})</span> : null}
@@ -581,7 +576,8 @@ function StatsTableBlock({ rows }: { rows: NonNullable<SideBySideReportData['cri
                 )}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -610,23 +606,17 @@ export default function ExecutiveDeckSection({
   const coleta = data.coleta;
   const nameA = data.sideA?.name || 'Manejo A';
   const nameB = data.sideB?.name || 'Manejo B';
-  const winnerDeclared = winnerFromJson(data);
-  const winnerInferred = displayWinnerLetter(data);
-  const winnerName =
-    winnerDeclared === 'A'
-      ? nameA
-      : winnerDeclared === 'B'
-        ? nameB
-        : winnerInferred === 'A'
-          ? nameA
-          : winnerInferred === 'B'
-            ? nameB
-            : null;
+  const winner = winnerFromJson(data);
+  const winnerName = winnerBadgeLabel(winner, nameA, nameB);
   const financial = heroFinancialSnapshot(data);
   const scorePair = scoresFromJson(data);
   const productivity = productivitySnapshot(data);
   const roi = roiSnapshot(data);
   const radarRows = useMemo(() => buildPremiumRadarRows(data), [data]);
+  const radarReadout = useMemo(
+    () => radarAxisWinSummary(radarRows, nameA, nameB),
+    [radarRows, nameA, nameB],
+  );
   const comparableMetrics = useMemo(() => buildAllComparableMetrics(data), [data]);
   const evidenceRows = useMemo(() => buildEvidenceRows(data), [data]);
   const narrativeLines = useMemo(() => buildNarrativeLines(data), [data]);
@@ -658,26 +648,33 @@ export default function ExecutiveDeckSection({
 
   const productivityDetail =
     productivity && isFiniteNumber(productivity.a) && isFiniteNumber(productivity.b)
-      ? SHOW_DATA_DEBUG
-        ? `Fonte: ${productivity.sourceLabel}.${productivity.b !== productivity.a ? ` Δ ${formatSignedDelta(productivity.b - productivity.a, 1)} sc/ha (B − A).` : ''}`
-        : `${productivity.sourceLabel}.${productivity.b !== productivity.a ? ` Diferença: ${formatSignedDelta(productivity.b - productivity.a, 1)} sc/ha (B − A).` : ''}`
-      : 'Colheita ou estimativa comparável não disponível para os dois manejos.';
+      ? `Fonte: ${productivity.sourceLabel}.${productivity.b !== productivity.a ? ` Δ ${formatSignedDelta(productivity.b - productivity.a, 1)} sc/ha (B − A).` : ''}`
+      : 'Quando colheita ou estimativa comparável não existir no payload, o painel exibe ausência explícita.';
 
   const roiTitle = roi
     ? `${formatNumber(roi.a ?? 0, { decimals: 0 })}% vs ${formatNumber(roi.b ?? 0, { decimals: 0 })}%`
     : 'ROI não publicado';
 
   const roiDetail = roi
-    ? SHOW_DATA_DEBUG
-      ? 'Valores exclusivamente de decision_layer.roiBySide.A/B.roiPct.'
-      : 'Valores calculados pelo motor económico publicado para cada manejo.'
-    : 'Motor económico incompleto neste relatório — ROI comparável não disponível.';
+    ? 'Valores exclusivamente de decision_layer.roiBySide.A/B.roiPct.'
+    : 'Sem roiBySide completo no JSON publicado.';
+
+  const melhorDesempenhoTexto =
+    winnerName != null
+      ? `Melhor desempenho (conclusão): ${winnerName}`
+      : 'Sem conclusion.winner no JSON — não exibimos vencedor inferido.';
 
   const motorAlerts = data.decision_layer?.fortsmart_ai?.motor_alertas ?? [];
 
   return (
     <section id={sectionId} className="scroll-mt-36 print:break-inside-avoid">
       <div className="mx-auto max-w-[1400px] space-y-3">
+        <p className="rounded-lg border border-slate-200/80 bg-white px-3 py-2 text-center text-[11px] leading-snug text-slate-600 shadow-sm print:hidden">
+          Legenda local deste painel:{' '}
+          <strong style={{ color: DECK_SIDE_A }}>Manejo A</strong> verde ·{' '}
+          <strong style={{ color: DECK_SIDE_B }}>Manejo B</strong> azul escuro. Nas demais secções do relatório, os gráficos usam{' '}
+          <span className="font-mono text-[10px] text-slate-500">A = azul · B = verde</span>.
+        </p>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* Painel esquerdo */}
         <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-md print:border print:shadow-none">
@@ -703,42 +700,29 @@ export default function ExecutiveDeckSection({
           </div>
 
           <div
-            className="relative overflow-hidden rounded-2xl px-4 py-4 text-white shadow-lg"
+            className="flex items-center gap-3 rounded-2xl px-4 py-3 text-white"
             style={{
-              background:
-                winnerInferred === 'A' || winnerDeclared === 'A'
-                  ? 'linear-gradient(120deg, #065f46 0%, #047857 55%, #0f2a5c 100%)'
-                  : 'linear-gradient(120deg, #0f2a5c 0%, #1e3a8a 55%, #065f46 100%)',
+              background: 'linear-gradient(90deg, #1e3a8a 0%, #14532d 100%)',
             }}
           >
-            <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" aria-hidden />
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.22em] text-slate-900 shadow">
-                Vencedor
-              </span>
-              <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/75">Melhor desempenho</p>
+            <div
+              className="min-w-[3.25rem] rounded-xl px-3 py-2 text-center text-2xl font-black tabular-nums"
+              style={{ backgroundColor: DECK_SIDE_A }}
+            >
+              {scorePair.a != null ? Math.round(scorePair.a) : '—'}
             </div>
-            <p className="mt-2 text-lg font-black leading-tight sm:text-xl">{winnerName ?? 'Empate técnico'}</p>
-            {scoreDelta != null && scoreDelta !== 0 ? (
-              <p className="mt-1 text-[11px] text-white/80">
-                Vantagem de <span className="font-bold text-white">{Math.abs(scoreDelta)} pontos</span> no índice técnico consolidado
+            <div className="min-w-0 flex-1 text-center">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-sky-200/90">Melhor desempenho</p>
+              <p className="mt-1 text-sm font-bold leading-tight">{melhorDesempenhoTexto}</p>
+              <p className="mt-1 text-[9px] text-emerald-200/85">
+                Com base na conclusão do técnico e nos indicadores publicados (índice 0–100).
               </p>
-            ) : null}
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-lg bg-white/10 px-3 py-2 backdrop-blur">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/70">{nameA}</p>
-                <p className="mt-0.5 text-xl font-black tabular-nums">
-                  {scorePair.a != null ? Math.round(scorePair.a) : '—'}
-                </p>
-              </div>
-              <div
-                className={`rounded-lg px-3 py-2 ${winnerInferred === 'B' || winnerDeclared === 'B' ? 'bg-amber-400/25 ring-1 ring-amber-300/60' : 'bg-white/10'} backdrop-blur`}
-              >
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/70">{nameB}</p>
-                <p className="mt-0.5 text-xl font-black tabular-nums">
-                  {scorePair.b != null ? Math.round(scorePair.b) : '—'}
-                </p>
-              </div>
+            </div>
+            <div
+              className="min-w-[3.25rem] rounded-xl px-3 py-2 text-center text-2xl font-black tabular-nums"
+              style={{ backgroundColor: DECK_SIDE_B }}
+            >
+              {scorePair.b != null ? Math.round(scorePair.b) : '—'}
             </div>
           </div>
           {scorePair.a == null || scorePair.b == null ? (
@@ -775,9 +759,8 @@ export default function ExecutiveDeckSection({
                 );
               })
             ) : (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-600 leading-relaxed">
-                Não há conjunto de indicadores numéricos emparelhados com a mesma unidade (ex.: plantas/ha, % de estande,
-                kg/ha). Quando o app publicar KPIs comparáveis nos dois manejos, eles aparecem aqui automaticamente.
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-500">
+                Sem pares A/B comparáveis com a mesma unidade no JSON.
               </div>
             )}
           </div>
@@ -865,7 +848,7 @@ export default function ExecutiveDeckSection({
                 </div>
               ) : (
                 <div className="mt-2 flex h-28 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 text-center text-sm text-slate-500">
-                  Sem eventos de aplicação com DAA registados. Confirme no app se as aplicações foram guardadas com data e DAA.
+                  Sem eventos de aplicação com DAA no JSON publicado. Confirme no app se as aplicações foram registadas.
                 </div>
               )}
             </div>
@@ -1052,6 +1035,9 @@ export default function ExecutiveDeckSection({
                   <p className="mt-1 text-[10px] text-slate-500">
                     Eixos normalizados (0–100) a partir dos KPIs e da fenologia publicados no relatório.
                   </p>
+                  {radarReadout ? (
+                    <p className="mt-2 text-xs font-medium text-slate-700 leading-snug">{radarReadout}</p>
+                  ) : null}
                   {radarRows.length > 0 ? (
                     <div className="mt-2 h-56 w-full min-w-0 sm:h-64 [&_svg.recharts-surface]:relative">
                       <ResponsiveContainer width="100%" height="100%">
@@ -1186,6 +1172,7 @@ export default function ExecutiveDeckSection({
             {data.economic_timeline?.sides?.length ? (
               <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                 <p className="text-xs font-bold text-slate-800">Custo acumulado por DAA</p>
+                <p className="text-[10px] text-slate-500">Fonte: economic_timeline no JSON.</p>
                 <EconomicTimelineChart
                   timeline={data.economic_timeline}
                   nameA={nameA}
@@ -1196,40 +1183,35 @@ export default function ExecutiveDeckSection({
               </div>
             ) : null}
 
-            <div className="border-t border-emerald-900/10 pt-5">
-              <div className="mb-3 flex items-center gap-2">
-                <span className="h-1 w-8 shrink-0 rounded-full bg-emerald-600" aria-hidden />
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Resumo executivo</p>
-              </div>
+            <div className="border-t border-slate-200 pt-4">
+              <p className="text-sm font-bold text-slate-900">Resumo executivo</p>
               {narrativeLines.length > 0 ? (
-                <ul className="space-y-2 border-l-2 border-emerald-600/60 pl-4">
+                <ul className="mt-2 space-y-2">
                   {narrativeLines.map((line) => (
-                    <li key={line} className="text-sm leading-relaxed text-slate-700">
+                    <li key={line} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-700">
                       {line}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="border-l-2 border-transparent pl-4 text-sm text-slate-500">Sem texto narrativo complementar neste bloco.</p>
+                <p className="mt-2 text-xs text-slate-500">Sem texto narrativo adicional gerado para este bloco.</p>
               )}
               {evidenceRows.length > 0 ? (
-                <div className="mt-5 border-t border-slate-100 pt-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Evidência quantitativa</p>
-                  <dl className="mt-2 space-y-2 text-sm">
+                <div className="mt-4">
+                  <p className="text-xs font-bold text-slate-700">Evidência quantitativa</p>
+                  <div className="mt-2 space-y-2">
                     {evidenceRows.map((row) => (
-                      <div
-                        key={`${row.label}-${row.aValue}`}
-                        className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-slate-100 pb-2 last:border-0"
-                      >
-                        <dt className="min-w-0 font-medium text-slate-800">{row.label}</dt>
-                        <dd className="tabular-nums text-slate-600">
+                      <div key={`${row.label}-${row.aValue}`} className="rounded-lg border border-slate-200 px-3 py-2 text-xs">
+                        <p className="font-semibold text-slate-800">{row.label}</p>
+                        <div className="mt-1 grid grid-cols-2 gap-2">
                           <span style={{ color: DECK_SIDE_A }}>{row.aValue}</span>
-                          <span className="mx-2 text-slate-300">|</span>
-                          <span style={{ color: DECK_SIDE_B }}>{row.bValue}</span>
-                        </dd>
+                          <span className="text-right" style={{ color: DECK_SIDE_B }}>
+                            {row.bValue}
+                          </span>
+                        </div>
                       </div>
                     ))}
-                  </dl>
+                  </div>
                 </div>
               ) : null}
             </div>

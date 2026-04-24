@@ -1,6 +1,6 @@
 /**
  * Contrato mínimo lado a lado (espelhado com `packages/report-contract` e o DTO Flutter).
- * Tipos definidos aqui para o build Next funcionar na Vercel/Render sem `file:` para `../packages/`.
+ * Tipos definidos aqui para o build Next funcionar em Render/Vercel sem `file:` para `../packages/`.
  * Ao alterar, alinhar com `packages/report-contract/src/index.ts`.
  */
 

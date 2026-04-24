@@ -5,7 +5,7 @@ import type { SideBySideReportData } from '@/components/SideBySideReportContent'
 import { isColheitaJson, isCustoJson } from '@/components/lado_a_lado/ladoALadoHelpers';
 import { formatNumber } from '@/utils/format';
 import type { RoiSideSnapshot } from '@/lib/decisionLayer';
-import { estimatedRevenueBrlPerHa, winnerFromJson } from './premiumInference';
+import { estimatedRevenueBrlPerHa, heroFinancialSnapshot, winnerFromJson } from './premiumInference';
 import EconomicTimelineChart from './EconomicTimelineChart';
 import PremiumSectionShell from './PremiumSectionShell';
 
@@ -148,13 +148,97 @@ export default function EconomicSection({ data }: { data: SideBySideReportData }
         })()
       : null;
 
+  const econAnalysis = data.economic_analysis;
+  const evoTl = data.evolution_timeline;
+  const finSnap = heroFinancialSnapshot(data);
+  const gain100Ha = finSnap.gainBrlHa != null && Number.isFinite(finSnap.gainBrlHa) ? finSnap.gainBrlHa * 100 : null;
+
   return (
     <PremiumSectionShell
       id="economico-premium"
       eyebrow="Margem e ROI"
       title="Fechamento econômico"
-      subtitle="Valores do motor económico e referências de mercado. Uso decisório sujeito à validação do responsável técnico e ao contexto comercial da propriedade."
+      subtitle="Valores do motor econômico e referências de mercado conforme publicados no JSON. Uso decisório sujeito à validação do responsável técnico e ao contexto comercial da propriedade."
     >
+      {finSnap.gainBrlHa != null && Math.abs(finSnap.gainBrlHa) >= 1 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-6 grid gap-3 sm:grid-cols-2"
+        >
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/90 p-5 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-900">Ganho de receita bruta estimada (B vs A)</p>
+            <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-950">
+              {finSnap.gainBrlHa > 0 ? '+' : ''}R$ {formatNumber(Math.abs(finSnap.gainBrlHa), { decimals: 0 })}/ha
+            </p>
+            <p className="mt-1 text-xs text-emerald-900/85">
+              Com base em produtividade em sacas publicada e preço da saca no relatório.
+            </p>
+          </div>
+          {gain100Ha != null && Math.abs(gain100Ha) >= 1 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Ordem de grandeza (100 ha)</p>
+              <p className="mt-2 text-xl font-bold tabular-nums text-slate-900">
+                {gain100Ha > 0 ? '+' : ''}R$ {formatNumber(Math.abs(gain100Ha), { decimals: 0 })} · 100 ha
+              </p>
+              <p className="mt-1 text-xs text-slate-600">
+                Projeção linear (ganho R$/ha publicado × 100). Não substitui análise de risco comercial nem preço futuro.
+              </p>
+            </div>
+          ) : null}
+        </motion.div>
+      ) : null}
+      {marginHighlight ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 shadow-sm"
+        >
+          <span className="font-semibold text-slate-900">Motor de margem: </span>
+          {marginHighlight}
+        </motion.div>
+      ) : null}
+
+      {econAnalysis && typeof econAnalysis === 'object' ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-sm"
+        >
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Pacote econômico (enterprise)</p>
+          <p className="mt-2 text-sm text-slate-700">
+            Este bloco (`economic_analysis`) é uma ponte de contrato: aponta quais seções estão preenchidas no JSON, sem recalcular
+            números fora do motor.
+          </p>
+          {(() => {
+            const p = (econAnalysis as { pointers?: Record<string, unknown> }).pointers;
+            if (!p) return null;
+            const entries = Object.entries(p).filter(([, v]) => v != null);
+            if (entries.length === 0) return null;
+            return (
+              <div className="mt-3 grid sm:grid-cols-2 gap-2 text-sm">
+                {entries.map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between gap-3 rounded-xl bg-white/70 border border-slate-200/70 px-3 py-2">
+                    <span className="text-slate-500">{k}</span>
+                    <span className="font-semibold text-slate-900">{String(v)}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </motion.div>
+      ) : null}
+
+      {evoTl && typeof evoTl === 'object' ? (
+        <p className="mb-6 text-xs text-slate-500">
+          Também foi publicado um bloco canônico <span className="font-semibold">evolution_timeline</span> (além de{' '}
+          <span className="font-semibold">economic_timeline</span> e <span className="font-semibold">evolucao</span>).
+        </p>
+      ) : null}
+
       {mr && (mr.price_sack_brl != null || mr.kg_per_sack != null) ? (
         <motion.div
           initial={{ opacity: 0, y: 10 }}

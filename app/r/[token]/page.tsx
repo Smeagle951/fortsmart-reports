@@ -11,6 +11,7 @@ import RelatorioPlantioMultiContent from '@/components/plantio/RelatorioPlantioM
 import RelatorioAmostragemSoloContent from '@/components/amostragem-solo/RelatorioAmostragemSoloContent';
 import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaContent';
 import { normalizeRelatorioVisitaTecnica } from '@/lib/normalize-relatorio-visita-tecnica';
+import { normalizeSideBySideWebPayload } from '@/lib/normalize-side-by-side-web-payload';
 import PrintBar from '@/components/PrintBar';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import type { ResearchProReportPayload } from '@/types/research-report';
@@ -263,7 +264,10 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const tipo = (relatorio.tipo as string | undefined) ?? reportTypeV2;
     const tipoRelatorio = (relatorio.tipoRelatorio as string | undefined) ?? reportTypeV2;
 
-    const isSideBySide = tipo === 'avaliacao_lado_a_lado';
+    const isSideBySide =
+      tipo === 'avaliacao_lado_a_lado' ||
+      tipoRelatorio === 'avaliacao_lado_a_lado' ||
+      reportTypeV2 === 'avaliacao_lado_a_lado';
     const isPlantioMulti =
       tipo === 'plantio_multi' || tipoRelatorio === 'plantio_multi';
     const isPlantio =
@@ -297,6 +301,10 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
           console.warn('[fortsmart-reports] /r/[token] cálculo ANOVA/Tukey falhou:', err);
         }
       }
+    }
+
+    if (isSideBySide) {
+      relatorio = normalizeSideBySideWebPayload(relatorio) as Record<string, unknown>;
     }
 
     console.log('[fortsmart-reports] /r/[token] roteamento:', { tipo, tipoRelatorio, reportTypeV2, isPlantio, isPlantioMulti, isSideBySide, isVisitaTecnica, isMonitoramento, isResearchPro, isAmostragemSolo, topKeys: Object.keys(relatorio).slice(0, 12) });

@@ -28,7 +28,7 @@ export default function EvolutionSection({ data }: { data: SideBySideReportData 
       id="evolucao-premium"
       eyebrow="Série temporal"
       title="Evolução operacional"
-      subtitle="Contagem de aplicações por DAA e por manejo — exibida quando existem ao menos 2 DAA distintos no registro."
+      subtitle="Contagem de aplicações por DAA e por manejo — exibida apenas quando há série real (≥2 DAA distintos) no JSON publicado."
     >
       <motion.div
         initial={{ opacity: 0, y: 10 }}

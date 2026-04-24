@@ -14,15 +14,6 @@ export function winnerFromJson(data: SideBySideReportData): 'A' | 'B' | null {
   return null;
 }
 
-/** Destaque “melhor desempenho”: conclusão do técnico ou maior índice publicado/inferido. */
-export function displayWinnerLetter(data: SideBySideReportData): 'A' | 'B' | null {
-  const w = winnerFromJson(data);
-  if (w) return w;
-  const { a, b } = scoresFromJson(data);
-  if (a != null && b != null && a !== b) return b > a ? 'B' : 'A';
-  return null;
-}
-
 type SideKpis = NonNullable<SideBySideReportData['sideA']>['kpis'];
 
 function asKpisLike(k?: SideKpis): KpisLike | undefined {

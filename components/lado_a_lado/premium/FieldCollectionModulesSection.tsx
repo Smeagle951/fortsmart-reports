@@ -2,7 +2,6 @@
 
 import React, { useMemo } from 'react';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
-import { sideKeysInPresentationOrder } from '@/components/lado_a_lado/ladoALadoHelpers';
 
 /* ----------------------------- labels & order ----------------------------- */
 
@@ -37,9 +36,6 @@ const KEY_LABELS: Record<string, string> = {
   imagem: 'Foto',
   url: 'Foto',
   gps: 'GPS',
-  /** Chaves em inglês vindas de templates legados */
-  images: 'Imagens',
-  occurrences: 'Ocorrências',
 };
 
 const SECTION_ID_FALLBACK: Record<string, string> = {
@@ -118,61 +114,6 @@ function isLikelyImageUrl(v: unknown): boolean {
   return false;
 }
 
-/** Ex.: "Foto: https://.../foto.png; Legenda: Pulgão" serializado num único campo de texto. */
-function parseFotoLegendaFromString(s: string): { url: string; caption: string } | null {
-  const t = s.trim();
-  if (!t) return null;
-  if (!/foto:\s*https?:\/\//i.test(t)) {
-    const first = t.split(/\s+/)[0] ?? '';
-    if (isLikelyImageUrl(first) && t.length < 2000 && !/legenda:/i.test(t)) {
-      return { url: first.replace(/[.,;)]+$/, ''), caption: '' };
-    }
-  }
-  const m = t.match(/Foto:\s*(https?:\/\/[^\s;]+)/i);
-  if (!m) return null;
-  const url = m[1].replace(/[.,;)]+$/, '');
-  const leg = t.match(/Legenda:\s*([^;]+?)(?:;|$)/i);
-  return { url, caption: leg?.[1]?.trim() ?? '' };
-}
-
-function FotoInlineBlock({
-  url,
-  caption,
-  compact,
-}: {
-  url: string;
-  caption: string;
-  compact?: boolean;
-}) {
-  return (
-    <figure
-      className={`group my-1 min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-gradient-to-b from-slate-50 to-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.15)] ring-1 ring-slate-900/[0.05] ${
-        compact ? 'max-w-full' : 'max-w-lg'
-      }`}
-    >
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={url}
-          alt={caption || 'Evidência fotográfica'}
-          className={`w-full bg-slate-100 object-contain ${compact ? 'max-h-32 sm:max-h-36' : 'max-h-56'}`}
-          loading="lazy"
-        />
-      </a>
-      {caption ? (
-        <figcaption className="border-t border-slate-200/70 bg-white/95 px-3 py-2 text-[12.5px] font-medium leading-snug text-slate-800">
-          {caption}
-        </figcaption>
-      ) : null}
-    </figure>
-  );
-}
-
 function hasFieldCollectionData(data: SideBySideReportData): boolean {
   const fcm = data.field_collection_modules;
   if (fcm == null || typeof fcm !== 'object' || Array.isArray(fcm)) return false;
@@ -231,25 +172,6 @@ function pickImageUrlFromRow(row: Record<string, unknown>): string | null {
   return null;
 }
 
-/** URL + legenda a partir de colunas dedicadas ou de texto "Foto: …; Legenda: …". */
-function pickFotoFromRow(row: Record<string, unknown>): { url: string; caption: string } | null {
-  const fromKeys = pickImageUrlFromRow(row);
-  if (fromKeys) {
-    const caption =
-      (typeof row.caption === 'string' && row.caption.trim()) ||
-      (typeof row.alvo === 'string' && row.alvo.trim()) ||
-      (typeof row.descricao === 'string' && row.descricao.trim()) ||
-      'Evidência';
-    return { url: fromKeys, caption };
-  }
-  for (const v of Object.values(row)) {
-    if (typeof v !== 'string') continue;
-    const p = parseFotoLegendaFromString(v);
-    if (p?.url) return { url: p.url, caption: p.caption || (typeof row.alvo === 'string' ? row.alvo : 'Evidência') };
-  }
-  return null;
-}
-
 function isPhotoMediaRecord(v: unknown): v is Record<string, unknown> {
   if (!isPlainObject(v)) return false;
   const url = (v.url ?? v.publicUrl ?? v.public_url)?.toString().trim() ?? '';
@@ -272,7 +194,19 @@ function PhotoMediaCell({ value }: { value: Record<string, unknown> }) {
   const caption =
     (value.caption ?? value.legenda ?? value.nome ?? value.nomeAlvo)?.toString().trim() ?? '';
   if (/^https?:\/\//i.test(url)) {
-    return <FotoInlineBlock url={url} caption={caption} />;
+    return (
+      <div className="space-y-1.5 min-w-0">
+        <div className="relative overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-900/[0.06]">
+          <img
+            src={url}
+            alt={caption || 'Registo fotográfico'}
+            className="max-h-44 w-full object-contain"
+            loading="lazy"
+          />
+        </div>
+        {caption ? <p className="text-[12px] text-slate-600">{caption}</p> : null}
+      </div>
+    );
   }
   return (
     <div className="rounded-lg border border-amber-200/80 bg-amber-50/60 px-2.5 py-2 text-[12px] leading-snug text-amber-950">
@@ -285,25 +219,9 @@ function PhotoMediaCell({ value }: { value: Record<string, unknown> }) {
   );
 }
 
-function renderDdScalar(v: unknown): React.ReactNode {
-  if (isPhotoMediaRecord(v)) {
-    return <PhotoMediaCell value={v as Record<string, unknown>} />;
-  }
-  if (typeof v === 'string') {
-    const c = parseFotoLegendaFromString(v);
-    if (c?.url) return <FotoInlineBlock url={c.url} caption={c.caption} compact />;
-    if (isLikelyImageUrl(v) && v.length < 2000) return <FotoInlineBlock url={v.trim()} caption="" compact />;
-  }
-  return formatCellValue(v);
-}
-
 function renderTableCell(value: unknown): React.ReactNode {
   if (isPhotoMediaRecord(value)) {
     return <PhotoMediaCell value={value} />;
-  }
-  if (typeof value === 'string') {
-    const c = parseFotoLegendaFromString(value);
-    if (c?.url) return <FotoInlineBlock url={c.url} caption={c.caption} compact />;
   }
   return formatCellValue(value);
 }
@@ -326,23 +244,36 @@ function collectKeysFromRows(rows: Record<string, unknown>[]): string[] {
 
 /* --------------------------------- cells --------------------------------- */
 
+function ImageThumb({ src, alt }: { src: string; alt?: string }) {
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block shrink-0 overflow-hidden rounded-md ring-1 ring-slate-200/70 shadow-sm hover:ring-amber-400/60 transition"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt ?? 'foto'}
+        loading="lazy"
+        className="h-14 w-14 object-cover print:h-20 print:w-20"
+      />
+    </a>
+  );
+}
+
 /** Célula de tabela: URL pública, registo de mídia (objeto) ou texto formatado. */
 function renderCell(k: string, v: unknown, row: Record<string, unknown>): React.ReactNode {
   if (isPhotoMediaRecord(v)) {
     return <PhotoMediaCell value={v as Record<string, unknown>} />;
-  }
-  if (typeof v === 'string') {
-    const combined = parseFotoLegendaFromString(v);
-    if (combined?.url) {
-      return <FotoInlineBlock url={combined.url} caption={combined.caption} compact />;
-    }
   }
   if (IMAGE_KEYS.has(k) && typeof v === 'string' && isLikelyImageUrl(v)) {
     const caption =
       (typeof row.caption === 'string' && row.caption.trim()) ||
       (typeof row.descricao === 'string' && row.descricao.trim()) ||
       undefined;
-    return <FotoInlineBlock url={v} caption={caption ?? ''} compact />;
+    return <ImageThumb src={v} alt={caption} />;
   }
   return (
     <span className="text-[12.5px] leading-snug text-slate-800">
@@ -397,16 +328,19 @@ function ItensTable({ rows }: { rows: Record<string, unknown>[] }) {
 
 /** Ocorrências com imagem viram galeria compacta com legenda (estilo dossiê). */
 function OccurrencesGallery({ rows }: { rows: Record<string, unknown>[] }) {
-  const withImages = rows.filter((r) => pickFotoFromRow(r) != null);
-  const withoutImages = rows.filter((r) => pickFotoFromRow(r) == null);
+  const withImages = rows.filter((r) => pickImageUrlFromRow(r));
+  const withoutImages = rows.filter((r) => !pickImageUrlFromRow(r));
   return (
     <div className="space-y-3">
       {withImages.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
           {withImages.map((r, i) => {
-            const pick = pickFotoFromRow(r)!;
-            const src = pick.url;
-            const caption = pick.caption;
+            const src = pickImageUrlFromRow(r)!;
+            const caption =
+              (typeof r.caption === 'string' && r.caption.trim()) ||
+              (typeof r.descricao === 'string' && r.descricao.trim()) ||
+              (typeof r.alvo === 'string' && r.alvo.trim()) ||
+              'Ocorrência';
             const meta: string[] = [];
             if (typeof r.severidade === 'string' && r.severidade) meta.push(`Sev. ${r.severidade}`);
             if (typeof r.incidencia === 'string' && r.incidencia) meta.push(`Incid. ${r.incidencia}`);
@@ -415,21 +349,21 @@ function OccurrencesGallery({ rows }: { rows: Record<string, unknown>[] }) {
             return (
               <figure
                 key={i}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/80 shadow-[0_4px_24px_-10px_rgba(15,23,42,0.12)] ring-1 ring-slate-900/[0.04] transition-shadow hover:shadow-md"
+                className="group relative overflow-hidden rounded-lg ring-1 ring-slate-200 bg-white shadow-sm"
               >
-                <a href={src} target="_blank" rel="noopener noreferrer" className="block overflow-hidden">
+                <a href={src} target="_blank" rel="noopener noreferrer" className="block">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={src}
                     alt={caption}
                     loading="lazy"
-                    className="aspect-[4/3] w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                    className="aspect-[4/3] w-full object-cover group-hover:scale-[1.02] transition-transform"
                   />
                 </a>
-                <figcaption className="px-3 py-2.5 border-t border-slate-200/60 bg-white/90">
-                  <p className="text-[12.5px] font-semibold text-slate-900 leading-snug line-clamp-2">{caption}</p>
+                <figcaption className="px-2.5 py-1.5 border-t border-slate-100">
+                  <p className="text-[11.5px] font-semibold text-slate-800 truncate">{caption}</p>
                   {meta.length > 0 && (
-                    <p className="text-[10.5px] text-slate-500 mt-1">{meta.join(' · ')}</p>
+                    <p className="text-[10.5px] text-slate-500 mt-0.5 truncate">{meta.join(' · ')}</p>
                   )}
                 </figcaption>
               </figure>
@@ -441,13 +375,6 @@ function OccurrencesGallery({ rows }: { rows: Record<string, unknown>[] }) {
     </div>
   );
 }
-
-const SECTIONS_WITH_FOTO_GALLERY = new Set([
-  'ocorrencias',
-  'pragas_detalhe',
-  'doencas_detalhe',
-  'plantas_daninhas',
-]);
 
 /* ---------------------------- object rendering ---------------------------- */
 
@@ -488,7 +415,7 @@ function DlBlock({ obj }: { obj: Record<string, unknown> }) {
               {KEY_LABELS[k] ?? k.replace(/_/g, ' ')}
             </dt>
             <dd className="mt-0.5 text-[12.5px] font-medium text-slate-900 min-w-0 wrap-break-word">
-              {renderDdScalar(v)}
+              {isPhotoMediaRecord(v) ? <PhotoMediaCell value={v} /> : formatCellValue(v)}
             </dd>
           </div>
         );
@@ -510,10 +437,7 @@ function renderValue(raw: unknown, depth: number, sectionId?: string): React.Rea
     if (raw.length === 0) return <span className="text-slate-400 text-xs">—</span>;
     if (raw.every((x) => isPlainObject(x))) {
       const rows = raw as Record<string, unknown>[];
-      if (
-        (sectionId && SECTIONS_WITH_FOTO_GALLERY.has(sectionId)) ||
-        rows.some((r) => pickFotoFromRow(r) != null)
-      ) {
+      if (sectionId === 'ocorrencias' || rows.some((r) => pickImageUrlFromRow(r))) {
         return <OccurrencesGallery rows={rows} />;
       }
       return <ItensTable rows={rows} />;
@@ -533,22 +457,12 @@ function renderValue(raw: unknown, depth: number, sectionId?: string): React.Rea
     const o = raw as Record<string, unknown>;
     if (Array.isArray(o.itens) && o.itens.length > 0 && o.itens.every((x) => isPlainObject(x))) {
       const rows = o.itens as Record<string, unknown>[];
-      if (
-        (sectionId && SECTIONS_WITH_FOTO_GALLERY.has(sectionId)) ||
-        rows.some((r) => pickFotoFromRow(r) != null)
-      ) {
+      if (sectionId === 'ocorrencias' || rows.some((r) => pickImageUrlFromRow(r))) {
         return <OccurrencesGallery rows={rows} />;
       }
       return <ItensTable rows={rows} />;
     }
     return <DlBlock obj={o} />;
-  }
-  if (typeof raw === 'string') {
-    const p = parseFotoLegendaFromString(raw);
-    if (p?.url) return <FotoInlineBlock url={p.url} caption={p.caption} compact />;
-    if (isLikelyImageUrl(raw) && raw.length < 2000) {
-      return <FotoInlineBlock url={raw.trim()} caption="" compact />;
-    }
   }
   return <span className="text-[12.5px] text-slate-800 font-medium">{formatCellValue(raw)}</span>;
 }
@@ -560,13 +474,13 @@ const SIDE_SKIN: Record<
   { bg: string; bar: string; chip: string; label: string }
 > = {
   A: {
-    bg: 'bg-gradient-to-br from-blue-50/90 to-slate-50/40 ring-1 ring-blue-100/80',
+    bg: 'bg-blue-50/50 ring-1 ring-blue-100',
     bar: 'from-blue-500 to-indigo-600',
     chip: 'bg-blue-600/10 text-blue-800 ring-blue-500/20',
     label: 'Manejo A',
   },
   B: {
-    bg: 'bg-gradient-to-br from-emerald-50/90 to-slate-50/40 ring-1 ring-emerald-100/80',
+    bg: 'bg-emerald-50/50 ring-1 ring-emerald-100',
     bar: 'from-emerald-500 to-teal-600',
     chip: 'bg-emerald-600/10 text-emerald-800 ring-emerald-500/20',
     label: 'Manejo B',
@@ -599,14 +513,12 @@ function SideCell({
 }) {
   const skin = sideSkin(letter);
   return (
-    <div
-      className={`rounded-xl border border-white/60 ${skin.bg} p-2.5 sm:p-3.5 relative overflow-hidden min-w-0 shadow-sm`}
-    >
+    <div className={`rounded-lg ${skin.bg} p-2.5 sm:p-3 relative overflow-hidden min-w-0`}>
       <div
         className={`absolute left-0 top-0 h-full w-[3px] bg-gradient-to-b ${skin.bar}`}
         aria-hidden
       />
-      <div className="pl-2.5 min-w-0">
+      <div className="pl-2 min-w-0">
         {empty ? (
           <p className="text-xs text-slate-400 italic py-1">Sem registros.</p>
         ) : (
@@ -647,7 +559,7 @@ export default function FieldCollectionModulesSection({
   const schemaVersion = fcm.schema_version;
 
   return (
-    <section id={sectionId} className="scroll-mt-28 print:break-inside-avoid relative isolate" dir="ltr">
+    <section id={sectionId} className="scroll-mt-28 print:break-inside-avoid relative isolate">
       <div
         className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/70
           bg-gradient-to-b from-white via-slate-50/20 to-slate-100/10
@@ -671,14 +583,12 @@ export default function FieldCollectionModulesSection({
                 )}
               </p>
             </div>
-            <div className="flex items-center gap-1.5" title="Sempre: esquerda = A, direita = B">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-emerald-200 ring-1 ring-emerald-400/30">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
-                A
-              </span>
+            <div className="flex items-center gap-1.5">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-blue-200 ring-1 ring-blue-400/30">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" aria-hidden />
-                B
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />A
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-emerald-200 ring-1 ring-emerald-400/30">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />B
               </span>
             </div>
           </div>
@@ -688,7 +598,7 @@ export default function FieldCollectionModulesSection({
           {points.map((pt, i) => {
             const pLabel = typeof pt.index === 'number' ? `Ponto ${pt.index}` : `Ponto ${i + 1}`;
             const sides = pt.sides && typeof pt.sides === 'object' ? pt.sides : {};
-            const sideKeys = sideKeysInPresentationOrder(sides);
+            const sideKeys = Object.keys(sides).sort();
             if (sideKeys.length === 0) return null;
 
             const secSet = new Set<string>();
@@ -709,11 +619,11 @@ export default function FieldCollectionModulesSection({
             return (
               <div
                 key={pt.point_id ?? `pt-${i}`}
-                className="overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white via-white to-slate-50/30 shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12),0_1px_0_0_rgba(255,255,255,0.95)_inset]"
+                className="rounded-xl border border-slate-200/70 bg-white/70 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_4px_18px_-8px_rgba(15,23,42,0.08)]"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/60 px-4 py-3.5 sm:px-5 sm:py-4 bg-gradient-to-r from-slate-100/90 via-white to-slate-50/50">
-                  <div className="flex items-center gap-3">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-[12px] font-bold text-white shadow-md ring-2 ring-slate-900/10">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-3 bg-gradient-to-r from-slate-50/80 to-white">
+                  <div className="flex items-center gap-2.5">
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[11px] font-bold text-white shadow-sm">
                       {typeof pt.index === 'number' ? pt.index : i + 1}
                     </span>
                     <h3 className="text-sm sm:text-base font-semibold tracking-tight text-slate-900">
@@ -728,8 +638,8 @@ export default function FieldCollectionModulesSection({
                   ) : null}
                 </div>
 
-                <div className="divide-y divide-slate-100/90">
-                  {sectionIds.map((secId, rowIdx) => {
+                <div className="divide-y divide-slate-100">
+                  {sectionIds.map((secId) => {
                     const title = titleForSection(secId, moduleLabels);
                     const rowCells = sideKeys.map((letter) => {
                       const secMap = sides[letter] ?? {};
@@ -751,18 +661,16 @@ export default function FieldCollectionModulesSection({
                     return (
                       <div
                         key={secId}
-                        className={`grid gap-2.5 px-3 py-3.5 sm:gap-4 sm:px-5 sm:py-4 ${
-                          rowIdx % 2 === 0 ? 'bg-slate-50/35' : 'bg-white/60'
-                        }`}
+                        className="grid gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 sm:py-4"
                         style={{
-                          gridTemplateColumns: `minmax(7.5rem,11rem) repeat(${sideKeys.length},minmax(0,1fr))`,
+                          gridTemplateColumns: `minmax(7rem,10rem) repeat(${sideKeys.length},minmax(0,1fr))`,
                         }}
                       >
-                        <div className="flex flex-col justify-start rounded-lg border border-slate-200/50 bg-white/80 px-3 py-2 shadow-sm sm:px-3.5 sm:py-2.5">
-                          <span className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                        <div className="flex flex-col justify-start pt-0.5">
+                          <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500">
                             Módulo
                           </span>
-                          <span className="mt-1 text-[13.5px] font-semibold text-slate-900 leading-snug">
+                          <span className="mt-0.5 text-[13px] font-semibold text-slate-900 leading-tight">
                             {title}
                           </span>
                         </div>

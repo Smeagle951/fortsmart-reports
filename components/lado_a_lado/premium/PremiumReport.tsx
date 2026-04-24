@@ -2,7 +2,44 @@
 
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { postReportAnalytics } from '@/lib/report-analytics-client';
-import PremiumReportTabShell from './PremiumReportTabShell';
+import './premium-theme.css';
+import AgronomicAlertBanner from './AgronomicAlertBanner';
+import ConclusionSection from './ConclusionSection';
+import CoverSection from './CoverSection';
+import DecisionLayerSummarySection from './DecisionLayerSummarySection';
+import EconomicSection from './EconomicSection';
+import ExecutiveDeckSection from './ExecutiveDeckSection';
+import ExecutiveOutcomeStrip from './ExecutiveOutcomeStrip';
+import ExecutionSection from './ExecutionSection';
+import ExperimentDesignSection from './ExperimentDesignSection';
+import FieldCollectionModulesSection from './FieldCollectionModulesSection';
+import FortSmartAiSection from './FortSmartAiSection';
+import HeroSection from './HeroSection';
+import KPISection from './KPISection';
+import PlantEvaluationSection from './PlantEvaluationSection';
+import SidePhotoGallerySection from './SidePhotoGallerySection';
+import SubareaCostsAndEvolutionSection from './SubareaCostsAndEvolutionSection';
+import TimelinePremiumSection from './TimelinePremiumSection';
+import TreatmentSection from './TreatmentSection';
+import WhyWinPanel from './WhyWinPanel';
+
+const NAV_PREMIUM: { id: string; label: string }[] = [
+  { id: 'hero-premium', label: 'Início' },
+  { id: 'decisao-executiva-premium', label: 'Decisão' },
+  { id: 'deck-executivo-premium', label: 'Painel' },
+  { id: 'fotos-premium', label: 'Fotos' },
+  { id: 'kpis-premium', label: 'Indicadores' },
+  { id: 'fortsmart-ai-premium', label: 'FortSmart AI' },
+  { id: 'ensaio-premium', label: 'Ensaio' },
+  { id: 'coleta-modulos-premium', label: 'Coleta' },
+  { id: 'timeline-premium', label: 'Linha do tempo' },
+  { id: 'economico-premium', label: 'Econômico' },
+  { id: 'custos-evolucao-visitas-premium', label: 'Subáreas / visitas' },
+  { id: 'conclusao-premium', label: 'Conclusão' },
+  { id: 'tratamento-premium', label: 'Protocolo' },
+  { id: 'execucao-premium', label: 'Execução' },
+  { id: 'plantas-premium', label: 'Plantas' },
+];
 
 export default function PremiumReport({
   data,
@@ -23,7 +60,6 @@ export default function PremiumReport({
       window.print();
       return;
     }
-    el.classList.add('fs-pdf-all-panels');
     try {
       const { default: html2pdf } = await import('html2pdf.js');
       await html2pdf()
@@ -45,13 +81,20 @@ export default function PremiumReport({
       }
     } catch {
       window.print();
-    } finally {
-      el.classList.remove('fs-pdf-all-panels');
     }
   };
 
+  const scrollToId = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const createdStr = meta.createdAt
+    ? new Date(meta.createdAt).toLocaleDateString('pt-BR')
+    : null;
+  const idStr = meta.reportId || reportId;
+
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#F8F9FA] text-slate-900 print:bg-white">
+    <div className="premium-spec-theme relative min-h-screen overflow-x-hidden print:bg-white">
       <style jsx global>{`
         @media print {
           .fs-l2-page-break {
@@ -62,55 +105,87 @@ export default function PremiumReport({
             break-inside: avoid;
             page-break-inside: avoid;
           }
-          .premium-tablist {
-            display: none !important;
-          }
-          .premium-tab-panel {
-            display: block !important;
-            visibility: visible !important;
-            break-inside: auto;
-            page-break-before: always;
-          }
-          .premium-tab-panel:first-of-type {
-            page-break-before: auto;
-          }
-        }
-        /* html2pdf: força todas as subtelas no canvas (não só a aba ativa) */
-        .fs-pdf-all-panels .premium-tab-panel {
-          display: block !important;
-          visibility: visible !important;
-        }
-        .fs-pdf-all-panels .premium-tablist {
-          display: none !important;
         }
       `}</style>
       <div
-        className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(15,23,42,0.05),transparent_50%)] print:hidden"
+        className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(27,67,50,0.06),transparent_50%)] print:hidden"
         aria-hidden
       />
-      <div className="sticky top-0 z-40 flex flex-wrap items-center justify-end gap-2 border-b border-slate-200/80 bg-white/90 px-4 py-2.5 print:hidden backdrop-blur-xl shadow-sm">
+      <div className="premium-toolbar sticky top-0 z-40 flex flex-wrap items-center justify-end gap-2 px-4 py-2.5 border-b print:hidden backdrop-blur-xl shadow-sm">
         <button
           type="button"
           onClick={handlePrint}
-          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+          className="px-4 py-2 text-xs font-semibold uppercase tracking-wide rounded-full border transition-colors"
+          style={{
+            color: 'var(--fs-forest, #1b4332)',
+            borderColor: 'var(--fs-border, rgba(0,0,0,0.08))',
+            background: '#fff',
+          }}
         >
           Imprimir
         </button>
         <button
           type="button"
           onClick={handleExportPdf}
-          className="rounded-full bg-gradient-to-r from-slate-800 to-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-md transition-colors hover:from-slate-700 hover:to-slate-800"
+          className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white rounded-full transition-colors shadow-md"
+          style={{ background: 'linear-gradient(90deg, var(--fs-forest,#1b4332), var(--fs-forest-md,#2d6a4f))' }}
         >
           Exportar PDF
         </button>
       </div>
 
-      <div
-        id="relatorio-lado-a-lado-content"
-        className="overflow-x-hidden print:overflow-visible"
-        dir="ltr"
-      >
-        <PremiumReportTabShell data={data} reportId={reportId} />
+      <nav className="premium-nav-bar sticky top-[52px] z-30 print:hidden border-b">
+        <div className="mx-auto flex max-w-[1140px] gap-1 overflow-x-auto px-2 py-2.5 sm:px-4">
+          {NAV_PREMIUM.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => scrollToId(item.id)}
+              className="shrink-0 px-3.5 py-2 text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wide rounded-full whitespace-nowrap transition-colors"
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <div id="relatorio-lado-a-lado-content" className="overflow-x-hidden print:overflow-visible">
+        <div id="hero-premium" className="scroll-mt-36 fs-l2-avoid print:break-inside-avoid">
+          <CoverSection data={data} reportId={reportId} />
+          <ExecutiveOutcomeStrip data={data} />
+          <AgronomicAlertBanner data={data} />
+          <HeroSection data={data} />
+        </div>
+
+        <div className="pt-6 sm:pt-8 fs-l2-avoid print:break-inside-avoid">
+          <DecisionLayerSummarySection data={data} />
+        </div>
+
+        <div className="fs-l2-page-break print:break-after-page" aria-hidden />
+        <div className="mx-auto max-w-[1140px] space-y-16 px-4 py-12 sm:space-y-20 sm:px-6 sm:py-16 print:space-y-10 print:px-4">
+          <ExecutiveDeckSection data={data} />
+          <WhyWinPanel data={data} />
+          <div className="fs-l2-page-break print:hidden" aria-hidden />
+          <SidePhotoGallerySection data={data} />
+          <KPISection data={data} />
+          <FortSmartAiSection data={data} />
+          <ExperimentDesignSection data={data} sectionId="ensaio-premium" />
+          <FieldCollectionModulesSection data={data} sectionId="coleta-modulos-premium" />
+          <TimelinePremiumSection data={data} />
+          <EconomicSection data={data} />
+          <SubareaCostsAndEvolutionSection data={data} />
+          <ConclusionSection data={data} />
+          <TreatmentSection data={data} />
+          <ExecutionSection data={data} />
+          <PlantEvaluationSection data={data} />
+        </div>
+
+        <footer className="text-center text-sm text-[var(--fs-ink-md,#4a4a46)] py-12 border-t border-[var(--fs-border,rgba(0,0,0,0.08))] print:mt-8">
+          <p className="font-medium text-[var(--fs-ink,#1a1a18)]">FortSmart Agro · relatório decisório</p>
+          <p className="mt-2 text-xs text-[var(--fs-ink-lt,#8a8a84)]">
+            {[createdStr, idStr ? `ID ${idStr}` : null].filter(Boolean).join(' · ') || ' '}
+          </p>
+        </footer>
       </div>
     </div>
   );

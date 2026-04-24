@@ -1,0 +1,43 @@
+/* Tema alinhado à especificação visual Premium (forest / side-b / cream). Aplicado só dentro de `.premium-spec-theme`. */
+.premium-spec-theme {
+  --fs-forest: #1b4332;
+  --fs-forest-md: #2d6a4f;
+  --fs-forest-xs: #d8f3dc;
+  --fs-side-b: #7b2d00;
+  --fs-side-b-lt: #fbeee8;
+  --fs-gold: #b7881c;
+  --fs-gold-lt: #fef3cd;
+  --fs-ink: #1a1a18;
+  --fs-ink-md: #4a4a46;
+  --fs-ink-lt: #8a8a84;
+  --fs-cream: #fafaf7;
+  --fs-cream-dk: #f2f1ec;
+  --fs-border: rgba(0, 0, 0, 0.08);
+  --fs-r: 10px;
+  font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  color: var(--fs-ink);
+  background-color: var(--fs-cream);
+}
+
+.premium-spec-theme .premium-font-serif {
+  font-family: 'DM Serif Display', ui-serif, Georgia, serif;
+}
+
+.premium-spec-theme .premium-nav-bar {
+  background: var(--fs-forest);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.premium-spec-theme .premium-nav-bar button {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.premium-spec-theme .premium-nav-bar button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.premium-spec-theme .premium-toolbar {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--fs-border);
+}

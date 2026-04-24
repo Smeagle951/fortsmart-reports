@@ -145,6 +145,60 @@ export default function DecisionLayerSummarySection({ data }: { data: SideBySide
             <DecisionKpiStrip data={data} />
           </div>
 
+          {(() => {
+            const w = dl?.weights;
+            const entries = w && typeof w === 'object' ? Object.entries(w).filter(([, v]) => typeof v === 'number') : [];
+            if (entries.length > 0) {
+              return (
+                <div className="px-4 sm:px-6 py-3 border-t border-slate-100 bg-white">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Composição publicada no motor (pesos)</p>
+                  <ul className="mt-2 text-xs text-slate-600 space-y-1">
+                    {entries.map(([k, v]) => (
+                      <li key={k}>
+                        <span className="font-medium text-slate-800">{k}</span>: {formatNumber(v as number, { decimals: 0 })}%
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            }
+            return (
+              <div className="px-4 sm:px-6 py-3 border-t border-slate-100 bg-slate-50/50">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Metodologia dos scores exibidos</p>
+                <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                  Os valores 0–100 refletem <span className="font-semibold">performanceScore</span> publicado no app por lado ou,
+                  na sua ausência, um índice sintético a partir de KPIs comparados (produtividade estimada, população, eficiência).
+                </p>
+              </div>
+            );
+          })()}
+
+          {(() => {
+            const rows = data.criteriosEstatistica ?? [];
+            const prod = rows.find((r) => (r.criterio || '').toLowerCase().includes('produt'));
+            const cvA = prod?.cvPctA;
+            const cvB = prod?.cvPctB;
+            const pool = [cvA, cvB].filter((x): x is number => x != null && Number.isFinite(x));
+            if (pool.length === 0) return null;
+            const best = Math.min(...pool);
+            const label =
+              best < 10
+                ? 'Alta consistência entre pontos (CV de produtividade abaixo de 10% no critério publicado).'
+                : best < 20
+                  ? 'Consistência moderada entre pontos — interpretar com cautela em talhões heterogéneos.'
+                  : 'Variabilidade elevada entre pontos (CV) no critério de produtividade — reforçar amostragem em novos ciclos.';
+            return (
+              <div className="px-4 sm:px-6 py-3 border-t border-slate-100 bg-emerald-50/40">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-900">Interpretação de confiança</p>
+                <p className="mt-1 text-sm text-emerald-950/90 leading-relaxed">{label}</p>
+                <p className="mt-1 text-[11px] text-emerald-900/80 tabular-nums">
+                  CV A: {cvA != null ? `${formatNumber(cvA, { decimals: 1 })}%` : '—'} · CV B:{' '}
+                  {cvB != null ? `${formatNumber(cvB, { decimals: 1 })}%` : '—'}
+                </p>
+              </div>
+            );
+          })()}
+
           {sA != null && sB != null && (
             <div className="px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-center justify-center gap-2 text-sm text-slate-600 border-y border-slate-100/90 bg-slate-50/60">
               <span className="font-semibold tabular-nums text-slate-800">

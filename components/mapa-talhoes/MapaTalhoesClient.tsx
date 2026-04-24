@@ -68,7 +68,7 @@ export function MapaTalhoesClient({
     }
   }, [sp, initialFeatureCollection]);
 
-  /** Fallback quando o SSR não entrega GeoJSON mas a URL tem `/mapa-talhoes/m/:id`. */
+  /** Fallback quando o SSR não entrega GeoJSON (ex.: shell noutro host) mas a URL tem `/mapa-talhoes/m/:id`. */
   useEffect(() => {
     if (initialFeatureCollection != null) return;
     if (raw != null) return;

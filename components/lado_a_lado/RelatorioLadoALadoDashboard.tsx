@@ -354,7 +354,7 @@ function ScoreBadge({
       <span className={cn('font-bold uppercase tracking-[0.18em]', compact ? 'text-[10px] text-white/80' : 'mt-1 text-[11px] text-white/80')}>
         {label}
       </span>
-    </div>
+            </div>
   );
 }
 
@@ -368,14 +368,14 @@ function MetricVsCard({ metric }: { metric: MetricCard }) {
       <div className="mt-2 flex items-center justify-between gap-2 text-sm font-bold text-slate-800">
         <span style={{ color: winnerA ? COLOR_SIDE_A : COLORS.text }}>
           <ValueOrNull value={metric.a} digits={metric.digits ?? 0} nullLabel="null" />
-        </span>
+                      </span>
         <span className="text-xs font-semibold text-slate-300">vs</span>
         <span style={{ color: winnerB ? COLOR_SIDE_B : COLORS.text }}>
           <ValueOrNull value={metric.b} digits={metric.digits ?? 0} nullLabel="null" />
-        </span>
-      </div>
+                      </span>
+                </div>
       <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-slate-400">{metric.unit}</div>
-    </div>
+                </div>
   );
 }
 
@@ -394,7 +394,7 @@ function AlertBox({ alert }: { alert: AlertRow }) {
         {isError ? <ShieldAlert className="h-4 w-4 text-red-600" /> : isWarning ? <TriangleAlert className="h-4 w-4 text-amber-600" /> : <Sprout className="h-4 w-4 text-blue-600" />}
       </span>
       <p className="text-slate-800">{alert.text}</p>
-    </div>
+          </div>
   );
 }
 
@@ -403,11 +403,11 @@ function StatsTable({ rows }: { rows: StatsRow[] | undefined }) {
     return (
       <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
         <NullBadge label="criteriosEstatistica: null" />
-      </div>
+              </div>
     );
   }
 
-  return (
+                      return (
     <div className="overflow-x-auto rounded-xl border border-slate-200">
       <table className="min-w-full text-left text-xs">
         <thead className="bg-slate-50 text-slate-500">
@@ -449,7 +449,7 @@ function StatsTable({ rows }: { rows: StatsRow[] | undefined }) {
                     }}
                   >
                     {row.diferencaIndicativa ? 'Indicativa' : 'Neutra'}
-                  </span>
+                          </span>
                 ) : (
                   <NullBadge label="null" />
                 )}
@@ -458,7 +458,7 @@ function StatsTable({ rows }: { rows: StatsRow[] | undefined }) {
           ))}
         </tbody>
       </table>
-    </div>
+                </div>
   );
 }
 
@@ -467,7 +467,7 @@ function PlantMetricsTable({ rows }: { rows: PlantRow[] | undefined }) {
     return (
       <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
         <NullBadge label="plant_evaluation.metrics: null" />
-      </div>
+            </div>
     );
   }
 
@@ -482,19 +482,19 @@ function PlantMetricsTable({ rows }: { rows: PlantRow[] | undefined }) {
               <div className="mt-1 font-bold" style={{ color: COLOR_SIDE_A }}>
                 <ValueOrNull value={row.meanA} digits={1} />
                 {row.unit ? <span className="ml-1 text-xs text-slate-400">{row.unit}</span> : null}
-              </div>
             </div>
+                </div>
             <div className="rounded-lg bg-white px-3 py-2">
               <div className="text-[11px] font-semibold text-slate-500">Manejo B</div>
               <div className="mt-1 font-bold" style={{ color: COLOR_SIDE_B }}>
                 <ValueOrNull value={row.meanB} digits={1} />
                 {row.unit ? <span className="ml-1 text-xs text-slate-400">{row.unit}</span> : null}
-              </div>
+                  </div>
+                </div>
             </div>
-          </div>
-        </div>
+                  </div>
       ))}
-    </div>
+              </div>
   );
 }
 
@@ -524,18 +524,18 @@ function PhotosGrid({
             ) : (
               <div className="flex aspect-square items-center justify-center p-3 text-center text-xs text-slate-400">
                 <NullBadge label={`side${entry.side}.photos[0].url`} />
-              </div>
-            )}
-          </div>
+                    </div>
+                  )}
+                </div>
           <div className="space-y-1">
             <div className="rounded-md px-2 py-1 text-center text-[11px] font-bold text-white" style={{ backgroundColor: entry.color }}>
               {entry.name}
-            </div>
+              </div>
             <div className="min-h-[28px] text-center text-[11px] text-slate-500">{entry.photo?.caption || 'Sem legenda publicada.'}</div>
-          </div>
-        </div>
+                </div>
+                    </div>
       ))}
-    </div>
+            </div>
   );
 }
 
@@ -548,14 +548,14 @@ function CompactKpiRow({
   label: string;
   children: React.ReactNode;
 }) {
-  return (
+                              return (
     <div className="flex items-start gap-2 text-sm">
       <span className="mt-0.5 text-slate-500">{icon}</span>
       <div className="text-slate-700">
         <span className="font-semibold text-slate-900">{label}: </span>
         {children}
-      </div>
-    </div>
+                          </div>
+                        </div>
   );
 }
 
@@ -618,7 +618,7 @@ export default function RelatorioLadoALadoDashboard({
     }
   };
 
-  return (
+                              return (
     <div
       className="min-h-screen px-4 py-6 sm:px-6"
       style={{ backgroundColor: COLORS.bg, fontFamily: 'Inter, Roboto, sans-serif' }}
@@ -633,31 +633,31 @@ export default function RelatorioLadoALadoDashboard({
             <blockquote className="mt-4 rounded-r-xl border-l-4 border-green-600 bg-green-50 px-4 py-3 text-sm leading-relaxed text-slate-700">
               {data.comparativo_intro.trim()}
             </blockquote>
-          ) : null}
+                                    ) : null}
 
           <div className="mt-5 rounded-2xl bg-[linear-gradient(90deg,#143B8A_0%,#15663A_100%)] p-4 text-white">
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center">
               <div className="flex items-center gap-3">
                 <ScoreBadge label={sideAName} value={scoreA} color={COLOR_SIDE_A} />
-              </div>
+                                  </div>
               <div className="text-center">
                 <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">Melhor desempenho</div>
                 <div className="mt-1 text-sm font-bold">
                   {winnerName ? `${winnerName}` : <NullBadge label="conclusion.winner" />}
-                </div>
+                                  </div>
                 <div className="mt-1 text-xs text-white/70">« « comparação técnica publicada » »</div>
-              </div>
+                          </div>
               <div className="flex items-center justify-end gap-3">
                 <ScoreBadge label={sideBName} value={scoreB} color={COLOR_SIDE_B} />
-              </div>
-            </div>
-          </div>
+                        </div>
+                            </div>
+                      </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {metrics.map((metric) => (
               <MetricVsCard key={`${metric.label}-${metric.unit}`} metric={metric} />
             ))}
-          </div>
+                    </div>
 
           <div className="mt-4 grid gap-3">
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
@@ -684,7 +684,7 @@ export default function RelatorioLadoALadoDashboard({
               >
                 Risco {risk || 'null'}
               </span>
-            </div>
+                  </div>
 
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
               <ClipboardList className="h-4 w-4 text-slate-500" />
@@ -699,15 +699,15 @@ export default function RelatorioLadoALadoDashboard({
               <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
                 Alertas {alerts.length > 0 ? '!' : 'null'}
               </span>
-            </div>
-          </div>
+                    </div>
+                    </div>
 
           <div className="mt-5">
             <div className="mb-2 text-sm font-bold text-slate-900">Insights &amp; Alertas</div>
             <div className="space-y-2">
               {alerts.length > 0 ? alerts.map((alert, index) => <AlertBox key={`${alert.level}-${index}`} alert={alert} />) : <NullBadge label="fortsmart_ai.motor_alertas" />}
-            </div>
-          </div>
+                            </div>
+                          </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
             {LEFT_TABS.map((tab) => (
@@ -720,8 +720,8 @@ export default function RelatorioLadoALadoDashboard({
               >
                 {tab}
               </button>
-            ))}
-          </div>
+                                ))}
+                            </div>
 
           <div className="mt-4">
             {leftTab === 'Geral' ? (
@@ -730,8 +730,8 @@ export default function RelatorioLadoALadoDashboard({
                   <div>
                     <div className="text-sm font-bold text-slate-900">Eventos de Aplicação por DAA</div>
                     <div className="mt-1 text-xs text-amber-700">Série real disponível no JSON: contagem de eventos por `applications[].daa`.</div>
-                  </div>
-                </div>
+                          </div>
+                              </div>
                 {applicationSeries?.length ? (
                   <div className="mt-4 h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -754,12 +754,12 @@ export default function RelatorioLadoALadoDashboard({
                           <LabelList dataKey="sideB" position="top" fill={COLOR_SIDE_A} fontSize={10} />
                         </Area>
                       </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
+                      </ResponsiveContainer>
+                    </div>
                 ) : (
                   <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
                     <NullBadge label="applications: null" />
-                  </div>
+                      </div>
                 )}
               </div>
             ) : null}
@@ -789,18 +789,18 @@ export default function RelatorioLadoALadoDashboard({
                             style={{ backgroundColor: item.side === 'A' ? COLOR_SIDE_A : COLOR_SIDE_B }}
                           >
                             Lado {item.side}
-                          </span>
+                            </span>
                           <span className="font-semibold text-slate-900">DAA {item.daa ?? <NullBadge label="null" />}</span>
                           <span className="text-slate-500">{item.type || <NullBadge label="type" />}</span>
                           <span className="text-slate-500">{names || <NullBadge label="products" />}</span>
-                        </div>
-                      </div>
+                    </div>
+                    </div>
                     );
                   })
                 ) : (
                   <NullBadge label="applications: null" />
                 )}
-              </div>
+                </div>
             ) : null}
 
             {leftTab === 'Fitossanidade' ? (
@@ -819,7 +819,7 @@ export default function RelatorioLadoALadoDashboard({
                 ) : (
                   <NullBadge label="ocorrencias: null" />
                 )}
-              </div>
+                              </div>
             ) : null}
 
             {leftTab === 'Diagnóstico' ? (
@@ -844,19 +844,19 @@ export default function RelatorioLadoALadoDashboard({
                   <span className="font-semibold text-slate-900">Plano:</span>{' '}
                   {data.diagnosis?.planoAcao || <NullBadge label="planoAcao" />}
                 </div>
-              </div>
+            </div>
             ) : null}
 
             {leftTab === 'Fotos' ? (
               <PhotosGrid sideAName={sideAName} sideBName={sideBName} photosA={data.sideA?.photos} photosB={data.sideB?.photos} />
             ) : null}
-          </div>
+            </div>
         </section>
 
         <section className="overflow-hidden rounded-2xl bg-white shadow-md">
           <div className="p-5">
             <PanelHeader title="Relatório de Avaliação" subtitle={rightSubtitle} onPrint={handlePrint} />
-          </div>
+                </div>
 
           <div
             className="relative min-h-[124px] overflow-hidden px-5 py-4 text-white"
@@ -870,11 +870,11 @@ export default function RelatorioLadoALadoDashboard({
           >
             <div className="text-lg font-bold">
               {data.conclusion?.headline || (winnerName ? `${winnerName} - Superioridade Técnica e Econômica` : <NullBadge label="conclusion.headline" />)}
-            </div>
+              </div>
             <div className="mt-1 text-xs text-white/80">
               {winner != null ? `Fonte visual: conclusion.winner = ${winner}` : <NullBadge label="conclusion.winner" />}
-            </div>
-          </div>
+                    </div>
+                    </div>
 
           <div className="space-y-4 p-5">
             <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
@@ -887,10 +887,10 @@ export default function RelatorioLadoALadoDashboard({
                   </>
                 ) : (
                   <NullBadge label="score delta" />
-                )}
-              </div>
-              <ScoreBadge label="Manejo B" value={scoreB} color={COLOR_SIDE_B} compact />
+              )}
             </div>
+              <ScoreBadge label="Manejo B" value={scoreB} color={COLOR_SIDE_B} compact />
+              </div>
 
             <div className="space-y-2">
               <CompactKpiRow icon={<Sprout className="h-4 w-4" />} label="Previsão de Produtividade">
@@ -900,7 +900,7 @@ export default function RelatorioLadoALadoDashboard({
                 vs{' '}
                 <span style={{ color: COLOR_SIDE_B }} className="font-bold">
                   <ValueOrNull value={economics.scB} suffix=" sc/ha" nullLabel="B" />
-                </span>
+                            </span>
                 {economics.deltaScHa != null ? (
                   <span className="ml-2 font-bold text-green-700">(+{formatNumber(economics.deltaScHa, { decimals: 0 })} sc/ha)</span>
                 ) : null}
@@ -912,12 +912,12 @@ export default function RelatorioLadoALadoDashboard({
                 vs{' '}
                 <span className="font-bold text-green-700">
                   <ValueOrNull value={economics.roiB} suffix="%" nullLabel="roi.B" />
-                </span>
+                            </span>
               </CompactKpiRow>
               <CompactKpiRow icon={<TriangleAlert className="h-4 w-4" />} label="Risco">
                 {risk || <NullBadge label="ocorrencias" />}
               </CompactKpiRow>
-            </div>
+                        </div>
 
             <div className="flex flex-wrap gap-2">
               {RIGHT_TABS.map((tab) => (
@@ -930,8 +930,8 @@ export default function RelatorioLadoALadoDashboard({
                 >
                   {tab}
                 </button>
-              ))}
-            </div>
+                    ))}
+              </div>
 
             {rightTab === 'KPI' ? (
               <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
@@ -949,29 +949,29 @@ export default function RelatorioLadoALadoDashboard({
                           <Radar name={sideBName} dataKey="B" stroke={COLOR_SIDE_B} fill={COLOR_SIDE_B} fillOpacity={0.18} strokeWidth={2} />
                           <Legend />
                         </RadarChart>
-                      </ResponsiveContainer>
+                  </ResponsiveContainer>
                     </div>
                   ) : (
                     <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
                       <NullBadge label="kpis: null" />
-                    </div>
-                  )}
                 </div>
+              )}
+              </div>
 
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-900">
                     <Camera className="h-4 w-4 text-slate-500" />
                     Fotos de Campo
-                  </div>
+                        </div>
                   <PhotosGrid sideAName={sideAName} sideBName={sideBName} photosA={data.sideA?.photos} photosB={data.sideB?.photos} />
-                </div>
-              </div>
+                      </div>
+                        </div>
             ) : null}
 
             {rightTab === 'Estatística' ? <StatsTable rows={statisticalRows} /> : null}
 
             {rightTab === 'Plantas' ? (
-              <div>
+                <div>
                 <div className="mb-3 text-xs text-slate-500">
                   Amostras:{' '}
                   {typeof data.plant_evaluation?.sampleSize === 'object' ? (
@@ -981,10 +981,10 @@ export default function RelatorioLadoALadoDashboard({
                   ) : (
                     <NullBadge label="sampleSize" />
                   )}
-                </div>
+                      </div>
                 <PlantMetricsTable rows={plantRows} />
-              </div>
-            ) : null}
+                        </div>
+                      ) : null}
 
             {rightTab === 'Fotos' ? (
               <PhotosGrid sideAName={sideAName} sideBName={sideBName} photosA={data.sideA?.photos} photosB={data.sideB?.photos} />
@@ -994,7 +994,7 @@ export default function RelatorioLadoALadoDashboard({
               <div className="space-y-3">
                 <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-4 text-sm leading-relaxed text-slate-700">
                   {summaryText || <NullBadge label="conclusion.summary" />}
-                </div>
+                      </div>
                 <div className="text-sm font-bold text-slate-900">Recomendações</div>
                 <div className="space-y-2">
                   {data.conclusion?.recommendations?.length ? (
@@ -1002,14 +1002,14 @@ export default function RelatorioLadoALadoDashboard({
                       <div key={`${item}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
                         <span className="mr-2 font-bold text-green-700">{index + 1}.</span>
                         {item}
-                      </div>
+                  </div>
                     ))
                   ) : (
                     <NullBadge label="conclusion.recommendations" />
                   )}
-                </div>
-              </div>
-            ) : null}
+                      </div>
+                  </div>
+        ) : null}
 
             <div className="border-t border-slate-200 pt-4">
               <div className="text-base font-bold text-slate-900">Resumo Executivo</div>
@@ -1026,21 +1026,21 @@ export default function RelatorioLadoALadoDashboard({
                         </>
                       )}
                     </p>
-                  </div>
-                </div>
+                            </div>
+                      </div>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-slate-800">
                   <div className="flex items-start gap-2">
                     <ShieldAlert className="mt-0.5 h-4 w-4 text-amber-700" />
                     <p>{recommendationText || <NullBadge label="recommendation" />}</p>
                   </div>
-                </div>
+                  </div>
               </div>
             </div>
 
             <div className="text-[11px] text-slate-400">
               ID {data.meta?.reportId || reportId || '—'} · Layout reconstruído para leitura web lado a lado
             </div>
-          </div>
+            </div>
         </section>
       </div>
     </div>
