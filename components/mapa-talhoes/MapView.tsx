@@ -3,14 +3,21 @@
 import type { FeatureCollection, GeoJsonObject } from 'geojson';
 import L from 'leaflet';
 import { useEffect, useMemo } from 'react';
-import { GeoJSON, MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { GeoJSON, MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { colorPairForProperties, strokeForProperties } from './materialColor';
 
 import 'leaflet/dist/leaflet.css';
 
 type Props = {
   data: FeatureCollection;
+  /** Clique no polígono (talhão/subárea) — mesmos atributos do popup. */
+  onSelectFeature?: (properties: Record<string, unknown> | null) => void;
 };
+
+function MapBackgroundClick({ onMapClick }: { onMapClick: () => void }) {
+  useMapEvents({ click: () => onMapClick() });
+  return null;
+}
 
 function FitBounds({ geojson }: { geojson: FeatureCollection | null }) {
   const map = useMap();
@@ -60,7 +67,7 @@ function tooltipText(p: Record<string, unknown>): string {
   return `${tal} — ${mat}`;
 }
 
-export function MapView({ data }: Props) {
+export function MapView({ data, onSelectFeature }: Props) {
   const dataKey = useMemo(
     () => data.features.map((f) => (f.id != null ? String(f.id) : JSON.stringify(f.geometry))).join('|'),
     [data]
@@ -85,6 +92,7 @@ export function MapView({ data }: Props) {
         attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
         url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
       />
+      {onSelectFeature ? <MapBackgroundClick onMapClick={() => onSelectFeature(null)} /> : null}
       <FitBounds geojson={data} />
       <GeoJSON
         key={dataKey}
@@ -118,6 +126,12 @@ export function MapView({ data }: Props) {
             opacity: 0.95,
             className: 'fs-map-tooltip',
           });
+          if (onSelectFeature) {
+            layer.on('click', (e) => {
+              L.DomEvent.stopPropagation(e);
+              onSelectFeature(p);
+            });
+          }
         }}
       />
     </MapContainer>
