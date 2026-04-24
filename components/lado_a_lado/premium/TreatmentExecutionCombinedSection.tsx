@@ -172,6 +172,15 @@ function ApplicationBlock({ ev, accent }: { ev: ReportApplicationEventV2Json; ac
           ))}
         </ul>
       ) : null}
+
+      <div className="mt-2 border-t border-slate-100 pl-2 pt-2">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Observações (técnico)</p>
+        {ev.notes?.trim() ? (
+          <p className="mt-0.5 whitespace-pre-wrap text-[11px] leading-snug text-slate-800">{ev.notes.trim()}</p>
+        ) : (
+          <p className="mt-0.5 text-[11px] italic text-amber-900">Sem observação nesta aplicação — complete no registro e publique de novo.</p>
+        )}
+      </div>
     </motion.div>
   );
 }
@@ -179,7 +188,14 @@ function ApplicationBlock({ ev, accent }: { ev: ReportApplicationEventV2Json; ac
 /** A = esmeralda, B = azul (alinhado ao painel executivo e à secção combinada no deploy). */
 const ACCENT: Record<'A' | 'B', string> = { A: '#15803d', B: '#1e40af' };
 
-export default function TreatmentExecutionCombinedSection({ data }: { data: SideBySideReportData }) {
+export default function TreatmentExecutionCombinedSection({
+  data,
+  embedded,
+}: {
+  data: SideBySideReportData;
+  /** Sem capa PremiumSectionShell — para encaixar no relatório agronómico único. */
+  embedded?: boolean;
+}) {
   const sides = [...(data.treatment_protocol?.sides ?? [])].sort((a, b) => (a.side === 'A' ? -1 : b.side === 'A' ? 1 : 0));
   const apps = data.applications ?? [];
   const legacy = data.aplicacoes ?? [];
@@ -187,6 +203,18 @@ export default function TreatmentExecutionCombinedSection({ data }: { data: Side
   if (sides.length === 0 && apps.length === 0 && legacy.length === 0) return null;
 
   if (apps.length === 0 && legacy.length > 0) {
+    const legacyBody = (
+      <ul className="grid gap-3 md:grid-cols-2">
+        {legacy.map((a, i) => (
+          <li key={i} className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+            <span className="font-semibold text-slate-900">{a.data ? formatDate(a.data) : '—'}</span>
+            <span className="text-slate-600"> · {a.tipo || 'Aplicação'}</span>
+            {a.produtos ? <p className="mt-1 text-slate-700">{a.produtos}</p> : null}
+          </li>
+        ))}
+      </ul>
+    );
+    if (embedded) return <div className="space-y-3">{legacyBody}</div>;
     return (
       <PremiumSectionShell
         id="tratamento-execucao-premium"
@@ -194,56 +222,41 @@ export default function TreatmentExecutionCombinedSection({ data }: { data: Side
         title="Tratamento e aplicações"
         subtitle="Registros em formato resumido. Para detalhe completo (clima, bico, DAA, vínculo ao protocolo), publique o array applications no relatório."
       >
-        <ul className="grid gap-3 md:grid-cols-2">
-          {legacy.map((a, i) => (
-            <li key={i} className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
-              <span className="font-semibold text-slate-900">{a.data ? formatDate(a.data) : '—'}</span>
-              <span className="text-slate-600"> · {a.tipo || 'Aplicação'}</span>
-              {a.produtos ? <p className="mt-1 text-slate-700">{a.produtos}</p> : null}
-            </li>
-          ))}
-        </ul>
+        {legacyBody}
       </PremiumSectionShell>
     );
   }
 
   const sortedApps = [...apps].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-  return (
-    <PremiumSectionShell
-      id="tratamento-execucao-premium"
-      eyebrow="Protocolo e execução"
-      title="Tratamento planejado e aplicações em campo"
-      subtitle="Nomes dos manejos refletem os testes definidos na criação da avaliação. O plano mostra o protocolo; ao lado, as aplicações realizadas com detalhe de clima e equipamento."
-    >
-      <div className="grid gap-6 lg:grid-cols-2" dir="ltr">
-        {(['A', 'B'] as const).map((sideKey) => {
-          const side = sides.find((s) => s.side === sideKey);
-          const displayName = sideDisplayTitle(sideKey, side, data);
-          const roleLine = sideRoleLine(sideKey, data);
-          const headerBg = sideKey === 'A' ? 'bg-emerald-800' : 'bg-blue-900';
-          const ring = sideKey === 'A' ? 'ring-emerald-100' : 'ring-blue-100';
-          const accent = ACCENT[sideKey];
-          const sideApps = sortedApps.filter((e) => e.side === sideKey);
-          const planCount = dedupeProtocolProducts(side?.products ?? []).length;
+  const grid = (
+    <div className="grid gap-6 lg:grid-cols-2" dir="ltr">
+      {(['A', 'B'] as const).map((sideKey) => {
+        const side = sides.find((s) => s.side === sideKey);
+        const displayName = sideDisplayTitle(sideKey, side, data);
+        const roleLine = sideRoleLine(sideKey, data);
+        const headerBg = sideKey === 'A' ? 'bg-emerald-800' : 'bg-blue-900';
+        const ring = sideKey === 'A' ? 'ring-emerald-100' : 'ring-blue-100';
+        const accent = ACCENT[sideKey];
+        const sideApps = sortedApps.filter((e) => e.side === sideKey);
+        const planCount = dedupeProtocolProducts(side?.products ?? []).length;
 
-          return (
-            <motion.div
-              key={sideKey}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className={`flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md ring-2 ${ring}`}
-            >
-              <div className={`${headerBg} px-4 py-3 text-center text-white`}>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-95">Manejo {sideKey}</p>
-                <p className="text-lg font-black">{displayName}</p>
-                <p className="text-[11px] opacity-90">{roleLine}</p>
-                <p className="text-[11px] opacity-85">
-                  {planCount} produto{planCount === 1 ? '' : 's'} no plano · {sideApps.length} aplicação{sideApps.length === 1 ? '' : 'ões'} em
-                  campo
-                </p>
-              </div>
+        return (
+          <motion.div
+            key={sideKey}
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className={`flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md ring-2 ${ring}`}
+          >
+            <div className={`${headerBg} px-4 py-3 text-center text-white`}>
+              <p className="text-lg font-black leading-tight">{displayName}</p>
+              <p className="mt-1 text-[11px] opacity-90">{roleLine}</p>
+              <p className="mt-0.5 text-[11px] opacity-85">
+                {planCount} produto{planCount === 1 ? '' : 's'} no plano · {sideApps.length} aplicação{sideApps.length === 1 ? '' : 'ões'} em
+                campo
+              </p>
+            </div>
 
               {(side?.objective || side?.expected_result) && (
                 <div className="space-y-2 border-b border-slate-100 bg-slate-50/60 px-4 py-3 text-[12px] leading-snug text-slate-700 sm:px-5">
@@ -292,9 +305,21 @@ export default function TreatmentExecutionCombinedSection({ data }: { data: Side
                 </div>
               </div>
             </motion.div>
-          );
-        })}
-      </div>
+        );
+      })}
+    </div>
+  );
+
+  if (embedded) return <div className="space-y-2">{grid}</div>;
+
+  return (
+    <PremiumSectionShell
+      id="tratamento-execucao-premium"
+      eyebrow="Protocolo e execução"
+      title="Tratamento planejado e aplicações em campo"
+      subtitle="Nomes dos manejos refletem os testes definidos na criação da avaliação. O plano mostra o protocolo; ao lado, as aplicações realizadas com detalhe de clima e equipamento."
+    >
+      {grid}
     </PremiumSectionShell>
   );
 }

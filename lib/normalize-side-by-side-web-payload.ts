@@ -178,5 +178,30 @@ export function normalizeSideBySideWebPayload(src: Record<string, unknown>): Sid
   out.sideA = sideAOut;
   out.sideB = sideBOut;
 
+  // Aliases / compat: payloads legados ou snake_case parcial.
+  if (out.treatment_protocol == null && src.treatmentProtocol != null) {
+    out.treatment_protocol = src.treatmentProtocol;
+  }
+  if (out.field_collection_modules == null && src.fieldCollectionModules != null) {
+    out.field_collection_modules = src.fieldCollectionModules;
+  }
+  const appsRaw = out.applications;
+  if (Array.isArray(appsRaw) && appsRaw.length > 0) {
+    out.applications = appsRaw.map((row) => {
+      const ev = asRecord(row);
+      if (!ev) return row;
+      const notes =
+        typeof ev.notes === 'string' && ev.notes.trim()
+          ? ev.notes.trim()
+          : typeof ev.observacao === 'string' && ev.observacao.trim()
+            ? ev.observacao.trim()
+            : typeof ev.observacoes === 'string' && ev.observacoes.trim()
+              ? ev.observacoes.trim()
+              : undefined;
+      if (notes == null) return row;
+      return { ...ev, notes };
+    });
+  }
+
   return out as unknown as SideBySideReportData;
 }

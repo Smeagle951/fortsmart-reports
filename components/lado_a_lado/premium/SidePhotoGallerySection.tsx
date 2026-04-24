@@ -54,13 +54,59 @@ function PhotoCard({
   );
 }
 
-export default function SidePhotoGallerySection({ data }: { data: SideBySideReportData }) {
+export default function SidePhotoGallerySection({
+  data,
+  embedded,
+}: {
+  data: SideBySideReportData;
+  /** Sem capa duplicada — usado pelo relatório agronómico único. */
+  embedded?: boolean;
+}) {
   const a = (data.sideA?.photos ?? []) as ReportPhotoWeb[];
   const b = (data.sideB?.photos ?? []) as ReportPhotoWeb[];
   if (a.length === 0 && b.length === 0) return null;
 
-  const nameA = data.sideA?.name || 'Manejo A';
-  const nameB = data.sideB?.name || 'Manejo B';
+  const nameA = data.sideA?.name?.trim() || data.sideA?.label?.trim() || 'Tratamento 1 (nome no app)';
+  const nameB = data.sideB?.name?.trim() || data.sideB?.label?.trim() || 'Tratamento 2 (nome no app)';
+
+  const gallery = (
+    <div className="grid gap-4 lg:grid-cols-2 print:grid-cols-2">
+      <div className="space-y-3">
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">{nameA}</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {a.map((p, i) => (
+            <PhotoCard
+              // eslint-disable-next-line react/no-array-index-key
+              key={`A-${i}`}
+              sideLabel={nameA}
+              url={p.url}
+              caption={p.caption}
+              category={p.category}
+              p={p}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="space-y-3">
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">{nameB}</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {b.map((p, i) => (
+            <PhotoCard
+              // eslint-disable-next-line react/no-array-index-key
+              key={`B-${i}`}
+              sideLabel={nameB}
+              url={p.url}
+              caption={p.caption}
+              category={p.category}
+              p={p}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (embedded) return gallery;
 
   return (
     <PremiumSectionShell
@@ -69,40 +115,7 @@ export default function SidePhotoGallerySection({ data }: { data: SideBySideRepo
       title="Galeria (A/B)"
       subtitle="Fotos publicadas no JSON. Categorias vêm do app quando existirem."
     >
-      <div className="grid gap-4 lg:grid-cols-2 print:grid-cols-2">
-        <div className="space-y-3">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">{nameA}</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {a.map((p, i) => (
-              <PhotoCard
-                // eslint-disable-next-line react/no-array-index-key
-                key={`A-${i}`}
-                sideLabel="A"
-                url={p.url}
-                caption={p.caption}
-                category={p.category}
-                p={p}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="space-y-3">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">{nameB}</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {b.map((p, i) => (
-              <PhotoCard
-                // eslint-disable-next-line react/no-array-index-key
-                key={`B-${i}`}
-                sideLabel="B"
-                url={p.url}
-                caption={p.caption}
-                category={p.category}
-                p={p}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      {gallery}
     </PremiumSectionShell>
   );
 }

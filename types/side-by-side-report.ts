@@ -20,6 +20,8 @@ export type ReportApplicationEventV2Json = {
   stage?: string;
   type?: string;
   responsible?: string;
+  /** Observações do técnico por aplicação (app / SQLite `notes`). */
+  notes?: string;
   climate?: {
     temperature?: number;
     humidity?: number;
