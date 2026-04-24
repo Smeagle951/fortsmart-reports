@@ -55,6 +55,28 @@ export function scoresFromJson(data: SideBySideReportData): { a: number | null; 
 }
 
 /**
+ * Letra A/B para destaque na UI enterprise: `conclusion.winner`, depois motor (`decision_layer`),
+ * depois maior índice técnico derivado (`scoresFromJson`). Empate → null.
+ */
+export function displayWinnerLetter(data: SideBySideReportData): 'A' | 'B' | null {
+  const fromConclusion = winnerFromJson(data);
+  if (fromConclusion === 'A' || fromConclusion === 'B') return fromConclusion;
+
+  const dl = data.decision_layer;
+  const overall = dl?.engineOverallWinner;
+  if (overall === 'A' || overall === 'B') return overall;
+  const roiWin = dl?.engineRoiWinner;
+  if (roiWin === 'A' || roiWin === 'B') return roiWin;
+
+  const { a, b } = scoresFromJson(data);
+  if (a != null && b != null && Number.isFinite(a) && Number.isFinite(b)) {
+    if (a === b) return null;
+    return a > b ? 'A' : 'B';
+  }
+  return null;
+}
+
+/**
  * Diferença B−A em sc/ha e receita (B−A)×preço quando colheita+economia existem no JSON.
  * Não define “vencedor”; só números factuais do payload.
  */
