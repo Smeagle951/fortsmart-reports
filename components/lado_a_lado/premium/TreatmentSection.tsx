@@ -22,6 +22,9 @@ export default function TreatmentSection({ data }: { data: SideBySideReportData 
           const isA = s.side === 'A';
           const headerBg = isA ? 'bg-blue-800' : 'bg-emerald-800';
           const ring = isA ? 'ring-blue-100' : 'ring-emerald-100';
+          const userName = (isA ? data.sideA?.name : data.sideB?.name)?.trim();
+          const title = userName || s.name || `Manejo ${s.side}`;
+          const role = (isA ? data.sideA?.label : data.sideB?.label)?.trim() || `Tratamento ${s.side}`;
           return (
             <motion.div
               key={s.side + s.name}
@@ -35,8 +38,8 @@ export default function TreatmentSection({ data }: { data: SideBySideReportData 
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-95">
                   Manejo {s.side}
                 </p>
-                <p className="font-bold text-lg mt-0.5">{s.name}</p>
-                <p className="text-[11px] opacity-85">Tratamento {s.side}</p>
+                <p className="font-bold text-lg mt-0.5">{title}</p>
+                <p className="text-[11px] opacity-85">{role}</p>
               </div>
               <div className="p-5 space-y-3 text-sm text-slate-700">
                 {s.objective ? (

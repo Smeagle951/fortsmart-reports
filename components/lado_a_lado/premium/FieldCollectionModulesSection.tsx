@@ -195,16 +195,16 @@ function PhotoMediaCell({ value }: { value: Record<string, unknown> }) {
     (value.caption ?? value.legenda ?? value.nome ?? value.nomeAlvo)?.toString().trim() ?? '';
   if (/^https?:\/\//i.test(url)) {
     return (
-      <div className="space-y-1.5 min-w-0">
-        <div className="relative overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-900/[0.06]">
-          <img
-            src={url}
-            alt={caption || 'Registo fotográfico'}
-            className="max-h-44 w-full object-contain"
-            loading="lazy"
-          />
-        </div>
-        {caption ? <p className="text-[12px] text-slate-600">{caption}</p> : null}
+      <div className="space-y-1 min-w-0">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[12.5px] font-semibold text-blue-700 underline decoration-blue-700/40 hover:text-blue-900"
+        >
+          Abrir imagem no browser
+        </a>
+        {caption ? <p className="text-[11.5px] text-slate-600 leading-snug">{caption}</p> : null}
       </div>
     );
   }
@@ -469,20 +469,15 @@ function renderValue(raw: unknown, depth: number, sectionId?: string): React.Rea
 
 /* --------------------------- side / section skin -------------------------- */
 
-const SIDE_SKIN: Record<
-  string,
-  { bg: string; bar: string; chip: string; label: string }
-> = {
+const SIDE_SKIN: Record<string, { border: string; chip: string; label: string }> = {
   A: {
-    bg: 'bg-blue-50/50 ring-1 ring-blue-100',
-    bar: 'from-blue-500 to-indigo-600',
-    chip: 'bg-blue-600/10 text-blue-800 ring-blue-500/20',
+    border: 'border-l-[3px] border-l-blue-600',
+    chip: 'bg-blue-600/10 text-blue-800',
     label: 'Manejo A',
   },
   B: {
-    bg: 'bg-emerald-50/50 ring-1 ring-emerald-100',
-    bar: 'from-emerald-500 to-teal-600',
-    chip: 'bg-emerald-600/10 text-emerald-800 ring-emerald-500/20',
+    border: 'border-l-[3px] border-l-emerald-600',
+    chip: 'bg-emerald-600/10 text-emerald-800',
     label: 'Manejo B',
   },
 };
@@ -490,9 +485,8 @@ const SIDE_SKIN: Record<
 function sideSkin(letter: string) {
   return (
     SIDE_SKIN[letter] ?? {
-      bg: 'bg-slate-50 ring-1 ring-slate-200',
-      bar: 'from-slate-500 to-slate-700',
-      chip: 'bg-slate-200 text-slate-700 ring-slate-300',
+      border: 'border-l-[3px] border-l-slate-400',
+      chip: 'bg-slate-200 text-slate-700',
       label: `Manejo ${letter}`,
     }
   );
@@ -513,12 +507,8 @@ function SideCell({
 }) {
   const skin = sideSkin(letter);
   return (
-    <div className={`rounded-lg ${skin.bg} p-2.5 sm:p-3 relative overflow-hidden min-w-0`}>
-      <div
-        className={`absolute left-0 top-0 h-full w-[3px] bg-gradient-to-b ${skin.bar}`}
-        aria-hidden
-      />
-      <div className="pl-2 min-w-0">
+    <div className={`min-w-0 border border-slate-200/80 bg-slate-50/40 pl-2 py-2 sm:py-2.5 ${skin.border}`}>
+      <div className="min-w-0 pl-1">
         {empty ? (
           <p className="text-xs text-slate-400 italic py-1">Sem registros.</p>
         ) : (
@@ -619,9 +609,9 @@ export default function FieldCollectionModulesSection({
             return (
               <div
                 key={pt.point_id ?? `pt-${i}`}
-                className="rounded-xl border border-slate-200/70 bg-white/70 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_4px_18px_-8px_rgba(15,23,42,0.08)]"
+                className="border-b border-slate-200/80 pb-8 last:border-0 last:pb-0"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-3 bg-gradient-to-r from-slate-50/80 to-white">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/60 px-0 py-3">
                   <div className="flex items-center gap-2.5">
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[11px] font-bold text-white shadow-sm">
                       {typeof pt.index === 'number' ? pt.index : i + 1}

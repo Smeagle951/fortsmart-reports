@@ -64,7 +64,7 @@ export default function EconomicTimelineChart({
   if (data.length < 2) return null;
 
   return (
-    <div className="h-64 w-full mt-2">
+    <div className="mt-2 h-[min(50vh,22rem)] min-h-[220px] w-full max-w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />

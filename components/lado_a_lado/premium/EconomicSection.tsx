@@ -330,11 +330,13 @@ export default function EconomicSection({ data }: { data: SideBySideReportData }
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+          className="mb-8 border-y border-slate-200 py-5"
         >
           <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Custo acumulado por DAA</p>
           <p className="mt-1 text-xs text-slate-600 max-w-3xl leading-relaxed">{timeline.methodology}</p>
-          <EconomicTimelineChart timeline={timeline} nameA={nameA} nameB={nameB} />
+          <div className="mt-3 w-full min-w-0 overflow-x-auto">
+            <EconomicTimelineChart timeline={timeline} nameA={nameA} nameB={nameB} />
+          </div>
         </motion.div>
       ) : null}
 
@@ -375,59 +377,89 @@ export default function EconomicSection({ data }: { data: SideBySideReportData }
         </motion.div>
       ) : null}
 
-      <div className="grid md:grid-cols-2 gap-4">
-        {custo?.by_side?.map((row, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-            style={{ borderLeftWidth: 4, borderLeftColor: row.side === 'A' ? '#2563eb' : '#16a34a' }}
-          >
-            <p className="text-xs font-semibold uppercase text-slate-500">Custo · manejo {row.side}</p>
-            <p className="text-xl font-bold text-slate-900 mt-1">
-              {row.costPerHa != null ? `R$ ${formatNumber(row.costPerHa, { decimals: 2 })}/ha` : 'não informado'}
-            </p>
-            {row.sideName ? <p className="text-sm text-slate-600 mt-1">{row.sideName}</p> : null}
-          </motion.div>
-        ))}
-        {colheita?.sides?.map((s, i) => (
-          <motion.div
-            key={`c-${i}`}
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-            style={{ borderLeftWidth: 4, borderLeftColor: s.side === 'A' ? '#2563eb' : '#16a34a' }}
-          >
-            <p className="text-xs font-semibold uppercase text-slate-500">Produtividade · manejo {s.side}</p>
-            <p className="text-xl font-bold text-slate-900 mt-1">
-              {s.yieldScHa != null
-                ? `${formatNumber(s.yieldScHa, { decimals: 1 })} sc/ha`
-                : s.yieldKgHa != null
-                  ? `${formatNumber(s.yieldKgHa, { decimals: 0 })} kg/ha`
-                  : 'não informado'}
-            </p>
-            {s.yieldKgHa != null && s.yieldScHa == null && kg > 0 ? (
-              <p className="text-xs text-slate-500 mt-1">≈ {formatNumber(s.yieldKgHa / kg, { decimals: 1 })} sc/ha (conversão)</p>
-            ) : null}
-          </motion.div>
-        ))}
-      </div>
+      {custo?.by_side != null && custo.by_side.length > 0 ? (
+        <div className="mt-2 overflow-x-auto border border-slate-200 rounded-lg">
+          <table className="w-full min-w-[320px] text-left text-sm">
+            <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="px-3 py-2">Teste / manejo</th>
+                <th className="px-3 py-2 text-right">Custo (R$/ha)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {custo.by_side.map((row, i) => {
+                const testLabel =
+                  row.sideName?.trim() ||
+                  (row.side === 'A' ? nameA : row.side === 'B' ? nameB : `Manejo ${row.side}`);
+                return (
+                  <tr key={i} className="border-t border-slate-100">
+                    <td
+                      className="px-3 py-2.5 font-medium text-slate-800"
+                      style={{ borderLeftWidth: 3, borderLeftColor: row.side === 'A' ? '#2563eb' : '#16a34a' }}
+                    >
+                      {testLabel}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-900">
+                      {row.costPerHa != null ? `R$ ${formatNumber(row.costPerHa, { decimals: 2 })}` : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {colheita?.sides != null && colheita.sides.length > 0 ? (
+        <div className="mt-4 overflow-x-auto border border-slate-200 rounded-lg">
+          <table className="w-full min-w-[320px] text-left text-sm">
+            <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="px-3 py-2">Teste / manejo</th>
+                <th className="px-3 py-2 text-right">Produtividade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {colheita.sides.map((s, i) => {
+                const testLabel = s.sideName?.trim() || (s.side === 'A' ? nameA : s.side === 'B' ? nameB : `Manejo ${s.side}`);
+                const y =
+                  s.yieldScHa != null
+                    ? `${formatNumber(s.yieldScHa, { decimals: 1 })} sc/ha`
+                    : s.yieldKgHa != null
+                      ? `${formatNumber(s.yieldKgHa, { decimals: 0 })} kg/ha`
+                      : '—';
+                return (
+                  <tr key={`c-${i}`} className="border-t border-slate-100">
+                    <td
+                      className="px-3 py-2.5 font-medium text-slate-800"
+                      style={{ borderLeftWidth: 3, borderLeftColor: s.side === 'A' ? '#2563eb' : '#16a34a' }}
+                    >
+                      {testLabel}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums text-slate-900">
+                      {y}
+                      {s.yieldKgHa != null && s.yieldScHa == null && kg > 0 ? (
+                        <span className="block text-xs font-normal text-slate-500">
+                          ≈ {formatNumber(s.yieldKgHa / kg, { decimals: 1 })} sc/ha
+                        </span>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
       {preco != null ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm"
-        >
-          <p className="text-sm font-semibold text-slate-800">Preço da saca (bloco economia)</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">R$ {formatNumber(preco, { decimals: 2 })}/sc</p>
+        <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-200 pb-3">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Preço de referência (saca)</p>
+          <p className="text-lg font-bold tabular-nums text-slate-900">R$ {formatNumber(preco, { decimals: 2 })}/sc</p>
           {showEconomiaFontePreco(economia?.fonte_preco) ? (
-            <p className="text-xs text-slate-600 mt-1">Fonte informada: {economia?.fonte_preco}</p>
+            <p className="w-full text-xs text-slate-600">Fonte: {economia?.fonte_preco}</p>
           ) : null}
-        </motion.div>
+        </div>
       ) : null}
       {custo?.deltaCostPerHa_B_vs_A != null ? (
         <p className="mt-4 text-center text-sm font-semibold text-slate-700">

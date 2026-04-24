@@ -9,11 +9,13 @@ function PhotoCard({
   url,
   caption,
   category,
+  p,
 }: {
   sideLabel: string;
   url?: string | null;
   caption?: string | null;
   category?: string | null;
+  p: ReportPhotoWeb;
 }) {
   return (
     <figure className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:break-inside-avoid">
@@ -33,6 +35,20 @@ function PhotoCard({
           {category ? <span className="text-slate-500"> · {category}</span> : null}
         </div>
         {caption ? <p className="mt-1 text-slate-600">{caption}</p> : null}
+        {p.hotspots != null && p.hotspots.length > 0 ? (
+          <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-[11px] text-slate-700">
+            <li className="font-semibold text-slate-500">Marcadores na imagem</li>
+            {p.hotspots.map((h, hi) => (
+              <li key={hi} className="leading-snug">
+                <span className="text-slate-500">
+                  {Math.round(h.xPct)}%, {Math.round(h.yPct)}%
+                </span>
+                {h.label ? <span className="text-slate-800"> — {h.label}</span> : null}
+                {h.detail ? <span className="block text-slate-600">{h.detail}</span> : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </figcaption>
     </figure>
   );
@@ -65,6 +81,7 @@ export default function SidePhotoGallerySection({ data }: { data: SideBySideRepo
                 url={p.url}
                 caption={p.caption}
                 category={p.category}
+                p={p}
               />
             ))}
           </div>
@@ -80,6 +97,7 @@ export default function SidePhotoGallerySection({ data }: { data: SideBySideRepo
                 url={p.url}
                 caption={p.caption}
                 category={p.category}
+                p={p}
               />
             ))}
           </div>

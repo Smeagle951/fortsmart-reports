@@ -2,12 +2,29 @@
 
 import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
-import type { ReportApplicationEventV2Json } from '@/types/side-by-side-report';
-import type { TreatmentProtocolSideJson } from '@/types/side-by-side-report';
+import type { ReportApplicationEventV2Json, TreatmentProtocolSideJson } from '@/types/side-by-side-report';
 import { formatWind } from '@/components/lado_a_lado/ladoALadoHelpers';
 import { formatDate, formatNumber } from '@/utils/format';
 import PremiumSectionShell from './PremiumSectionShell';
-import { ENT } from './enterprise/enterpriseTheme';
+
+/** Título do teste: nome definido na criação da avaliação (sideA/sideB), não o rótulo do plano de protocolo isolado. */
+function sideDisplayTitle(
+  sideKey: 'A' | 'B',
+  protocolSide: TreatmentProtocolSideJson | undefined,
+  data: SideBySideReportData,
+): string {
+  const user = (sideKey === 'A' ? data.sideA?.name : data.sideB?.name)?.trim();
+  if (user) return user;
+  const fromProtocol = protocolSide?.name?.trim();
+  if (fromProtocol) return fromProtocol;
+  return `Manejo ${sideKey}`;
+}
+
+function sideRoleLine(sideKey: 'A' | 'B', data: SideBySideReportData): string {
+  const lab = (sideKey === 'A' ? data.sideA?.label : data.sideB?.label)?.trim();
+  if (lab) return lab;
+  return `Tratamento ${sideKey}`;
+}
 
 function protocolBadge(ev: ReportApplicationEventV2Json): { label: string; ok: boolean } {
   const prods = ev.products ?? [];
@@ -18,6 +35,25 @@ function protocolBadge(ev: ReportApplicationEventV2Json): { label: string; ok: b
   return { label: 'Parcial ao protocolo', ok: false };
 }
 
+function dedupeProtocolProducts(
+  products: NonNullable<TreatmentProtocolSideJson['products']>,
+): NonNullable<TreatmentProtocolSideJson['products']> {
+  const seen = new Set<string>();
+  const out: NonNullable<TreatmentProtocolSideJson['products']> = [];
+  for (const p of products) {
+    const key = [
+      (p.name ?? '').toLowerCase().trim(),
+      String(p.dose ?? p.dose_value ?? '').trim(),
+      (p.dose_unit ?? '').toLowerCase().trim(),
+      (p.active_ingredient ?? '').toLowerCase().trim(),
+    ].join('\u0001');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
+  }
+  return out;
+}
+
 function ProtocolProductsTable({
   products,
   accent,
@@ -25,7 +61,8 @@ function ProtocolProductsTable({
   products: NonNullable<TreatmentProtocolSideJson['products']>;
   accent: string;
 }) {
-  if (!products.length) return <p className="text-xs text-slate-500">Nenhum produto no plano.</p>;
+  const list = dedupeProtocolProducts(products);
+  if (!list.length) return <p className="text-xs text-slate-500">Nenhum produto no plano.</p>;
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200">
       <table className="w-full min-w-[280px] text-left text-xs">
@@ -38,7 +75,7 @@ function ProtocolProductsTable({
           </tr>
         </thead>
         <tbody>
-          {products.map((p, j) => (
+          {list.map((p, j) => (
             <tr key={j} className="border-t border-slate-100" style={{ borderLeftWidth: 3, borderLeftColor: accent }}>
               <td className="px-2 py-2 font-semibold text-slate-900">{p.name}</td>
               <td className="px-2 py-2 text-slate-600">{p.active_ingredient || '—'}</td>
@@ -87,7 +124,6 @@ function ApplicationBlock({ ev, accent }: { ev: ReportApplicationEventV2Json; ac
         </span>
       </div>
 
-      {/* Grid técnico: clima + equipamento */}
       <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 border-y border-slate-100 py-1.5 pl-2 text-[11px]">
         {c?.temperature != null ? (
           <p>
@@ -140,6 +176,9 @@ function ApplicationBlock({ ev, accent }: { ev: ReportApplicationEventV2Json; ac
   );
 }
 
+/** A = esmeralda, B = azul (alinhado ao painel executivo e à secção combinada no deploy). */
+const ACCENT: Record<'A' | 'B', string> = { A: '#15803d', B: '#1e40af' };
+
 export default function TreatmentExecutionCombinedSection({ data }: { data: SideBySideReportData }) {
   const sides = [...(data.treatment_protocol?.sides ?? [])].sort((a, b) => (a.side === 'A' ? -1 : b.side === 'A' ? 1 : 0));
   const apps = data.applications ?? [];
@@ -175,17 +214,18 @@ export default function TreatmentExecutionCombinedSection({ data }: { data: Side
       id="tratamento-execucao-premium"
       eyebrow="Protocolo e execução"
       title="Tratamento planejado e aplicações em campo"
-      subtitle="Plano por manejo (produtos e doses) e, abaixo, as aplicações realizadas com data, DAA, clima, equipamento e produtos aplicados — alinhado ao registo detalhado no app."
+      subtitle="Nomes dos manejos refletem os testes definidos na criação da avaliação. O plano mostra o protocolo; ao lado, as aplicações realizadas com detalhe de clima e equipamento."
     >
       <div className="grid gap-6 lg:grid-cols-2" dir="ltr">
         {(['A', 'B'] as const).map((sideKey) => {
           const side = sides.find((s) => s.side === sideKey);
-          const name = sideKey === 'A' ? data.sideA?.name || 'Manejo A' : data.sideB?.name || 'Manejo B';
-          /* Esquerda = A (verde), direita = B (azul) — alinhado ao herói e galeria */
+          const displayName = sideDisplayTitle(sideKey, side, data);
+          const roleLine = sideRoleLine(sideKey, data);
           const headerBg = sideKey === 'A' ? 'bg-emerald-800' : 'bg-blue-900';
           const ring = sideKey === 'A' ? 'ring-emerald-100' : 'ring-blue-100';
-          const accent = sideKey === 'A' ? ENT.green : ENT.blue;
+          const accent = ACCENT[sideKey];
           const sideApps = sortedApps.filter((e) => e.side === sideKey);
+          const planCount = dedupeProtocolProducts(side?.products ?? []).length;
 
           return (
             <motion.div
@@ -197,9 +237,11 @@ export default function TreatmentExecutionCombinedSection({ data }: { data: Side
             >
               <div className={`${headerBg} px-4 py-3 text-center text-white`}>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.22em] opacity-95">Manejo {sideKey}</p>
-                <p className="text-lg font-black">{side?.name ?? name}</p>
+                <p className="text-lg font-black">{displayName}</p>
+                <p className="text-[11px] opacity-90">{roleLine}</p>
                 <p className="text-[11px] opacity-85">
-                  {(side?.products?.length ?? 0)} produto{(side?.products?.length ?? 0) === 1 ? '' : 's'} no plano · {sideApps.length} aplicação{sideApps.length === 1 ? '' : 'ões'} em campo
+                  {planCount} produto{planCount === 1 ? '' : 's'} no plano · {sideApps.length} aplicação{sideApps.length === 1 ? '' : 'ões'} em
+                  campo
                 </p>
               </div>
 
@@ -220,7 +262,6 @@ export default function TreatmentExecutionCombinedSection({ data }: { data: Side
                 </div>
               )}
 
-              {/* Plano + Aplicações lado a lado */}
               <div className="grid gap-4 px-4 py-4 sm:px-5 lg:grid-cols-2">
                 <div className="min-w-0">
                   <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-900/5 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-700">

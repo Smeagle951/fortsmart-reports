@@ -10,8 +10,8 @@ import DecisionLayerSummarySection from './DecisionLayerSummarySection';
 import EconomicSection from './EconomicSection';
 import ExecutiveDeckSection from './ExecutiveDeckSection';
 import ExecutiveOutcomeStrip from './ExecutiveOutcomeStrip';
-import ExecutionSection from './ExecutionSection';
 import ExperimentDesignSection from './ExperimentDesignSection';
+import ReportFooterEnterprise from './enterprise/ReportFooterEnterprise';
 import FieldCollectionModulesSection from './FieldCollectionModulesSection';
 import FortSmartAiSection from './FortSmartAiSection';
 import HeroSection from './HeroSection';
@@ -20,7 +20,7 @@ import PlantEvaluationSection from './PlantEvaluationSection';
 import SidePhotoGallerySection from './SidePhotoGallerySection';
 import SubareaCostsAndEvolutionSection from './SubareaCostsAndEvolutionSection';
 import TimelinePremiumSection from './TimelinePremiumSection';
-import TreatmentSection from './TreatmentSection';
+import TreatmentExecutionCombinedSection from './TreatmentExecutionCombinedSection';
 import WhyWinPanel from './WhyWinPanel';
 
 const NAV_PREMIUM: { id: string; label: string }[] = [
@@ -36,8 +36,7 @@ const NAV_PREMIUM: { id: string; label: string }[] = [
   { id: 'economico-premium', label: 'Econômico' },
   { id: 'custos-evolucao-visitas-premium', label: 'Subáreas / visitas' },
   { id: 'conclusao-premium', label: 'Conclusão' },
-  { id: 'tratamento-premium', label: 'Protocolo' },
-  { id: 'execucao-premium', label: 'Execução' },
+  { id: 'tratamento-execucao-premium', label: 'Tratamento' },
   { id: 'plantas-premium', label: 'Plantas' },
 ];
 
@@ -87,11 +86,6 @@ export default function PremiumReport({
   const scrollToId = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
-
-  const createdStr = meta.createdAt
-    ? new Date(meta.createdAt).toLocaleDateString('pt-BR')
-    : null;
-  const idStr = meta.reportId || reportId;
 
   return (
     <div className="premium-spec-theme relative min-h-screen overflow-x-hidden print:bg-white">
@@ -175,17 +169,11 @@ export default function PremiumReport({
           <EconomicSection data={data} />
           <SubareaCostsAndEvolutionSection data={data} />
           <ConclusionSection data={data} />
-          <TreatmentSection data={data} />
-          <ExecutionSection data={data} />
+          <TreatmentExecutionCombinedSection data={data} />
           <PlantEvaluationSection data={data} />
         </div>
 
-        <footer className="text-center text-sm text-[var(--fs-ink-md,#4a4a46)] py-12 border-t border-[var(--fs-border,rgba(0,0,0,0.08))] print:mt-8">
-          <p className="font-medium text-[var(--fs-ink,#1a1a18)]">FortSmart Agro · relatório decisório</p>
-          <p className="mt-2 text-xs text-[var(--fs-ink-lt,#8a8a84)]">
-            {[createdStr, idStr ? `ID ${idStr}` : null].filter(Boolean).join(' · ') || ' '}
-          </p>
-        </footer>
+        <ReportFooterEnterprise data={data} reportId={reportId} />
       </div>
     </div>
   );

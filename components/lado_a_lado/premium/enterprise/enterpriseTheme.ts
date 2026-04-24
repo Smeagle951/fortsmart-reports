@@ -1,30 +1,5 @@
-/** Design system — relatório avaliação de campo (referência enterprise FortSmart). */
+/** Tema mínimo para blocos enterprise (rodapé, etc.) */
 export const ENT = {
-  green: '#438E44',
-  greenDark: '#2d6a2e',
-  greenSoft: '#e8f5e9',
-  blue: '#1A4A8E',
-  blueDark: '#0f2a5c',
-  blueLight: '#2563eb',
-  blueSoft: '#e3f2fd',
-  gold: '#C9A227',
-  goldSoft: '#fef3c7',
-  red: '#b91c1c',
-  redSoft: '#fee2e2',
-  amber: '#b45309',
-  amberSoft: '#fef3c7',
-  /** Página (referência SaaS: off-white) */
-  surface: '#F8F9FA',
-  /** Legado: cinza ligeiramente mais frio (PDF / impressão) */
-  surfaceAlt: '#F0F2F5',
-  card: '#ffffff',
-  text: '#0f172a',
-  textMuted: '#64748b',
-  radiusSm: '0.75rem',
-  radiusLg: '1rem',
-  radiusXl: '1.25rem',
-  shadowSoft: '0 2px 8px -4px rgba(15, 23, 42, 0.06)',
-  shadowCard: '0 4px 24px -8px rgba(15, 23, 42, 0.08)',
-  shadowHover: '0 12px 40px -12px rgba(15, 23, 42, 0.14)',
-  shadowStrong: '0 18px 48px -16px rgba(15, 23, 42, 0.22)',
+  blue: '#1565C0',
+  green: '#2E7D32',
 } as const;
