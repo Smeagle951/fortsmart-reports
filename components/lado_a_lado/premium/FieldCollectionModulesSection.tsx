@@ -390,31 +390,53 @@ function DlBlock({ obj }: { obj: Record<string, unknown> }) {
   if (entries.length === 0) {
     return <p className="text-xs text-slate-400">—</p>;
   }
+
+  const hasNested = entries.some(
+    ([, v]) =>
+      isPlainObject(v) || (Array.isArray(v) && v.length > 0 && typeof (v as unknown[])[0] === 'object'),
+  );
+
+  if (!hasNested) {
+    return (
+      <table className="w-full border-collapse text-left text-[11px] leading-snug">
+        <tbody>
+          {entries.map(([k, v]) => (
+            <tr key={k} className="border-b border-slate-100 last:border-b-0">
+              <th
+                scope="row"
+                className="w-[38%] max-w-38 py-1 pr-2 align-top text-[0.58rem] font-semibold uppercase tracking-wide text-slate-500"
+              >
+                {KEY_LABELS[k] ?? k.replace(/_/g, ' ')}
+              </th>
+              <td className="py-1 font-medium text-slate-900">
+                {isPhotoMediaRecord(v) ? <PhotoMediaCell value={v} /> : formatCellValue(v)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-2 gap-1.5">
+    <div className="grid grid-cols-2 gap-1">
       {entries.map(([k, v]) => {
         if (isPlainObject(v) || (Array.isArray(v) && v.length > 0 && typeof v[0] === 'object')) {
           return (
-            <div
-              key={k}
-              className="col-span-2 rounded-md bg-white/80 px-2.5 py-1.5 ring-1 ring-slate-200/70"
-            >
-              <p className="text-[0.6rem] font-semibold uppercase tracking-wide text-slate-500">
+            <div key={k} className="col-span-2 rounded border border-slate-200/90 bg-white px-2 py-1.5">
+              <p className="text-[0.58rem] font-semibold uppercase tracking-wide text-slate-500">
                 {KEY_LABELS[k] ?? k.replace(/_/g, ' ')}
               </p>
-              <div className="mt-1">{renderValue(v, 1)}</div>
+              <div className="mt-0.5">{renderValue(v, 1)}</div>
             </div>
           );
         }
         return (
-          <div
-            key={k}
-            className="rounded-md bg-white/90 px-2.5 py-1.5 ring-1 ring-slate-200/70"
-          >
-            <dt className="text-[0.58rem] font-semibold uppercase tracking-wide text-slate-500">
+          <div key={k} className="rounded border border-slate-200/90 bg-white px-2 py-1.5">
+            <dt className="text-[0.56rem] font-semibold uppercase tracking-wide text-slate-500">
               {KEY_LABELS[k] ?? k.replace(/_/g, ' ')}
             </dt>
-            <dd className="mt-0.5 text-[12.5px] font-medium text-slate-900 min-w-0 wrap-break-word">
+            <dd className="mt-0.5 text-[11.5px] font-medium text-slate-900 min-w-0 wrap-break-word">
               {isPhotoMediaRecord(v) ? <PhotoMediaCell value={v} /> : formatCellValue(v)}
             </dd>
           </div>
@@ -507,10 +529,10 @@ function SideCell({
 }) {
   const skin = sideSkin(letter);
   return (
-    <div className={`min-w-0 border border-slate-200/80 bg-slate-50/40 pl-2 py-2 sm:py-2.5 ${skin.border}`}>
-      <div className="min-w-0 pl-1">
+    <div className={`min-w-0 border border-slate-200/70 bg-white pl-1.5 py-1.5 ${skin.border}`}>
+      <div className="min-w-0 pl-0.5">
         {empty ? (
-          <p className="text-xs text-slate-400 italic py-1">Sem registros.</p>
+          <p className="text-[11px] text-slate-400 italic">Sem registros.</p>
         ) : (
           renderValue(value, 0, sectionId)
         )}
@@ -533,9 +555,12 @@ type FcmPoint = {
 export default function FieldCollectionModulesSection({
   data,
   sectionId = 'coleta-campo-modulos',
+  /** Menos padding e visual mais denso (relatório agronómico). */
+  compact = false,
 }: {
   data: SideBySideReportData;
   sectionId?: string;
+  compact?: boolean;
 }) {
   if (!hasFieldCollectionData(data)) return null;
 
@@ -548,43 +573,58 @@ export default function FieldCollectionModulesSection({
   const moduleLabels = fcm.module_labels ?? {};
   const schemaVersion = fcm.schema_version;
 
-  return (
-    <section id={sectionId} className="scroll-mt-28 print:break-inside-avoid relative isolate">
-      <div
-        className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/70
+  const shell = compact
+    ? 'rounded-lg border border-slate-200/90 bg-white shadow-sm print:shadow-none print:border-slate-300'
+    : `relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/70
           bg-gradient-to-b from-white via-slate-50/20 to-slate-100/10
           shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_10px_32px_-12px_rgba(15,23,42,0.08)]
-          print:shadow-none print:border print:rounded-lg"
-      >
-        <div className="relative overflow-hidden border-b border-slate-200/60 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-5 py-5 sm:px-7 sm:py-6 print:!bg-slate-100 print:!border-slate-300">
-          <p className="text-[0.62rem] font-bold uppercase tracking-[0.3em] text-slate-400 print:text-slate-600">
-            Dossiê técnico
+          print:shadow-none print:border print:rounded-lg`;
+
+  const headPad = compact ? 'px-3 py-2.5 sm:px-4' : 'px-5 py-5 sm:px-7 sm:py-6';
+  const headTitle = compact ? 'text-sm font-semibold' : 'text-lg sm:text-2xl font-light tracking-[-0.02em]';
+  const bodyPad = compact ? 'space-y-3 px-2.5 py-3 sm:px-4 sm:py-4' : 'space-y-8 px-4 py-7 sm:px-7 sm:py-8';
+  const pointSep = compact ? 'border-b border-slate-200/80 pb-3 last:border-0 last:pb-0' : 'border-b border-slate-200/80 pb-8 last:border-0 last:pb-0';
+  const pointHead = compact ? 'py-1.5' : 'py-3';
+  const modRow = compact ? 'gap-1.5 px-1.5 py-1.5 sm:px-2 sm:py-2' : 'gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 sm:py-4';
+
+  return (
+    <section id={sectionId} className="scroll-mt-28 print:break-inside-avoid relative isolate">
+      <div className={shell}>
+        <div
+          className={`relative border-b border-slate-200/60 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 print:!bg-slate-100 print:!border-slate-300 ${headPad}`}
+        >
+          <p className="text-[0.58rem] font-bold uppercase tracking-[0.22em] text-slate-400 print:text-slate-600">
+            {compact ? 'Coleta' : 'Dossiê técnico'}
           </p>
-          <div className="mt-1.5 flex flex-wrap items-end justify-between gap-3">
+          <div className="mt-0.5 flex flex-wrap items-end justify-between gap-2">
             <div>
-              <h2 className="text-lg sm:text-2xl font-light tracking-[-0.02em] text-white print:text-slate-900">
-                Coleta em campo — ponto a ponto
+              <h2 className={`${headTitle} text-white print:text-slate-900`}>
+                {compact ? 'Módulos por ponto (A × B)' : 'Coleta em campo — ponto a ponto'}
               </h2>
-              <p className="mt-1 max-w-2xl text-xs sm:text-sm leading-relaxed text-slate-300 font-light print:text-slate-700">
-                Cada linha alinha o mesmo módulo agronómico nos dois manejos, para leitura
-                comparativa imediata. Fotos das ocorrências abrem em tamanho real ao clicar.
-                {schemaVersion != null && (
-                  <span className="text-slate-500 print:text-slate-500"> · Schema v{schemaVersion}</span>
-                )}
-              </p>
+              {!compact ? (
+                <p className="mt-1 max-w-2xl text-xs sm:text-sm leading-relaxed text-slate-300 font-light print:text-slate-700">
+                  Cada linha alinha o mesmo módulo agronómico nos dois manejos, para leitura comparativa imediata. Fotos
+                  das ocorrências abrem em tamanho real ao clicar.
+                  {schemaVersion != null && (
+                    <span className="text-slate-500 print:text-slate-500"> · Schema v{schemaVersion}</span>
+                  )}
+                </p>
+              ) : schemaVersion != null ? (
+                <p className="mt-0.5 text-[10px] text-slate-400 print:text-slate-600">Schema v{schemaVersion}</p>
+              ) : null}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-blue-200 ring-1 ring-blue-400/30">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />A
+            <div className="flex items-center gap-1">
+              <span className="inline-flex items-center gap-1 rounded bg-blue-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-100 print:text-blue-900 print:bg-blue-100">
+                A
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-emerald-200 ring-1 ring-emerald-400/30">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />B
+              <span className="inline-flex items-center gap-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-100 print:text-emerald-900 print:bg-emerald-100">
+                B
               </span>
             </div>
           </div>
         </div>
 
-        <div className="space-y-8 px-4 py-7 sm:px-7 sm:py-8">
+        <div className={bodyPad}>
           {points.map((pt, i) => {
             const pLabel = typeof pt.index === 'number' ? `Ponto ${pt.index}` : `Ponto ${i + 1}`;
             const sides = pt.sides && typeof pt.sides === 'object' ? pt.sides : {};
@@ -607,22 +647,27 @@ export default function FieldCollectionModulesSection({
             });
 
             return (
-              <div
-                key={pt.point_id ?? `pt-${i}`}
-                className="border-b border-slate-200/80 pb-8 last:border-0 last:pb-0"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/60 px-0 py-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[11px] font-bold text-white shadow-sm">
+              <div key={pt.point_id ?? `pt-${i}`} className={pointSep}>
+                <div
+                  className={`flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 px-0 ${pointHead}`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`inline-flex items-center justify-center rounded bg-slate-900 font-bold text-white ${compact ? 'h-5 min-w-[1.25rem] px-1 text-[10px]' : 'h-7 w-7 text-[11px] shadow-sm'}`}
+                    >
                       {typeof pt.index === 'number' ? pt.index : i + 1}
                     </span>
-                    <h3 className="text-sm sm:text-base font-semibold tracking-tight text-slate-900">
+                    <h3
+                      className={`font-semibold tracking-tight text-slate-900 ${compact ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}
+                    >
                       {pLabel}
                     </h3>
                   </div>
                   {pt.status ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-200">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span
+                      className={`inline-flex items-center gap-1 rounded bg-emerald-50 font-medium text-emerald-800 ${compact ? 'px-1.5 py-0.5 text-[10px]' : 'gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] text-emerald-700 ring-1 ring-emerald-200'}`}
+                    >
+                      {!compact ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> : null}
                       {pt.status}
                     </span>
                   ) : null}
@@ -651,16 +696,22 @@ export default function FieldCollectionModulesSection({
                     return (
                       <div
                         key={secId}
-                        className="grid gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 sm:py-4"
+                        className={`grid ${modRow}`}
                         style={{
-                          gridTemplateColumns: `minmax(7rem,10rem) repeat(${sideKeys.length},minmax(0,1fr))`,
+                          gridTemplateColumns: compact
+                            ? `minmax(5.5rem,8rem) repeat(${sideKeys.length},minmax(0,1fr))`
+                            : `minmax(7rem,10rem) repeat(${sideKeys.length},minmax(0,1fr))`,
                         }}
                       >
                         <div className="flex flex-col justify-start pt-0.5">
-                          <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                            Módulo
+                          <span
+                            className={`font-bold uppercase tracking-wide text-slate-500 ${compact ? 'text-[9px] tracking-[0.1em]' : 'text-[10.5px] tracking-[0.14em]'}`}
+                          >
+                            {compact ? 'Mod.' : 'Módulo'}
                           </span>
-                          <span className="mt-0.5 text-[13px] font-semibold text-slate-900 leading-tight">
+                          <span
+                            className={`mt-0.5 font-semibold text-slate-900 leading-tight ${compact ? 'text-[11px]' : 'text-[13px]'}`}
+                          >
                             {title}
                           </span>
                         </div>

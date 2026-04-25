@@ -71,11 +71,11 @@ function AgrSection({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-36 border-b border-slate-200/80 pb-10 pt-8 print:break-inside-avoid">
-      <header className="mb-5">
-        <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-emerald-800">{kicker}</p>
-        <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{title}</h2>
-        {subtitle ? <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-600">{subtitle}</p> : null}
+    <section id={id} className="scroll-mt-36 border-b border-slate-200/80 pb-6 pt-6 print:break-inside-avoid sm:pb-7 sm:pt-7">
+      <header className="mb-3 sm:mb-4">
+        <p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-emerald-800">{kicker}</p>
+        <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">{title}</h2>
+        {subtitle ? <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-600 sm:text-sm">{subtitle}</p> : null}
       </header>
       {children}
     </section>
@@ -129,16 +129,16 @@ export default function LadoALadoRelatorioAgronomico({ data }: { data: SideBySid
   return (
     <>
       <nav
-        className="premium-nav-bar sticky top-[52px] z-30 border-b border-slate-200/90 bg-white/95 print:hidden"
+        className="premium-nav-bar sticky top-[52px] z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur-sm print:hidden"
         aria-label="Secções do relatório"
       >
-        <div className="mx-auto flex max-w-[1200px] gap-1 overflow-x-auto px-2 py-2 sm:px-4">
+        <div className="mx-auto flex max-w-[1200px] gap-0.5 overflow-x-auto px-2 py-1 sm:px-3">
           {NAV.map((n) => (
             <button
               key={n.id}
               type="button"
               onClick={() => document.getElementById(n.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-wide text-slate-700 hover:border-emerald-700 hover:text-emerald-900"
+              className="shrink-0 border-b-2 border-transparent px-2 py-1.5 text-[0.58rem] font-bold uppercase tracking-wide text-slate-600 hover:border-emerald-700 hover:text-emerald-900 sm:px-2.5 sm:text-[0.6rem]"
             >
               {n.label}
             </button>
@@ -146,54 +146,100 @@ export default function LadoALadoRelatorioAgronomico({ data }: { data: SideBySid
         </div>
       </nav>
 
-      <div className="mx-auto max-w-[1200px] px-4 pb-16 sm:px-6">
-        {/* Capa compacta */}
-        <header id="l2-capa" className="scroll-mt-36 border-b border-slate-200 py-8 print:py-4">
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.25em] text-slate-500">Avaliação lado a lado</p>
-          <h1 className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
-            {data.branding?.title?.trim() || farm.fieldName || farm.farmName || 'Relatório de ensaio'}
-          </h1>
-          {data.branding?.subtitle?.trim() ? (
-            <p className="mt-2 text-sm text-slate-600">{data.branding.subtitle.trim()}</p>
-          ) : null}
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
-              <p className="text-[10px] font-bold uppercase text-slate-500">Tratamento / teste 1</p>
-              <p className="mt-1 text-lg font-bold text-slate-900">{nameA}</p>
-              {data.sideA?.label?.trim() ? <p className="text-xs text-slate-600">{data.sideA.label.trim()}</p> : null}
+      <div className="mx-auto max-w-[1200px] px-3 pb-12 sm:px-5 sm:pb-14">
+        {/* Capa — linha editorial + tabelas (sem cards) */}
+        <header
+          id="l2-capa"
+          className="scroll-mt-36 border-b border-slate-200/90 py-5 print:py-3 sm:py-6"
+        >
+          <div className="border border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white">
+            <div className="border-b border-slate-200/70 bg-slate-900 px-3 py-2.5 sm:px-4 sm:py-3">
+              <p className="text-[0.55rem] font-bold uppercase tracking-[0.28em] text-slate-400">Avaliação lado a lado</p>
+              <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-white sm:text-xl">
+                {data.branding?.title?.trim() || farm.fieldName || farm.farmName || 'Relatório de ensaio'}
+              </h1>
+              {data.branding?.subtitle?.trim() ? (
+                <p className="mt-1 text-[11px] font-normal leading-snug text-slate-300 sm:text-xs">{data.branding.subtitle.trim()}</p>
+              ) : null}
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
-              <p className="text-[10px] font-bold uppercase text-slate-500">Tratamento / teste 2</p>
-              <p className="mt-1 text-lg font-bold text-slate-900">{nameB}</p>
-              {data.sideB?.label?.trim() ? <p className="text-xs text-slate-600">{data.sideB.label.trim()}</p> : null}
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[280px] border-collapse text-left text-xs sm:text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-100/90">
+                    <th className="w-[42%] px-2 py-1.5 font-bold uppercase tracking-wide text-slate-500 sm:px-3 sm:py-2">
+                      Tratamento / teste
+                    </th>
+                    <th className="border-l border-slate-200 px-2 py-1.5 font-semibold text-slate-800 sm:px-3 sm:py-2">1</th>
+                    <th className="border-l border-slate-200 px-2 py-1.5 font-semibold text-slate-800 sm:px-3 sm:py-2">2</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  <tr className="bg-white">
+                    <th scope="row" className="px-2 py-1.5 font-medium text-slate-500 sm:px-3 sm:py-2">
+                      Nome no app
+                    </th>
+                    <td className="border-l border-slate-100 px-2 py-1.5 font-semibold text-slate-900 sm:px-3 sm:py-2">{nameA}</td>
+                    <td className="border-l border-slate-100 px-2 py-1.5 font-semibold text-slate-900 sm:px-3 sm:py-2">{nameB}</td>
+                  </tr>
+                  {(data.sideA?.label?.trim() || data.sideB?.label?.trim()) && (
+                    <tr className="bg-slate-50/50">
+                      <th scope="row" className="px-2 py-1.5 font-medium text-slate-500 sm:px-3 sm:py-2">
+                        Rótulo / nota
+                      </th>
+                      <td className="border-l border-slate-100 px-2 py-1.5 text-slate-700 sm:px-3 sm:py-2">
+                        {data.sideA?.label?.trim() || '—'}
+                      </td>
+                      <td className="border-l border-slate-100 px-2 py-1.5 text-slate-700 sm:px-3 sm:py-2">
+                        {data.sideB?.label?.trim() || '—'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="overflow-x-auto border-t border-slate-200/80">
+              <table className="w-full min-w-[280px] border-collapse text-left text-[11px] sm:text-xs">
+                <tbody>
+                  {farm.farmName ? (
+                    <tr className="border-b border-slate-100 bg-white">
+                      <th scope="row" className="w-[32%] whitespace-nowrap px-2 py-1 font-semibold text-slate-500 sm:px-3 sm:py-1.5">
+                        Fazenda
+                      </th>
+                      <td className="px-2 py-1 text-slate-900 sm:px-3 sm:py-1.5">{farm.farmName}</td>
+                    </tr>
+                  ) : null}
+                  {farm.fieldName ? (
+                    <tr className="border-b border-slate-100 bg-white">
+                      <th scope="row" className="whitespace-nowrap px-2 py-1 font-semibold text-slate-500 sm:px-3 sm:py-1.5">
+                        Talhão
+                      </th>
+                      <td className="px-2 py-1 text-slate-900 sm:px-3 sm:py-1.5">{farm.fieldName}</td>
+                    </tr>
+                  ) : null}
+                  {farm.culture ? (
+                    <tr className="border-b border-slate-100 bg-white">
+                      <th scope="row" className="whitespace-nowrap px-2 py-1 font-semibold text-slate-500 sm:px-3 sm:py-1.5">
+                        Cultura
+                      </th>
+                      <td className="px-2 py-1 text-slate-900 sm:px-3 sm:py-1.5">{farm.culture}</td>
+                    </tr>
+                  ) : null}
+                  {farm.areaHa != null ? (
+                    <tr className="bg-slate-50/40">
+                      <th scope="row" className="whitespace-nowrap px-2 py-1 font-semibold text-slate-500 sm:px-3 sm:py-1.5">
+                        Área (ha)
+                      </th>
+                      <td className="px-2 py-1 font-medium tabular-nums text-slate-900 sm:px-3 sm:py-1.5">
+                        {formatNumber(farm.areaHa, { decimals: 2 })}
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
             </div>
           </div>
-          <dl className="mt-6 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-            {farm.farmName ? (
-              <>
-                <dt className="font-semibold text-slate-500">Fazenda</dt>
-                <dd>{farm.farmName}</dd>
-              </>
-            ) : null}
-            {farm.fieldName ? (
-              <>
-                <dt className="font-semibold text-slate-500">Talhão</dt>
-                <dd>{farm.fieldName}</dd>
-              </>
-            ) : null}
-            {farm.culture ? (
-              <>
-                <dt className="font-semibold text-slate-500">Cultura</dt>
-                <dd>{farm.culture}</dd>
-              </>
-            ) : null}
-            {farm.areaHa != null ? (
-              <>
-                <dt className="font-semibold text-slate-500">Área (ha)</dt>
-                <dd>{formatNumber(farm.areaHa, { decimals: 2 })}</dd>
-              </>
-            ) : null}
-          </dl>
         </header>
 
         {/* Resumo executivo — tabela única */}
@@ -310,7 +356,7 @@ export default function LadoALadoRelatorioAgronomico({ data }: { data: SideBySid
           subtitle="Identificação, fenologia, estande, estrutura de plantas, raiz, pragas, doenças, daninhas e demais módulos preenchidos no app — em formato tabular."
         >
           {hasFieldCollection(data) ? (
-            <FieldCollectionModulesSection data={data} sectionId="l2-coleta-modulos" />
+            <FieldCollectionModulesSection data={data} sectionId="l2-coleta-modulos" compact />
           ) : (
             <p className="rounded-lg border border-dashed border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-950">
               Sem bloco <code className="rounded bg-white/80 px-1 text-xs">field_collection_modules</code> no relatório. Preencha os
