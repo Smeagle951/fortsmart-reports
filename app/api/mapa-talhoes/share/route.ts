@@ -27,7 +27,17 @@ function extractFc(body: unknown): FeatureCollection | null {
   return null;
 }
 
+/**
+ * O link devolvido ao app **deve** apontar para o mesmo host do POST (ex. relatorios.…),
+ * nunca forçar só NEXT_PUBLIC_CANONICAL_URL: se a canonical for o site institucional, o
+ * utilizador abre um sítio sem esta rota/Supabase e o mapa fica vazio ou 404.
+ */
 function publicOrigin(req: NextRequest): string {
+  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host');
+  const proto = req.headers.get('x-forwarded-proto') ?? 'https';
+  if (host) {
+    return `${proto}://${host}`;
+  }
   const canonical = process.env.NEXT_PUBLIC_CANONICAL_URL?.trim();
   if (canonical) {
     try {
@@ -36,9 +46,6 @@ function publicOrigin(req: NextRequest): string {
       /* fallthrough */
     }
   }
-  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host');
-  const proto = req.headers.get('x-forwarded-proto') ?? 'https';
-  if (host) return `${proto}://${host}`;
   return new URL(req.url).origin;
 }
 
@@ -78,6 +85,17 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
+  if (!Array.isArray(fc.features) || fc.features.length === 0) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: 'no_features',
+        error:
+          'Nenhum polígono no GeoJSON. Confirme que os talhões têm coordenadas no mapa; sem geometria não há o que desenhar.',
+      },
+      { status: 400 },
+    );
+  }
 
   const serialized = JSON.stringify(fc);
   if (serialized.length > MAX_BODY_BYTES) {
@@ -104,7 +122,7 @@ export async function POST(req: NextRequest) {
           ok: false,
           code: 'table_missing',
           error:
-            'Tabela mapa_talhoes_shares inexistente. Execute a migração em supabase/migrations/20260422120000_mapa_talhoes_shares.sql',
+            'Tabela mapa_talhoes_shares inexistente. Execute a migração: fortsmart-reports/supabase/migrations/20260422120000_mapa_talhoes_shares.sql (ou docs/migrations/20260422120000_mapa_talhoes_shares.sql).',
         },
         { status: 503 },
       );
