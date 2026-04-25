@@ -71,9 +71,15 @@ const fmtPph = (n: number | null) =>
     : n.toLocaleString('pt-BR', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
 
 export function SeedCalculatorTable({ data }: { data: FeatureCollection | null }) {
-  const { rows, areaTotal, seedsTotal, mediaHa } = useMemo(() => {
+  const { rows, areaTotal, seedsTotal, mediaHa, porMaterial } = useMemo(() => {
     if (!data?.features?.length) {
-      return { rows: [] as Row[], areaTotal: 0, seedsTotal: 0, mediaHa: 0 };
+      return {
+        rows: [] as Row[],
+        areaTotal: 0,
+        seedsTotal: 0,
+        mediaHa: 0,
+        porMaterial: [] as { material: string; areaHa: number; seeds: number }[],
+      };
     }
     const list: Row[] = [];
     data.features.forEach((f, i) => {
@@ -83,7 +89,17 @@ export function SeedCalculatorTable({ data }: { data: FeatureCollection | null }
     const areaTotal = list.reduce((s, r) => s + (r.areaHa > 0 ? r.areaHa : 0), 0);
     const seedsTotal = list.reduce((s, r) => s + (r.totalSeeds != null ? r.totalSeeds : 0), 0);
     const mediaHa = areaTotal > 0 ? seedsTotal / areaTotal : 0;
-    return { rows: list, areaTotal, seedsTotal, mediaHa };
+    const agg = new Map<string, { areaHa: number; seeds: number }>();
+    for (const r of list) {
+      const cur = agg.get(r.material) ?? { areaHa: 0, seeds: 0 };
+      cur.areaHa += r.areaHa > 0 ? r.areaHa : 0;
+      cur.seeds += r.totalSeeds != null ? r.totalSeeds : 0;
+      agg.set(r.material, cur);
+    }
+    const porMaterial = Array.from(agg.entries())
+      .map(([material, v]) => ({ material, ...v }))
+      .sort((a, b) => a.material.localeCompare(b.material, 'pt-BR'));
+    return { rows: list, areaTotal, seedsTotal, mediaHa, porMaterial };
   }, [data]);
 
   if (rows.length === 0) {
@@ -123,7 +139,9 @@ export function SeedCalculatorTable({ data }: { data: FeatureCollection | null }
               <th className="p-1.5">Talhão / parcela</th>
               <th className="p-1.5">Material</th>
               <th className="p-1.5 text-right">Área (ha)</th>
-              <th className="p-1.5 text-right">Estande (pl/m)</th>
+              <th className="p-1.5 text-right" title="Plantas por metro de fileira">
+                pl/m
+              </th>
               <th className="p-1.5 text-right">Plantas/ha</th>
               <th className="p-1.5 text-right">Total sementes</th>
             </tr>
@@ -156,6 +174,22 @@ export function SeedCalculatorTable({ data }: { data: FeatureCollection | null }
           </tbody>
         </table>
       </div>
+      {porMaterial.length > 1 ? (
+        <div className="rounded-md border border-slate-600/50 bg-slate-800/40 p-2">
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            Total por híbrido / material
+          </p>
+          <ul className="flex flex-wrap gap-2 text-[11px] text-slate-300">
+            {porMaterial.map((g) => (
+              <li key={g.material} className="rounded border border-slate-600/60 bg-slate-900/60 px-2 py-1">
+                <span className="font-medium text-slate-100">{g.material}</span>:{' '}
+                <span className="tabular-nums">{fmtDec(g.areaHa)} ha</span> ·{' '}
+                <span className="tabular-nums text-emerald-200/90">{fmtInt(g.seeds)}</span> sementes
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }

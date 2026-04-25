@@ -13,3 +13,15 @@
   font-size: 11px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
+
+/* PDF: impressão do mapa e painel (atalho «Gerar relatório») */
+@media print {
+  .mapa-talhoes-root {
+    background: #fff !important;
+    color: #0f172a !important;
+  }
+  .mapa-talhoes-root .leaflet-container {
+    break-inside: avoid;
+    min-height: 70vh !important;
+  }
+}

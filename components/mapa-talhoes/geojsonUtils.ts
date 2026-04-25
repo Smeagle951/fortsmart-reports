@@ -73,7 +73,17 @@ export function filterByCulturaSafra(
   };
 }
 
-export type TalhaoListItem = { talhaoId: string; label: string; areaHa: number | null; cultura: string; safra: string };
+export type MapaViewMode = 'talhoes' | 'talhoes_subareas' | 'subareas';
+
+export type TalhaoListItem = {
+  talhaoId: string;
+  label: string;
+  areaHa: number | null;
+  cultura: string;
+  safra: string;
+  /** Material / híbrido para cor na lista (GeoJSON do export). */
+  material: string;
+};
 
 export function listTalhoesFromFc(fc: FeatureCollection): TalhaoListItem[] {
   const byId = new Map<string, TalhaoListItem>();
@@ -87,9 +97,45 @@ export function listTalhoesFromFc(fc: FeatureCollection): TalhaoListItem[] {
     const areaHa = typeof areaH === 'number' && !Number.isNaN(areaH) ? areaH : null;
     const cultura = p.cultura != null ? String(p.cultura) : '—';
     const safra = p.safra != null ? String(p.safra) : '—';
-    if (!byId.has(id)) byId.set(id, { talhaoId: id, label, areaHa, cultura, safra });
+    const material =
+      p.material != null && String(p.material).trim() !== ''
+        ? String(p.material)
+        : '—';
+    if (!byId.has(id)) byId.set(id, { talhaoId: id, label, areaHa, cultura, safra, material });
   }
   return Array.from(byId.values()).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+}
+
+/** Feições para o mapa conforme modo de visualização (GeoJSON inalterado). */
+export function filterByViewMode(fc: FeatureCollection, mode: MapaViewMode): FeatureCollection {
+  if (mode === 'talhoes_subareas') return fc;
+  if (mode === 'talhoes') {
+    return {
+      ...fc,
+      features: fc.features.filter((f) => {
+        const p = f.properties as Record<string, unknown> | null | undefined;
+        return p && String(p.tipo) === 'talhao';
+      }),
+    };
+  }
+  return {
+    ...fc,
+    features: fc.features.filter((f) => {
+      const p = f.properties as Record<string, unknown> | null | undefined;
+      return p && String(p.tipo) === 'subarea';
+    }),
+  };
+}
+
+/** Subáreas cujo `talhao_id` coincide com o talhão selecionado. */
+export function subareasForTalhaoId(fc: FeatureCollection, talhaoId: string): Feature[] {
+  const tid = talhaoId.trim();
+  if (!tid) return [];
+  return fc.features.filter((f) => {
+    const p = f.properties as Record<string, unknown> | null | undefined;
+    if (!p || String(p.tipo) !== 'subarea') return false;
+    return String(p.talhao_id ?? '') === tid;
+  });
 }
 
 export function distinctCulturasSafas(fc: FeatureCollection): { culturas: string[]; safras: string[] } {

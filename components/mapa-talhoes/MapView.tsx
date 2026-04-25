@@ -3,7 +3,7 @@
 import type { FeatureCollection, GeoJsonObject } from 'geojson';
 import L from 'leaflet';
 import { useEffect, useMemo } from 'react';
-import { GeoJSON, MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import { GeoJSON, MapContainer, ScaleControl, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { colorPairForProperties, strokeForProperties } from './materialColor';
 
 import 'leaflet/dist/leaflet.css';
@@ -92,6 +92,7 @@ export function MapView({ data, onSelectFeature }: Props) {
         attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
         url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
       />
+      <ScaleControl imperial={false} metric position="bottomleft" />
       {onSelectFeature ? <MapBackgroundClick onMapClick={() => onSelectFeature(null)} /> : null}
       <FitBounds geojson={data} />
       <GeoJSON
