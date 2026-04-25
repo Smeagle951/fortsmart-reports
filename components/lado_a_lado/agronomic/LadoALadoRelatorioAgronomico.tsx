@@ -1,5 +1,6 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import type { ReportApplicationEventV2Json } from '@/types/side-by-side-report';
 import FieldCollectionModulesSection from '@/components/lado_a_lado/premium/FieldCollectionModulesSection';
@@ -71,14 +72,23 @@ function AgrSection({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-36 border-b border-slate-200/80 pb-6 pt-6 print:break-inside-avoid sm:pb-7 sm:pt-7">
+    <motion.section
+      id={id}
+      initial={{ opacity: 0.9, y: 14 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-32px 0px -8px 0px' }}
+      transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+      className="scroll-mt-36 border-b border-slate-200/80 pb-6 pt-6 print:break-inside-avoid sm:pb-7 sm:pt-7"
+    >
       <header className="mb-3 sm:mb-4">
         <p className="text-[0.6rem] font-bold uppercase tracking-[0.18em] text-emerald-800">{kicker}</p>
-        <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">{title}</h2>
+        <h2 className="mt-0.5 bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-800 bg-clip-text text-lg font-bold tracking-tight text-transparent sm:text-xl">
+          {title}
+        </h2>
         {subtitle ? <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-600 sm:text-sm">{subtitle}</p> : null}
       </header>
       {children}
-    </section>
+    </motion.section>
   );
 }
 
@@ -129,19 +139,22 @@ export default function LadoALadoRelatorioAgronomico({ data }: { data: SideBySid
   return (
     <>
       <nav
-        className="premium-nav-bar sticky top-[52px] z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur-sm print:hidden"
+        className="premium-nav-bar sticky top-[52px] z-30 border-b border-emerald-200/40 bg-gradient-to-r from-white via-emerald-50/60 to-sky-50/50 backdrop-blur-md print:hidden"
         aria-label="Secções do relatório"
       >
         <div className="mx-auto flex max-w-[1200px] gap-0.5 overflow-x-auto px-2 py-1 sm:px-3">
           {NAV.map((n) => (
-            <button
+            <motion.button
               key={n.id}
               type="button"
+              whileHover={{ scale: 1.04, y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 22 }}
               onClick={() => document.getElementById(n.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="shrink-0 border-b-2 border-transparent px-2 py-1.5 text-[0.58rem] font-bold uppercase tracking-wide text-slate-600 hover:border-emerald-700 hover:text-emerald-900 sm:px-2.5 sm:text-[0.6rem]"
+              className="shrink-0 rounded-t-md border-b-2 border-transparent px-2 py-1.5 text-[0.58rem] font-bold uppercase tracking-wide text-slate-600 hover:border-emerald-600 hover:bg-white/80 hover:text-emerald-900 sm:px-2.5 sm:text-[0.6rem]"
             >
               {n.label}
-            </button>
+            </motion.button>
           ))}
         </div>
       </nav>

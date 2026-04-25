@@ -1,8 +1,16 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import type { ReportPhotoWeb } from '@/types/side-by-side-report';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import PremiumSectionShell from './PremiumSectionShell';
+
+function hotspotMomentLabel(m?: string): string | null {
+  const t = m?.trim().toLowerCase();
+  if (t === 'antes') return 'Antes da aplicação';
+  if (t === 'depois') return 'Depois da aplicação';
+  return null;
+}
 
 function PhotoCard({
   sideLabel,
@@ -18,8 +26,14 @@ function PhotoCard({
   p: ReportPhotoWeb;
 }) {
   return (
-    <figure className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:break-inside-avoid">
-      <div className="aspect-4/3 w-full overflow-hidden bg-slate-100">
+    <motion.figure
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-20px' }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/80 shadow-md shadow-emerald-950/5 ring-1 ring-emerald-900/5 print:break-inside-avoid print:shadow-sm"
+    >
+      <div className="aspect-4/3 w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200/80">
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={url} alt={caption || `${sideLabel} — foto`} className="h-full w-full object-cover" />
@@ -36,21 +50,29 @@ function PhotoCard({
         </div>
         {caption ? <p className="mt-1 text-slate-600">{caption}</p> : null}
         {p.hotspots != null && p.hotspots.length > 0 ? (
-          <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-[11px] text-slate-700">
-            <li className="font-semibold text-slate-500">Marcadores na imagem</li>
-            {p.hotspots.map((h, hi) => (
-              <li key={hi} className="leading-snug">
-                <span className="text-slate-500">
-                  {Math.round(h.xPct)}%, {Math.round(h.yPct)}%
-                </span>
-                {h.label ? <span className="text-slate-800"> — {h.label}</span> : null}
-                {h.detail ? <span className="block text-slate-600">{h.detail}</span> : null}
-              </li>
-            ))}
+          <ul className="mt-2 space-y-1.5 border-t border-emerald-100/80 bg-emerald-50/30 pt-2 text-[11px] text-slate-700">
+            <li className="font-bold uppercase tracking-wide text-emerald-900/80">Marcadores</li>
+            {p.hotspots.map((h, hi) => {
+              const phase = hotspotMomentLabel(h.applicationMoment);
+              return (
+                <li key={hi} className="leading-snug">
+                  <span className="text-slate-500">
+                    {Math.round(h.xPct)}%, {Math.round(h.yPct)}%
+                  </span>
+                  {h.label ? <span className="text-slate-800"> — {h.label}</span> : null}
+                  {phase ? (
+                    <span className="ml-1 inline-block rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-900">
+                      {phase}
+                    </span>
+                  ) : null}
+                  {h.detail ? <span className="block text-slate-600">{h.detail}</span> : null}
+                </li>
+              );
+            })}
           </ul>
         ) : null}
       </figcaption>
-    </figure>
+    </motion.figure>
   );
 }
 

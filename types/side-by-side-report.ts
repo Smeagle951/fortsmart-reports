@@ -108,6 +108,8 @@ export type ReportPhotoWeb = {
     yPct: number;
     label?: string;
     detail?: string;
+    /** `antes` | `depois` — momento relativo à aplicação (app). */
+    applicationMoment?: string;
   }>;
 };
 
