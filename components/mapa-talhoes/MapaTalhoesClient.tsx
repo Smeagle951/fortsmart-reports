@@ -76,7 +76,7 @@ export function MapaTalhoesClient({
       setErr(null);
       return;
     }
-    const d = sp.get('d');
+    const d = sp?.get('d');
     if (!d) return;
     const fc = decodeGeoJsonFromQuery(d);
     if (fc) {

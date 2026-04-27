@@ -10,7 +10,7 @@ import { calcularMetricasTalhao, corClassificacao } from '@/lib/calculations';
 
 function HomeContent() {
   const searchParams = useSearchParams();
-  const tokenFromUrl = searchParams.get('token');
+  const tokenFromUrl = searchParams?.get('token') ?? null;
   const [relatorio, setRelatorio] = useState<RelatorioMonitoramento>(emptyRelatorio);
   const [source, setSource] = useState<'sqlite' | 'supabase' | 'empty' | 'error' | 'loading'>('loading');
   const [dbPath, setDbPath] = useState<string | null>(null);

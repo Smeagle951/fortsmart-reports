@@ -25,12 +25,12 @@ export default function ProdutoFichaPage({ params }: Props) {
   const searchParams = useSearchParams();
   const { slug } = use(params);
   const nome = slugToNome(slug);
-  const data = searchParams.get('data') ?? '';
-  const dose = searchParams.get('dose') ?? '';
-  const classe = searchParams.get('classe') ?? '';
-  const alvo = searchParams.get('alvo') ?? '';
-  const talhao = searchParams.get('talhao') ?? '';
-  const responsavel = searchParams.get('responsavel') ?? '';
+  const data = searchParams?.get('data') ?? '';
+  const dose = searchParams?.get('dose') ?? '';
+  const classe = searchParams?.get('classe') ?? '';
+  const alvo = searchParams?.get('alvo') ?? '';
+  const talhao = searchParams?.get('talhao') ?? '';
+  const responsavel = searchParams?.get('responsavel') ?? '';
   return (
     <main className="min-h-screen bg-[#F8FAFC]">
       <div className="mx-auto max-w-3xl px-4 py-8">
