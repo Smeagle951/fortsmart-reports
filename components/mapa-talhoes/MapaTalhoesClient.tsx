@@ -3,7 +3,7 @@
 import type { FeatureCollection, GeoJsonObject } from 'geojson';
 import dynamic from 'next/dynamic';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import {
   decodeGeoJsonFromQuery,
   distinctCulturasSafas,
@@ -13,6 +13,7 @@ import {
   filterByViewMode,
   isFeatureCollectionGj,
   listTalhoesFromFc,
+  parseJsonFileText,
   type MapaViewMode,
 } from './geojsonUtils';
 import { FiltersHeader } from './FiltersHeader';
@@ -57,6 +58,7 @@ export function MapaTalhoesClient({
   const [loadingShare, setLoadingShare] = useState(false);
   const [selectedFeatureProps, setSelectedFeatureProps] = useState<Record<string, unknown> | null>(null);
   const [hostHint, setHostHint] = useState<string | null>(null);
+  const fileImportInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -274,6 +276,29 @@ export function MapaTalhoesClient({
     window.setTimeout(() => setTip(null), 6000);
   }, []);
 
+  const onGeojsonFilePicked = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? '');
+      const fc = parseJsonFileText(text);
+      if (fc && fc.features.length > 0) {
+        setRaw(fc);
+        setErr(null);
+        setTip('GeoJSON carregado a partir do ficheiro.');
+        window.setTimeout(() => setTip(null), 5000);
+      } else {
+        setErr('O ficheiro não é um GeoJSON válido (esperado FeatureCollection com feições).');
+      }
+    };
+    reader.onerror = () => {
+      setErr('Não foi possível ler o ficheiro.');
+    };
+    reader.readAsText(file, 'UTF-8');
+  }, []);
+
   return (
     <div className="mapa-talhoes-root flex min-h-screen flex-col bg-slate-950 text-slate-100">
       <FiltersHeader
@@ -324,11 +349,25 @@ export function MapaTalhoesClient({
                   <ol className="list-decimal space-y-1.5 pl-4 text-slate-400">
                     <li>FortSmart → <strong className="text-slate-300">Plantio</strong>.</li>
                     <li>
-                      Selecione talhões → <strong className="text-slate-300">Visualizar mapa (web)</strong> ou link{' '}
-                      <code className="text-emerald-300/90">…/mapa-talhoes/m/…</code>
+                      Selecione talhões → <strong className="text-slate-300">Visualizar mapa (web)</strong> (link curto) ou
+                      anexe o <strong className="text-slate-300">.geojson</strong> com o botão abaixo.
                     </li>
-                    <li>O URL deve incluir <code className="text-emerald-300/90">?d=</code> ou o token curto.</li>
+                    <li>Alternativamente, URL com <code className="text-emerald-300/90">?d=</code> (apenas se for pequeno) ou o token <code className="text-emerald-300/90">…/mapa-talhoes/m/…</code></li>
                   </ol>
+                  <input
+                    ref={fileImportInputRef}
+                    type="file"
+                    accept=".geojson,application/geo+json,application/json"
+                    className="hidden"
+                    onChange={onGeojsonFilePicked}
+                  />
+                  <button
+                    type="button"
+                    className="mt-4 w-full rounded-lg border border-emerald-600/50 bg-emerald-900/30 px-3 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/50"
+                    onClick={() => fileImportInputRef.current?.click()}
+                  >
+                    Importar ficheiro .geojson
+                  </button>
                 </>
               )}
             </div>
