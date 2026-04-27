@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { normalizeCanonicalBaseUrl } from '@/utils/canonicalUrl';
 
+const DEFAULT_CANONICAL_ORIGIN = 'https://relatorios.fortsmart-agro.com.br';
+
 function getHostFromOrigin(origin: string): string {
   try {
     return new URL(origin).host;
@@ -25,7 +27,9 @@ export function middleware(req: NextRequest) {
   }
 
   const raw = String(process.env.NEXT_PUBLIC_CANONICAL_URL ?? '').trim();
-  const canonicalOrigin = raw ? normalizeCanonicalBaseUrl(raw) : null;
+  const canonicalOrigin = raw
+    ? normalizeCanonicalBaseUrl(raw)
+    : normalizeCanonicalBaseUrl(DEFAULT_CANONICAL_ORIGIN);
   if (!canonicalOrigin) return NextResponse.next();
 
   const canonicalHost = getHostFromOrigin(canonicalOrigin);
