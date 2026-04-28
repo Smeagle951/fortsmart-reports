@@ -105,26 +105,71 @@ export default async function handler(
       .json({ ok: false, error: 'GeoJSON demasiado grande para link curto (tente menos talhões ou use export ficheiro).' });
   }
 
-  const id = randomBytes(9).toString('base64url');
   const expiresAt = new Date(Date.now() + TTL_MS).toISOString();
+  /** Colisões de PK (improvável) — nova tentativa com outro token. */
+  let id = '';
+  let lastErr: { message?: string; code?: string; details?: string; hint?: string } | null = null;
 
-  const { error } = await svc.from('mapa_talhoes_shares').insert({
-    id,
-    geojson: fc as unknown as Record<string, unknown>,
-    expires_at: expiresAt,
-  });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    id = randomBytes(9).toString('base64url');
 
-  if (error) {
-    console.error('[mapa-talhoes/share] insert:', error.message);
-    if (error.message.includes('relation') && error.message.includes('does not exist')) {
+    const { error } = await svc.from('mapa_talhoes_shares').insert({
+      id,
+      geojson: fc as unknown as Record<string, unknown>,
+      expires_at: expiresAt,
+    });
+
+    if (!error) {
+      lastErr = null;
+      break;
+    }
+    lastErr = error;
+    console.error('[mapa-talhoes/share] insert:', JSON.stringify(error));
+    if (error.code === '23505') continue;
+    break;
+  }
+
+  if (lastErr != null) {
+    const err = lastErr;
+    console.error('[mapa-talhoes/share] insert final:', JSON.stringify(err));
+    if (
+      String(err.message ?? '').includes('relation') &&
+      String(err.message ?? '').includes('does not exist')
+    ) {
       return res.status(503).json({
         ok: false,
         code: 'table_missing',
         error:
-          'Tabela mapa_talhoes_shares inexistente. Execute: fortsmart-reports/supabase/migrations/20260422120000_mapa_talhoes_shares.sql (ou docs/migrations/20260422120000_mapa_talhoes_shares.sql).',
+          'Tabela mapa_talhoes_shares inexistente. Execute docs/migrations/20260422120000_mapa_talhoes_shares.sql no Supabase.',
       });
     }
-    return res.status(500).json({ ok: false, error: 'Falha ao guardar snapshot.' });
+    const rl =
+      String(err.message ?? '').toLowerCase().includes('row-level security') ||
+      String(err.hint ?? '')
+        .toLowerCase()
+        .includes('row-level security');
+    if (rl) {
+      return res.status(500).json({
+        ok: false,
+        code: 'rls_blocked',
+        pg_code: err.code,
+        error:
+          'Erro ao guardar snapshot: RLS impediu INSERT. Confirme que a API na Vercel usa SUPABASE_SERVICE_ROLE_KEY e não apenas a anon key.',
+      });
+    }
+    const truncated = String(err.message ?? 'Falha ao guardar snapshot.').slice(0, 480);
+    return res.status(500).json({
+      ok: false,
+      success: false,
+      code: 'insert_failed',
+      pg_code: err.code ?? null,
+      hint: String(err.hint ?? err.details ?? '').slice(0, 400) || undefined,
+      error: truncated,
+    });
+  }
+
+  if (!id) {
+    return res.status(500).json({ ok: false, error: 'Falha ao gerar token do snapshot.' });
   }
 
   const origin = publicOriginFromReq(req);
