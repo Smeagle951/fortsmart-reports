@@ -97,7 +97,7 @@ export function MapaTalhoesClient({
     if (initialFeatureCollection != null) return;
     if (raw != null) return;
 
-    const m = pathname.match(/^\/mapa-talhoes\/m\/([^/]+)\/?$/);
+    const m = pathname?.match(/^\/mapa-talhoes\/m\/([^/]+)\/?$/);
     const token = m?.[1]?.trim();
     if (!token) return;
 
