@@ -16,6 +16,7 @@ import {
   parseJsonFileText,
   type MapaViewMode,
 } from './geojsonUtils';
+import { MapaGeoJsonUploadZone } from './MapaGeoJsonUploadZone';
 import { FiltersHeader } from './FiltersHeader';
 import { LegendFooter } from './LegendFooter';
 import { MapSummaryBar } from './MapSummaryBar';
@@ -77,7 +78,10 @@ export function MapaTalhoesClient({
     setErr(null);
   }, [initialFeatureCollection]);
 
-  /** Prioridade: `?id=` (snapshot gravado em Supabase) > `?d=` (compat., só cargas pequenas) > client fetch `/mapa-talhoes/m/`. */
+  /**
+   * Origem dos dados (recomendado): upload de ficheiro GeoJSON (zona no topo).
+   * Compat.: `?id=` (Supabase) > `?d=` (legado, só cargas pequenas) > rota `/mapa-talhoes/m/:token`.
+   */
   useEffect(() => {
     if (initialFeatureCollection != null) return;
     const idParam = sp?.get('id')?.trim();
@@ -312,7 +316,7 @@ export function MapaTalhoesClient({
       }
       await navigator.clipboard.writeText(data.url);
       setErr(null);
-      setTip('Link curto copiado para a área de transferência.');
+      setTip('Link copiado para a área de transferência.');
       window.setTimeout(() => setTip(null), 5000);
     } catch {
       setErr('Rede indisponível ao criar link curto.');
@@ -341,20 +345,43 @@ export function MapaTalhoesClient({
       if (fc && fc.features.length > 0) {
         setRaw(fc);
         setErr(null);
-        setTip('GeoJSON carregado a partir do ficheiro.');
+        setTip('Mapa carregado com sucesso.');
         window.setTimeout(() => setTip(null), 5000);
       } else {
-        setErr('O ficheiro não é um GeoJSON válido (esperado FeatureCollection com feições).');
+        setErr(
+          'Erro ao ler arquivo — esperado GeoJSON válido (FeatureCollection com feições).',
+        );
       }
     };
     reader.onerror = () => {
-      setErr('Não foi possível ler o ficheiro.');
+      setErr('Erro ao ler arquivo.');
     };
     reader.readAsText(file, 'UTF-8');
   }, []);
 
+  const onDropZoneLoaded = useCallback((fc: FeatureCollection) => {
+    setRaw(fc);
+    setErr(null);
+  }, []);
+
+  const onDropZoneSuccess = useCallback((msg: string) => {
+    setTip(msg);
+    window.setTimeout(() => setTip(null), 5000);
+  }, []);
+
+  const onDropZoneError = useCallback((msg: string) => {
+    setErr(msg);
+  }, []);
+
   return (
     <div className="mapa-talhoes-root flex min-h-screen flex-col bg-slate-950 text-slate-100">
+      <MapaGeoJsonUploadZone
+        compact={!!raw}
+        disabled={loadingShare}
+        onFeatureCollection={onDropZoneLoaded}
+        onSuccess={onDropZoneSuccess}
+        onError={onDropZoneError}
+      />
       <FiltersHeader
         cultura={cultura}
         safra={safra}
@@ -403,8 +430,9 @@ export function MapaTalhoesClient({
                   <ol className="list-decimal space-y-1.5 pl-4 text-slate-400">
                     <li>FortSmart → <strong className="text-slate-300">Plantio</strong>.</li>
                     <li>
-                      Selecione talhões → <strong className="text-slate-300">Visualizar mapa (web)</strong> (link curto) ou
-                      anexe o <strong className="text-slate-300">.geojson</strong> com o botão abaixo.
+                      Selecione talhões → <strong className="text-slate-300">Visualizar mapa (web)</strong>: o app gera{' '}
+                      <strong className="text-slate-300">fortsmart_mapa_talhoes.geojson</strong> e abre esta página — use a
+                      zona <strong className="text-slate-300">Carregar arquivo GeoJSON</strong> no topo ou o botão abaixo.
                     </li>
                     <li>
                       Ou link com snapshot <code className="text-emerald-300/90">?id=…</code> · legado{' '}

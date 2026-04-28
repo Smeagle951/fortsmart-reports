@@ -104,9 +104,10 @@ export function FiltersHeader({
               <button
                 type="button"
                 className="rounded-lg border border-slate-500/80 bg-slate-800/80 px-2.5 py-2 text-xs font-medium text-slate-100 hover:bg-slate-800"
+                title="Descarregar de novo o FeatureCollection atual"
                 onClick={onExportGeoJson}
               >
-                GeoJSON
+                Exportar GeoJSON novamente
               </button>
               <button
                 type="button"
@@ -127,9 +128,10 @@ export function FiltersHeader({
                 type="button"
                 disabled={linkBusy}
                 className="rounded-lg border border-emerald-600/50 bg-emerald-800/40 px-3 py-2 text-xs font-semibold text-emerald-50 hover:bg-emerald-800/60 disabled:opacity-50"
+                title="Copia URL curta quando o servidor guarda o snapshot (Supabase)."
                 onClick={() => void onCopyShortLink()}
               >
-                {linkBusy ? 'A gerar…' : 'Link curto'}
+                {linkBusy ? 'A gerar…' : 'Copiar link'}
               </button>
               <a
                 href={novoPlantioHref}
