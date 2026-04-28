@@ -76,6 +76,27 @@ fortsmart-reports/
 
 **Não usar** `/relatorio?id=123` (inseguro). Sempre compartilhar via **share_token** e rota `/r/[token]`.
 
+## Painel de Amostragem de Solos (Novo)
+
+Painel web independente para visualização georreferenciada de amostragens de solo e compactação.
+
+- **URL:** `https://seu-dominio.vercel.app/painel-amostragem`
+- **Características:**
+  - Mapa satélite com pontos georreferenciados
+  - Galeria de fotos com zoom e preview
+  - Seletor de talhões
+  - Exportação KML
+  - Funciona offline após carregar dados
+  - Aceita upload de JSON ou carregamento via URL
+
+**Fluxo de uso:**
+1. Exportar JSON do app FortSmart (módulo amostragem)
+2. Acessar painel na URL
+3. Fazer upload do arquivo JSON
+4. Visualizar pontos, fotos e dados no mapa
+
+Arquivos: `public/painel-amostragem/index.html` (app estático puro HTML/JS)
+
 ## Download em PDF
 
 O usuário clica em **Baixar PDF** → o navegador abre o diálogo de impressão → “Salvar como PDF”. Não é gerado PDF no servidor.

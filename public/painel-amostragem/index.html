@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FortSmart - Painel de Amostragem</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --fortsmart-primary: #1B5E20;
+            --fortsmart-primary-light: #E8F5E9;
+            --fortsmart-accent: #1565C0;
+            --fortsmart-success: #43A047;
+            --fortsmart-warning: #F9A825;
+            --fortsmart-error: #C62828;
+            --fortsmart-text-primary: #263238;
+            --fortsmart-text-secondary: #90A4AE;
+            --fortsmart-surface: #FFFFFF;
+            --fortsmart-surface-light: #F5F5F5;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--fortsmart-surface-light);
+            color: var(--fortsmart-text-primary);
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--fortsmart-primary);
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            position: relative;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .campaign-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .campaign-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .campaign-subtitle {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .real-data-badge {
+            display: none;
+            margin-left: 12px;
+            background: #43A047;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: white;
+            color: var(--fortsmart-primary);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 56px);
+        }
+
+        .sidebar {
+            width: 380px;
+            background: white;
+            border-right: 1px solid #E0E0E0;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #E0E0E0;
+        }
+
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .sidebar-subtitle {
+            font-size: 13px;
+            color: var(--fortsmart-text-secondary);
+        }
+
+        .talhao-selector {
+            padding: 16px 20px;
+            border-bottom: 1px solid #E0E0E0;
+        }
+
+        .selector-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--fortsmart-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .talhao-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #E0E0E0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 16px 20px;
+            border-bottom: 1px solid #E0E0E0;
+        }
+
+        .stat-card {
+            background: var(--fortsmart-surface-light);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--fortsmart-primary);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--fortsmart-text-secondary);
+            margin-top: 4px;
+        }
+
+        .points-section {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .points-header {
+            padding: 12px 20px;
+            background: var(--fortsmart-surface-light);
+            border-bottom: 1px solid #E0E0E0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .points-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .point-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .point-item:hover {
+            background: var(--fortsmart-primary-light);
+        }
+
+        .point-number {
+            width: 32px;
+            height: 32px;
+            background: var(--fortsmart-primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .point-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .point-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .point-coords {
+            font-size: 11px;
+            color: var(--fortsmart-text-secondary);
+            font-family: monospace;
+        }
+
+        .point-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+        }
+
+        .status-complete {
+            color: var(--fortsmart-success);
+        }
+
+        .status-pending {
+            color: var(--fortsmart-warning);
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 500;
+        }
+
+        .map-control-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .map-legend {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 500;
+            font-size: 12px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: var(--fortsmart-primary);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(90vh - 80px);
+        }
+
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .photo-item {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .info-card {
+            background: var(--fortsmart-surface-light);
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--fortsmart-text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--fortsmart-primary-light);
+            border-top-color: var(--fortsmart-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .data-selector {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--fortsmart-primary-light) 0%, white 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            padding: 20px;
+        }
+
+        .selector-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .selector-logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .selector-logo h2 {
+            color: var(--fortsmart-primary);
+            margin-top: 16px;
+            font-size: 24px;
+        }
+
+        .selector-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .selector-option {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            border: 2px solid var(--fortsmart-surface-light);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .selector-option:hover {
+            border-color: var(--fortsmart-primary);
+            background: var(--fortsmart-primary-light);
+        }
+
+        .selector-option strong {
+            display: block;
+            font-size: 15px;
+        }
+
+        .selector-option span {
+            display: block;
+            font-size: 13px;
+            color: var(--fortsmart-text-secondary);
+        }
+
+        .custom-marker {
+            background: var(--fortsmart-primary);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .custom-marker.completed {
+            background: var(--fortsmart-success);
+        }
+
+        .custom-marker.pending {
+            background: var(--fortsmart-warning);
+            color: #333;
+        }
+
+        /* Image Lightbox / Preview Styles */
+        .image-lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 5000;
+            cursor: zoom-out;
+        }
+
+        .image-lightbox.active {
+            display: flex;
+        }
+
+        .image-lightbox img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .image-lightbox.zoomed img {
+            transform: scale(2);
+            cursor: grab;
+        }
+
+        .image-lightbox.zoomed img:active {
+            cursor: grabbing;
+        }
+
+        .lightbox-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 12px 24px;
+            border-radius: 50px;
+        }
+
+        .lightbox-btn {
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .lightbox-btn:hover {
+            background: var(--fortsmart-primary-light);
+            transform: scale(1.1);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 0, 0, 0.7);
+        }
+
+        .photo-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            padding: 8px;
+            color: white;
+            font-size: 11px;
+            text-align: center;
+        }
+
+        .photo-item {
+            position: relative;
+        }
+
+        .photo-item::after {
+            content: '🔍 Clique para ampliar';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .photo-item:hover::after {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Carregando...</div>
+    </div>
+
+    <div id="dataSelector" class="data-selector">
+        <div class="selector-card">
+            <div class="selector-logo">
+                <i data-lucide="leaf" style="width: 48px; height: 48px; color: var(--fortsmart-primary);"></i>
+                <h2>FortSmart Agro</h2>
+                <p>Painel de Amostragem de Solos</p>
+            </div>
+            <div class="selector-options">
+                <div class="selector-option" onclick="loadFromUrl()">
+                    <i data-lucide="link" style="width: 24px; height: 24px; color: var(--fortsmart-primary);"></i>
+                    <div>
+                        <strong>Carregar via URL</strong>
+                        <span>Dados hospedados na nuvem</span>
+                    </div>
+                </div>
+                <div class="selector-option" onclick="document.getElementById('fileInput').click()">
+                    <i data-lucide="upload" style="width: 24px; height: 24px; color: var(--fortsmart-primary);"></i>
+                    <div>
+                        <strong>Upload de arquivo JSON</strong>
+                        <span>Exportado do app FortSmart</span>
+                    </div>
+                </div>
+                <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="loadFromFile(event)">
+            </div>
+            <div
+                style="background: var(--fortsmart-primary-light); padding: 16px; border-radius: 12px; font-size: 13px; color: var(--fortsmart-text-secondary);">
+                <p>💡 <strong>Dica:</strong> Exporte os dados do app FortSmart Agro e faça upload aqui.</p>
+                <p>O painel aceita amostragens de <strong>solos</strong> e <strong>compactação</strong>.</p>
+            </div>
+        </div>
+    </div>
+
+    <header class="header" style="display: none;" id="mainHeader">
+        <div class="header-left">
+            <div class="logo">
+                <div class="logo-icon"><i data-lucide="leaf" style="width: 18px; height: 18px;"></i></div>
+                <span>FortSmart Agro</span>
+            </div>
+            <div class="campaign-info">
+                <div class="campaign-title" id="campaignName">-</div>
+                <div class="campaign-subtitle">
+                    <span id="campaignDetails">-</span>
+                    <span class="real-data-badge" id="realDataBadge">✓ DADOS REAIS</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="exportKML()"><i data-lucide="download"
+                    style="width: 16px; height: 16px;"></i>KML</button>
+            <button class="btn btn-primary" onclick="window.print()"><i data-lucide="printer"
+                    style="width: 16px; height: 16px;"></i>Imprimir</button>
+        </div>
+    </header>
+
+    <div class="main-container" id="mainContainer" style="display: none;">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Painel de Amostragem</div>
+                <div class="sidebar-subtitle">Visualização georreferenciada</div>
+            </div>
+            <div class="talhao-selector">
+                <div class="selector-label">Selecionar Talhão</div>
+                <select class="talhao-select" id="talhaoSelect" onchange="changeTalhao()">
+                    <option value="">Carregue dados primeiro</option>
+                </select>
+            </div>
+            <div class="stats-panel">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalPoints">0</div>
+                    <div class="stat-label">Pontos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalPhotos">0</div>
+                    <div class="stat-label">Fotos</div>
+                </div>
+            </div>
+            <div class="points-section">
+                <div class="points-header">
+                    <span>Pontos de Amostragem</span>
+                    <span id="pointsCount">0</span>
+                </div>
+                <div class="points-list" id="pointsList"></div>
+            </div>
+        </aside>
+
+        <main class="map-container">
+            <div id="map"></div>
+            <div class="map-controls">
+                <button class="map-control-btn" onclick="setMapType('satellite')" title="Satélite"><i
+                        data-lucide="satellite" style="width: 20px; height: 20px;"></i></button>
+                <button class="map-control-btn" onclick="setMapType('roadmap')" title="Mapa"><i data-lucide="map"
+                        style="width: 20px; height: 20px;"></i></button>
+                <button class="map-control-btn" onclick="fitBounds()" title="Ajustar"><i data-lucide="maximize"
+                        style="width: 20px; height: 20px;"></i></button>
+            </div>
+            <div class="map-legend">
+                <strong>Legenda</strong><br>
+                <span style="color: var(--fortsmart-success);">● Completo</span>
+                <span style="color: var(--fortsmart-warning);">● Pendente</span>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="pointModal" onclick="if(event.target===this)closeModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"><i data-lucide="map-pin"
+                        style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"></i><span
+                        id="modalPointName">-</span></div>
+                <button class="modal-close" onclick="closeModal()"><i data-lucide="x"
+                        style="width: 24px; height: 24px;"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="modalPhotos"></div>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-label">Talhão</div>
+                        <div class="info-value" id="modalTalhao">-</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Fazenda</div>
+                        <div class="info-value" id="modalFazenda">-</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Coordenadas</div>
+                        <div class="info-value" id="modalCoords" style="font-family: monospace; font-size: 12px;">-
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Data/Hora</div>
+                        <div class="info-value" id="modalDateTime">-</div>
+                    </div>
+                </div>
+                <div style="margin-top: 16px;">
+                    <strong>Profundidades:</strong>
+                    <div id="modalDepths"></div>
+                </div>
+                <div class="info-card" style="margin-top: 16px;">
+                    <div class="info-label">Responsável</div>
+                    <div class="info-value" id="modalResponsavel">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        lucide.createIcons();
+
+        let map, markers = [], polygonLayer = null;
+        let campaignData = null, pointsData = [], loadedTalhoes = [];
+        let currentTalhao = null;
+
+        // Inicializar - mostra seletor de dados
+        function initApp() {
+            hideLoading();
+            showDataSelector();
+
+            // Verifica se há URL com dados
+            const urlParams = new URLSearchParams(window.location.search);
+            const dataUrl = urlParams.get('data');
+            if (dataUrl) loadFromUrlParam(dataUrl);
+        }
+
+        function showLoading(text) {
+            document.getElementById('loading').style.display = 'flex';
+            document.querySelector('.loading-text').textContent = text || 'Carregando...';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showDataSelector() {
+            document.getElementById('dataSelector').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        function hideDataSelector() {
+            document.getElementById('dataSelector').style.display = 'none';
+        }
+
+        function showMainInterface() {
+            document.getElementById('mainHeader').style.display = 'flex';
+            document.getElementById('mainContainer').style.display = 'flex';
+        }
+
+        // Carregar de URL
+        async function loadFromUrl() {
+            const url = prompt('Digite a URL do arquivo JSON:');
+            if (url) await loadFromUrlParam(url);
+        }
+
+        async function loadFromUrlParam(url) {
+            try {
+                showLoading('Carregando dados da URL...');
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Erro ao carregar');
+                const data = await response.json();
+                await processLoadedData(data);
+            } catch (error) {
+                hideLoading();
+                alert('Erro: ' + error.message);
+            }
+        }
+
+        // Carregar de arquivo
+        async function loadFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                showLoading('Lendo arquivo...');
+                const text = await file.text();
+                const data = JSON.parse(text);
+                await processLoadedData(data);
+            } catch (error) {
+                hideLoading();
+                alert('Erro ao ler arquivo: ' + error.message);
+            }
+        }
+
+        // Processar dados carregados (SEMPRE dados reais)
+        async function processLoadedData(data) {
+            try {
+                showLoading('Processando dados...');
+
+                // Validação
+                if (!data.campaign || !data.points) {
+                    throw new Error('JSON inválido: deve conter "campaign" e "points"');
+                }
+
+                campaignData = data.campaign;
+                pointsData = data.points;
+
+                // Extrair talhões
+                if (data.talhoes && data.talhoes.length > 0) {
+                    loadedTalhoes = data.talhoes;
+                } else {
+                    // Gerar talhões dos pontos
+                    const talhoesMap = new Map();
+                    pointsData.forEach((p, idx) => {
+                        const nome = p.talhao || 'Talhão Principal';
+                        if (!talhoesMap.has(nome)) {
+                            talhoesMap.set(nome, { id: idx + 1, nome: nome, fazenda: p.fazenda || 'Fazenda', poligono: [] });
+                        }
+                        talhoesMap.get(nome).poligono.push([p.lat, p.lng]);
+                    });
+                    loadedTalhoes = Array.from(talhoesMap.values());
+                    loadedTalhoes.forEach(t => {
+                        if (t.poligono.length >= 3) t.poligono = calculateBoundingBox(t.poligono);
+                    });
+                }
+
+                // Atualizar UI
+                document.getElementById('campaignName').textContent = campaignData.name;
+                document.getElementById('campaignDetails').textContent =
+                    `${campaignData.culture || '-'} | Safra ${campaignData.safra || '-'} | ${(campaignData.tipo || 'AMOSTRAGEM').toUpperCase()}`;
+                document.getElementById('realDataBadge').style.display = 'inline';
+
+                // Preencher seletor
+                const select = document.getElementById('talhaoSelect');
+                select.innerHTML = '<option value="">Selecione um talhão</option>';
+                loadedTalhoes.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = `${t.nome} - ${t.fazenda || 'Fazenda'}`;
+                    select.appendChild(opt);
+                });
+
+                // Inicializar mapa
+                initMap();
+
+                hideLoading();
+                hideDataSelector();
+                showMainInterface();
+
+                // Auto-selecionar se só tiver um
+                if (loadedTalhoes.length === 1) {
+                    select.value = loadedTalhoes[0].id;
+                    changeTalhao();
+                }
+
+                console.log('✓ Dados reais carregados:', campaignData.name, pointsData.length, 'pontos');
+
+            } catch (error) {
+                hideLoading();
+                alert('Erro: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function calculateBoundingBox(coords) {
+            let minLat = coords[0][0], maxLat = coords[0][0];
+            let minLng = coords[0][1], maxLng = coords[0][1];
+            coords.forEach(c => {
+                minLat = Math.min(minLat, c[0]); maxLat = Math.max(maxLat, c[0]);
+                minLng = Math.min(minLng, c[1]); maxLng = Math.max(maxLng, c[1]);
+            });
+            const pad = 0.001;
+            return [[minLat - pad, minLng - pad], [minLat - pad, maxLng + pad], [maxLat + pad, maxLng + pad], [maxLat + pad, minLng - pad], [minLat - pad, minLng - pad]];
+        }
+
+        function initMap() {
+            map = L.map('map').setView([-14.235, -51.925], 15);
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri', maxZoom: 19 }).addTo(map);
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
+        }
+
+        function changeTalhao() {
+            const talhaoId = document.getElementById('talhaoSelect').value;
+            if (!talhaoId) return;
+
+            const talhao = loadedTalhoes.find(t => t.id == talhaoId);
+            if (!talhao) return;
+
+            currentTalhao = talhao;
+
+            // Limpar camadas
+            if (polygonLayer) map.removeLayer(polygonLayer);
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            // Desenhar polígono
+            if (talhao.poligono && talhao.poligono.length > 0) {
+                polygonLayer = L.polygon(talhao.poligono, { color: '#1B5E20', fillColor: '#1B5E20', fillOpacity: 0.1, weight: 3 }).addTo(map);
+            }
+
+            // Filtrar pontos
+            const talhaoPoints = pointsData.filter(p => p.talhao === talhao.nome || p.talhaoId == talhao.id);
+
+            // Atualizar lista
+            const list = document.getElementById('pointsList');
+            document.getElementById('pointsCount').textContent = talhaoPoints.length;
+            list.innerHTML = '';
+            talhaoPoints.forEach((point, idx) => {
+                const isComplete = point.profundidades && point.profundidades.every(d => d.status === 'complete');
+                const item = document.createElement('div');
+                item.className = 'point-item';
+                item.onclick = () => showPointDetails(point);
+                item.innerHTML = `
+                    <div class="point-number">${idx + 1}</div>
+                    <div class="point-info">
+                        <div class="point-name">${point.nome}</div>
+                        <div class="point-coords">${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}</div>
+                    </div>
+                    <div class="point-status ${isComplete ? 'status-complete' : 'status-pending'}">
+                        <i data-lucide="${isComplete ? 'check-circle' : 'clock'}" style="width: 14px; height: 14px;"></i>
+                        <span>${isComplete ? 'Completo' : 'Pendente'}</span>
+                    </div>`;
+                list.appendChild(item);
+
+                // Adicionar marcador
+                const icon = L.divIcon({
+                    html: `<div class="custom-marker ${isComplete ? 'completed' : 'pending'}">${idx + 1}</div>`,
+                    className: 'custom-div-icon', iconSize: [32, 32], iconAnchor: [16, 16]
+                });
+                const marker = L.marker([point.lat, point.lng], { icon }).addTo(map)
+                    .bindPopup(`<strong>${point.nome}</strong><br>${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`);
+                marker.on('click', () => showPointDetails(point));
+                markers.push(marker);
+            });
+            lucide.createIcons();
+
+            // Ajustar bounds
+            if (polygonLayer) {
+                map.fitBounds(polygonLayer.getBounds(), { padding: [50, 50] });
+            } else if (markers.length > 0) {
+                const group = L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+
+            // Atualizar stats
+            const totalPhotos = talhaoPoints.reduce((sum, p) => sum + (p.fotos ? p.fotos.length : 0), 0);
+            document.getElementById('totalPoints').textContent = talhaoPoints.length;
+            document.getElementById('totalPhotos').textContent = totalPhotos;
+        }
+
+        function showPointDetails(point) {
+            document.getElementById('modalPointName').textContent = point.nome;
+            document.getElementById('modalTalhao').textContent = point.talhao || '-';
+            document.getElementById('modalFazenda').textContent = point.fazenda || '-';
+            document.getElementById('modalCoords').textContent = `${point.lat.toFixed(5)} / ${point.lng.toFixed(5)}`;
+            document.getElementById('modalDateTime').textContent = `${point.data || '-'} ${point.hora || ''}`;
+            document.getElementById('modalResponsavel').textContent = point.responsavel || '-';
+
+            // Fotos - com preview e zoom
+            const photosDiv = document.getElementById('modalPhotos');
+            if (point.fotos && point.fotos.length > 0) {
+                // Store photos data for lightbox
+                const photosData = point.fotos.map(f => ({
+                    src: f.data_url || f.url || f.file_path,
+                    depth: f.depth_range || f.depth,
+                    data: f.captured_at || f.data
+                }));
+
+                photosDiv.innerHTML = '<div class="photo-gallery">' +
+                    point.fotos.map((f, idx) => `
+                        <div class="photo-item" onclick='openImageLightbox(${JSON.stringify(photosData).replace(/'/g, "&#39;")}, ${idx})'>
+                            <img src="${f.data_url || f.url || f.file_path}" alt="Foto ${f.depth_range || f.depth || ''}" onerror="this.src='https://via.placeholder.com/150?text=Sem+Preview'">
+                            <div class="photo-overlay">${f.depth_range || f.depth || 'Foto'} • Clique para ampliar</div>
+                        </div>
+                    `).join('') + '</div>';
+            } else {
+                photosDiv.innerHTML = '<p style="color: #999; margin-bottom: 16px;">Sem fotos registradas</p>';
+            }
+
+            // Profundidades
+            const depthsDiv = document.getElementById('modalDepths');
+            if (point.profundidades && point.profundidades.length > 0) {
+                depthsDiv.innerHTML = point.profundidades.map(d => `
+                    <div style="display: flex; justify-content: space-between; padding: 8px; background: #f5f5f5; border-radius: 4px; margin-bottom: 4px;">
+                        <span>${d.range}</span>
+                        <span style="color: ${d.status === 'complete' ? 'var(--fortsmart-success)' : 'var(--fortsmart-warning)'}">
+                            ${d.status === 'complete' ? '✓ Coletado' : '⏳ Pendente'}
+                            ${d.photos_count ? `(${d.photos_count} foto${d.photos_count > 1 ? 's' : ''})` : ''}
+                        </span>
+                    </div>
+                `).join('');
+            } else {
+                depthsDiv.innerHTML = '<p style="color: #999;">Sem profundidades registradas</p>';
+            }
+
+            document.getElementById('pointModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('pointModal').classList.remove('active');
+        }
+
+        function setMapType(type) {
+            map.eachLayer(layer => { if (layer instanceof L.TileLayer) map.removeLayer(layer); });
+            if (type === 'satellite') {
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri', maxZoom: 19 }).addTo(map);
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
+            } else {
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM', maxZoom: 19 }).addTo(map);
+            }
+        }
+
+        function fitBounds() {
+            if (polygonLayer) {
+                map.fitBounds(polygonLayer.getBounds(), { padding: [50, 50] });
+            } else if (markers.length > 0) {
+                const group = L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        function exportKML() {
+            if (!currentTalhao) { alert('Selecione um talhão primeiro'); return; }
+
+            const talhaoPoints = pointsData.filter(p => p.talhao === currentTalhao.nome || p.talhaoId == currentTalhao.id);
+
+            let kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+    <name>${campaignData.name}</name>
+    ${currentTalhao.poligono ? `
+    <Placemark>
+        <name>${currentTalhao.nome}</name>
+        <Style><LineStyle><color>ff006400</color><width>3</width></LineStyle><PolyStyle><color>19006400</color><fill>1</fill></PolyStyle></Style>
+        <Polygon><outerBoundaryIs><LinearRing><coordinates>
+            ${currentTalhao.poligono.map(p => `${p[1]},${p[0]},0`).join(' ')}
+        </coordinates></LinearRing></outerBoundaryIs></Polygon>
+    </Placemark>` : ''}
+    ${talhaoPoints.map(p => `
+    <Placemark>
+        <name>${p.nome}</name>
+        <description><![CDATA[Talhão: ${p.talhao}<br>Data: ${p.data}<br>Coord: ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}]]></description>
+        <Point><coordinates>${p.lng},${p.lat},0</coordinates></Point>
+    </Placemark>`).join('')}
+</Document>
+</kml>`;
+
+            const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentTalhao.nome.replace(/\s+/g, '_')}.kml`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Image Lightbox Functions
+        let currentLightboxImages = [];
+        let currentImageIndex = 0;
+        let isZoomed = false;
+
+        function openImageLightbox(images, index = 0) {
+            currentLightboxImages = images;
+            currentImageIndex = index;
+            isZoomed = false;
+
+            const lightbox = document.getElementById('imageLightbox');
+            const img = document.getElementById('lightboxImage');
+            const counter = document.getElementById('lightboxCounter');
+
+            img.src = images[index].src || images[index].url || images[index].data_url || images[index].file_path;
+            counter.textContent = `${index + 1} / ${images.length}`;
+
+            lightbox.classList.add('active');
+            lightbox.classList.remove('zoomed');
+
+            // Initialize Lucide icons in lightbox
+            lucide.createIcons();
+
+            // Preload adjacent images
+            if (index > 0) preloadImage(images[index - 1]);
+            if (index < images.length - 1) preloadImage(images[index + 1]);
+        }
+
+        function preloadImage(imgData) {
+            const img = new Image();
+            img.src = imgData.src || imgData.url || imgData.data_url || imgData.file_path;
+        }
+
+        function closeImageLightbox() {
+            document.getElementById('imageLightbox').classList.remove('active');
+            isZoomed = false;
+        }
+
+        function toggleZoom() {
+            isZoomed = !isZoomed;
+            const lightbox = document.getElementById('imageLightbox');
+            if (isZoomed) {
+                lightbox.classList.add('zoomed');
+            } else {
+                lightbox.classList.remove('zoomed');
+            }
+        }
+
+        function nextImage() {
+            currentImageIndex = (currentImageIndex + 1) % currentLightboxImages.length;
+            updateLightboxImage();
+        }
+
+        function prevImage() {
+            currentImageIndex = (currentImageIndex - 1 + currentLightboxImages.length) % currentLightboxImages.length;
+            updateLightboxImage();
+        }
+
+        function updateLightboxImage() {
+            const img = document.getElementById('lightboxImage');
+            const counter = document.getElementById('lightboxCounter');
+            const imageData = currentLightboxImages[currentImageIndex];
+
+            img.src = imageData.src || imageData.url || imageData.data_url || imageData.file_path;
+            counter.textContent = `${currentImageIndex + 1} / ${currentLightboxImages.length}`;
+
+            // Reset zoom
+            isZoomed = false;
+            document.getElementById('imageLightbox').classList.remove('zoomed');
+        }
+
+        // Keyboard navigation for lightbox
+        document.addEventListener('keydown', function (e) {
+            const lightbox = document.getElementById('imageLightbox');
+            if (!lightbox.classList.contains('active')) return;
+
+            switch (e.key) {
+                case 'Escape':
+                    closeImageLightbox();
+                    break;
+                case 'ArrowLeft':
+                    prevImage();
+                    break;
+                case 'ArrowRight':
+                    nextImage();
+                    break;
+                case ' ':
+                case 'Enter':
+                    e.preventDefault();
+                    toggleZoom();
+                    break;
+            }
+        });
+
+        // Touch/swipe support for mobile
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', function (e) {
+            const lightbox = document.getElementById('imageLightbox');
+            if (!lightbox.classList.contains('active')) return;
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', function (e) {
+            const lightbox = document.getElementById('imageLightbox');
+            if (!lightbox.classList.contains('active')) return;
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    nextImage();
+                } else {
+                    prevImage();
+                }
+            }
+        }
+
+        // Iniciar
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+
+    <!-- Image Lightbox / Preview Modal -->
+    <div id="imageLightbox" class="image-lightbox" onclick="if(event.target===this && !isZoomed) closeImageLightbox()">
+        <button class="lightbox-close" onclick="closeImageLightbox()">
+            <i data-lucide="x" style="width: 24px; height: 24px;"></i>
+        </button>
+
+        <img id="lightboxImage" src="" alt="Foto ampliada" onclick="toggleZoom()">
+
+        <div class="lightbox-controls">
+            <button class="lightbox-btn" onclick="prevImage()" title="Anterior (←)">
+                <i data-lucide="chevron-left" style="width: 20px; height: 20px;"></i>
+            </button>
+            <button class="lightbox-btn" onclick="toggleZoom()" title="Zoom (Espaço)">
+                <i data-lucide="zoom-in" style="width: 20px; height: 20px;"></i>
+            </button>
+            <button class="lightbox-btn" onclick="nextImage()" title="Próxima (→)">
+                <i data-lucide="chevron-right" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+
+        <div id="lightboxCounter"
+            style="position: absolute; top: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">
+            1 / 1
+        </div>
+    </div>
+</body>
+
+</html>

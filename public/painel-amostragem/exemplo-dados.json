@@ -1,0 +1,265 @@
+{
+  "metadata": {
+    "exportado_em": "2026-04-28T17:30:00.000Z",
+    "versao": "1.0.0",
+    "total_pontos": 3,
+    "total_talhoes": 1,
+    "app_version": "FortSmart Agro"
+  },
+  "campaign": {
+    "id": 1,
+    "name": "Amostragem Pivô Central 7",
+    "culture": "Soja",
+    "safra": "2025/2026",
+    "responsavel": "Técnico de Campo - CREA 12345",
+    "tipo": "solos",
+    "compliance_mode": true,
+    "created_at": "2026-04-28T08:00:00.000Z"
+  },
+  "talhoes": [
+    {
+      "id": 1,
+      "nome": "Pivô Central 7",
+      "fazenda": "Fazenda São João",
+      "poligono": [
+        [-15.348, -54.450],
+        [-15.348, -54.448],
+        [-15.346, -54.448],
+        [-15.346, -54.450],
+        [-15.348, -54.450]
+      ],
+      "bounds": {
+        "min_lat": -15.348,
+        "max_lat": -15.346,
+        "min_lng": -54.450,
+        "max_lng": -54.448
+      }
+    }
+  ],
+  "points": [
+    {
+      "id": 1,
+      "nome": "Pivô 7 A 1",
+      "talhao": "Pivô Central 7",
+      "fazenda": "Fazenda São João",
+      "lat": -15.34750,
+      "lng": -54.44950,
+      "accuracy": 2.5,
+      "altitude": 485.0,
+      "data": "2026-04-28",
+      "hora": "10:15:30",
+      "responsavel": "Técnico de Campo - CREA 12345",
+      "observacoes": "Solo úmido, boa estrutura, presença de raízes finas.",
+      "profundidades": [
+        {
+          "id": 1,
+          "range": "0-10 cm",
+          "top_cm": 0,
+          "bottom_cm": 10,
+          "status": "complete",
+          "is_collected": true,
+          "is_locked": true,
+          "sample_code": "FS2026-P7-A1-0-10",
+          "collected_at": "2026-04-28T10:15:30.000Z",
+          "photos_count": 2
+        },
+        {
+          "id": 2,
+          "range": "10-20 cm",
+          "top_cm": 10,
+          "bottom_cm": 20,
+          "status": "complete",
+          "is_collected": true,
+          "is_locked": true,
+          "sample_code": "FS2026-P7-A1-10-20",
+          "collected_at": "2026-04-28T10:18:45.000Z",
+          "photos_count": 1
+        },
+        {
+          "id": 3,
+          "range": "20-30 cm",
+          "top_cm": 20,
+          "bottom_cm": 30,
+          "status": "complete",
+          "is_collected": true,
+          "is_locked": true,
+          "sample_code": "FS2026-P7-A1-20-30",
+          "collected_at": "2026-04-28T10:22:15.000Z",
+          "photos_count": 1
+        }
+      ],
+      "fotos": [
+        {
+          "id": 1,
+          "depth_id": 1,
+          "depth_range": "0-10 cm",
+          "captured_at": "2026-04-28T10:15:30.000Z",
+          "file_name": "photo_1_1_1.jpg",
+          "latitude": -15.34750,
+          "longitude": -54.44950
+        },
+        {
+          "id": 2,
+          "depth_id": 1,
+          "depth_range": "0-10 cm",
+          "captured_at": "2026-04-28T10:16:00.000Z",
+          "file_name": "photo_1_1_2.jpg",
+          "latitude": -15.34750,
+          "longitude": -54.44950
+        },
+        {
+          "id": 3,
+          "depth_id": 2,
+          "depth_range": "10-20 cm",
+          "captured_at": "2026-04-28T10:18:45.000Z",
+          "file_name": "photo_1_2_3.jpg",
+          "latitude": -15.34750,
+          "longitude": -54.44950
+        },
+        {
+          "id": 4,
+          "depth_id": 3,
+          "depth_range": "20-30 cm",
+          "captured_at": "2026-04-28T10:22:15.000Z",
+          "file_name": "photo_1_3_4.jpg",
+          "latitude": -15.34750,
+          "longitude": -54.44950
+        }
+      ],
+      "tem_fotos": true,
+      "subsamples_count": 1
+    },
+    {
+      "id": 2,
+      "nome": "Pivô 7 A 2",
+      "talhao": "Pivô Central 7",
+      "fazenda": "Fazenda São João",
+      "lat": -15.34780,
+      "lng": -54.44920,
+      "accuracy": 3.2,
+      "altitude": 487.0,
+      "data": "2026-04-28",
+      "hora": "10:45:12",
+      "responsavel": "Técnico de Campo - CREA 12345",
+      "observacoes": null,
+      "profundidades": [
+        {
+          "id": 4,
+          "range": "0-10 cm",
+          "top_cm": 0,
+          "bottom_cm": 10,
+          "status": "complete",
+          "is_collected": true,
+          "is_locked": true,
+          "sample_code": "FS2026-P7-A2-0-10",
+          "collected_at": "2026-04-28T10:45:12.000Z",
+          "photos_count": 1
+        },
+        {
+          "id": 5,
+          "range": "10-20 cm",
+          "top_cm": 10,
+          "bottom_cm": 20,
+          "status": "complete",
+          "is_collected": true,
+          "is_locked": true,
+          "sample_code": "FS2026-P7-A2-10-20",
+          "collected_at": "2026-04-28T10:48:30.000Z",
+          "photos_count": 1
+        }
+      ],
+      "fotos": [
+        {
+          "id": 5,
+          "depth_id": 4,
+          "depth_range": "0-10 cm",
+          "captured_at": "2026-04-28T10:45:12.000Z",
+          "file_name": "photo_2_4_5.jpg",
+          "latitude": -15.34780,
+          "longitude": -54.44920
+        },
+        {
+          "id": 6,
+          "depth_id": 5,
+          "depth_range": "10-20 cm",
+          "captured_at": "2026-04-28T10:48:30.000Z",
+          "file_name": "photo_2_5_6.jpg",
+          "latitude": -15.34780,
+          "longitude": -54.44920
+        }
+      ],
+      "tem_fotos": true,
+      "subsamples_count": 1
+    },
+    {
+      "id": 3,
+      "nome": "Pivô 7 A 3",
+      "talhao": "Pivô Central 7",
+      "fazenda": "Fazenda São João",
+      "lat": -15.34810,
+      "lng": -54.44890,
+      "accuracy": 2.8,
+      "altitude": 489.0,
+      "data": "2026-04-28",
+      "hora": "11:05:45",
+      "responsavel": "Técnico de Campo - CREA 12345",
+      "observacoes": "Presença de pedras no horizonte 20-30cm",
+      "profundidades": [
+        {
+          "id": 6,
+          "range": "0-10 cm",
+          "top_cm": 0,
+          "bottom_cm": 10,
+          "status": "complete",
+          "is_collected": true,
+          "is_locked": true,
+          "sample_code": "FS2026-P7-A3-0-10",
+          "collected_at": "2026-04-28T11:05:45.000Z",
+          "photos_count": 2
+        },
+        {
+          "id": 7,
+          "range": "10-20 cm",
+          "top_cm": 10,
+          "bottom_cm": 20,
+          "status": "pending",
+          "is_collected": false,
+          "is_locked": false,
+          "sample_code": null,
+          "collected_at": null,
+          "photos_count": 0
+        }
+      ],
+      "fotos": [
+        {
+          "id": 7,
+          "depth_id": 6,
+          "depth_range": "0-10 cm",
+          "captured_at": "2026-04-28T11:05:45.000Z",
+          "file_name": "photo_3_6_7.jpg",
+          "latitude": -15.34810,
+          "longitude": -54.44890
+        },
+        {
+          "id": 8,
+          "depth_id": 6,
+          "depth_range": "0-10 cm",
+          "captured_at": "2026-04-28T11:06:15.000Z",
+          "file_name": "photo_3_6_8.jpg",
+          "latitude": -15.34810,
+          "longitude": -54.44890
+        }
+      ],
+      "tem_fotos": true,
+      "subsamples_count": 1
+    }
+  ],
+  "resumo": {
+    "total_pontos": 3,
+    "total_fotos": 8,
+    "total_profundidades": 7,
+    "pontos_completos": 2,
+    "pontos_pendentes": 1,
+    "tamanho_json_kb": 15.4
+  }
+}

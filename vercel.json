@@ -5,6 +5,44 @@
   "regions": [
     "gru1"
   ],
+  "routes": [
+    {
+      "src": "/painel-amostragem",
+      "dest": "/painel-amostragem/index.html"
+    },
+    {
+      "src": "/painel-amostragem/(.*)",
+      "dest": "/painel-amostragem/$1"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/painel-amostragem/data/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    },
+    {
+      "source": "/painel-amostragem/photos/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    }
+  ],
   "env": {
     "SUPABASE_URL": "https://qnujboesewzikwypidja.supabase.co",
     "NEXT_PUBLIC_SUPABASE_URL": "https://qnujboesewzikwypidja.supabase.co",
