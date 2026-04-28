@@ -128,7 +128,15 @@ export default async function handler(
   }
 
   const origin = publicOriginFromReq(req);
-  const url = `${origin.replace(/\/$/, '')}/mapa-talhoes/m/${id}`;
+  const base = `${origin.replace(/\/$/, '')}`;
+  /** Link canónico (`?id=`) — evita URLs longas tipo `?d=` ou path dedicado só client */
+  const url = `${base}/mapa-talhoes?id=${encodeURIComponent(id)}`;
 
-  return res.status(200).json({ ok: true, token: id, url });
+  return res.status(200).json({
+    success: true,
+    ok: true,
+    map_id: id,
+    token: id,
+    url,
+  });
 }

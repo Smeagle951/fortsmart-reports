@@ -70,12 +70,65 @@ export function MapaTalhoesClient({
     }
   }, []);
 
+  /** SSR / props OU snapshot explícito */
   useEffect(() => {
-    if (initialFeatureCollection != null) {
-      setRaw(initialFeatureCollection);
-      setErr(null);
-      return;
-    }
+    if (initialFeatureCollection == null) return;
+    setRaw(initialFeatureCollection);
+    setErr(null);
+  }, [initialFeatureCollection]);
+
+  /** Prioridade: `?id=` (snapshot gravado em Supabase) > `?d=` (compat., só cargas pequenas) > client fetch `/mapa-talhoes/m/`. */
+  useEffect(() => {
+    if (initialFeatureCollection != null) return;
+    const idParam = sp?.get('id')?.trim();
+    if (!idParam) return;
+
+    let cancelled = false;
+    const ac = new AbortController();
+
+    void (async () => {
+      try {
+        setLoadingShare(true);
+        setErr(null);
+        const res = await fetch(
+          `/api/mapa-talhoes/snapshot/${encodeURIComponent(idParam)}`,
+          { signal: ac.signal },
+        );
+        if (cancelled) return;
+        if (!res.ok) {
+          setErr(
+            res.status === 404
+              ? 'Link expirado ou inválido. Gere um novo mapa na app FortSmart (Plantio → Exportar KML / mapa web).'
+              : `Não foi possível carregar o mapa partilhado (${res.status}).`,
+          );
+          return;
+        }
+        const data = (await res.json()) as unknown;
+        if (cancelled) return;
+        if (isFeatureCollectionGj(data as GeoJsonObject)) {
+          setRaw(data as FeatureCollection);
+          setErr(null);
+        } else {
+          setErr('Resposta do servidor sem GeoJSON válido.');
+        }
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        setErr('Falha de rede ao carregar o mapa partilhado.');
+      } finally {
+        if (!cancelled) setLoadingShare(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [initialFeatureCollection, sp]);
+
+  useEffect(() => {
+    if (initialFeatureCollection != null) return;
+    if (sp?.get('id')?.trim()) return;
     const d = sp?.get('d');
     if (!d) return;
     const fc = decodeGeoJsonFromQuery(d);
@@ -84,7 +137,7 @@ export function MapaTalhoesClient({
       setErr(null);
     } else {
       setErr(
-        'O parâmetro d= na URL está incompleto ou inválido (navegadores cortam URLs muito longas). Use o link curto gerado pela app FortSmart ou exporte o .geojson.',
+        'O parâmetro d= na URL está incompleto ou inválido (navegadores cortam URLs muito longas). Use Visualizar mapa (web) no app ou importe um .geojson.',
       );
     }
   }, [sp, initialFeatureCollection]);
@@ -95,6 +148,7 @@ export function MapaTalhoesClient({
 
   useEffect(() => {
     if (initialFeatureCollection != null) return;
+    if (sp?.get('id')?.trim()) return;
     if (raw != null) return;
 
     const m = pathname?.match(/^\/mapa-talhoes\/m\/([^/]+)\/?$/);
@@ -142,7 +196,7 @@ export function MapaTalhoesClient({
       cancelled = true;
       ac.abort();
     };
-  }, [initialFeatureCollection, raw, pathname]);
+  }, [initialFeatureCollection, raw, pathname, sp]);
 
   const baseFiltered = useMemo(() => {
     if (!raw) return null;
@@ -352,7 +406,11 @@ export function MapaTalhoesClient({
                       Selecione talhões → <strong className="text-slate-300">Visualizar mapa (web)</strong> (link curto) ou
                       anexe o <strong className="text-slate-300">.geojson</strong> com o botão abaixo.
                     </li>
-                    <li>Alternativamente, URL com <code className="text-emerald-300/90">?d=</code> (apenas se for pequeno) ou o token <code className="text-emerald-300/90">…/mapa-talhoes/m/…</code></li>
+                    <li>
+                      Ou link com snapshot <code className="text-emerald-300/90">?id=…</code> · legado{' '}
+                      <code className="text-emerald-300/90">…/mapa-talhoes/m/…</code> ·{' '}
+                      <code className="text-emerald-300/90">?d=</code> (só cargas muito pequenas)
+                    </li>
                   </ol>
                   <input
                     ref={fileImportInputRef}
