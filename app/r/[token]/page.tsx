@@ -3,7 +3,7 @@ import { insertReportAnalyticsEvent, insertReportViewEvent } from '@/lib/log-rep
 import { getRelatorioByTokenHybrid } from '@/lib/get-relatorio-by-token-hybrid';
 import { type RelatorioRow } from '@/lib/supabase';
 import RelatorioContent from '@/components/RelatorioContent';
-import RelatorioFitossanitarioContent from '@/components/RelatorioFitossanitarioContent';
+import RelatorioMonitoramentoContent from '@/components/RelatorioMonitoramentoContent';
 import RelatorioResearchProContent from '@/components/research/RelatorioResearchProContent';
 import SideBySideReportContent, { type SideBySideReportData } from '@/components/SideBySideReportContent';
 import RelatorioPlantio from '@/components/RelatorioPlantio';
@@ -454,8 +454,8 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
         <article className={`relatorio ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''} ${isPlantioMulti ? 'relatorio--plantio-multi' : ''}`} style={isMonitoramento ? { minHeight: '100vh', background: '#F1F5F9' } : undefined}>
           {isMonitoramento ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de monitoramento">
-              <RelatorioFitossanitarioContent
-                relatorio={payloadSafe as import('@/components/RelatorioFitossanitarioContent').PayloadFitossanitario}
+              <RelatorioMonitoramentoContent
+                relatorio={payloadSafe as import('@/components/RelatorioMonitoramentoContent').PayloadMonitoramento}
                 reportId={reportIdStr}
                 relatorioUuid={relatorioUuidStr}
                 shareToken={token}

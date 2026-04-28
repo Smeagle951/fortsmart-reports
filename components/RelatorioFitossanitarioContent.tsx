@@ -209,7 +209,7 @@ export type PayloadFitossanitario = Record<string, unknown> & {
 }
 
 /** Deriva DadosPlantioMonitoramento a partir de modulo_plantio (plantabilidade, estande, fenologia). */
-function deriveDadosPlantioFromModuloPlantio(modulo: Record<string, unknown> | null | undefined): DadosPlantioMonitoramento | null {
+export function deriveDadosPlantioFromModuloPlantio(modulo: Record<string, unknown> | null | undefined): DadosPlantioMonitoramento | null {
   if (!modulo || typeof modulo !== 'object') return null;
   const pb = (modulo.plantabilidade ?? (modulo as any).plantabilidade) as Record<string, unknown> | undefined;
   const est = (modulo.estande ?? (modulo as any).estande) as Record<string, unknown> | undefined;

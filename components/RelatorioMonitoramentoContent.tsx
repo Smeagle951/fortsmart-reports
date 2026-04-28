@@ -16,6 +16,8 @@ import { formatPercent2, formatDecimal2 } from '@/utils/format';
 import '@/styles/report-monitoramento-premium.css';
 import TalhaoBloco from './TalhaoBloco';
 import MonitoramentoNdeContextoPanel, { parseOrganismosContextoFromPayload } from './MonitoramentoNdeContextoPanel';
+import PlantioIntegradoPremiumSection from './PlantioIntegradoPremiumSection';
+import { postReportAnalytics } from '@/lib/report-analytics-client';
 import type { NivelRecomendacao } from '@/lib/types/monitoring';
 
 /** Polígono padrão (bbox) quando o payload não traz geojson */
@@ -264,15 +266,24 @@ export type PayloadMonitoramento = Record<string, unknown> & {
   imagens?: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
   consultoria?: { nome?: string; logo?: string };
   organismos_contexto?: Array<Record<string, unknown>>;
+  dados_plantio?: Record<string, unknown> | null;
+  modulo_plantio?: Record<string, unknown>;
 };
 
 interface RelatorioMonitoramentoContentProps {
   relatorio: PayloadMonitoramento;
   reportId?: string;
   relatorioUuid?: string;
+  /** Token `/r/[token]` — audiência PDF no analytics (paridade com ex-fitossanitário). */
+  shareToken?: string;
 }
 
-export default function RelatorioMonitoramentoContent({ relatorio, reportId, relatorioUuid }: RelatorioMonitoramentoContentProps) {
+export default function RelatorioMonitoramentoContent({
+  relatorio,
+  reportId,
+  relatorioUuid,
+  shareToken,
+}: RelatorioMonitoramentoContentProps) {
   const normalized = useMemo((): RelatorioMonitoramento => {
     const prop = (relatorio.propriedade != null && typeof relatorio.propriedade === 'object') ? relatorio.propriedade as Record<string, unknown> : undefined;
     const meta = (relatorio.meta != null && typeof relatorio.meta === 'object') ? relatorio.meta as Record<string, unknown> : undefined;
@@ -350,7 +361,15 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
       image: { type: 'jpeg', quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    }).from(el).save();
+    }).from(el).save().then(() => {
+      if (shareToken) {
+        void postReportAnalytics({
+          shareToken,
+          eventType: 'download',
+          module: 'monitoramento',
+        });
+      }
+    });
   };
 
   const handleExportExcel = async () => {
@@ -641,6 +660,8 @@ export default function RelatorioMonitoramentoContent({ relatorio, reportId, rel
             )}
           </section>
         )}
+
+        <PlantioIntegradoPremiumSection relatorio={relatorio as Record<string, unknown>} />
 
         {organismosContextoRows.length > 0 && (
           <div style={{ marginBottom: 28 }}>
