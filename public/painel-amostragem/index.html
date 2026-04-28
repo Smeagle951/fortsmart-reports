@@ -838,15 +838,31 @@
         let campaignData = null, pointsData = [], loadedTalhoes = [];
         let currentTalhao = null;
 
-        // Inicializar - mostra seletor de dados
+                // Inicializar - mostra seletor de dados ou processa dados da URL
         function initApp() {
             hideLoading();
-            showDataSelector();
 
-            // Verifica se há URL com dados
+            // Verificar se há dados na URL (base64)
             const urlParams = new URLSearchParams(window.location.search);
-            const dataUrl = urlParams.get('data');
-            if (dataUrl) loadFromUrlParam(dataUrl);
+            const base64Data = urlParams.get('data');
+
+            if (base64Data) {
+                try {
+                    // Decodificar dados base64
+                    const jsonString = atob(base64Data);
+                    const data = JSON.parse(jsonString);
+
+                    // Processar dados diretamente
+                    console.log('Dados recebidos via URL:', data);
+                    processLoadedData(data);
+                    return;
+                } catch (e) {
+                    console.error('Erro ao decodificar dados da URL:', e);
+                    alert('Erro ao carregar dados do app. Tente fazer upload manual do arquivo JSON.');
+                }
+            }
+
+            showDataSelector();
         }
 
         function showLoading(text) {
