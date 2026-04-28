@@ -16,162 +16,283 @@ import MatrizRiscoFenologico from './MatrizRiscoFenologico';
 const MapaInterativo = dynamic(() => import('./MapaInterativo'), { ssr: false });
 
 interface TalhaoBlocoProps {
-    talhao: Talhao;
-    index: number;
-    total: number;
-    data: string;
+  talhao: Talhao;
+  index: number;
+  total: number;
+  data: string;
+  /** Visual alinhado ao HTML guia (hero escuro + cartões serif) — usado em /r/[token] monitoramento */
+  variant?: 'classic' | 'premium';
 }
 
 const cardStyle = {
-    background: '#fff',
-    borderRadius: 8,
-    border: '1px solid #E2E8F0',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+  background: '#fff',
+  borderRadius: 8,
+  border: '1px solid #E2E8F0',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
 };
 
-export default function TalhaoBloco({ talhao, index, total, data }: TalhaoBlocoProps) {
-    const metricas = calcularMetricasTalhao(talhao);
-    const metricasPorPonto = calcularMetricasPorPonto(talhao);
-    const recomendacoes = talhao.recomendacoes || [];
-    const cor = corClassificacao(metricas.classificacao);
-    const label = labelClassificacao(metricas.classificacao);
+export default function TalhaoBloco({ talhao, index, total, data, variant = 'classic' }: TalhaoBlocoProps) {
+  const premium = variant === 'premium';
+  const metricas = calcularMetricasTalhao(talhao);
+  const metricasPorPonto = calcularMetricasPorPonto(talhao);
+  const recomendacoes = talhao.recomendacoes || [];
+  const cor = corClassificacao(metricas.classificacao);
+  const label = labelClassificacao(metricas.classificacao);
 
+  if (premium) {
     return (
-        <section id={`talhao-${talhao.id}`}>
-            <div style={{
-                ...cardStyle,
-                marginBottom: 20,
-                overflow: 'hidden',
-                borderLeft: `4px solid ${cor}`,
-            }}>
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'stretch',
-                    flexWrap: 'wrap',
-                }}>
-                    <div style={{
-                        padding: 20,
-                        borderRight: '1px solid #E2E8F0',
-                        minWidth: 200,
-                    }}>
-                        <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>Talhão {index}/{total}</div>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: '#1E293B', lineHeight: 1.2 }}>{talhao.nome}</div>
-                        <div style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>
-                            {[talhao.cultura || '—', talhao.variedade, talhao.estagio]
-                                .filter(v => v && String(v).toLowerCase() !== 'sem dados')
-                                .join(' · ') || (talhao.cultura || '—')}
-                        </div>
-                    </div>
-                    <div style={{
-                        flex: 1,
-                        padding: 20,
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-                        gap: 16,
-                        alignItems: 'center',
-                    }}>
-                        <MetricaItem label="Área" value={talhao.area_ha != null && Number(talhao.area_ha) > 0 ? `${formatDecimal2(talhao.area_ha)} ha` : '—'} />
-                        <MetricaItem label="Pontos" value={String(metricas.totalPontos)} />
-                        <MetricaItem label="Ocorrências" value={String(metricas.totalOcorrencias)} />
-                        <MetricaItem label="Índice" value={formatPercent2(metricas.indiceOcorrencia)} highlight color={cor} />
-                        <div>
-                            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Classificação</div>
-                            <span style={{
-                                display: 'inline-block',
-                                padding: '4px 10px',
-                                borderRadius: 6,
-                                fontSize: 12,
-                                fontWeight: 600,
-                                background: `${cor}15`,
-                                color: cor,
-                            }}>
-                                {label}
-                            </span>
-                        </div>
-                    </div>
-                    <div style={{
-                        padding: 20,
-                        borderLeft: '1px solid #E2E8F0',
-                        textAlign: 'right',
-                        minWidth: 140,
-                    }}>
-                        <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>Último monitoramento</div>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: '#1E293B' }}>{data}</div>
-                    </div>
-                </div>
-            </div>
+      <section id={`talhao-${talhao.id}`} className="fs-mon-talhao">
+        <h2 className="fs-mon-talhao__subtitle">Talhão {index}/{total} · Detalhes de campo</h2>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-                <ResumoExecutivo metricas={metricas} talhaoNome={talhao.nome} area_ha={talhao.area_ha} ultimoMonitoramento={data} />
-                <div style={{ ...cardStyle, overflow: 'hidden' }}>
-                    <MapaInterativo pontos={talhao.pontos} poligono={talhao.poligono_geojson} talhaoId={talhao.id} />
-                </div>
+        <div className="fs-mon-talhao__intro" style={{ borderLeft: `4px solid ${cor}` }}>
+          <div className="fs-mon-talhao__intro-grid">
+            <div className="fs-mon-talhao__intro-col-main">
+              <div className="fs-mon-talhao__muted">Identificação</div>
+              <div className="fs-mon-talhao__name">{talhao.nome}</div>
+              <div className="fs-mon-talhao__sub">
+                {[talhao.cultura || '—', talhao.variedade, talhao.estagio]
+                  .filter(v => v && String(v).toLowerCase() !== 'sem dados')
+                  .join(' · ') || (talhao.cultura || '—')}
+              </div>
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: talhao.condicoes_climaticas ? '1fr 1fr' : '1fr', gap: 20, marginBottom: 20 }}>
-                <PrincipaisInfestacoes metricas={metricas} />
-                {talhao.condicoes_climaticas && <CondicoesClimaticasCard condicoes={talhao.condicoes_climaticas} />}
+            <div className="fs-mon-talhao__intro-col-metrics">
+              <Pm label="Área" value={talhao.area_ha != null && Number(talhao.area_ha) > 0 ? `${formatDecimal2(talhao.area_ha)} ha` : '—'} />
+              <Pm label="Pontos" value={String(metricas.totalPontos)} />
+              <Pm label="Ocorrências" value={String(metricas.totalOcorrencias)} />
+              <Pm label="Índice" value={formatPercent2(metricas.indiceOcorrencia)} highlight color={cor} />
+              <div>
+                <div className="fs-mon-talhao__muted">Classificação</div>
+                <span
+                  className="fs-mon-premium__pill-sm"
+                  style={{ background: `${cor}14`, color: cor }}
+                >
+                  {label}
+                </span>
+              </div>
             </div>
-
-            {/* Matriz de Risco Fenologico (Evolution Curve) */}
-            <div style={{ ...cardStyle, padding: '0 24px 24px 24px', marginBottom: 20 }}>
-                <MatrizRiscoFenologico talhao={talhao} />
+            <div className="fs-mon-talhao__intro-col-meta">
+              <div className="fs-mon-talhao__muted">Monitoramento</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--fs-ink, #0a0c0a)' }}>{data}</div>
             </div>
+          </div>
+        </div>
 
-            {/* Dados complementares: sempre exibida quando houver qualquer dado de plantio/monitoramento */}
-            <div style={{ ...cardStyle, padding: 16, marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 12 }}>Dados complementares</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-                    <DadoItem label="Estágio" value={talhao.estagio && String(talhao.estagio).toLowerCase() !== 'sem dados' ? talhao.estagio : '—'} />
-                    <DadoItem label="DAE" value={talhao.dae != null && Number.isFinite(talhao.dae) ? String(talhao.dae) : '—'} />
-                    <DadoItem label="Pop. estande" value={talhao.populacao_estande != null && Number.isFinite(talhao.populacao_estande) ? `${formatDecimal2(talhao.populacao_estande)} pl/m` : '—'} />
-                    <DadoItem label="Temperatura" value={talhao.condicoes_climaticas?.temperatura != null && Number.isFinite(talhao.condicoes_climaticas.temperatura) ? `${formatDecimal2(talhao.condicoes_climaticas.temperatura)} °C` : '—'} />
-                    <DadoItem label="Umidade" value={talhao.condicoes_climaticas?.umidade != null && Number.isFinite(talhao.condicoes_climaticas.umidade) ? `${formatPercent2(talhao.condicoes_climaticas.umidade)}` : '—'} />
-                    <DadoItem label="Chuva" value={talhao.condicoes_climaticas?.chuva && talhao.condicoes_climaticas.chuva !== 'Sem Chuva' ? String(talhao.condicoes_climaticas.chuva) : (talhao.condicoes_climaticas?.chuva ?? '—')} />
-                </div>
-            </div>
+        <div className="fs-mon-talhao__split fs-mon-talhao__split--map">
+          <div>
+            <ResumoExecutivo metricas={metricas} talhaoNome={talhao.nome} area_ha={talhao.area_ha} ultimoMonitoramento={data} />
+          </div>
+          <div className="fs-mon-talhao__map">
+            <MapaInterativo pontos={talhao.pontos} poligono={talhao.poligono_geojson} talhaoId={talhao.id} />
+          </div>
+        </div>
 
-            <div style={{ ...cardStyle, padding: 20, marginBottom: 20 }}>
-                <RecomendacoesTecnicas recomendacoes={recomendacoes} />
-            </div>
+        <div style={{ display: 'grid', gridTemplateColumns: talhao.condicoes_climaticas ? 'minmax(0, 1fr) minmax(0, 1fr)' : '1fr', gap: 20, marginBottom: 24 }}>
+          <PrincipaisInfestacoes metricas={metricas} />
+          {talhao.condicoes_climaticas && <CondicoesClimaticasCard condicoes={talhao.condicoes_climaticas} />}
+        </div>
 
-            <div style={{ marginBottom: 20 }}>
-                <IndicesPorPonto metricasPorPonto={metricasPorPonto} pontos={talhao.pontos} />
-            </div>
+        <div className="fs-mon-talhao__card" style={{ padding: '12px 0 28px 0' }}>
+          <MatrizRiscoFenologico talhao={talhao} />
+        </div>
 
-            <div style={{ ...cardStyle, padding: 20, marginBottom: 20 }}>
-                <GaleriaOcorrencias pontos={talhao.pontos} />
-            </div>
+        <div className="fs-mon-talhao__card">
+          <div className="fs-mon-premium__surface-h">Dados complementares</div>
+          <div className="fs-mon-premium__grid-kpi" style={{ padding: '16px 20px 20px' }}>
+            <Dd label="Estágio" value={talhao.estagio && String(talhao.estagio).toLowerCase() !== 'sem dados' ? String(talhao.estagio) : '—'} />
+            <Dd label="DAE" value={talhao.dae != null && Number.isFinite(talhao.dae) ? String(talhao.dae) : '—'} />
+            <Dd
+              label="Pop. estande"
+              value={talhao.populacao_estande != null && Number.isFinite(talhao.populacao_estande)
+                ? `${formatDecimal2(talhao.populacao_estande)} pl/m`
+                : '—'}
+            />
+            <Dd
+              label="Temperatura"
+              value={talhao.condicoes_climaticas?.temperatura != null && Number.isFinite(talhao.condicoes_climaticas.temperatura)
+                ? `${formatDecimal2(talhao.condicoes_climaticas.temperatura)} °C`
+                : '—'}
+            />
+            <Dd
+              label="Umidade"
+              value={
+                talhao.condicoes_climaticas?.umidade != null && Number.isFinite(talhao.condicoes_climaticas.umidade)
+                  ? formatPercent2(talhao.condicoes_climaticas.umidade)
+                  : '—'
+              }
+            />
+            <Dd
+              label="Chuva"
+              value={
+                talhao.condicoes_climaticas?.chuva && talhao.condicoes_climaticas.chuva !== 'Sem Chuva'
+                  ? String(talhao.condicoes_climaticas.chuva)
+                  : talhao.condicoes_climaticas?.chuva ?? '—'
+              }
+            />
+          </div>
+        </div>
 
-            <div style={{ marginBottom: 40 }}>
-                <TabelaDetalhada pontos={talhao.pontos} />
-            </div>
+        <div className="fs-mon-talhao__card fs-mon-talhao__card-pad">
+          <RecomendacoesTecnicas recomendacoes={recomendacoes} />
+        </div>
 
-            {index < total && (
-                <div style={{ margin: '40px 0', borderTop: '1px dashed #CBD5E1', position: 'relative' }}>
-                    <span style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: '#F8FAFC', padding: '0 12px', fontSize: 11, color: '#94A3B8', fontWeight: 600 }}>
-                        Próximo: Talhão {index + 1}
-                    </span>
-                </div>
-            )}
-        </section>
+        <div style={{ marginBottom: 24 }}>
+          <IndicesPorPonto metricasPorPonto={metricasPorPonto} pontos={talhao.pontos} />
+        </div>
+
+        <div className="fs-mon-talhao__card fs-mon-talhao__card-pad">
+          <GaleriaOcorrencias pontos={talhao.pontos} />
+        </div>
+
+        <div style={{ marginBottom: 40 }}>
+          <TabelaDetalhada pontos={talhao.pontos} />
+        </div>
+
+        {index < total && (
+          <div className="fs-mon-talhao__next">
+            Próximo talhão · {index + 1}/{total}
+          </div>
+        )}
+      </section>
     );
+  }
+
+  return (
+    <section id={`talhao-${talhao.id}`}>
+      <div
+        style={{
+          ...cardStyle,
+          marginBottom: 20,
+          overflow: 'hidden',
+          borderLeft: `4px solid ${cor}`,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'stretch', flexWrap: 'wrap' }}>
+          <div style={{ padding: 20, borderRight: '1px solid #E2E8F0', minWidth: 200 }}>
+            <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>Talhão {index}/{total}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#1E293B', lineHeight: 1.2 }}>{talhao.nome}</div>
+            <div style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>
+              {[talhao.cultura || '—', talhao.variedade, talhao.estagio]
+                .filter(v => v && String(v).toLowerCase() !== 'sem dados')
+                .join(' · ') || (talhao.cultura || '—')}
+            </div>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              padding: 20,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+              gap: 16,
+              alignItems: 'center',
+            }}
+          >
+            <MetricaItem label="Área" value={talhao.area_ha != null && Number(talhao.area_ha) > 0 ? `${formatDecimal2(talhao.area_ha)} ha` : '—'} />
+            <MetricaItem label="Pontos" value={String(metricas.totalPontos)} />
+            <MetricaItem label="Ocorrências" value={String(metricas.totalOcorrencias)} />
+            <MetricaItem label="Índice" value={formatPercent2(metricas.indiceOcorrencia)} highlight color={cor} />
+            <div>
+              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>Classificação</div>
+              <span style={{ display: 'inline-block', padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: `${cor}15`, color: cor }}>
+                {label}
+              </span>
+            </div>
+          </div>
+          <div style={{ padding: 20, borderLeft: '1px solid #E2E8F0', textAlign: 'right', minWidth: 140 }}>
+            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>Último monitoramento</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#1E293B' }}>{data}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+        <ResumoExecutivo metricas={metricas} talhaoNome={talhao.nome} area_ha={talhao.area_ha} ultimoMonitoramento={data} />
+        <div style={{ ...cardStyle, overflow: 'hidden' }}>
+          <MapaInterativo pontos={talhao.pontos} poligono={talhao.poligono_geojson} talhaoId={talhao.id} />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: talhao.condicoes_climaticas ? '1fr 1fr' : '1fr', gap: 20, marginBottom: 20 }}>
+        <PrincipaisInfestacoes metricas={metricas} />
+        {talhao.condicoes_climaticas && <CondicoesClimaticasCard condicoes={talhao.condicoes_climaticas} />}
+      </div>
+
+      <div style={{ ...cardStyle, padding: '0 24px 24px 24px', marginBottom: 20 }}>
+        <MatrizRiscoFenologico talhao={talhao} />
+      </div>
+
+      <div style={{ ...cardStyle, padding: 16, marginBottom: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 12 }}>Dados complementares</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+          <DadoItem label="Estágio" value={talhao.estagio && String(talhao.estagio).toLowerCase() !== 'sem dados' ? talhao.estagio : '—'} />
+          <DadoItem label="DAE" value={talhao.dae != null && Number.isFinite(talhao.dae) ? String(talhao.dae) : '—'} />
+          <DadoItem label="Pop. estande" value={talhao.populacao_estande != null && Number.isFinite(talhao.populacao_estande) ? `${formatDecimal2(talhao.populacao_estande)} pl/m` : '—'} />
+          <DadoItem label="Temperatura" value={talhao.condicoes_climaticas?.temperatura != null && Number.isFinite(talhao.condicoes_climaticas.temperatura) ? `${formatDecimal2(talhao.condicoes_climaticas.temperatura)} °C` : '—'} />
+          <DadoItem label="Umidade" value={talhao.condicoes_climaticas?.umidade != null && Number.isFinite(talhao.condicoes_climaticas.umidade) ? `${formatPercent2(talhao.condicoes_climaticas.umidade)}` : '—'} />
+          <DadoItem label="Chuva" value={talhao.condicoes_climaticas?.chuva && talhao.condicoes_climaticas.chuva !== 'Sem Chuva' ? String(talhao.condicoes_climaticas.chuva) : (talhao.condicoes_climaticas?.chuva ?? '—')} />
+        </div>
+      </div>
+
+      <div style={{ ...cardStyle, padding: 20, marginBottom: 20 }}>
+        <RecomendacoesTecnicas recomendacoes={recomendacoes} />
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <IndicesPorPonto metricasPorPonto={metricasPorPonto} pontos={talhao.pontos} />
+      </div>
+
+      <div style={{ ...cardStyle, padding: 20, marginBottom: 20 }}>
+        <GaleriaOcorrencias pontos={talhao.pontos} />
+      </div>
+
+      <div style={{ marginBottom: 40 }}>
+        <TabelaDetalhada pontos={talhao.pontos} />
+      </div>
+
+      {index < total && (
+        <div style={{ margin: '40px 0', borderTop: '1px dashed #CBD5E1', position: 'relative' }}>
+          <span style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: '#F8FAFC', padding: '0 12px', fontSize: 11, color: '#94A3B8', fontWeight: 600 }}>
+            Próximo: Talhão {index + 1}
+          </span>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Pm({ label, value, highlight, color }: { label: string; value: string; highlight?: boolean; color?: string }) {
+  return (
+    <div>
+      <div className="fs-mon-talhao__muted" style={{ fontSize: 10 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: highlight && color ? color : 'var(--fs-ink, #0a0c0a)' }}>{value}</div>
+    </div>
+  );
+}
+
+function Dd({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="fs-mon-premium__kpi-cell">
+      <div className="fs-mon-premium__kpi-label">{label}</div>
+      <div className="fs-mon-premium__kpi-val">{value}</div>
+    </div>
+  );
 }
 
 function MetricaItem({ label, value, highlight, color }: { label: string; value: string; highlight?: boolean; color?: string }) {
-    return (
-        <div>
-            <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>{label}</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: highlight && color ? color : '#1E293B' }}>{value}</div>
-        </div>
-    );
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600, marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: highlight && color ? color : '#1E293B' }}>{value}</div>
+    </div>
+  );
 }
 
 function DadoItem({ label, value }: { label: string; value: string }) {
-    return (
-        <div>
-            <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>{label}: </span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#1E293B' }}>{value}</span>
-        </div>
-    );
+  return (
+    <div>
+      <span style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>{label}: </span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: '#1E293B' }}>{value}</span>
+    </div>
+  );
 }

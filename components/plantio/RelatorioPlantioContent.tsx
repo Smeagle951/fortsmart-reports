@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import '@/styles/report-plantio-premium.css';
 import { normalizeRelatorioPlantio } from '@/lib/normalize-relatorio-plantio';
 import HeaderRelatorio from '@/components/HeaderRelatorio';
 import DashboardTalhao, { type RelatorioPlantioData } from './DashboardTalhao';
@@ -51,8 +52,30 @@ export default function RelatorioPlantioContent({
   const contextoSafra = (normalized.contextoSafra || {}) as { materialVariedade?: string; empresa?: string };
   const storageId = relatorioUuid || reportId;
 
+  const plantab = normalized.plantabilidade as Record<string, unknown> | undefined;
+  const cvRaw = plantab?.cvPercent ?? plantab?.cvGeralPercent ?? plantab?.coeficienteVariacao;
+  const cvStr = cvRaw != null && Number.isFinite(Number(cvRaw)) ? `${Number(cvRaw).toFixed(1).replace('.', ',')}% CV` : 'Plantio preciso';
+
   return (
-    <div className="relatorio-plantio">
+    <div className="relatorio-plantio fs-plnt-premium">
+      <header className="fs-plnt-premium__topbar no-print">
+        <div className="fs-plnt-premium__logo" aria-hidden>
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1 15l-4-4 1.4-1.4 2.6 2.6 5.6-5.6L18 10l-7 7z" /></svg>
+        </div>
+        <span className="fs-plnt-premium__brand">FortSmart</span>
+        <div className="fs-plnt-premium__sep" />
+        <span className="fs-plnt-premium__title">Relatório de plantio preciso</span>
+        <div className="fs-plnt-premium__top-actions">
+          <div className="fs-plnt-premium__pill">
+            <span className="fs-plnt-premium__pill-dot" aria-hidden />
+            {cvStr}
+          </div>
+          <button type="button" className="fs-plnt-premium__btn" onClick={() => typeof window !== 'undefined' && window.print()}>
+            PDF / Imprimir
+          </button>
+        </div>
+      </header>
+      <div className="fs-plnt-premium__body">
       <HeaderRelatorio
         meta={meta}
         propriedade={prop}
@@ -117,6 +140,7 @@ export default function RelatorioPlantioContent({
         <PlantabilidadeEstande data={data} />
         <div className="my-8 border-t border-slate-300" />
         <DiagnosticoIntegrado data={data} />
+      </div>
       </div>
     </div>
   );

@@ -106,3 +106,51 @@ export interface Recomendacao {
     severidade: number;
     fortsmartIa?: FortsmartIaRelatorio;
 }
+
+/**
+ * NDE e texto de dano (catálogo decision_engine) + leitura real de monitoramento / histórico económico.
+ * Emitido por publishMonitoramento (app) como `organismos_contexto`.
+ */
+export interface OrganismoContextoWeb {
+    nome: string;
+    organismEngineId?: string;
+    nomeCientifico?: string;
+    referenciaNde?: number;
+    referenciaNdeUnidade?: string;
+    estagioNde?: string;
+    perdaUnidadeTexto?: string;
+    custoIntervencaoRefHa?: number;
+    janelaHorasRef?: number;
+    fatorFenologicoAplicavel?: number;
+    observacaoCatalogo?: string;
+    fonte?: string;
+    /** Região dos parâmetros (ex.: DEFAULT) */
+    paramsRegionId?: string;
+    /** UF da propriedade, quando conhecida */
+    propriedadeUf?: string;
+    pontosAfetados?: number;
+    frequencia?: number;
+    totalOcorrencias?: number;
+    quantidadeMedia?: number;
+    severidadeMedia?: number;
+    nivelRiscoIndicado?: string;
+    densidadeIndM2?: number;
+    perdaBrlHa?: number;
+    roiMultiplo?: number;
+    janelaHoras?: number;
+    scoreCriticidade?: number;
+    confidencePercent?: number;
+    /** Sem linha resolvida no catálogo / fallback */
+    usandoParametrosGenericos?: boolean;
+
+    /** Interpretação agronômica (catálogo JSON + ratio leitura/NDE ou severidade) */
+    interpretacaoTipo?: 'praga' | 'doenca';
+    interpretacaoEscala?: string;
+    interpretacaoCategoria?: string;
+    interpretacaoTexto?: string;
+    interpretacaoRatioNde?: number;
+    interpretacaoPercentualAcimaNde?: number;
+    interpretacaoJanelaRecomendada?: string;
+    interpretacaoUrgencia?: string;
+    interpretacaoNotaOperacional?: string;
+}
