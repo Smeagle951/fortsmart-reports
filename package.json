@@ -8,6 +8,7 @@
     "build": "next build",
     "cf:build": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion",
     "cloudflare-build": "npm run cf:build",
+    "cf:deploy": "wrangler deploy",
     "start": "next start",
     "preview:cf": "npm run cf:build && opennextjs-cloudflare preview",
     "deploy:cf": "npm run cf:build && opennextjs-cloudflare deploy",
