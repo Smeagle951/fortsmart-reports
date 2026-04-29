@@ -8,7 +8,7 @@ import './mapa-talhoes.css';
 export const metadata: Metadata = {
   title: 'Mapa de talhões | FortSmart',
   description:
-    'Visualização de talhões, subáreas e calculadora de sementes (GeoJSON do app: ?d=, link curto /m/… ou ficheiro).',
+    'Talhões, subáreas e calculadora de sementes. Dados por ?file= (R2/CDN), ?id= snapshot, ou importação GeoJSON.',
 };
 
 function Fallback() {
@@ -20,8 +20,8 @@ function Fallback() {
 }
 
 /**
- * Mapa principal: lê `?d=` (base64url UTF-8), partilha `/mapa-talhoes/m/:token` (SSR no child)
- * e importação de ficheiro — toda a lógica em [MapaTalhoesClient].
+ * Prioridade na query: `?file=` URL pública GeoJSON → `?id=` snapshot → `?d=` legado —
+ * implementação em [MapaTalhoesClient].
  */
 export default function MapaTalhoesPage() {
   return (

@@ -40,6 +40,17 @@ export function parseJsonFileText(text: string): FeatureCollection | null {
   }
 }
 
+/** URL pública esperada para `?file=` (R2/CDN/GCS) — evita javascript: ou esquema inválido. */
+export function looksLikeHttpsGeoJsonFetchUrl(raw: string | null | undefined): boolean {
+  if (raw == null || raw.trim() === '') return false;
+  try {
+    const u = new URL(raw);
+    return u.protocol === 'https:' || u.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 export function filterByCulturaSafra(
   fc: FeatureCollection,
   cultura: string,

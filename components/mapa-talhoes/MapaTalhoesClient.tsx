@@ -8,6 +8,7 @@ import {
   decodeGeoJsonFromQuery,
   distinctCulturasSafas,
   downloadGeoJson,
+  looksLikeHttpsGeoJsonFetchUrl,
   filterByCulturaSafra,
   filterBySelectedTalhoes,
   filterByViewMode,
@@ -79,11 +80,65 @@ export function MapaTalhoesClient({
   }, [initialFeatureCollection]);
 
   /**
-   * Origem dos dados (recomendado): upload de ficheiro GeoJSON (zona no topo).
-   * Compat.: `?id=` (Supabase) > `?d=` (legado, só cargas pequenas) > rota `/mapa-talhoes/m/:token`.
+   * Prioridade absoluta — `?file=` (HTTPS, ex.: objeto público Cloudflare R2).
    */
   useEffect(() => {
     if (initialFeatureCollection != null) return;
+    const fileUrl = sp?.get('file')?.trim();
+    if (!fileUrl) return;
+    let cancelled = false;
+    const ac = new AbortController();
+
+    void (async () => {
+      if (!looksLikeHttpsGeoJsonFetchUrl(fileUrl)) {
+        setErr('Parâmetro file= deve ser uma URL http(s) válida para o GeoJSON.');
+        return;
+      }
+      try {
+        setLoadingShare(true);
+        setErr(null);
+        setTip(null);
+        const res = await fetch(fileUrl, { signal: ac.signal, mode: 'cors', cache: 'no-store' });
+        if (cancelled) return;
+        if (!res.ok) {
+          setErr(`Falha ao carregar arquivo GeoJSON (${res.status}). Verifique permissões CORS no armazenamento.`);
+          return;
+        }
+        const text = await res.text();
+        if (cancelled) return;
+        const fc = parseJsonFileText(text);
+        if (fc && fc.features.length > 0) {
+          setRaw(fc);
+          setErr(null);
+        } else {
+          setErr('Falha ao carregar arquivo GeoJSON: FeatureCollection ausente ou vazio.');
+        }
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        const msg = e instanceof Error ? e.message : String(e);
+        setErr(
+          msg.includes('Failed to fetch') || msg.includes('NetworkError')
+            ? 'Falha de rede ao carregar GeoJSON (CORS ou URL inacessível).'
+            : `Falha ao carregar GeoJSON: ${msg}`,
+        );
+      } finally {
+        if (!cancelled) setLoadingShare(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [initialFeatureCollection, sp]);
+
+  /**
+   * Origem: snapshot `?id=` (Supabase) · compat. `/mapa-talhoes/m/:token` abaixo.
+   */
+  useEffect(() => {
+    if (initialFeatureCollection != null) return;
+    if (sp?.get('file')?.trim()) return;
     const idParam = sp?.get('id')?.trim();
     if (!idParam) return;
 
@@ -132,6 +187,7 @@ export function MapaTalhoesClient({
 
   useEffect(() => {
     if (initialFeatureCollection != null) return;
+    if (sp?.get('file')?.trim()) return;
     if (sp?.get('id')?.trim()) return;
     const d = sp?.get('d');
     if (!d) return;
@@ -152,6 +208,7 @@ export function MapaTalhoesClient({
 
   useEffect(() => {
     if (initialFeatureCollection != null) return;
+    if (sp?.get('file')?.trim()) return;
     if (sp?.get('id')?.trim()) return;
     if (raw != null) return;
 
@@ -430,14 +487,15 @@ export function MapaTalhoesClient({
                   <ol className="list-decimal space-y-1.5 pl-4 text-slate-400">
                     <li>FortSmart → <strong className="text-slate-300">Plantio</strong>.</li>
                     <li>
-                      Selecione talhões → <strong className="text-slate-300">Visualizar mapa (web)</strong>: o app gera{' '}
-                      <strong className="text-slate-300">fortsmart_mapa_talhoes.geojson</strong> e abre esta página — use a
-                      zona <strong className="text-slate-300">Carregar arquivo GeoJSON</strong> no topo ou o botão abaixo.
+                      Selecione talhões → <strong className="text-slate-300">Visualizar mapa (web)</strong>: o app envia o
+                      GeoJSON ao armazenamento (R2) e abre esta página com{' '}
+                      <code className="text-emerald-300/90">?file=</code> (carregamento automático). Import na zona de cima
+                      é opcional para ficheiros offline.
                     </li>
                     <li>
-                      Ou link com snapshot <code className="text-emerald-300/90">?id=…</code> · legado{' '}
-                      <code className="text-emerald-300/90">…/mapa-talhoes/m/…</code> ·{' '}
-                      <code className="text-emerald-300/90">?d=</code> (só cargas muito pequenas)
+                      Ou snapshot <code className="text-emerald-300/90">?id=…</code> ·{' '}
+                      <code className="text-emerald-300/90">…/mapa-talhoes/m/…</code> · legado{' '}
+                      <code className="text-emerald-300/90">?d=</code> (base64, só cargas muito pequenas)
                     </li>
                   </ol>
                   <input

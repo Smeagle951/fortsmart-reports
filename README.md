@@ -130,11 +130,30 @@ Ver `data/schema-relatorio-visita-tecnica.json` e `data/exemplo-relatorio.json`.
 2. **Ver relatório privado:** abrir no app o link `https://seu-dominio.vercel.app/relatorio/{uuid}` com o cookie `firebase_uid` definido (ao fazer login com Firebase, definir esse cookie no domínio da Vercel ou usar a API `GET /api/relatorio/[id]` com header `X-Firebase-UID`).
 3. **Compartilhar:** ao clicar "Compartilhar", backend faz `UPDATE relatorios SET share_token = gen_random_uuid()::text, is_public = true WHERE id = $1 AND owner_firebase_uid = $2` e retorna o link `https://seu-dominio.vercel.app/r/{share_token}`. Quem recebe o link acessa sem login.
 
+## Deploy na Cloudflare (Workers + GitHub)
+
+Este repositório usa **OpenNext** (`@opennextjs/cloudflare`) e **Wrangler**. O script `npm run build` continua a ser **`next build`** (usado internamente pelo OpenNext); o build completo para Workers é **`npm run cf:build`**.
+
+**Workers Builds (painel Cloudflare) — valores sugeridos**
+
+| Campo | Valor |
+|--------|--------|
+| Nome do projeto | `fortsmart-reports` |
+| Caminho (root) | `/` |
+| Comando de construção | `npm run cf:build` |
+| Comando de implantação | `npx wrangler deploy` |
+| Branch não produção (opcional) | `npx wrangler versions upload` |
+
+Defina as mesmas variáveis de ambiente do Supabase/Next em **Build variables** e **Secrets**, como na [documentação OpenNext (env)](https://opennext.js.org/cloudflare/howtos/env-vars).
+
+Local: `npm run cf:build` gera `.open-next/`; `npm run deploy:cf` faz build + deploy (`opennextjs-cloudflare deploy`). Next.js 14.2.x exige a flag `--dangerouslyUseUnsupportedNextVersion` (já incluída em `cf:build`).
+
 ## Deploy na Vercel
 
 1. Conecte o repositório GitHub ao Vercel.
-2. Configure as variáveis de ambiente no painel da Vercel.
-3. Deploy automático a cada push.
+2. No projeto Vercel, defina o **comando de build** como `npm run build` (apenas `next build`) — não use `cf:build` na Vercel a menos que migre o deploy para Workers.
+3. Configure as variáveis de ambiente no painel da Vercel.
+4. Deploy automático a cada push.
 
 ---
 

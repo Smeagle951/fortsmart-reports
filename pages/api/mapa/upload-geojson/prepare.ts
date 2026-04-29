@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 import { getSupabaseService } from '@/lib/supabase';
+import { prepareR2GeoJsonUpload, r2CredentialsPresent } from '@/lib/cloudflare/r2-geojson-upload';
 import { mapaSnapshotBucketName } from '@/lib/mapa-snapshot-storage';
 
 const SNAPSHOT_FOLDER = 'snapshots';
@@ -41,12 +42,43 @@ function publicOriginFromReq(req: NextApiRequest): string {
 
 /**
  * POST /api/mapa/upload-geojson/prepare
- * Cria token legível + URL assinada para PUT direto ao Storage (geoJSON não passa pelo body da Vercel).
+ *
+ * Preferência enterprise: **Cloudflare R2** (env `R2_*`) → PUT assinado + mapa via `?file=` (sem Base64 nem complete).
+ * Legado compatível: **Supabase Storage** + Postgres em `/complete`.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ ok: false, success: false, error: 'Método não permitido' });
+  }
+
+  if (r2CredentialsPresent()) {
+    const base = publicOriginFromReq(req).replace(/\/$/, '');
+    const r2 = await prepareR2GeoJsonUpload();
+    if (!r2.ok) {
+      return res.status(503).json({
+        ok: false,
+        success: false,
+        code: r2.code,
+        error: r2.message,
+      });
+    }
+    const fileParam = encodeURIComponent(r2.publicUrl);
+    return res.status(200).json({
+      success: true,
+      ok: true,
+      requires_complete: false,
+      storage_backend: 'r2',
+      map_id: r2.mapId,
+      bucket: process.env.R2_BUCKET_NAME!.trim(),
+      storage_path: r2.storagePath,
+      upload_url: r2.uploadUrl,
+      /** R2 público onde o objeto estará disponível depois do PUT. */
+      public_url: r2.publicUrl,
+      expires_in_seconds: 3600,
+      url_partial: `/mapa-talhoes?file=${fileParam}`,
+      url: `${base}/mapa-talhoes?file=${fileParam}`,
+    });
   }
 
   const svc = getSupabaseService();
@@ -123,6 +155,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   return res.status(200).json({
     success: true,
     ok: true,
+    requires_complete: true,
+    storage_backend: 'supabase',
     map_id: mapId,
     bucket,
     /** Caminho dentro do bucket; usado no passo „complete“. */
