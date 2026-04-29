@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import {
   prepareR2JsonUploadForSoilPanel,
-  r2CredentialsPresent,
+  isR2ConfiguredAsync,
 } from '@/lib/cloudflare/r2-geojson-upload';
 
 function publicOriginFromReq(req: NextApiRequest): string {
@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false, success: false, error: 'Método não permitido' });
   }
 
-  if (!r2CredentialsPresent()) {
+  if (!(await isR2ConfiguredAsync())) {
     return res.status(503).json({
       ok: false,
       success: false,
@@ -56,7 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     requires_complete: false,
     storage_backend: 'r2',
     map_id: prepared.mapId,
-    bucket: process.env.R2_BUCKET_NAME!.trim(),
+    bucket: prepared.bucketName,
     storage_path: prepared.storagePath,
     upload_url: prepared.uploadUrl,
     public_url: prepared.publicUrl,

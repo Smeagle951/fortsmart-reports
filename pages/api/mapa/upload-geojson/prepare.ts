@@ -2,8 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import {
   prepareR2GeoJsonUpload,
-  r2ConfigurationGaps,
-  r2CredentialsPresent,
+  r2ConfigurationGapsAsync,
+  isR2ConfiguredAsync,
 } from '@/lib/cloudflare/r2-geojson-upload';
 
 function publicOriginFromReq(req: NextApiRequest): string {
@@ -37,8 +37,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false, success: false, error: 'Método não permitido' });
   }
 
-  if (!r2CredentialsPresent()) {
-    const missing = r2ConfigurationGaps();
+  if (!(await isR2ConfiguredAsync())) {
+    const missing = await r2ConfigurationGapsAsync();
     return res.status(503).json({
       ok: false,
       success: false,
@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         'Cloudflare R2 não configurado no Worker (variáveis ausentes). Veja missing_env e confirme Production no painel.',
       missing_env: missing,
       note:
-        'Este endpoint usa process.env (R2_* / fallbacks CLOUDFLARE_*), não env.GEOJSON_BUCKET. O binding no wrangler é opcional para este fluxo de URL assinada S3.',
+        'Variáveis são lidas de process.env e de getCloudflareContext().env (painel Workers). Binding GEOJSON_BUCKET é opcional para URL assinada S3.',
     });
   }
 
@@ -68,10 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     requires_complete: false,
     storage_backend: 'r2',
     map_id: r2.mapId,
-    bucket:
-      process.env.R2_BUCKET_NAME?.trim() ||
-      process.env.CLOUDFLARE_R2_BUCKET?.trim() ||
-      '',
+    bucket: r2.bucketName,
     storage_path: r2.storagePath,
     upload_url: r2.uploadUrl,
     /** R2 público onde o objeto estará disponível depois do PUT. */

@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto';
 
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -17,7 +18,14 @@ export function geojsonStorageKey(mapId: string): string {
 }
 
 export type R2PrepareResult =
-  | { ok: true; uploadUrl: string; publicUrl: string; storagePath: string; mapId: string }
+  | {
+      ok: true;
+      uploadUrl: string;
+      publicUrl: string;
+      storagePath: string;
+      mapId: string;
+      bucketName: string;
+    }
   | { ok: false; code: string; message: string };
 
 type R2ObjectSpec = {
@@ -37,52 +45,70 @@ export type R2ResolvedEnv = {
 };
 
 /**
- * Lista chaves lógicas ausentes (sem expor valores).
- * O **prepare** usa S3 API + credenciais em `process.env`, não o binding `GEOJSON_BUCKET`.
+ * Lê uma variável definida no painel Cloudflare (Workers).
+ * No deploy OpenNext, `process.env` pode ficar vazio no runtime; o valor vem em `getCloudflareContext().env`.
+ *
+ * @see https://opennext.js.org/cloudflare/howtos/env-vars
  */
-export function r2ConfigurationGaps(): string[] {
+export async function readWorkerEnvString(...keys: string[]): Promise<string | undefined> {
+  for (const key of keys) {
+    const fromProcess = process.env[key]?.trim();
+    if (fromProcess) return fromProcess;
+  }
+  try {
+    const { env } = await getCloudflareContext();
+    const record = env as Record<string, unknown>;
+    for (const key of keys) {
+      const raw = record[key];
+      if (typeof raw === 'string' && raw.trim().length > 0) return raw.trim();
+    }
+  } catch {
+    /* next dev sem Worker, SSR, etc. */
+  }
+  return undefined;
+}
+
+/** Lista chaves lógicas ausentes (sem expor valores). */
+export async function r2ConfigurationGapsAsync(): Promise<string[]> {
   const g: string[] = [];
-  const account =
-    process.env.R2_ACCOUNT_ID?.trim() || process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
-  if (!account) {
+  if (!(await readWorkerEnvString('R2_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID'))) {
     g.push('R2_ACCOUNT_ID ou CLOUDFLARE_ACCOUNT_ID');
   }
-  if (!process.env.R2_ACCESS_KEY_ID?.trim()) {
+  if (!(await readWorkerEnvString('R2_ACCESS_KEY_ID'))) {
     g.push('R2_ACCESS_KEY_ID');
   }
-  if (!process.env.R2_SECRET_ACCESS_KEY?.trim()) {
+  if (!(await readWorkerEnvString('R2_SECRET_ACCESS_KEY'))) {
     g.push('R2_SECRET_ACCESS_KEY');
   }
-  const bucket =
-    process.env.R2_BUCKET_NAME?.trim() || process.env.CLOUDFLARE_R2_BUCKET?.trim();
-  if (!bucket) {
+  if (!(await readWorkerEnvString('R2_BUCKET_NAME', 'CLOUDFLARE_R2_BUCKET'))) {
     g.push('R2_BUCKET_NAME ou CLOUDFLARE_R2_BUCKET');
   }
-  if (!process.env.R2_PUBLIC_BASE_URL?.trim()) {
+  if (!(await readWorkerEnvString('R2_PUBLIC_BASE_URL'))) {
     g.push('R2_PUBLIC_BASE_URL');
   }
   return g;
 }
 
-export function resolveR2Env(): R2ResolvedEnv | null {
-  const gaps = r2ConfigurationGaps();
-  if (gaps.length > 0) return null;
-  return {
-    accountId:
-      process.env.R2_ACCOUNT_ID!.trim() ||
-      process.env.CLOUDFLARE_ACCOUNT_ID!.trim(),
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!.trim(),
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!.trim(),
-    bucketName:
-      process.env.R2_BUCKET_NAME!.trim() ||
-      process.env.CLOUDFLARE_R2_BUCKET!.trim(),
-    publicBaseUrl: process.env.R2_PUBLIC_BASE_URL!.trim(),
-  };
+export async function isR2ConfiguredAsync(): Promise<boolean> {
+  return (await r2ConfigurationGapsAsync()).length === 0;
 }
 
-/** Verifica ambiente obrigatório para upload assinado R2 → URL pública (GET público configurado no bucket). */
-export function r2CredentialsPresent(): boolean {
-  return r2ConfigurationGaps().length === 0;
+export async function resolveR2EnvAsync(): Promise<R2ResolvedEnv | null> {
+  const accountId = await readWorkerEnvString('R2_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID');
+  const accessKeyId = await readWorkerEnvString('R2_ACCESS_KEY_ID');
+  const secretAccessKey = await readWorkerEnvString('R2_SECRET_ACCESS_KEY');
+  const bucketName = await readWorkerEnvString('R2_BUCKET_NAME', 'CLOUDFLARE_R2_BUCKET');
+  const publicBaseUrl = await readWorkerEnvString('R2_PUBLIC_BASE_URL');
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucketName || !publicBaseUrl) {
+    return null;
+  }
+  return {
+    accountId,
+    accessKeyId,
+    secretAccessKey,
+    bucketName,
+    publicBaseUrl,
+  };
 }
 
 /**
@@ -108,12 +134,16 @@ export async function prepareR2JsonUploadForSoilPanel(): Promise<R2PrepareResult
 }
 
 async function prepareR2Upload(spec: R2ObjectSpec): Promise<R2PrepareResult> {
-  const cfg = resolveR2Env();
+  const cfg = await resolveR2EnvAsync();
   if (!cfg) {
+    const gaps = await r2ConfigurationGapsAsync();
     return {
       ok: false,
       code: 'r2_unconfigured',
-      message: `Configure: ${r2ConfigurationGaps().join('; ')}.`,
+      message:
+        gaps.length > 0
+          ? `Configure: ${gaps.join('; ')}.`
+          : 'Ambiente R2 incompleto.',
     };
   }
   const publicRoot = cfg.publicBaseUrl.replace(/\/+$/, '');
@@ -155,5 +185,12 @@ async function prepareR2Upload(spec: R2ObjectSpec): Promise<R2PrepareResult> {
     };
   }
 
-  return { ok: true, uploadUrl, publicUrl, storagePath: key, mapId };
+  return {
+    ok: true,
+    uploadUrl,
+    publicUrl,
+    storagePath: key,
+    mapId,
+    bucketName: cfg.bucketName,
+  };
 }
