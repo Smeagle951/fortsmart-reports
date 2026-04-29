@@ -7,6 +7,13 @@
   },
   "compatibility_date": "2026-04-28",
   "compatibility_flags": ["nodejs_compat"],
+  "r2_buckets": [
+    {
+      "binding": "GEOJSON_BUCKET",
+      "bucket_name": "fortsmart-geojson-storage",
+      "preview_bucket_name": "fortsmart-geojson-storage"
+    }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

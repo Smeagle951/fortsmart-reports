@@ -26,15 +26,63 @@ type R2ObjectSpec = {
   contentType: string;
   idPrefix: string;
 };
+
+/** Resolvido a partir de `R2_*` com fallbacks para nomes usados no painel Cloudflare. */
+export type R2ResolvedEnv = {
+  accountId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucketName: string;
+  publicBaseUrl: string;
+};
+
+/**
+ * Lista chaves lógicas ausentes (sem expor valores).
+ * O **prepare** usa S3 API + credenciais em `process.env`, não o binding `GEOJSON_BUCKET`.
+ */
+export function r2ConfigurationGaps(): string[] {
+  const g: string[] = [];
+  const account =
+    process.env.R2_ACCOUNT_ID?.trim() || process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  if (!account) {
+    g.push('R2_ACCOUNT_ID ou CLOUDFLARE_ACCOUNT_ID');
+  }
+  if (!process.env.R2_ACCESS_KEY_ID?.trim()) {
+    g.push('R2_ACCESS_KEY_ID');
+  }
+  if (!process.env.R2_SECRET_ACCESS_KEY?.trim()) {
+    g.push('R2_SECRET_ACCESS_KEY');
+  }
+  const bucket =
+    process.env.R2_BUCKET_NAME?.trim() || process.env.CLOUDFLARE_R2_BUCKET?.trim();
+  if (!bucket) {
+    g.push('R2_BUCKET_NAME ou CLOUDFLARE_R2_BUCKET');
+  }
+  if (!process.env.R2_PUBLIC_BASE_URL?.trim()) {
+    g.push('R2_PUBLIC_BASE_URL');
+  }
+  return g;
+}
+
+export function resolveR2Env(): R2ResolvedEnv | null {
+  const gaps = r2ConfigurationGaps();
+  if (gaps.length > 0) return null;
+  return {
+    accountId:
+      process.env.R2_ACCOUNT_ID!.trim() ||
+      process.env.CLOUDFLARE_ACCOUNT_ID!.trim(),
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!.trim(),
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!.trim(),
+    bucketName:
+      process.env.R2_BUCKET_NAME!.trim() ||
+      process.env.CLOUDFLARE_R2_BUCKET!.trim(),
+    publicBaseUrl: process.env.R2_PUBLIC_BASE_URL!.trim(),
+  };
+}
+
 /** Verifica ambiente obrigatório para upload assinado R2 → URL pública (GET público configurado no bucket). */
 export function r2CredentialsPresent(): boolean {
-  return !!(
-    process.env.R2_ACCOUNT_ID?.trim() &&
-    process.env.R2_ACCESS_KEY_ID?.trim() &&
-    process.env.R2_SECRET_ACCESS_KEY?.trim() &&
-    process.env.R2_BUCKET_NAME?.trim() &&
-    process.env.R2_PUBLIC_BASE_URL?.trim()
-  );
+  return r2ConfigurationGaps().length === 0;
 }
 
 /**
@@ -60,9 +108,15 @@ export async function prepareR2JsonUploadForSoilPanel(): Promise<R2PrepareResult
 }
 
 async function prepareR2Upload(spec: R2ObjectSpec): Promise<R2PrepareResult> {
-  const accountId = process.env.R2_ACCOUNT_ID!.trim();
-  const bucket = process.env.R2_BUCKET_NAME!.trim();
-  const publicRoot = process.env.R2_PUBLIC_BASE_URL!.trim().replace(/\/+$/, '');
+  const cfg = resolveR2Env();
+  if (!cfg) {
+    return {
+      ok: false,
+      code: 'r2_unconfigured',
+      message: `Configure: ${r2ConfigurationGaps().join('; ')}.`,
+    };
+  }
+  const publicRoot = cfg.publicBaseUrl.replace(/\/+$/, '');
 
   const mapId = `${spec.idPrefix}_${new Date().getFullYear()}_${randomBytes(5).toString('hex')}`;
   const key = `${spec.folder}/${mapId}.${spec.extension}`;
@@ -70,16 +124,16 @@ async function prepareR2Upload(spec: R2ObjectSpec): Promise<R2PrepareResult> {
 
   const client = new S3Client({
     region: 'auto',
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    endpoint: `https://${cfg.accountId}.r2.cloudflarestorage.com`,
     credentials: {
-      accessKeyId: process.env.R2_ACCESS_KEY_ID!.trim(),
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!.trim(),
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
     },
     forcePathStyle: true,
   });
 
   const command = new PutObjectCommand({
-    Bucket: bucket,
+    Bucket: cfg.bucketName,
     Key: key,
     ContentType: spec.contentType,
     CacheControl: 'public, max-age=300',
