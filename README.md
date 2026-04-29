@@ -132,17 +132,29 @@ Ver `data/schema-relatorio-visita-tecnica.json` e `data/exemplo-relatorio.json`.
 
 ## Deploy na Cloudflare (Workers + GitHub)
 
-Este repositório usa **OpenNext** (`@opennextjs/cloudflare`) e **Wrangler**. O script `npm run build` continua a ser **`next build`** (usado internamente pelo OpenNext); o build completo para Workers é **`npm run cf:build`**.
+Este repositório usa **OpenNext** (`@opennextjs/cloudflare`) e **Wrangler**. O script `npm run build` é **só `next build`** (o OpenNext volta a chamá-lo por dentro). Para o Worker sair no ar, o CI **tem** de correr **`npm run cf:build`** antes do `wrangler deploy` — esse passo gera a pasta **`.open-next/`** e o config compilado.
 
-**Workers Builds (painel Cloudflare) — valores sugeridos**
+### Erro típico no painel
+
+```
+ERROR Could not find compiled Open Next config, did you run the build command?
+```
+
+Significa que o **comando de construção** está como `npm run build` (Next puro). Troque para **`npm run cf:build`** ou **`npm run cloudflare-build`** (equivale ao mesmo).
+
+**Workers Builds (painel Cloudflare) — valores obrigatórios**
 
 | Campo | Valor |
 |--------|--------|
 | Nome do projeto | `fortsmart-reports` |
 | Caminho (root) | `/` |
-| Comando de construção | `npm run cf:build` |
+| Comando de construção | **`npm run cf:build`** (**não** use `npm run build` só) |
 | Comando de implantação | `npx wrangler deploy` |
 | Branch não produção (opcional) | `npx wrangler versions upload` |
+
+**Alternativa (um comando só):** se o painel permitir deixar o passo de “build” vazio, use **apenas** no deploy: `npm run deploy:cf` (inclui `cf:build` + `wrangler deploy`). Caso contrário use a tabela acima.
+
+**Variáveis R2 / Supabase** não entram no **build**: configure-as como **Secrets / Variables do Worker** ou variáveis de runtime no painel — **nunca** commits com esses valores no Git.
 
 Defina as mesmas variáveis de ambiente do Supabase/Next em **Build variables** e **Secrets**, como na [documentação OpenNext (env)](https://opennext.js.org/cloudflare/howtos/env-vars).
 
