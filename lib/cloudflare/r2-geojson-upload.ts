@@ -26,7 +26,6 @@ type R2ObjectSpec = {
   contentType: string;
   idPrefix: string;
 };
-
 /** Verifica ambiente obrigatório para upload assinado R2 → URL pública (GET público configurado no bucket). */
 export function r2CredentialsPresent(): boolean {
   return !!(
