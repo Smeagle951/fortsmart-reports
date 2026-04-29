@@ -387,39 +387,11 @@
             max-height: calc(90vh - 80px);
         }
 
-        .photo-meta-note {
-            font-size: 13px;
-            color: var(--fortsmart-primary);
-            background: rgba(27, 94, 32, 0.08);
-            border-left: 4px solid var(--fortsmart-primary);
-            padding: 10px 14px;
-            margin-bottom: 16px;
-            border-radius: 0 8px 8px 0;
-            line-height: 1.45;
-        }
-
-        .metadata-collapsible {
-            margin-top: 4px;
-        }
-
-        .metadata-collapsible summary {
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--fortsmart-accent);
-            padding: 8px 0;
-            user-select: none;
-        }
-
-        .metadata-collapsible[open] summary {
-            margin-bottom: 8px;
-        }
-
         .photo-gallery {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 12px;
-            margin-bottom: 12px;
+            margin-bottom: 20px;
         }
 
         .photo-item {
@@ -600,52 +572,22 @@
             display: flex;
         }
 
-        .lightbox-viewport {
-            touch-action: none;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 100%;
-            cursor: zoom-in;
-        }
-
-        .lightbox-viewport img {
+        .image-lightbox img {
             max-width: 95%;
             max-height: 95%;
             object-fit: contain;
             border-radius: 8px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            transition: transform 0.12s ease-out;
-            transform-origin: center center;
-            transform: translate(var(--lx, 0px), var(--ly, 0px)) scale(var(--ls, 1));
-            cursor: inherit;
-            -webkit-user-drag: none;
-            user-select: none;
-            -webkit-touch-callout: none;
+            transition: transform 0.3s ease;
         }
 
         .image-lightbox.zoomed img {
+            transform: scale(2);
             cursor: grab;
         }
 
         .image-lightbox.zoomed img:active {
             cursor: grabbing;
-        }
-
-        #lightboxHint {
-            position: absolute;
-            bottom: 96px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.55);
-            color: rgba(255,255,255,0.88);
-            font-size: 12px;
-            padding: 6px 14px;
-            border-radius: 999px;
-            pointer-events: none;
-            white-space: nowrap;
         }
 
         .lightbox-controls {
@@ -857,39 +799,33 @@
             </div>
             <div class="modal-body">
                 <div id="modalPhotos"></div>
-                <p class="photo-meta-note"><strong>Foco em auditoria:</strong> dados principais aparecem
-                    <strong>carimbados na própria imagem</strong> (não apenas neste texto). Ao abrir a foto
-                    grande, use o zoom ou pinça no celular para inspecionar a legenda.</p>
-                <details class="metadata-collapsible" id="modalMetadataExtra">
-                    <summary>Metadados textuais opcionais (duplicados para conferência rápida)</summary>
-                    <div class="info-grid">
-                        <div class="info-card">
-                            <div class="info-label">Talhão</div>
-                            <div class="info-value" id="modalTalhao">-</div>
-                        </div>
-                        <div class="info-card">
-                            <div class="info-label">Fazenda</div>
-                            <div class="info-value" id="modalFazenda">-</div>
-                        </div>
-                        <div class="info-card">
-                            <div class="info-label">Coordenadas</div>
-                            <div class="info-value" id="modalCoords" style="font-family: monospace; font-size: 12px;">-
-                            </div>
-                        </div>
-                        <div class="info-card">
-                            <div class="info-label">Data/Hora</div>
-                            <div class="info-value" id="modalDateTime">-</div>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-label">Talhão</div>
+                        <div class="info-value" id="modalTalhao">-</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Fazenda</div>
+                        <div class="info-value" id="modalFazenda">-</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Coordenadas</div>
+                        <div class="info-value" id="modalCoords" style="font-family: monospace; font-size: 12px;">-
                         </div>
                     </div>
-                    <div style="margin-top: 16px;">
-                        <strong>Profundidades:</strong>
-                        <div id="modalDepths"></div>
+                    <div class="info-card">
+                        <div class="info-label">Data/Hora</div>
+                        <div class="info-value" id="modalDateTime">-</div>
                     </div>
-                    <div class="info-card" style="margin-top: 16px;">
-                        <div class="info-label">Responsável</div>
-                        <div class="info-value" id="modalResponsavel">-</div>
-                    </div>
-                </details>
+                </div>
+                <div style="margin-top: 16px;">
+                    <strong>Profundidades:</strong>
+                    <div id="modalDepths"></div>
+                </div>
+                <div class="info-card" style="margin-top: 16px;">
+                    <div class="info-label">Responsável</div>
+                    <div class="info-value" id="modalResponsavel">-</div>
+                </div>
             </div>
         </div>
     </div>
@@ -902,49 +838,29 @@
         let campaignData = null, pointsData = [], loadedTalhoes = [];
         let currentTalhao = null;
 
-        function extractAutoDataUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const raw =
-                urlParams.get('file') ||
-                urlParams.get('url') ||
-                urlParams.get('json_url');
-            if (!raw) return null;
-            try {
-                return decodeURIComponent(raw);
-            } catch (_) {
-                return raw;
-            }
-        }
-
-        // Inicializar - prioridade: ?file= (R2) -> ?data= (legado base64) -> seletor manual
+            // Inicializar — ?file= (JSON no R2 / CDN, como retorna prepare) ou ?data= (legado)
         function initApp() {
-            hideLoading();
-
             const urlParams = new URLSearchParams(window.location.search);
-            const fileUrl = extractAutoDataUrl();
-            const base64Data = urlParams.get('data');
+            const fileParam = urlParams.get('file');
+            const dataParam = urlParams.get('data');
+            let remoteJsonUrl = null;
+            if (fileParam) {
+                try {
+                    remoteJsonUrl = decodeURIComponent(fileParam);
+                } catch (e) {
+                    remoteJsonUrl = fileParam;
+                }
+            } else if (dataParam) {
+                remoteJsonUrl = dataParam;
+            }
 
-            if (fileUrl) {
-                loadFromUrlParam(fileUrl);
+            if (remoteJsonUrl) {
+                showLoading('Carregando dados da campanha...');
+                loadFromUrlParam(remoteJsonUrl);
                 return;
             }
 
-            if (base64Data) {
-                try {
-                    // Decodificar dados base64
-                    const jsonString = atob(base64Data);
-                    const data = JSON.parse(jsonString);
-
-                    // Processar dados diretamente
-                    console.log('Dados recebidos via URL:', data);
-                    processLoadedData(data);
-                    return;
-                } catch (e) {
-                    console.error('Erro ao decodificar dados da URL:', e);
-                    alert('Erro ao carregar dados do app. Tente novamente o botão "Visualizar painel web".');
-                }
-            }
-
+            hideLoading();
             showDataSelector();
         }
 
@@ -979,14 +895,15 @@
 
         async function loadFromUrlParam(url) {
             try {
-                showLoading('Carregando arquivo GeoJSON/JSON...');
+                showLoading('Carregando dados da URL...');
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('Erro ao carregar');
                 const data = await response.json();
                 await processLoadedData(data);
             } catch (error) {
                 hideLoading();
-                alert('Falha ao carregar arquivo GeoJSON/JSON: ' + error.message);
+                alert('Erro: ' + error.message);
+                showDataSelector();
             }
         }
 
@@ -1046,7 +963,7 @@
 
                 // Preencher seletor
                 const select = document.getElementById('talhaoSelect');
-                select.innerHTML = '<option value="__all__">Todos os talhões</option>';
+                select.innerHTML = '<option value="">Selecione um talhão</option>';
                 loadedTalhoes.forEach(t => {
                     const opt = document.createElement('option');
                     opt.value = t.id;
@@ -1061,13 +978,11 @@
                 hideDataSelector();
                 showMainInterface();
 
-                // Auto-selecionar: 1 talhão => ele; múltiplos => todos com filtro aberto
+                // Auto-selecionar se só tiver um
                 if (loadedTalhoes.length === 1) {
                     select.value = loadedTalhoes[0].id;
-                } else {
-                    select.value = '__all__';
+                    changeTalhao();
                 }
-                changeTalhao();
 
                 console.log('✓ Dados reais carregados:', campaignData.name, pointsData.length, 'pontos');
 
@@ -1099,9 +1014,9 @@
             const talhaoId = document.getElementById('talhaoSelect').value;
             if (!talhaoId) return;
 
-            const isAll = talhaoId === '__all__';
-            const talhao = isAll ? null : loadedTalhoes.find(t => t.id == talhaoId);
-            if (!isAll && !talhao) return;
+            const talhao = loadedTalhoes.find(t => t.id == talhaoId);
+            if (!talhao) return;
+
             currentTalhao = talhao;
 
             // Limpar camadas
@@ -1109,15 +1024,13 @@
             markers.forEach(m => map.removeLayer(m));
             markers = [];
 
-            // Desenhar polígono (somente em seleção única)
-            if (!isAll && talhao && talhao.poligono && talhao.poligono.length > 0) {
+            // Desenhar polígono
+            if (talhao.poligono && talhao.poligono.length > 0) {
                 polygonLayer = L.polygon(talhao.poligono, { color: '#1B5E20', fillColor: '#1B5E20', fillOpacity: 0.1, weight: 3 }).addTo(map);
             }
 
             // Filtrar pontos
-            const talhaoPoints = isAll
-                ? pointsData
-                : pointsData.filter(p => p.talhao === talhao.nome || p.talhaoId == talhao.id);
+            const talhaoPoints = pointsData.filter(p => p.talhao === talhao.nome || p.talhaoId == talhao.id);
 
             // Atualizar lista
             const list = document.getElementById('pointsList');
@@ -1277,62 +1190,27 @@
         // Image Lightbox Functions
         let currentLightboxImages = [];
         let currentImageIndex = 0;
-        /** Zoom/pan dentro do lightbox (legenda já está na imagem exportada pelo app). */
-        let lbScale = 1;
-        let lbTx = 0;
-        let lbTy = 0;
-        let lbPinchStartDist = null;
-        let lbPinchStartScale = 1;
-        let lbPanning = false;
-        let lbPanStartX = 0;
-        let lbPanStartY = 0;
-        let lbPanOrigX = 0;
-        let lbPanOrigY = 0;
-
-        function resetLbTransform() {
-            lbScale = 1;
-            lbTx = 0;
-            lbTy = 0;
-            applyLbTransform();
-            const lb = document.getElementById('imageLightbox');
-            if (lb) lb.classList.remove('zoomed');
-        }
-
-        function applyLbTransform() {
-            const img = document.getElementById('lightboxImage');
-            if (!img) return;
-            lbScale = Math.min(8, Math.max(0.4, lbScale));
-            img.style.setProperty('--ls', lbScale.toFixed(4));
-            img.style.setProperty('--lx', lbTx.toFixed(2) + 'px');
-            img.style.setProperty('--ly', lbTy.toFixed(2) + 'px');
-            const lb = document.getElementById('imageLightbox');
-            if (lbScale > 1.02) lb.classList.add('zoomed');
-            else lb.classList.remove('zoomed');
-        }
-
-        function toggleLbZoomTap() {
-            if (lbScale < 1.5) lbScale = 2.25;
-            else resetLbTransform();
-            applyLbTransform();
-        }
+            let isZoomed = false;
 
         function openImageLightbox(images, index = 0) {
             currentLightboxImages = images;
             currentImageIndex = index;
+            isZoomed = false;
 
             const lightbox = document.getElementById('imageLightbox');
             const img = document.getElementById('lightboxImage');
             const counter = document.getElementById('lightboxCounter');
 
-            img.onload = () => resetLbTransform();
             img.src = images[index].src || images[index].url || images[index].data_url || images[index].file_path;
             counter.textContent = `${index + 1} / ${images.length}`;
-            resetLbTransform();
 
             lightbox.classList.add('active');
+            lightbox.classList.remove('zoomed');
 
+            // Initialize Lucide icons in lightbox
             lucide.createIcons();
 
+            // Preload adjacent images
             if (index > 0) preloadImage(images[index - 1]);
             if (index < images.length - 1) preloadImage(images[index + 1]);
         }
@@ -1344,14 +1222,17 @@
 
         function closeImageLightbox() {
             document.getElementById('imageLightbox').classList.remove('active');
-            resetLbTransform();
+            isZoomed = false;
         }
 
         function toggleZoom() {
-            lbScale = lbScale >= 2 ? 1 : 2;
-            lbTx = 0;
-            lbTy = 0;
-            applyLbTransform();
+            isZoomed = !isZoomed;
+            const lightbox = document.getElementById('imageLightbox');
+            if (isZoomed) {
+                lightbox.classList.add('zoomed');
+            } else {
+                lightbox.classList.remove('zoomed');
+            }
         }
 
         function nextImage() {
@@ -1372,71 +1253,9 @@
             img.src = imageData.src || imageData.url || imageData.data_url || imageData.file_path;
             counter.textContent = `${currentImageIndex + 1} / ${currentLightboxImages.length}`;
 
-            resetLbTransform();
-        }
-
-        function bindLightboxViewportGestures() {
-            const lbViewportEl = document.getElementById('lightboxViewport');
-            if (!lbViewportEl || lbViewportEl.dataset.fsBound === '1') return;
-            lbViewportEl.dataset.fsBound = '1';
-
-            lbViewportEl.addEventListener('wheel', function (ev) {
-                const lightbox = document.getElementById('imageLightbox');
-                if (!lightbox.classList.contains('active')) return;
-                ev.preventDefault();
-                const step = Math.exp(-ev.deltaY * 0.002);
-                lbScale *= step;
-                applyLbTransform();
-            }, { passive: false });
-
-            lbViewportEl.addEventListener('touchstart', function (ev) {
-                if (ev.touches.length === 2) {
-                    const [a, b] = [ev.touches[0], ev.touches[1]];
-                    lbPinchStartDist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
-                    lbPinchStartScale = lbScale;
-                    ev.preventDefault();
-                }
-            }, { passive: false });
-
-            lbViewportEl.addEventListener('touchmove', function (ev) {
-                const lightbox = document.getElementById('imageLightbox');
-                if (!lightbox.classList.contains('active')) return;
-                if (ev.touches.length === 2 && lbPinchStartDist != null && lbPinchStartDist > 0) {
-                    const [a, b] = [ev.touches[0], ev.touches[1]];
-                    const d = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
-                    lbScale = lbPinchStartScale * (d / lbPinchStartDist);
-                    applyLbTransform();
-                    ev.preventDefault();
-                }
-            }, { passive: false });
-
-            lbViewportEl.addEventListener('touchend', function () {
-                lbPinchStartDist = null;
-            });
-
-            lbViewportEl.addEventListener('pointerdown', function (ev) {
-                if (lbScale <= 1.02) return;
-                lbPanning = true;
-                lbPanStartX = ev.clientX;
-                lbPanStartY = ev.clientY;
-                lbPanOrigX = lbTx;
-                lbPanOrigY = lbTy;
-                try {
-                    lbViewportEl.setPointerCapture(ev.pointerId);
-                } catch (_) { }
-            });
-            lbViewportEl.addEventListener('pointermove', function (ev) {
-                if (!lbPanning || lbScale <= 1.02) return;
-                lbTx = lbPanOrigX + (ev.clientX - lbPanStartX);
-                lbTy = lbPanOrigY + (ev.clientY - lbPanStartY);
-                applyLbTransform();
-            });
-            lbViewportEl.addEventListener('pointerup', function () {
-                lbPanning = false;
-            });
-            lbViewportEl.addEventListener('pointercancel', function () {
-                lbPanning = false;
-            });
+            // Reset zoom
+            isZoomed = false;
+            document.getElementById('imageLightbox').classList.remove('zoomed');
         }
 
         // Keyboard navigation for lightbox
@@ -1479,8 +1298,7 @@
             handleSwipe();
         });
 
-        function handleSwipe() {
-            if (lbScale > 1.05) return;
+            function handleSwipe() {
             const swipeThreshold = 50;
             const diff = touchStartX - touchEndX;
 
@@ -1493,24 +1311,17 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
-            bindLightboxViewportGestures();
-            initApp();
-        });
+            // Iniciar
+            document.addEventListener('DOMContentLoaded', initApp);
     </script>
 
     <!-- Image Lightbox / Preview Modal -->
-    <div id="imageLightbox" class="image-lightbox"
-        onclick="if(event.target===this && lbScale<=1.01) closeImageLightbox()">
+    <div id="imageLightbox" class="image-lightbox" onclick="if(event.target===this && !isZoomed) closeImageLightbox()">
         <button class="lightbox-close" onclick="closeImageLightbox()">
             <i data-lucide="x" style="width: 24px; height: 24px;"></i>
         </button>
 
-        <div class="lightbox-viewport" id="lightboxViewport">
-            <img id="lightboxImage" src="" alt="Foto ampliada" draggable="false" onclick="event.stopPropagation(); toggleLbZoomTap();">
-        </div>
-
-        <div id="lightboxHint">Rodinha zoom · pinça (2 dedos) · arraste quando ampliado</div>
+        <img id="lightboxImage" src="" alt="Foto ampliada" onclick="toggleZoom()">
 
         <div class="lightbox-controls">
             <button class="lightbox-btn" onclick="prevImage()" title="Anterior (←)">
