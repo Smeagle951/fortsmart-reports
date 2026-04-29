@@ -2,6 +2,9 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "fortsmart-reports",
   "main": ".open-next/worker.js",
+  "build": {
+    "command": "npm run cf:build"
+  },
   "compatibility_date": "2026-04-28",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
