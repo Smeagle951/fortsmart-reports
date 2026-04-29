@@ -20,6 +20,13 @@ export type R2PrepareResult =
   | { ok: true; uploadUrl: string; publicUrl: string; storagePath: string; mapId: string }
   | { ok: false; code: string; message: string };
 
+type R2ObjectSpec = {
+  folder: string;
+  extension: string;
+  contentType: string;
+  idPrefix: string;
+};
+
 /** Verifica ambiente obrigatório para upload assinado R2 → URL pública (GET público configurado no bucket). */
 export function r2CredentialsPresent(): boolean {
   return !!(
@@ -36,12 +43,30 @@ export function r2CredentialsPresent(): boolean {
  * Bucket deve permitir GET público em `${R2_PUBLIC_BASE_URL}/{key}` (domínio r2.dev ou custom).
  */
 export async function prepareR2GeoJsonUpload(): Promise<R2PrepareResult> {
+  return prepareR2Upload({
+    folder: SNAPSHOT_FOLDER,
+    extension: 'geojson',
+    contentType: 'application/geo+json',
+    idPrefix: 'mapa',
+  });
+}
+
+export async function prepareR2JsonUploadForSoilPanel(): Promise<R2PrepareResult> {
+  return prepareR2Upload({
+    folder: 'painel-amostragem',
+    extension: 'json',
+    contentType: 'application/json',
+    idPrefix: 'amostragem',
+  });
+}
+
+async function prepareR2Upload(spec: R2ObjectSpec): Promise<R2PrepareResult> {
   const accountId = process.env.R2_ACCOUNT_ID!.trim();
   const bucket = process.env.R2_BUCKET_NAME!.trim();
   const publicRoot = process.env.R2_PUBLIC_BASE_URL!.trim().replace(/\/+$/, '');
 
-  const mapId = generateMapObjectId();
-  const key = geojsonStorageKey(mapId);
+  const mapId = `${spec.idPrefix}_${new Date().getFullYear()}_${randomBytes(5).toString('hex')}`;
+  const key = `${spec.folder}/${mapId}.${spec.extension}`;
   const publicUrl = `${publicRoot}/${key}`;
 
   const client = new S3Client({
@@ -57,7 +82,7 @@ export async function prepareR2GeoJsonUpload(): Promise<R2PrepareResult> {
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: key,
-    ContentType: 'application/geo+json',
+    ContentType: spec.contentType,
     CacheControl: 'public, max-age=300',
   });
 

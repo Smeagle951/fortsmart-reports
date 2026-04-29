@@ -14,6 +14,7 @@ import {
   filterByViewMode,
   isFeatureCollectionGj,
   listTalhoesFromFc,
+  parseJsonFileText,
   type MapaViewMode,
 } from './geojsonUtils';
 import { FiltersHeader } from './FiltersHeader';
