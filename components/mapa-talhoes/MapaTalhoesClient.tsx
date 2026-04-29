@@ -3,7 +3,7 @@
 import type { FeatureCollection, GeoJsonObject } from 'geojson';
 import dynamic from 'next/dynamic';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   decodeGeoJsonFromQuery,
   distinctCulturasSafas,
@@ -14,10 +14,8 @@ import {
   filterByViewMode,
   isFeatureCollectionGj,
   listTalhoesFromFc,
-  parseJsonFileText,
   type MapaViewMode,
 } from './geojsonUtils';
-import { MapaGeoJsonUploadZone } from './MapaGeoJsonUploadZone';
 import { FiltersHeader } from './FiltersHeader';
 import { LegendFooter } from './LegendFooter';
 import { MapSummaryBar } from './MapSummaryBar';
@@ -55,12 +53,10 @@ export function MapaTalhoesClient({
   const [staged, setStaged] = useState<Set<string>>(new Set());
   const [onMap, setOnMap] = useState<Set<string>>(new Set());
   const [err, setErr] = useState<string | null>(null);
-  const [linkBusy, setLinkBusy] = useState(false);
   const [tip, setTip] = useState<string | null>(null);
   const [loadingShare, setLoadingShare] = useState(false);
   const [selectedFeatureProps, setSelectedFeatureProps] = useState<Record<string, unknown> | null>(null);
   const [hostHint, setHostHint] = useState<string | null>(null);
-  const fileImportInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -349,38 +345,17 @@ export function MapaTalhoesClient({
     setOnMap(new Set(staged));
   }, [staged]);
 
-  const copiarLinkCurto = useCallback(async () => {
-    if (!raw) return;
-    setErr(null);
-    setLinkBusy(true);
+  const copiarLinkAtual = useCallback(async () => {
+    if (typeof window === 'undefined') return;
     try {
-      const res = await fetch('/api/mapa-talhoes/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify(raw),
-      });
-      const data = (await res.json()) as {
-        ok?: boolean;
-        url?: string;
-        error?: string;
-      };
-      if (!res.ok || !data.ok || !data.url) {
-        setErr(
-          data.error ??
-            `Não foi possível criar link curto (${res.status}). Confirme a migração Supabase e variáveis do servidor.`,
-        );
-        return;
-      }
-      await navigator.clipboard.writeText(data.url);
+      await navigator.clipboard.writeText(window.location.href);
       setErr(null);
-      setTip('Link copiado para a área de transferência.');
+      setTip('Link atual copiado para a área de transferência.');
       window.setTimeout(() => setTip(null), 5000);
     } catch {
-      setErr('Rede indisponível ao criar link curto.');
-    } finally {
-      setLinkBusy(false);
+      setErr('Não foi possível copiar o link atual.');
     }
-  }, [raw]);
+  }, []);
 
   const onPrintPdf = useCallback(() => {
     window.print();
@@ -391,54 +366,8 @@ export function MapaTalhoesClient({
     window.setTimeout(() => setTip(null), 6000);
   }, []);
 
-  const onGeojsonFilePicked = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = String(reader.result ?? '');
-      const fc = parseJsonFileText(text);
-      if (fc && fc.features.length > 0) {
-        setRaw(fc);
-        setErr(null);
-        setTip('Mapa carregado com sucesso.');
-        window.setTimeout(() => setTip(null), 5000);
-      } else {
-        setErr(
-          'Erro ao ler arquivo — esperado GeoJSON válido (FeatureCollection com feições).',
-        );
-      }
-    };
-    reader.onerror = () => {
-      setErr('Erro ao ler arquivo.');
-    };
-    reader.readAsText(file, 'UTF-8');
-  }, []);
-
-  const onDropZoneLoaded = useCallback((fc: FeatureCollection) => {
-    setRaw(fc);
-    setErr(null);
-  }, []);
-
-  const onDropZoneSuccess = useCallback((msg: string) => {
-    setTip(msg);
-    window.setTimeout(() => setTip(null), 5000);
-  }, []);
-
-  const onDropZoneError = useCallback((msg: string) => {
-    setErr(msg);
-  }, []);
-
   return (
     <div className="mapa-talhoes-root flex min-h-screen flex-col bg-slate-950 text-slate-100">
-      <MapaGeoJsonUploadZone
-        compact={!!raw}
-        disabled={loadingShare}
-        onFeatureCollection={onDropZoneLoaded}
-        onSuccess={onDropZoneSuccess}
-        onError={onDropZoneError}
-      />
       <FiltersHeader
         cultura={cultura}
         safra={safra}
@@ -450,9 +379,8 @@ export function MapaTalhoesClient({
         onViewMode={setViewMode}
         hasData={!!raw}
         tip={tip}
-        linkBusy={linkBusy}
         onExportGeoJson={() => raw && downloadGeoJson(raw, 'fortsmart-mapa-talhoes.geojson')}
-        onCopyShortLink={() => void copiarLinkCurto()}
+        onCopyCurrentLink={() => void copiarLinkAtual()}
         onPrintPdf={onPrintPdf}
         onKmlInfo={onKmlInfo}
         novoPlantioHref={NOVO_PLANTIO_HREF}
@@ -489,8 +417,7 @@ export function MapaTalhoesClient({
                     <li>
                       Selecione talhões → <strong className="text-slate-300">Visualizar mapa (web)</strong>: o app envia o
                       GeoJSON ao armazenamento (R2) e abre esta página com{' '}
-                      <code className="text-emerald-300/90">?file=</code> (carregamento automático). Import na zona de cima
-                      é opcional para ficheiros offline.
+                      <code className="text-emerald-300/90">?file=</code> (carregamento automático).
                     </li>
                     <li>
                       Ou snapshot <code className="text-emerald-300/90">?id=…</code> ·{' '}
@@ -498,20 +425,6 @@ export function MapaTalhoesClient({
                       <code className="text-emerald-300/90">?d=</code> (base64, só cargas muito pequenas)
                     </li>
                   </ol>
-                  <input
-                    ref={fileImportInputRef}
-                    type="file"
-                    accept=".geojson,application/geo+json,application/json"
-                    className="hidden"
-                    onChange={onGeojsonFilePicked}
-                  />
-                  <button
-                    type="button"
-                    className="mt-4 w-full rounded-lg border border-emerald-600/50 bg-emerald-900/30 px-3 py-2.5 text-sm font-medium text-emerald-100 hover:bg-emerald-900/50"
-                    onClick={() => fileImportInputRef.current?.click()}
-                  >
-                    Importar ficheiro .geojson
-                  </button>
                 </>
               )}
             </div>

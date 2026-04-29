@@ -1,24 +1,6 @@
-import { randomBytes } from 'crypto';
-
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-import { getSupabaseService } from '@/lib/supabase';
 import { prepareR2GeoJsonUpload, r2CredentialsPresent } from '@/lib/cloudflare/r2-geojson-upload';
-import { mapaSnapshotBucketName } from '@/lib/mapa-snapshot-storage';
-
-const SNAPSHOT_FOLDER = 'snapshots';
-
-/** `mapa_2026_ab12cd34ef` */
-function generateMapId(): string {
-  const y = new Date().getFullYear();
-  const hex = randomBytes(5).toString('hex');
-  return `mapa_${y}_${hex}`;
-}
-
-/** path objeto no bucket = …/snapshots/mapa_YEAR_hex.geojson */
-function storagePathForMapId(mapId: string): string {
-  return `${SNAPSHOT_FOLDER}/${mapId}.geojson`;
-}
 
 function publicOriginFromReq(req: NextApiRequest): string {
   const xfh = String(req.headers['x-forwarded-host'] ?? '')
@@ -43,8 +25,7 @@ function publicOriginFromReq(req: NextApiRequest): string {
 /**
  * POST /api/mapa/upload-geojson/prepare
  *
- * Preferência enterprise: **Cloudflare R2** (env `R2_*`) → PUT assinado + mapa via `?file=` (sem Base64 nem complete).
- * Legado compatível: **Supabase Storage** + Postgres em `/complete`.
+ * Fluxo oficial enterprise: **Cloudflare R2** (env `R2_*`) → PUT assinado + mapa via `?file=`.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -52,119 +33,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false, success: false, error: 'Método não permitido' });
   }
 
-  if (r2CredentialsPresent()) {
-    const base = publicOriginFromReq(req).replace(/\/$/, '');
-    const r2 = await prepareR2GeoJsonUpload();
-    if (!r2.ok) {
-      return res.status(503).json({
-        ok: false,
-        success: false,
-        code: r2.code,
-        error: r2.message,
-      });
-    }
-    const fileParam = encodeURIComponent(r2.publicUrl);
-    return res.status(200).json({
-      success: true,
-      ok: true,
-      requires_complete: false,
-      storage_backend: 'r2',
-      map_id: r2.mapId,
-      bucket: process.env.R2_BUCKET_NAME!.trim(),
-      storage_path: r2.storagePath,
-      upload_url: r2.uploadUrl,
-      /** R2 público onde o objeto estará disponível depois do PUT. */
-      public_url: r2.publicUrl,
-      expires_in_seconds: 3600,
-      url_partial: `/mapa-talhoes?file=${fileParam}`,
-      url: `${base}/mapa-talhoes?file=${fileParam}`,
-    });
-  }
-
-  const svc = getSupabaseService();
-  if (!svc) {
+  if (!r2CredentialsPresent()) {
     return res.status(503).json({
       ok: false,
       success: false,
-      code: 'supabase_unconfigured',
-      error: 'Servidor sem Supabase (service role).',
-    });
-  }
-
-  const bucket = mapaSnapshotBucketName();
-  let mapId = '';
-  let signed: {
-    signedUrl: string;
-    path: string;
-    token: string;
-  } | null = null;
-  let lastSignMsg = '';
-
-  for (let attempt = 0; attempt < 8; attempt++) {
-    mapId = generateMapId();
-    const path = storagePathForMapId(mapId);
-
-    const out = await svc.storage.from(bucket).createSignedUploadUrl(path, {
-      upsert: true,
-    });
-
-    if (!out.error && out.data) {
-      signed = {
-        signedUrl: out.data.signedUrl,
-        path: out.data.path ?? path,
-        token: String((out.data as { token?: unknown }).token ?? ''),
-      };
-      break;
-    }
-
-    const msg = String(out.error?.message ?? '');
-    lastSignMsg = msg;
-    if (
-      msg.toLowerCase().includes('bucket') ||
-      msg.includes('not_found') ||
-      msg.includes('Not found')
-    ) {
-      console.error('[mapa/upload prepare] bucket:', bucket, out.error?.message);
-      return res.status(503).json({
-        ok: false,
-        success: false,
-        code: 'bucket_missing',
-        bucket,
-        error:
-          `Bucket Storage "${bucket}" inexistente ou inacessível. Crie o bucket privado em Supabase → Storage (${bucket}) ou defina SUPABASE_MAP_SNAPSHOT_BUCKET.`,
-      });
-    }
-
-    console.error(`[mapa/upload prepare] createSignedUploadUrl (${attempt + 1}/8):`, msg);
-    if (attempt < 7) {
-      await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
-    }
-  }
-
-  if (!signed) {
-    return res.status(503).json({
-      ok: false,
-      success: false,
-      code: 'storage_sign_failed',
-      error: lastSignMsg || 'Falha ao criar URL de upload assinado.',
+      code: 'r2_unconfigured',
+      error: 'Cloudflare R2 não configurado (R2_* ausente).',
     });
   }
 
   const base = publicOriginFromReq(req).replace(/\/$/, '');
-
+  const r2 = await prepareR2GeoJsonUpload();
+  if (!r2.ok) {
+    return res.status(503).json({
+      ok: false,
+      success: false,
+      code: r2.code,
+      error: r2.message,
+    });
+  }
+  const fileParam = encodeURIComponent(r2.publicUrl);
   return res.status(200).json({
     success: true,
     ok: true,
-    requires_complete: true,
-    storage_backend: 'supabase',
-    map_id: mapId,
-    bucket,
-    /** Caminho dentro do bucket; usado no passo „complete“. */
-    storage_path: signed.path,
-    upload_url: signed.signedUrl,
-    upload_token: signed.token.length > 0 ? signed.token : undefined,
-    expires_in_seconds: 7200,
-    url_partial: `/mapa-talhoes?id=${encodeURIComponent(mapId)}`,
-    url: `${base}/mapa-talhoes?id=${encodeURIComponent(mapId)}`,
+    requires_complete: false,
+    storage_backend: 'r2',
+    map_id: r2.mapId,
+    bucket: process.env.R2_BUCKET_NAME!.trim(),
+    storage_path: r2.storagePath,
+    upload_url: r2.uploadUrl,
+    /** R2 público onde o objeto estará disponível depois do PUT. */
+    public_url: r2.publicUrl,
+    expires_in_seconds: 3600,
+    url_partial: `/mapa-talhoes?file=${fileParam}`,
+    url: `${base}/mapa-talhoes?file=${fileParam}`,
   });
 }

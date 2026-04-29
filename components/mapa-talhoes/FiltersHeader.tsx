@@ -13,9 +13,8 @@ type Props = {
   onViewMode: (v: MapaViewMode) => void;
   hasData: boolean;
   tip: string | null;
-  linkBusy: boolean;
   onExportGeoJson: () => void;
-  onCopyShortLink: () => void;
+  onCopyCurrentLink: () => void;
   onPrintPdf: () => void;
   /** KML é gerado no app móvel — abre página de ajuda / loja. */
   onKmlInfo: () => void;
@@ -33,9 +32,8 @@ export function FiltersHeader({
   onViewMode,
   hasData,
   tip,
-  linkBusy,
   onExportGeoJson,
-  onCopyShortLink,
+  onCopyCurrentLink,
   onPrintPdf,
   onKmlInfo,
   novoPlantioHref,
@@ -126,12 +124,11 @@ export function FiltersHeader({
               </button>
               <button
                 type="button"
-                disabled={linkBusy}
                 className="rounded-lg border border-emerald-600/50 bg-emerald-800/40 px-3 py-2 text-xs font-semibold text-emerald-50 hover:bg-emerald-800/60 disabled:opacity-50"
-                title="Copia URL curta quando o servidor guarda o snapshot (Supabase)."
-                onClick={() => void onCopyShortLink()}
+                title="Copia URL atual do mapa (preferencialmente ?file=...)"
+                onClick={() => void onCopyCurrentLink()}
               >
-                {linkBusy ? 'A gerar…' : 'Copiar link'}
+                Copiar link
               </button>
               <a
                 href={novoPlantioHref}

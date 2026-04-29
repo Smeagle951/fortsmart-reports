@@ -8,7 +8,7 @@ import './mapa-talhoes.css';
 export const metadata: Metadata = {
   title: 'Mapa de talhões | FortSmart',
   description:
-    'Talhões, subáreas e calculadora de sementes. Dados por ?file= (R2/CDN), ?id= snapshot, ou importação GeoJSON.',
+    'Talhões, subáreas e calculadora de sementes. Carregamento automático por ?file= (Cloudflare R2) com compatibilidade legado.',
 };
 
 function Fallback() {
