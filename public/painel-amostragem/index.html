@@ -902,12 +902,26 @@
         let campaignData = null, pointsData = [], loadedTalhoes = [];
         let currentTalhao = null;
 
+        function extractAutoDataUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const raw =
+                urlParams.get('file') ||
+                urlParams.get('url') ||
+                urlParams.get('json_url');
+            if (!raw) return null;
+            try {
+                return decodeURIComponent(raw);
+            } catch (_) {
+                return raw;
+            }
+        }
+
         // Inicializar - prioridade: ?file= (R2) -> ?data= (legado base64) -> seletor manual
         function initApp() {
             hideLoading();
 
             const urlParams = new URLSearchParams(window.location.search);
-            const fileUrl = urlParams.get('file');
+            const fileUrl = extractAutoDataUrl();
             const base64Data = urlParams.get('data');
 
             if (fileUrl) {
@@ -1032,7 +1046,7 @@
 
                 // Preencher seletor
                 const select = document.getElementById('talhaoSelect');
-                select.innerHTML = '<option value="">Selecione um talhão</option>';
+                select.innerHTML = '<option value="__all__">Todos os talhões</option>';
                 loadedTalhoes.forEach(t => {
                     const opt = document.createElement('option');
                     opt.value = t.id;
@@ -1047,11 +1061,13 @@
                 hideDataSelector();
                 showMainInterface();
 
-                // Auto-selecionar se só tiver um
+                // Auto-selecionar: 1 talhão => ele; múltiplos => todos com filtro aberto
                 if (loadedTalhoes.length === 1) {
                     select.value = loadedTalhoes[0].id;
-                    changeTalhao();
+                } else {
+                    select.value = '__all__';
                 }
+                changeTalhao();
 
                 console.log('✓ Dados reais carregados:', campaignData.name, pointsData.length, 'pontos');
 
@@ -1083,9 +1099,9 @@
             const talhaoId = document.getElementById('talhaoSelect').value;
             if (!talhaoId) return;
 
-            const talhao = loadedTalhoes.find(t => t.id == talhaoId);
-            if (!talhao) return;
-
+            const isAll = talhaoId === '__all__';
+            const talhao = isAll ? null : loadedTalhoes.find(t => t.id == talhaoId);
+            if (!isAll && !talhao) return;
             currentTalhao = talhao;
 
             // Limpar camadas
@@ -1093,13 +1109,15 @@
             markers.forEach(m => map.removeLayer(m));
             markers = [];
 
-            // Desenhar polígono
-            if (talhao.poligono && talhao.poligono.length > 0) {
+            // Desenhar polígono (somente em seleção única)
+            if (!isAll && talhao && talhao.poligono && talhao.poligono.length > 0) {
                 polygonLayer = L.polygon(talhao.poligono, { color: '#1B5E20', fillColor: '#1B5E20', fillOpacity: 0.1, weight: 3 }).addTo(map);
             }
 
             // Filtrar pontos
-            const talhaoPoints = pointsData.filter(p => p.talhao === talhao.nome || p.talhaoId == talhao.id);
+            const talhaoPoints = isAll
+                ? pointsData
+                : pointsData.filter(p => p.talhao === talhao.nome || p.talhaoId == talhao.id);
 
             // Atualizar lista
             const list = document.getElementById('pointsList');
