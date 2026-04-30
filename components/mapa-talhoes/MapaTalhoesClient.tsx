@@ -387,7 +387,7 @@ export function MapaTalhoesClient({
         novoPlantioHref={NOVO_PLANTIO_HREF}
       />
 
-      <div className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-2 p-2 print:block print:p-4 lg:grid lg:min-h-0 lg:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(260px,300px)] lg:gap-3 lg:p-3">
+      <div className="mapa-talhoes-layout mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-2 p-2 print:block print:p-4 lg:grid lg:min-h-0 lg:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(260px,300px)] lg:gap-3 lg:p-3">
         {/* Coluna esquerda: vazio OU lista */}
         <aside className="order-2 flex min-h-0 flex-col gap-2 lg:order-1 print:hidden">
           {!raw ? (
@@ -446,7 +446,7 @@ export function MapaTalhoesClient({
 
         {/* Centro: mapa + calculadora */}
         <div className="order-1 flex min-h-0 min-w-0 flex-col gap-2 lg:order-2">
-          <div className="relative min-h-[48vh] flex-1 overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/40 shadow-inner print:min-h-[70vh] print:border-slate-300">
+          <div className="mapa-talhoes-map-shell relative min-h-[58vh] flex-1 overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/40 shadow-inner print:min-h-[70vh] print:border-slate-300">
             {mapDisplayData && mapDisplayData.features.length > 0 ? (
               <MapSummaryBar data={mapDisplayData} />
             ) : null}
@@ -467,7 +467,7 @@ export function MapaTalhoesClient({
             )}
             <LegendFooter items={materialsLegend} showSubareaHint={viewMode !== 'talhoes'} />
           </div>
-          <div id="mapa-sementes" className="max-h-96 overflow-y-auto rounded-xl border border-slate-700/60 bg-slate-900/50 p-3 print:max-h-none">
+          <div id="mapa-sementes" className="mapa-talhoes-seed-panel max-h-80 overflow-y-auto rounded-xl border border-slate-700/60 bg-slate-900/50 p-3 print:max-h-none">
             <SeedCalculatorTable data={tableData} />
           </div>
         </div>
