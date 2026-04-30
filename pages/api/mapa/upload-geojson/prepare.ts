@@ -40,6 +40,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const base = publicOriginFromReq(req).replace(/\/$/, '');
   if (!(await isR2ConfiguredAsync())) {
     const mapId = generateMapObjectId();
+    const fallbackFileUrl = `${base}/api/mapa/upload-geojson/put/${encodeURIComponent(mapId)}`;
+    const fileParam = encodeURIComponent(fallbackFileUrl);
     return res.status(200).json({
       success: true,
       ok: true,
@@ -48,11 +50,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       map_id: mapId,
       bucket: 'mapa_talhoes_shares',
       storage_path: mapId,
-      upload_url: `${base}/api/mapa/upload-geojson/put/${encodeURIComponent(mapId)}`,
-      public_url: `${base}/api/mapa-talhoes/snapshot/${encodeURIComponent(mapId)}`,
+      upload_url: fallbackFileUrl,
+      public_url: fallbackFileUrl,
       expires_in_seconds: 3600,
-      url_partial: `/mapa-talhoes?id=${encodeURIComponent(mapId)}`,
-      url: `${base}/mapa-talhoes?id=${encodeURIComponent(mapId)}`,
+      url_partial: `/mapa-talhoes?file=${fileParam}`,
+      url: `${base}/mapa-talhoes?file=${fileParam}`,
     });
   }
 

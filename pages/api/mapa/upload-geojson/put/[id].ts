@@ -22,6 +22,19 @@ function isFeatureCollection(x: unknown): x is FeatureCollection {
   );
 }
 
+function geojsonFromCell(cell: unknown): FeatureCollection | null {
+  if (isFeatureCollection(cell)) return cell;
+  if (typeof cell === 'string' && cell.trim()) {
+    try {
+      const parsed = JSON.parse(cell) as unknown;
+      return isFeatureCollection(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 async function readRawBody(req: NextApiRequest): Promise<Buffer> {
   const chunks: Buffer[] = [];
   let size = 0;
@@ -37,8 +50,8 @@ async function readRawBody(req: NextApiRequest): Promise<Buffer> {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'PUT') {
-    res.setHeader('Allow', 'PUT');
+  if (req.method !== 'PUT' && req.method !== 'GET') {
+    res.setHeader('Allow', 'GET, PUT');
     return res.status(405).json({ ok: false, success: false, error: 'Método não permitido' });
   }
 
@@ -55,6 +68,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       code: 'supabase_unconfigured',
       error: 'Servidor sem Supabase (service role).',
     });
+  }
+
+  if (req.method === 'GET') {
+    const { data, error } = await svc
+      .from('mapa_talhoes_shares')
+      .select('geojson, expires_at')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !data) {
+      return res.status(404).json({ ok: false, error: 'not_found_or_expired' });
+    }
+
+    const expiresAt = data.expires_at as string | null | undefined;
+    if (typeof expiresAt === 'string' && expiresAt.length > 0 && new Date(expiresAt) < new Date()) {
+      return res.status(404).json({ ok: false, error: 'not_found_or_expired' });
+    }
+
+    const fc = geojsonFromCell(data.geojson);
+    if (!fc) {
+      return res.status(404).json({ ok: false, error: 'not_found_or_expired' });
+    }
+
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return res.status(200).json(fc);
   }
 
   let fc: FeatureCollection;
