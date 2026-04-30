@@ -44,6 +44,8 @@ export type R2ResolvedEnv = {
   publicBaseUrl: string;
 };
 
+const R2_PUBLIC_BASE_URL_KEYS = ['R2_PUBLIC_BASE_URL', 'R2_PUBLIC_BASE_UR'] as const;
+
 /**
  * Lê uma variável definida no painel Cloudflare (Workers).
  * No deploy OpenNext, `process.env` pode ficar vazio no runtime; o valor vem em `getCloudflareContext().env`.
@@ -83,7 +85,7 @@ export async function r2ConfigurationGapsAsync(): Promise<string[]> {
   if (!(await readWorkerEnvString('R2_BUCKET_NAME', 'CLOUDFLARE_R2_BUCKET'))) {
     g.push('R2_BUCKET_NAME ou CLOUDFLARE_R2_BUCKET');
   }
-  if (!(await readWorkerEnvString('R2_PUBLIC_BASE_URL'))) {
+  if (!(await readWorkerEnvString(...R2_PUBLIC_BASE_URL_KEYS))) {
     g.push('R2_PUBLIC_BASE_URL');
   }
   return g;
@@ -98,7 +100,7 @@ export async function resolveR2EnvAsync(): Promise<R2ResolvedEnv | null> {
   const accessKeyId = await readWorkerEnvString('R2_ACCESS_KEY_ID');
   const secretAccessKey = await readWorkerEnvString('R2_SECRET_ACCESS_KEY');
   const bucketName = await readWorkerEnvString('R2_BUCKET_NAME', 'CLOUDFLARE_R2_BUCKET');
-  const publicBaseUrl = await readWorkerEnvString('R2_PUBLIC_BASE_URL');
+  const publicBaseUrl = await readWorkerEnvString(...R2_PUBLIC_BASE_URL_KEYS);
   if (!accountId || !accessKeyId || !secretAccessKey || !bucketName || !publicBaseUrl) {
     return null;
   }
