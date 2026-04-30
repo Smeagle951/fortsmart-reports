@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { randomBytes } from 'crypto';
 
 import {
   prepareR2JsonUploadForSoilPanel,
@@ -29,12 +30,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false, success: false, error: 'Método não permitido' });
   }
 
+  const base = publicOriginFromReq(req).replace(/\/$/, '');
   if (!(await isR2ConfiguredAsync())) {
-    return res.status(503).json({
-      ok: false,
-      success: false,
-      code: 'r2_unconfigured',
-      error: 'Ambiente R2 não configurado no servidor.',
+    const mapId = `amostragem_${new Date().getFullYear()}_${randomBytes(5).toString('hex')}`;
+    const fallbackFileUrl = `${base}/api/painel-amostragem/upload-json/put/${encodeURIComponent(mapId)}`;
+    const fileParam = encodeURIComponent(fallbackFileUrl);
+    return res.status(200).json({
+      ok: true,
+      success: true,
+      requires_complete: false,
+      storage_backend: 'supabase_share_fallback',
+      map_id: mapId,
+      bucket: 'mapa_talhoes_shares',
+      storage_path: mapId,
+      upload_url: fallbackFileUrl,
+      public_url: fallbackFileUrl,
+      expires_in_seconds: 3600,
+      url_partial: `/painel-amostragem?file=${fileParam}`,
+      url: `${base}/painel-amostragem?file=${fileParam}`,
     });
   }
 
@@ -48,7 +61,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  const base = publicOriginFromReq(req).replace(/\/$/, '');
   const fileParam = encodeURIComponent(prepared.publicUrl);
   return res.status(200).json({
     ok: true,
