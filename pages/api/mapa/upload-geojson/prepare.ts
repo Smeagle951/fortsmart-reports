@@ -2,8 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import {
   prepareR2GeoJsonUpload,
-  r2ConfigurationGapsAsync,
   isR2ConfiguredAsync,
+  generateMapObjectId,
 } from '@/lib/cloudflare/r2-geojson-upload';
 
 function publicOriginFromReq(req: NextApiRequest): string {
@@ -37,21 +37,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false, success: false, error: 'Método não permitido' });
   }
 
+  const base = publicOriginFromReq(req).replace(/\/$/, '');
   if (!(await isR2ConfiguredAsync())) {
-    const missing = await r2ConfigurationGapsAsync();
-    return res.status(503).json({
-      ok: false,
-      success: false,
-      code: 'r2_unconfigured',
-      error:
-        'Cloudflare R2 não configurado no Worker (variáveis ausentes). Veja missing_env e confirme Production no painel.',
-      missing_env: missing,
-      note:
-        'Variáveis são lidas de process.env e de getCloudflareContext().env (painel Workers). Binding GEOJSON_BUCKET é opcional para URL assinada S3.',
+    const mapId = generateMapObjectId();
+    return res.status(200).json({
+      success: true,
+      ok: true,
+      requires_complete: false,
+      storage_backend: 'supabase_share_fallback',
+      map_id: mapId,
+      bucket: 'mapa_talhoes_shares',
+      storage_path: mapId,
+      upload_url: `${base}/api/mapa/upload-geojson/put/${encodeURIComponent(mapId)}`,
+      public_url: `${base}/api/mapa-talhoes/snapshot/${encodeURIComponent(mapId)}`,
+      expires_in_seconds: 3600,
+      url_partial: `/mapa-talhoes?id=${encodeURIComponent(mapId)}`,
+      url: `${base}/mapa-talhoes?id=${encodeURIComponent(mapId)}`,
     });
   }
 
-  const base = publicOriginFromReq(req).replace(/\/$/, '');
   const r2 = await prepareR2GeoJsonUpload();
   if (!r2.ok) {
     return res.status(503).json({
