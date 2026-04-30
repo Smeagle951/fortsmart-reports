@@ -15,9 +15,9 @@ export function getSupabase() {
 /** Cliente service_role (só no server). Sem singleton para funcionar corretamente em serverless. */
 export function getSupabaseService() {
   const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
     process.env.SUPABASE_URL ||
     process.env.URL_SUPABASE ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
     '';
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   if (!url || !key) return null;
