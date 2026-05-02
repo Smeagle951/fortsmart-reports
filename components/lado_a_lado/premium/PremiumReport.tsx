@@ -4,7 +4,9 @@ import type { SideBySideReportData } from '@/components/SideBySideReportContent'
 import LadoALadoRelatorioAgronomico from '@/components/lado_a_lado/agronomic/LadoALadoRelatorioAgronomico';
 import { postReportAnalytics } from '@/lib/report-analytics-client';
 import './premium-theme.css';
+import './editorial-lado-a-lado.css';
 import ReportFooterEnterprise from './enterprise/ReportFooterEnterprise';
+import EditorialLadoALadoFooterStrip from './EditorialLadoALadoFooterStrip';
 
 export default function PremiumReport({
   data,
@@ -93,6 +95,7 @@ export default function PremiumReport({
       <div id="relatorio-lado-a-lado-content" className="overflow-x-hidden print:overflow-visible">
         <LadoALadoRelatorioAgronomico data={data} />
         <ReportFooterEnterprise data={data} reportId={reportId} />
+        <EditorialLadoALadoFooterStrip data={data} shareToken={shareToken} />
       </div>
     </div>
   );
