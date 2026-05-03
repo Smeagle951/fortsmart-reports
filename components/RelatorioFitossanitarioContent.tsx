@@ -414,7 +414,7 @@ function extractResumoExecutivoText(relatorio: PayloadFitossanitario): string | 
   return null;
 }
 
-function mergePlantioCampos(params: {
+export function mergePlantioCampos(params: {
   dp: DadosPlantioMonitoramento | null | undefined;
   estandeRoot?: Record<string, unknown>;
   fenologiaRoot?: Record<string, unknown>;

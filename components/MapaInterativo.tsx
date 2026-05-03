@@ -3,6 +3,25 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { PontoMonitoramento } from '@/lib/types/monitoring';
 
+function normTipoMap(t: unknown): 'praga' | 'doenca' | 'daninha' {
+  const s = String(t ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+  if (s.includes('doenc')) return 'doenca';
+  if (s.includes('daninh')) return 'daninha';
+  return 'praga';
+}
+
+/** Ícone no mapa para pontos com foto: prioriza doença > daninha > praga. */
+function emojiIconForFotos(infestacoes: PontoMonitoramento['infestacoes']): string {
+  const comFoto = infestacoes.filter((i) => i.imagem && String(i.imagem).trim());
+  if (comFoto.length === 0) return '📍';
+  if (comFoto.some((i) => normTipoMap(i.tipo) === 'doenca')) return '🦠';
+  if (comFoto.some((i) => normTipoMap(i.tipo) === 'daninha')) return '🌿';
+  return '🐛';
+}
+
 export interface MapaLayersVisible {
   poligono?: boolean;
   pontos?: boolean;
@@ -27,6 +46,8 @@ interface MapaInterativoProps {
   layersVisible?: MapaLayersVisible;
   /** Chamado quando o mapa está pronto (permite flyTo mesmo com dynamic import). */
   onMapReady?: (api: MapaInterativoRef) => void;
+  /** Altura do tile map (px). */
+  mapHeight?: number;
 }
 
 function severidadeColor(sev: number): string {
@@ -47,7 +68,7 @@ const defaultLayers: MapaLayersVisible = {
 };
 
 const MapaInterativo = forwardRef<MapaInterativoRef, MapaInterativoProps>(function MapaInterativo(
-  { pontos, poligono, talhaoId, hideHeader, onImageClick, layersVisible: layersVisibleProp, onMapReady },
+  { pontos, poligono, talhaoId, hideHeader, onImageClick, layersVisible: layersVisibleProp, onMapReady, mapHeight = 360 },
   ref
 ) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -207,11 +228,12 @@ const MapaInterativo = forwardRef<MapaInterativoRef, MapaInterativoProps>(functi
       pontos.forEach((p) => {
         const comFoto = p.infestacoes.filter((i) => i.imagem && String(i.imagem).trim());
         if (comFoto.length === 0) return;
+        const emoji = emojiIconForFotos(p.infestacoes);
         const icon = L.divIcon({
-          html: '<div style="width:22px;height:22px;border-radius:50%;background:#1E40AF;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:white;font-size:10px;cursor:pointer">📷</div>',
+          html: `<div style="width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid #0f172a;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;cursor:pointer" title="Ocorrência com foto">${emoji}</div>`,
           className: '',
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
         });
         const blocos = comFoto
           .map((inf) => {
@@ -346,7 +368,13 @@ const MapaInterativo = forwardRef<MapaInterativoRef, MapaInterativoProps>(functi
       )}
       <div
         ref={mapRef}
-        style={{ height: 360, borderRadius: 12, overflow: 'hidden', border: '1px solid #E2E8F0' }}
+        style={{
+          height: mapHeight,
+          minHeight: mapHeight,
+          borderRadius: 12,
+          overflow: 'hidden',
+          border: '1px solid #E2E8F0',
+        }}
       />
     </div>
   );

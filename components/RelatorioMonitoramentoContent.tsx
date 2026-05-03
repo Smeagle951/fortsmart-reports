@@ -56,6 +56,19 @@ function safeNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function normalizeTipoFromPayload(t: unknown): TipoOrganismo {
+  const s = String(t ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+  if (s.includes('doenc')) return 'doenca';
+  if (s.includes('daninh')) return 'daninha';
+  if (['praga', 'doenca', 'daninha'].includes(String(t ?? '').toLowerCase())) {
+    return String(t).toLowerCase() as TipoOrganismo;
+  }
+  return 'praga';
+}
+
 function recoToCardKind(nivel: string): 'crit' | 'high' | 'med' {
   if (nivel === 'ACAO_IMEDIATA') return 'crit';
   if (nivel === 'ALTO_RISCO') return 'high';
@@ -176,7 +189,7 @@ function normalizeTalhao(raw: Record<string, unknown>): Talhao {
         .filter((inf): inf is Record<string, unknown> => inf != null && typeof inf === 'object')
         .map((inf, j) => ({
           id: String(inf.id ?? `inf-${i}-${j}`),
-          tipo: (['praga', 'doenca', 'daninha'].includes(String(inf.tipo ?? '')) ? inf.tipo : 'praga') as TipoOrganismo,
+          tipo: normalizeTipoFromPayload(inf.tipo),
           nome: String(inf.nome ?? '—'),
           terco: String(inf.terco ?? 'Médio'),
           quantidade: inf.quantidade != null ? safeNum(inf.quantidade) : null,

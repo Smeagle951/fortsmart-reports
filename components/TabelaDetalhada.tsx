@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Infestacao, PontoMonitoramento, TipoOrganismo } from '@/lib/types/monitoring';
 import { formatPercent2 } from '@/utils/format';
 
@@ -39,6 +39,18 @@ function getSevStyle(sev: number) {
 
 const PAGE_SIZE = 8;
 
+/** Normaliza rótulos vindos do app/DB (ex.: "Doença", "Disease", "daninha"). */
+function normalizeTipoOrganismo(t: unknown): TipoOrganismo {
+    const s = String(t ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '');
+    if (s.includes('doenc') || s.includes('disease')) return 'doenca';
+    if (s.includes('daninh') || s.includes('weed') || s.includes('invasive')) return 'daninha';
+    if (s.includes('prag') || s.includes('pest')) return 'praga';
+    return 'praga';
+}
+
 export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
     const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
     const [ordenacao, setOrdenacao] = useState<keyof LinhaTabela>('pontoId');
@@ -50,7 +62,7 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
     const linhas: LinhaTabela[] = (pontos || []).flatMap(p =>
         (p.infestacoes || []).map(inf => ({
             pontoId: p.identificador,
-            tipo: inf.tipo,
+            tipo: normalizeTipoOrganismo(inf.tipo),
             nome: inf.nome,
             terco: inf.terco,
             quantidade: inf.quantidade,
@@ -60,15 +72,37 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
     );
 
     const filtradas = linhas.filter(l => filtroTipo === 'todos' || l.tipo === filtroTipo);
-    const ordenadas = [...filtradas].sort((a, b) => {
-        const va = a[ordenacao] ?? '', vb = b[ordenacao] ?? '';
-        if (va < vb) return asc ? -1 : 1;
-        if (va > vb) return asc ? 1 : -1;
-        return 0;
-    });
 
-    const totalPags = Math.ceil((ordenadas?.length || 0) / PAGE_SIZE);
-    const pagSelected = (ordenadas || []).slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE);
+    const sortLinhas = (arr: LinhaTabela[]) =>
+        [...arr].sort((a, b) => {
+            const va = a[ordenacao] ?? '', vb = b[ordenacao] ?? '';
+            if (typeof va === 'number' && typeof vb === 'number') {
+                if (va < vb) return asc ? -1 : 1;
+                if (va > vb) return asc ? 1 : -1;
+                return 0;
+            }
+            const sa = String(va), sb = String(vb);
+            if (sa < sb) return asc ? -1 : 1;
+            if (sa > sb) return asc ? 1 : -1;
+            return 0;
+        });
+
+    const porTipo = {
+        praga: sortLinhas(linhas.filter(l => l.tipo === 'praga')),
+        doenca: sortLinhas(linhas.filter(l => l.tipo === 'doenca')),
+        daninha: sortLinhas(linhas.filter(l => l.tipo === 'daninha')),
+    };
+
+    const ordenadasFlat =
+        filtroTipo === 'todos'
+            ? [...porTipo.praga, ...porTipo.doenca, ...porTipo.daninha]
+            : sortLinhas(filtradas);
+
+    const usePagination = filtroTipo !== 'todos';
+    const totalPags = usePagination ? Math.ceil((ordenadasFlat?.length || 0) / PAGE_SIZE) : 1;
+    const pagSelected = usePagination
+        ? (ordenadasFlat || []).slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE)
+        : [];
 
     const handleSort = (col: keyof LinhaTabela) => {
         if (ordenacao === col) setAsc(!asc);
@@ -78,7 +112,7 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
 
     const handleExportCSV = () => {
         const header = ['Ponto', 'Tipo', 'Infestação', 'Terço', 'Quantidade', 'Severidade (%)'];
-        const rows = filtradas.map(l => [
+        const rows = ordenadasFlat.map(l => [
             l.pontoId, TIPO_LABEL[l.tipo], l.nome, l.terco,
             l.quantidade ?? 'N/A', l.severidade,
         ]);
@@ -95,6 +129,59 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
             {ordenacao === col ? (asc ? '▲' : '▼') : '⇅'}
         </span>
     );
+
+    const renderRow = (l: LinhaTabela, rowKey: string | number) => {
+        const sev = getSevStyle(l.severidade);
+        const tipo = TIPO_COLOR[l.tipo];
+        return (
+            <tr
+                key={rowKey}
+                style={{ borderBottom: '1px solid #F1F5F9', transition: 'background .1s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = '#FAFBFF'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
+            >
+                <td style={{ padding: '8px 14px', width: 56, verticalAlign: 'middle' }}>
+                    {l.imagem ? (
+                        <button
+                            type="button"
+                            onClick={() => setModalImg({ src: l.imagem!, nome: l.nome, pontoId: l.pontoId, terco: l.terco, severidade: l.severidade })}
+                            style={{ padding: 0, border: 'none', borderRadius: 6, overflow: 'hidden', cursor: 'pointer', background: '#f1f5f9', display: 'block' }}
+                        >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={l.imagem} alt={l.nome} style={{ width: 44, height: 44, objectFit: 'cover', display: 'block' }} />
+                        </button>
+                    ) : (
+                        <span style={{ fontSize: 10, color: '#94A3B8' }}>—</span>
+                    )}
+                </td>
+                <td style={{ padding: '10px 14px', fontWeight: 700, color: '#1B5E20' }}>{l.pontoId}</td>
+                <td style={{ padding: '10px 14px' }}>
+                    <span style={{ background: tipo.bg, color: tipo.text, padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                        {TIPO_LABEL[l.tipo]}
+                    </span>
+                </td>
+                <td style={{ padding: '10px 14px', fontWeight: 500, color: '#1A2332' }}>{l.nome}</td>
+                <td style={{ padding: '10px 14px', color: '#64748B' }}>{l.terco}</td>
+                <td style={{ padding: '10px 14px', color: '#64748B' }}>{l.quantidade ?? 'N/A'}</td>
+                <td style={{ padding: '10px 14px' }}>
+                    <span style={{ color: sev.color, fontWeight: 700 }}>{formatPercent2(l.severidade)}</span>
+                    <span style={{ fontSize: 10, background: sev.color + '22', color: sev.color, padding: '1px 6px', borderRadius: 99, marginLeft: 6, fontWeight: 600 }}>
+                        {sev.label}
+                    </span>
+                </td>
+            </tr>
+        );
+    };
+
+    const groupHeaderStyle: CSSProperties = {
+        background: '#EEF2FF',
+        borderBottom: '2px solid #C7D2FE',
+        fontSize: 12,
+        fontWeight: 800,
+        color: '#3730A3',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+    };
 
     return (
         <div>
@@ -162,61 +249,64 @@ export default function TabelaDetalhada({ pontos }: TabelaDetalhadaProps) {
                             </tr>
                         </thead>
                         <tbody>
-                            {pagSelected.map((l, idx) => {
-                                const sev = getSevStyle(l.severidade);
-                                const tipo = TIPO_COLOR[l.tipo];
-                                return (
-                                    <tr
-                                        key={idx}
-                                        style={{ borderBottom: '1px solid #F1F5F9', transition: 'background .1s' }}
-                                        onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = '#FAFBFF'; }}
-                                        onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
-                                    >
-                                        <td style={{ padding: '8px 14px', width: 56, verticalAlign: 'middle' }}>
-                                            {l.imagem ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setModalImg({ src: l.imagem!, nome: l.nome, pontoId: l.pontoId, terco: l.terco, severidade: l.severidade })}
-                                                    style={{ padding: 0, border: 'none', borderRadius: 6, overflow: 'hidden', cursor: 'pointer', background: '#f1f5f9', display: 'block' }}
-                                                >
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img src={l.imagem} alt={l.nome} style={{ width: 44, height: 44, objectFit: 'cover', display: 'block' }} />
-                                                </button>
-                                            ) : (
-                                                <span style={{ fontSize: 10, color: '#94A3B8' }}>—</span>
-                                            )}
-                                        </td>
-                                        <td style={{ padding: '10px 14px', fontWeight: 700, color: '#1B5E20' }}>{l.pontoId}</td>
-                                        <td style={{ padding: '10px 14px' }}>
-                                            <span style={{ background: tipo.bg, color: tipo.text, padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
-                                                {TIPO_LABEL[l.tipo]}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '10px 14px', fontWeight: 500, color: '#1A2332' }}>{l.nome}</td>
-                                        <td style={{ padding: '10px 14px', color: '#64748B' }}>{l.terco}</td>
-                                        <td style={{ padding: '10px 14px', color: '#64748B' }}>{l.quantidade ?? 'N/A'}</td>
-                                        <td style={{ padding: '10px 14px' }}>
-                                            <span style={{ color: sev.color, fontWeight: 700 }}>{formatPercent2(l.severidade)}</span>
-                                            <span style={{ fontSize: 10, background: sev.color + '22', color: sev.color, padding: '1px 6px', borderRadius: 99, marginLeft: 6, fontWeight: 600 }}>
-                                                {sev.label}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            {pagSelected.length === 0 && (
-                                <tr>
-                                    <td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#94A3B8', fontSize: 13 }}>
-                                        Nenhum dado para exibir.
-                                    </td>
-                                </tr>
+                            {filtroTipo === 'todos' ? (
+                                <>
+                                    {porTipo.praga.length > 0 && (
+                                        <>
+                                            <tr>
+                                                <td colSpan={7} style={{ ...groupHeaderStyle, padding: '10px 14px' }}>
+                                                    Pragas ({porTipo.praga.length})
+                                                </td>
+                                            </tr>
+                                            {porTipo.praga.map((l, idx) => renderRow(l, `praga-${idx}`))}
+                                        </>
+                                    )}
+                                    {porTipo.doenca.length > 0 && (
+                                        <>
+                                            <tr>
+                                                <td colSpan={7} style={{ ...groupHeaderStyle, padding: '10px 14px', background: '#F5F3FF', color: '#5B21B6', borderBottomColor: '#DDD6FE' }}>
+                                                    Doenças ({porTipo.doenca.length})
+                                                </td>
+                                            </tr>
+                                            {porTipo.doenca.map((l, idx) => renderRow(l, `doenca-${idx}`))}
+                                        </>
+                                    )}
+                                    {porTipo.daninha.length > 0 && (
+                                        <>
+                                            <tr>
+                                                <td colSpan={7} style={{ ...groupHeaderStyle, padding: '10px 14px', background: '#ECFDF5', color: '#14532D', borderBottomColor: '#A7F3D0' }}>
+                                                    Plantas daninhas ({porTipo.daninha.length})
+                                                </td>
+                                            </tr>
+                                            {porTipo.daninha.map((l, idx) => renderRow(l, `daninha-${idx}`))}
+                                        </>
+                                    )}
+                                    {linhas.length === 0 && (
+                                        <tr>
+                                            <td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#94A3B8', fontSize: 13 }}>
+                                                Nenhum dado para exibir.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    {pagSelected.map((l, idx) => renderRow(l, idx))}
+                                    {pagSelected.length === 0 && (
+                                        <tr>
+                                            <td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#94A3B8', fontSize: 13 }}>
+                                                Nenhum dado para exibir.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </>
                             )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Paginação */}
-                {totalPags > 1 && (
+                {/* Paginação (somente com filtro por tipo) */}
+                {usePagination && totalPags > 1 && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 16px', borderTop: '1px solid #F1F5F9' }}>
                         {Array.from({ length: totalPags }, (_, i) => i + 1).map(p => (
                             <button

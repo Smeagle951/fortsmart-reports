@@ -82,7 +82,13 @@ export default function TalhaoBloco({ talhao, index, total, data, variant = 'cla
             <ResumoExecutivo metricas={metricas} talhaoNome={talhao.nome} area_ha={talhao.area_ha} ultimoMonitoramento={data} />
           </div>
           <div className="fs-mon-talhao__map">
-            <MapaInterativo pontos={talhao.pontos} poligono={talhao.poligono_geojson} talhaoId={talhao.id} />
+            <MapaInterativo
+              pontos={talhao.pontos}
+              poligono={talhao.poligono_geojson}
+              talhaoId={talhao.id}
+              hideHeader
+              mapHeight={520}
+            />
           </div>
         </div>
 

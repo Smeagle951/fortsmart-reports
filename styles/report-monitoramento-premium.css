@@ -940,13 +940,13 @@
   position: relative;
   border-radius: var(--fs-r);
   overflow: hidden;
-  min-height: 380px;
+  min-height: 520px;
   background: radial-gradient(ellipse 70% 70% at 50% 50%, #0f2a15 0%, #080f08 100%);
   border: 1px solid rgba(106, 184, 122, 0.2);
 }
 
 .fs-mon-premium .fs-mon-talhao__map > div {
-  min-height: 380px !important;
+  min-height: 520px !important;
 }
 
 .fs-mon-premium .fs-mon-talhao__subtitle {
@@ -1038,7 +1038,7 @@
 
 @media (min-width: 960px) {
   .fs-mon-premium .fs-mon-talhao__split--map {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.42fr);
     align-items: stretch;
   }
 }
