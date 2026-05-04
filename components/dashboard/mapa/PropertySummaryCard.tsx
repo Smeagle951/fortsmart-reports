@@ -36,7 +36,7 @@ export function PropertySummaryCard({ summary, alerts }: Props) {
 
       {alerts.length > 0 ? (
         <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-950/40 p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-200/90">Alertas</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-200/90">Alertas ativos</p>
           <ul className="mt-2 space-y-2 text-xs">
             {alerts.map((a) => (
               <li

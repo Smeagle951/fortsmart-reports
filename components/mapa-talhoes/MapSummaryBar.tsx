@@ -42,11 +42,17 @@ const dec = (n: number) =>
   n.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
 const int = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
 
-export function MapSummaryBar({ data }: { data: FeatureCollection | null }) {
+type Placement = 'top' | 'bottom';
+
+export function MapSummaryBar({ data, placement = 'top' }: { data: FeatureCollection | null; placement?: Placement }) {
   const s = useMemo(() => compute(data), [data]);
   if (!data || data.features.length === 0) return null;
+  const pos =
+    placement === 'bottom'
+      ? 'pointer-events-none absolute bottom-24 left-2 right-auto top-auto z-[850] flex max-w-[min(22rem,calc(100%-1rem))] flex-wrap items-stretch justify-start gap-2 sm:bottom-20'
+      : 'pointer-events-none absolute left-2 right-2 top-2 z-[850] flex flex-wrap items-stretch justify-end gap-2 sm:left-auto sm:right-2 sm:top-2 sm:max-w-lg';
   return (
-    <div className="pointer-events-none absolute left-2 right-2 top-2 z-[1000] flex flex-wrap items-stretch justify-end gap-2 sm:left-auto sm:right-2 sm:top-2 sm:max-w-lg">
+    <div className={pos}>
       <div
         className="rounded-lg border border-slate-600/80 bg-slate-950/92 px-3 py-2 text-left text-[11px] text-slate-200 shadow-md backdrop-blur sm:text-xs"
         style={{ pointerEvents: 'auto' }}

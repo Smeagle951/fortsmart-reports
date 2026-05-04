@@ -34,6 +34,14 @@ export const COLORS = {
   fillSubarea: 'rgba(255, 255, 255, 0.18)',
 } as const;
 
+export const SEVERITY_BADGE_CLASS = {
+  alto: 'border-red-200 bg-red-50 text-red-700',
+  medio: 'border-amber-200 bg-amber-50 text-amber-700',
+  baixo: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  normal: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  doenca: 'border-purple-200 bg-purple-50 text-purple-700',
+} as const;
+
 export const TILE_DEFAULTS = {
   attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
   url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
