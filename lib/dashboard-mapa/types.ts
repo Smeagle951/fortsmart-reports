@@ -29,6 +29,12 @@ export type DashboardMonitorEvent = {
   evaluator: string;
   observation: string;
   imageUrl: string;
+  shortDescription?: string;
+  igi?: number;
+  incidencePercent?: number;
+  frequencyPercent?: number;
+  quantity?: number | null;
+  damageCause?: string;
   /** Atributos agronómicos exibidos no painel */
   specs: { label: string; value: string }[];
 };

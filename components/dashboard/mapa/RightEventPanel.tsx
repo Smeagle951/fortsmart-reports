@@ -16,6 +16,8 @@ function severityLabel(s: DashboardMonitorEvent['severity']) {
       return 'Alto';
     case 'medio':
       return 'Médio';
+    case 'normal':
+      return 'Normal';
     default:
       return 'Baixo';
   }
@@ -57,7 +59,9 @@ export function RightEventPanel({ event, onClose }: Props) {
                 {event.talhaoLabel}
                 {event.areaLabel ? ` · ${event.areaLabel}` : ''}
               </p>
-              <p className="text-[10px] text-muted-foreground">Coordenadas aproximadas · demo</p>
+              <p className="text-[10px] text-muted-foreground">
+                {event.lat.toFixed(6)}, {event.lng.toFixed(6)}
+              </p>
             </SheetHeader>
 
             <ScrollArea className="h-[calc(100vh-8rem)] px-4 py-3">
@@ -80,6 +84,13 @@ export function RightEventPanel({ event, onClose }: Props) {
               </div>
 
               <p className="mt-3 text-sm leading-relaxed text-foreground">{event.observation}</p>
+
+              {event.shortDescription || event.damageCause ? (
+                <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-950">
+                  {event.shortDescription ? <p className="font-semibold">{event.shortDescription}</p> : null}
+                  {event.damageCause ? <p className="mt-1 text-emerald-900">Dano/causa: {event.damageCause}</p> : null}
+                </div>
+              ) : null}
 
               {event.imageUrl?.trim() ? (
                 <div className="relative mt-3 aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted">

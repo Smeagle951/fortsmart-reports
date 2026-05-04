@@ -417,6 +417,17 @@ export function DashboardMapaClient({
     }
   }, [monitorEvents.length]);
 
+  const handleNavChange = useCallback((id: DashboardNavId) => {
+    setActiveNav(id);
+    if (id === 'monitoramento') {
+      setCamadaUi('events');
+      setLayerEvents(true);
+      setLayerTalhoes(true);
+      setLayerSubareas(true);
+      setSelectedEventId((prev) => prev ?? monitorEvents[0]?.id ?? null);
+    }
+  }, [monitorEvents]);
+
   const onUploadHeader = useCallback(() => {
     const url = process.env.NEXT_PUBLIC_FORTSMART_APP_URL?.trim();
     if (typeof window !== 'undefined') {
@@ -464,7 +475,7 @@ export function DashboardMapaClient({
     <div className="flex h-[100dvh] overflow-hidden bg-slate-100 print:block print:h-auto">
       <SidebarFarm
         activeNav={activeNav}
-        onNav={setActiveNav}
+        onNav={handleNavChange}
         collapsed={sidebarCollapsed}
         onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
         summary={summary}
@@ -509,17 +520,6 @@ export function DashboardMapaClient({
             safraChoices={safraChoices}
             culturaChoices={culturaChoices}
           />
-
-          {activeNav === 'monitoramento' && !monBundle ? (
-            <div className="pointer-events-none absolute left-2 right-2 top-14 z-[1040] flex justify-center print:hidden">
-              <p className="pointer-events-auto max-w-xl rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-center text-[11px] text-amber-950 shadow-md sm:text-xs">
-                Os dados de <strong>monitoramento</strong> (pins, painel lateral e linha do tempo) vêm do{' '}
-                <strong>relatório agronómico</strong>. Abra esta página com{' '}
-                <code className="rounded bg-white px-1 py-0.5 text-[10px]">?token=…</code> — o mesmo token do «Ver relatório web»
-                na app FortSmart.
-              </p>
-            </div>
-          ) : null}
 
           {performanceWarning ? (
             <div className="pointer-events-none absolute left-2 right-2 top-14 z-[1040] flex justify-center print:hidden">
@@ -595,7 +595,7 @@ export function DashboardMapaClient({
 
           {activeNav === 'config' ? (
             <DashboardNavOverlay title="Configurações" onClose={() => setActiveNav('talhoes')}>
-              <div className="mx-auto max-w-md space-y-3 text-sm text-slate-700">
+              <div className="mx-auto max-w-md space-y-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-sm">
                 <p className="text-xs text-slate-500">
                   Preferências do painel web (expansível). Por agora utilize filtros e legenda no próprio mapa.
                 </p>

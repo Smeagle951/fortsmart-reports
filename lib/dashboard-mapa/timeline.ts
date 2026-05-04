@@ -38,7 +38,7 @@ export function buildOperationalTimeline(params: {
     talhaoLabel: event.talhaoLabel,
     areaLabel: event.areaLabel,
     title: event.title,
-    description: event.observation || 'Monitoramento registrado no relatório.',
+    description: event.shortDescription || event.observation || 'Monitoramento registrado no relatório.',
     severity: event.severity,
     status: eventStatus(event.severity),
     imageUrl: event.imageUrl,
@@ -49,6 +49,16 @@ export function buildOperationalTimeline(params: {
     const plantio = asDateIso(p.data_plantio ?? p.plantio ?? p.dataPlantio);
     if (plantio) {
       const material = asText(p.material) || asText(p.hibrido) || asText(p.variedade);
+      const estande = asText(p.estande_pl_ha ?? p.plantas_por_ha ?? p.populacao_estande);
+      const estandeNum = estande ? Number(estande) : NaN;
+      const dap = asText(p.dap);
+      const dae = asText(p.dae);
+      const detalhes = [
+        material ? `material ${material}` : null,
+        estande && Number.isFinite(estandeNum) ? `estande ${estandeNum.toLocaleString('pt-BR')} pl/ha` : null,
+        dap ? `DAP ${dap}` : null,
+        dae ? `DAE ${dae}` : null,
+      ].filter(Boolean);
       items.push({
         id: `plantio-${asText(p.talhao_id) || index}-${plantio}`,
         type: 'plantio',
@@ -56,7 +66,7 @@ export function buildOperationalTimeline(params: {
         talhaoLabel: featureLabel(p),
         areaLabel: asText(p.subarea) || asText(p.subtipo) || undefined,
         title: 'Plantio',
-        description: material ? `Plantio registrado com ${material}.` : 'Plantio registrado no GeoJSON.',
+        description: detalhes.length ? `Plantio com ${detalhes.join(' · ')}.` : 'Plantio registrado no GeoJSON.',
         status: 'PLANTIO',
       });
     }

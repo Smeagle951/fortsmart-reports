@@ -49,7 +49,7 @@ export function MapSummaryBar({ data, placement = 'top' }: { data: FeatureCollec
   if (!data || data.features.length === 0) return null;
   const pos =
     placement === 'bottom'
-      ? 'pointer-events-none absolute bottom-24 left-2 right-auto top-auto z-[850] flex max-w-[min(22rem,calc(100%-1rem))] flex-wrap items-stretch justify-start gap-2 sm:bottom-20'
+      ? 'pointer-events-none absolute bottom-44 left-2 right-auto top-auto z-[950] flex max-w-[min(22rem,calc(100%-1rem))] flex-wrap items-stretch justify-start gap-2 sm:bottom-48'
       : 'pointer-events-none absolute left-2 right-2 top-2 z-[850] flex flex-wrap items-stretch justify-end gap-2 sm:left-auto sm:right-2 sm:top-2 sm:max-w-lg';
   return (
     <div className={pos}>

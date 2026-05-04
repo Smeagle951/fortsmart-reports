@@ -22,6 +22,19 @@ import type {
 
 import type { DashboardMonitorEvent, MapEventPinKind, PropertyAlert } from './types';
 
+type AugmentedInfestacao = Infestacao & {
+  igi?: number;
+  incidencia?: number;
+  frequencia?: number;
+  causa?: string;
+  dano?: string;
+};
+
+type AugmentedTalhao = Talhao & {
+  dap?: number;
+  data_plantio?: string;
+};
+
 /** Mesma regra que `/r/[token]` para rotear monitoramento. */
 export function isMonitoramentoPayloadForMap(r: Record<string, unknown>): boolean {
   const core = r.core as Record<string, unknown> | undefined;
@@ -42,6 +55,17 @@ export function isMonitoramentoPayloadForMap(r: Record<string, unknown>): boolea
 function safeNum(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+function optionalNum(v: unknown): number | undefined {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function safeStr(v: unknown): string | undefined {
+  if (v == null) return undefined;
+  const s = String(v).trim();
+  return s || undefined;
 }
 
 function normalizeTipoFromPayload(t: unknown): TipoOrganismo {
@@ -93,31 +117,39 @@ function defaultPolygon(pontos: PontoMonitoramento[]): GeoJSONPolygon {
 }
 
 /** Paridade com `normalizeTalhao` em RelatorioMonitoramentoContent — manter sincronizado. */
-export function normalizeTalhaoForMap(raw: Record<string, unknown>): Talhao {
+export function normalizeTalhaoForMap(raw: Record<string, unknown>): AugmentedTalhao {
   const pontosRaw = Array.isArray(raw.pontos) ? raw.pontos : [];
   const pontos: PontoMonitoramento[] = pontosRaw
     .filter((p): p is Record<string, unknown> => p != null && typeof p === 'object')
     .map((p, i) => {
       const infRaw = Array.isArray(p.infestacoes) ? p.infestacoes : [];
-      const infestacoes: Infestacao[] = infRaw
+      const infestacoes: AugmentedInfestacao[] = infRaw
         .filter((inf): inf is Record<string, unknown> => inf != null && typeof inf === 'object')
-        .map((inf, j) => ({
-          id: String(inf.id ?? `inf-${i}-${j}`),
-          tipo: normalizeTipoFromPayload(inf.tipo),
-          nome: String(inf.nome ?? '—'),
-          terco: String(inf.terco ?? 'Médio'),
-          quantidade: inf.quantidade != null ? safeNum(inf.quantidade) : null,
-          severidade: safeNum(inf.severidade ?? 0),
-          observacao: inf.observacao != null && String(inf.observacao) ? String(inf.observacao) : undefined,
-          imagem: (() => {
+        .map((inf, j) => {
+          const severidade = safeNum(inf.severidade ?? inf.percentual ?? inf.nivel_incidencia ?? 0);
+          return {
+            id: String(inf.id ?? `inf-${i}-${j}`),
+            tipo: normalizeTipoFromPayload(inf.tipo),
+            nome: String(inf.nome ?? inf.organismo ?? '—'),
+            terco: String(inf.terco ?? inf.localizacao ?? 'Médio'),
+            quantidade: inf.quantidade != null ? safeNum(inf.quantidade) : null,
+            severidade,
+            observacao: safeStr(inf.observacao ?? inf.descricao ?? inf.recomendacao),
+            igi: optionalNum(inf.igi ?? inf.IGI ?? inf.indice_geral_infestacao),
+            incidencia: optionalNum(inf.incidencia ?? inf.incidência ?? inf.incidencia_pct ?? inf.percentual),
+            frequencia: optionalNum(inf.frequencia ?? inf.frequência ?? inf.frequencia_pct),
+            causa: safeStr(inf.causa ?? inf.causa_dano ?? inf.causaProvavel),
+            dano: safeStr(inf.dano ?? inf.dano_causado ?? inf.sintoma),
+            imagem: (() => {
             const v = inf.imagem ?? inf.url ?? inf.foto_url ?? inf.foto_path ?? inf.image_url;
             if (v != null && String(v).trim()) return String(v).trim();
             const paths = inf.foto_paths;
             if (Array.isArray(paths) && paths.length > 0 && paths[0] != null && String(paths[0]).trim())
               return String(paths[0]).trim();
             return undefined;
-          })(),
-        }));
+            })(),
+          };
+        });
       return {
         id: String(p.id ?? `p-${i}`),
         identificador: String(p.identificador ?? `P${i + 1}`),
@@ -182,6 +214,7 @@ export function normalizeTalhaoForMap(raw: Record<string, unknown>): Talhao {
       0,
   );
   const dae = raw.dae != null ? safeNum(raw.dae) : undefined;
+  const dap = raw.dap != null ? safeNum(raw.dap) : undefined;
   const estandeRaw = raw.estande != null && typeof raw.estande === 'object' ? (raw.estande as Record<string, unknown>) : undefined;
   const populacaoEstande =
     estandeRaw?.plantasPorMetro != null
@@ -198,7 +231,9 @@ export function normalizeTalhaoForMap(raw: Record<string, unknown>): Talhao {
     variedade: raw.variedade != null && String(raw.variedade) ? String(raw.variedade) : undefined,
     estagio: raw.estagio != null && String(raw.estagio) ? String(raw.estagio) : undefined,
     dae: dae != null && Number.isFinite(dae) ? dae : undefined,
+    dap: dap != null && Number.isFinite(dap) ? dap : undefined,
     populacao_estande: populacaoEstande != null && Number.isFinite(populacaoEstande) ? populacaoEstande : undefined,
+    data_plantio: safeStr(raw.data_plantio ?? raw.dataPlantio ?? raw.plantio_data),
     poligono_geojson: poligono,
     pontos,
     condicoes_climaticas,
@@ -339,7 +374,10 @@ export function buildMonitoramentoMapBundle(relatorio: Record<string, unknown>):
           area_ha: t.area_ha,
           tipo: 'talhao',
           safra: meta.safra || undefined,
-          data_plantio: undefined,
+          data_plantio: (t as Talhao & { data_plantio?: string }).data_plantio,
+          dae: t.dae,
+          dap: (t as Talhao & { dap?: number }).dap,
+          estande_pl_ha: t.populacao_estande,
         },
         geometry: geom as Polygon,
       });
@@ -359,6 +397,17 @@ export function buildMonitoramentoMapBundle(relatorio: Record<string, unknown>):
           '';
 
         const id = `mon-${t.id}-${p.id}-${inf.id}-${evIdx++}`;
+        const igi = (inf as AugmentedInfestacao).igi;
+        const incidencePercent = (inf as AugmentedInfestacao).incidencia;
+        const frequencyPercent = (inf as AugmentedInfestacao).frequencia;
+        const damageCause = (inf as AugmentedInfestacao).causa ?? (inf as AugmentedInfestacao).dano;
+        const shortDescription = [
+          `${inf.severidade}% severidade`,
+          inf.quantidade != null ? `${inf.quantidade} ocorrência(s)` : null,
+          igi != null ? `IGI ${igi}` : null,
+          frequencyPercent != null ? `freq. ${frequencyPercent}%` : null,
+        ].filter(Boolean).join(' · ');
+
         events.push({
           id,
           title: inf.nome,
@@ -373,12 +422,28 @@ export function buildMonitoramentoMapBundle(relatorio: Record<string, unknown>):
           evaluator: meta.tecnico,
           observation: inf.observacao ?? `Terço: ${inf.terco}. Severidade: ${inf.severidade}%.`,
           imageUrl: photoSrc,
+          shortDescription,
+          igi,
+          incidencePercent,
+          frequencyPercent,
+          quantity: inf.quantidade,
+          damageCause,
           specs: [
             { label: 'Talhão', value: t.nome },
             { label: 'Ponto', value: p.identificador },
             { label: 'Cultura', value: t.cultura },
+            { label: 'Severidade', value: `${inf.severidade}%` },
+            ...(inf.quantidade != null ? [{ label: 'Ocorrências', value: String(inf.quantidade) }] : []),
+            ...(igi != null ? [{ label: 'IGI', value: String(igi) }] : []),
+            ...(incidencePercent != null ? [{ label: 'Incidência', value: `${incidencePercent}%` }] : []),
+            ...(frequencyPercent != null ? [{ label: 'Frequência', value: `${frequencyPercent}%` }] : []),
+            ...(damageCause ? [{ label: 'Dano / causa', value: damageCause }] : []),
+            ...(t.dae != null ? [{ label: 'DAE', value: `${t.dae} dias` }] : []),
+            ...((t as Talhao & { dap?: number }).dap != null ? [{ label: 'DAP', value: `${(t as Talhao & { dap?: number }).dap} dias` }] : []),
+            ...((t as Talhao & { data_plantio?: string }).data_plantio ? [{ label: 'Plantio', value: String((t as Talhao & { data_plantio?: string }).data_plantio) }] : []),
             ...(t.area_ha > 0 ? [{ label: 'Área (ha)', value: String(t.area_ha) }] : []),
             ...(t.variedade ? [{ label: 'Variedade', value: t.variedade }] : []),
+            ...(t.populacao_estande ? [{ label: 'Estande', value: `${t.populacao_estande.toLocaleString('pt-BR')} pl/ha` }] : []),
           ],
         });
       }

@@ -77,7 +77,7 @@ export function PremiumOverviewPanel({
 }: Props) {
   const stats = featureStats(featureCollection);
   const criticalAlerts = alerts.filter((alert) => alert.tone === 'danger').length;
-  const lastEvents = [...events].sort((a, b) => b.dateIso.localeCompare(a.dateIso)).slice(0, 5);
+  const lastEvents = [...events].sort((a, b) => b.dateIso.localeCompare(a.dateIso));
   const kpis = [
     { label: 'Área total mapeada', value: `${summary.totalHa.toLocaleString('pt-BR')} ha`, icon: MapPinned },
     { label: 'Talhões', value: summary.talhaoCount.toLocaleString('pt-BR'), icon: Sprout },
@@ -121,7 +121,7 @@ export function PremiumOverviewPanel({
               Últimos eventos
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="max-h-[520px] space-y-3 overflow-y-auto pr-3">
             {lastEvents.length ? (
               lastEvents.map((event, index) => (
                 <div key={event.id}>
