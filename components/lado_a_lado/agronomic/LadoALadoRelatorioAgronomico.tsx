@@ -6,6 +6,7 @@ import type { ReportApplicationEventV2Json } from '@/types/side-by-side-report';
 import FieldCollectionModulesSection from '@/components/lado_a_lado/premium/FieldCollectionModulesSection';
 import EditorialLadoALadoAboveFold from '@/components/lado_a_lado/premium/EditorialLadoALadoAboveFold';
 import SidePhotoGallerySection from '@/components/lado_a_lado/premium/SidePhotoGallerySection';
+import SideBySideFieldMapSection from '@/components/lado_a_lado/premium/SideBySideFieldMapSection';
 import TreatmentExecutionCombinedSection from '@/components/lado_a_lado/premium/TreatmentExecutionCombinedSection';
 import { isColheitaJson, isCustoJson, formatWind } from '@/components/lado_a_lado/ladoALadoHelpers';
 import { formatDate, formatNumber } from '@/utils/format';
@@ -24,6 +25,31 @@ function hasFieldCollection(data: SideBySideReportData): boolean {
   if (fcm == null || typeof fcm !== 'object' || Array.isArray(fcm)) return false;
   const pts = (fcm as { points?: unknown }).points;
   return Array.isArray(pts) && pts.length > 0;
+}
+
+function pointRaw(p: unknown): Record<string, unknown> {
+  return p != null && typeof p === 'object' && !Array.isArray(p) ? (p as Record<string, unknown>) : {};
+}
+
+function pointText(p: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const v = p[key];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+    if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  }
+  return null;
+}
+
+function pointNum(p: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    const v = p[key];
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    if (typeof v === 'string') {
+      const n = Number(v.replace(',', '.'));
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return null;
 }
 
 function produtosLinha(ev: ReportApplicationEventV2Json): string {
@@ -114,6 +140,7 @@ function AgrSection({
 
 const NAV: { id: string; label: string }[] = [
   { id: 'l2-resumo', label: 'Resumo' },
+  { id: 'l2-mapa', label: 'Mapa' },
   { id: 'l2-pontos', label: 'Pontos' },
   { id: 'l2-coleta', label: 'Coleta' },
   { id: 'l2-tratamento', label: 'Tratamento' },
@@ -253,13 +280,15 @@ export default function LadoALadoRelatorioAgronomico({ data }: { data: SideBySid
           </div>
         </AgrSection>
 
+        <SideBySideFieldMapSection data={data} />
+
         {/* Pontos */}
         <AgrSection
           id="l2-pontos"
           sectionNum="03"
           kicker="Amostragem"
           title="Pontos da avaliação"
-          subtitle="Ordem e estado dos pontos tal como registados na avaliação."
+          subtitle="Pontos de avaliação publicados pelo app, com identificação e coordenada quando disponíveis no JSON."
         >
           {points.length === 0 ? (
             <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
@@ -267,23 +296,33 @@ export default function LadoALadoRelatorioAgronomico({ data }: { data: SideBySid
               publicar o relatório.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
-              <table className="w-full min-w-[400px] border-collapse text-left text-sm">
-                <thead className="bg-slate-900 text-xs font-bold uppercase tracking-wide text-white">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                <table className="w-full min-w-[620px] border-collapse text-left text-sm">
+                <thead className="bg-emerald-950 text-xs font-bold uppercase tracking-wide text-white">
                   <tr>
                     <th className="px-3 py-2">#</th>
                     <th className="px-3 py-2">Identificação</th>
+                    <th className="px-3 py-2">Coordenada</th>
                     <th className="px-3 py-2">Estado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {points.map((p, i) => (
-                    <tr key={i} className="bg-white">
-                      <td className="px-3 py-2 tabular-nums font-semibold">{p.indexNo ?? i + 1}</td>
-                      <td className="px-3 py-2">{p.name?.trim() || '—'}</td>
-                      <td className="px-3 py-2">{p.status?.trim() || '—'}</td>
-                    </tr>
-                  ))}
+                  {points.map((p, i) => {
+                    const rawPoint = pointRaw(p);
+                    const indexNo = p.indexNo ?? pointNum(rawPoint, ['index', 'numero', 'ordem']) ?? i + 1;
+                    const name = p.name?.trim() || pointText(rawPoint, ['titulo', 'identificacao', 'identificador', 'point_id']) || `Ponto ${indexNo}`;
+                    const lat = pointNum(rawPoint, ['lat', 'latitude']);
+                    const lng = pointNum(rawPoint, ['lng', 'lon', 'long', 'longitude']);
+                    const coord = lat != null && lng != null ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : '—';
+                    return (
+                      <tr key={i} className="bg-white align-top">
+                        <td className="px-3 py-2 tabular-nums font-semibold text-emerald-950">{indexNo}</td>
+                        <td className="px-3 py-2 font-medium text-slate-900">{name}</td>
+                        <td className="px-3 py-2 font-mono text-xs text-slate-600">{coord}</td>
+                        <td className="px-3 py-2">{p.status?.trim() || pointText(rawPoint, ['situacao', 'estado']) || 'ok'}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

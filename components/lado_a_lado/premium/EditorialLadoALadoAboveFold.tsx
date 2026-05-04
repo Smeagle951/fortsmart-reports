@@ -55,6 +55,8 @@ function matchesProdRow(label: string): boolean {
 
 export default function EditorialLadoALadoAboveFold({ data }: { data: SideBySideReportData }) {
   const farm = data.farm ?? {};
+  const raw = data as unknown as Record<string, unknown>;
+  const talhao = raw.talhao && typeof raw.talhao === 'object' && !Array.isArray(raw.talhao) ? (raw.talhao as Record<string, unknown>) : null;
   const branding = data.branding ?? {};
   const meta = data.meta ?? {};
   const qc = data.quality_check as { warnings?: string[] } | undefined;
@@ -93,6 +95,10 @@ export default function EditorialLadoALadoAboveFold({ data }: { data: SideBySide
 
   const kpA = data.sideA?.kpis;
   const kpB = data.sideB?.kpis;
+  const areaHa =
+    farm.areaHa ??
+    (typeof talhao?.area_total_ha === 'number' ? talhao.area_total_ha : parseRowNum(talhao?.area_total_ha)) ??
+    (typeof talhao?.areaHa === 'number' ? talhao.areaHa : parseRowNum(talhao?.areaHa));
 
   type KpiCard = { label: string; va: string; vb: string };
   const kpiCards: KpiCard[] = [
@@ -195,7 +201,7 @@ export default function EditorialLadoALadoAboveFold({ data }: { data: SideBySide
             <div className="fs-l2-header-cell">
               <div className="fs-l2-header-label">Área</div>
               <div className="fs-l2-header-value">
-                {farm.areaHa != null ? `${formatNumber(farm.areaHa, { decimals: 2 })} ha` : '—'}
+                {areaHa != null ? `${formatNumber(areaHa, { decimals: 2 })} ha` : '—'}
               </div>
             </div>
           </div>

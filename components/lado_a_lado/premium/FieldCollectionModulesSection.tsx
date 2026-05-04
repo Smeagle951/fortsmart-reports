@@ -86,6 +86,7 @@ const COLUMN_PRIORITY = [
 
 const IMAGE_KEYS = new Set(['url', 'foto', 'imagem', 'image', 'thumbnail', 'thumb']);
 const IMAGE_EXT = /\.(jpe?g|png|webp|gif|avif|heic|heif)(\?.*)?$/i;
+const HTTP_IMAGE_RE = /https?:\/\/[^\s;|,)]+/gi;
 
 /* ------------------------------- utilities ------------------------------- */
 
@@ -114,6 +115,23 @@ function isLikelyImageUrl(v: unknown): boolean {
   return false;
 }
 
+function extractImageUrlsFromText(v: unknown): string[] {
+  if (typeof v !== 'string') return [];
+  const matches = v.match(HTTP_IMAGE_RE) ?? [];
+  return matches.map((m) => m.trim()).filter((m) => isLikelyImageUrl(m));
+}
+
+function stripImageUrlsFromText(text: string): string {
+  return text
+    .replace(/Foto:\s*https?:\/\/[^\s;|,)]+;?/gi, '')
+    .replace(/Imagem:\s*https?:\/\/[^\s;|,)]+;?/gi, '')
+    .replace(HTTP_IMAGE_RE, '')
+    .replace(/\s*;\s*/g, ' · ')
+    .replace(/\s+/g, ' ')
+    .replace(/^·\s*|\s*·$/g, '')
+    .trim();
+}
+
 function hasFieldCollectionData(data: SideBySideReportData): boolean {
   const fcm = data.field_collection_modules;
   if (fcm == null || typeof fcm !== 'object' || Array.isArray(fcm)) return false;
@@ -137,7 +155,7 @@ function formatCellValue(raw: unknown, depth = 0): string {
         });
       }
     }
-    return t;
+    return stripImageUrlsFromText(t) || t;
   }
   if (typeof raw === 'number') {
     if (!Number.isFinite(raw)) return '—';
@@ -169,6 +187,10 @@ function pickImageUrlFromRow(row: Record<string, unknown>): string | null {
     const v = row[k];
     if (typeof v === 'string' && isLikelyImageUrl(v)) return v.trim();
   }
+  for (const v of Object.values(row)) {
+    const urls = extractImageUrlsFromText(v);
+    if (urls.length > 0) return urls[0];
+  }
   return null;
 }
 
@@ -195,17 +217,21 @@ function PhotoMediaCell({ value }: { value: Record<string, unknown> }) {
     (value.caption ?? value.legenda ?? value.nome ?? value.nomeAlvo)?.toString().trim() ?? '';
   if (/^https?:\/\//i.test(url)) {
     return (
-      <div className="space-y-1 min-w-0">
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[12.5px] font-semibold text-blue-700 underline decoration-blue-700/40 hover:text-blue-900"
-        >
-          Abrir imagem no browser
-        </a>
-        {caption ? <p className="text-[11.5px] text-slate-600 leading-snug">{caption}</p> : null}
-      </div>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group block min-w-[140px] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={url}
+          alt={caption || 'Foto da avaliação'}
+          loading="lazy"
+          className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-[1.03]"
+        />
+        {caption ? <span className="block truncate px-2 py-1 text-[10.5px] font-medium text-slate-600">{caption}</span> : null}
+      </a>
     );
   }
   return (
@@ -219,9 +245,43 @@ function PhotoMediaCell({ value }: { value: Record<string, unknown> }) {
   );
 }
 
+function InlineImageGallery({ urls, caption }: { urls: string[]; caption?: string }) {
+  return (
+    <div className="grid min-w-[220px] grid-cols-2 gap-2 sm:grid-cols-3">
+      {urls.slice(0, 6).map((src, i) => (
+        <a
+          key={`${src}-${i}`}
+          href={src}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt={caption || `Foto ${i + 1}`}
+            loading="lazy"
+            className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-[1.03]"
+          />
+          {caption ? (
+            <span className="block truncate px-2 py-1 text-[10.5px] font-medium text-slate-600">
+              {caption}
+            </span>
+          ) : null}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 function renderTableCell(value: unknown): React.ReactNode {
   if (isPhotoMediaRecord(value)) {
     return <PhotoMediaCell value={value} />;
+  }
+  const urls = extractImageUrlsFromText(value);
+  if (urls.length > 0) {
+    const caption = typeof value === 'string' ? stripImageUrlsFromText(value) : undefined;
+    return <InlineImageGallery urls={urls} caption={caption} />;
   }
   return formatCellValue(value);
 }
@@ -268,12 +328,19 @@ function renderCell(k: string, v: unknown, row: Record<string, unknown>): React.
   if (isPhotoMediaRecord(v)) {
     return <PhotoMediaCell value={v as Record<string, unknown>} />;
   }
-  if (IMAGE_KEYS.has(k) && typeof v === 'string' && isLikelyImageUrl(v)) {
+  const embeddedUrls = extractImageUrlsFromText(v);
+  if (typeof v === 'string' && (embeddedUrls.length > 0 || (IMAGE_KEYS.has(k) && isLikelyImageUrl(v)))) {
     const caption =
-      (typeof row.caption === 'string' && row.caption.trim()) ||
-      (typeof row.descricao === 'string' && row.descricao.trim()) ||
+      (typeof row.caption === 'string' && stripImageUrlsFromText(row.caption)) ||
+      (typeof row.descricao === 'string' && stripImageUrlsFromText(row.descricao)) ||
+      stripImageUrlsFromText(v) ||
       undefined;
-    return <ImageThumb src={v} alt={caption} />;
+    const urls = embeddedUrls.length > 0 ? embeddedUrls : [v];
+    return urls.length === 1 ? (
+      <ImageThumb src={urls[0]} alt={caption} />
+    ) : (
+      <InlineImageGallery urls={urls} caption={caption} />
+    );
   }
   return (
     <span className="text-[12.5px] leading-snug text-slate-800">
@@ -409,7 +476,7 @@ function DlBlock({ obj }: { obj: Record<string, unknown> }) {
                 {KEY_LABELS[k] ?? k.replace(/_/g, ' ')}
               </th>
               <td className="py-1 font-medium text-slate-900">
-                {isPhotoMediaRecord(v) ? <PhotoMediaCell value={v} /> : formatCellValue(v)}
+                {renderTableCell(v)}
               </td>
             </tr>
           ))}
@@ -529,8 +596,8 @@ function SideCell({
 }) {
   const skin = sideSkin(letter);
   return (
-    <div className={`min-w-0 border border-slate-200/70 bg-white pl-1.5 py-1.5 ${skin.border}`}>
-      <div className="min-w-0 pl-0.5">
+    <div className={`min-w-0 rounded-lg border border-slate-200/80 bg-white px-2 py-2 shadow-sm ${skin.border}`}>
+      <div className="min-w-0">
         {empty ? (
           <p className="text-[11px] text-slate-400 italic">Sem registros.</p>
         ) : (
@@ -574,7 +641,7 @@ export default function FieldCollectionModulesSection({
   const schemaVersion = fcm.schema_version;
 
   const shell = compact
-    ? 'rounded-lg border border-slate-200/90 bg-white shadow-sm print:shadow-none print:border-slate-300'
+    ? 'overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-md shadow-emerald-950/5 print:shadow-none print:border-slate-300'
     : `relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/70
           bg-gradient-to-b from-white via-slate-50/20 to-slate-100/10
           shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_10px_32px_-12px_rgba(15,23,42,0.08)]
@@ -591,9 +658,9 @@ export default function FieldCollectionModulesSection({
     <section id={sectionId} className="scroll-mt-28 print:break-inside-avoid relative isolate">
       <div className={shell}>
         <div
-          className={`relative border-b border-slate-200/60 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 print:!bg-slate-100 print:!border-slate-300 ${headPad}`}
+          className={`relative border-b border-emerald-900/10 bg-emerald-950 print:!bg-slate-100 print:!border-slate-300 ${headPad}`}
         >
-          <p className="text-[0.58rem] font-bold uppercase tracking-[0.22em] text-slate-400 print:text-slate-600">
+          <p className="text-[0.58rem] font-bold uppercase tracking-[0.22em] text-emerald-100/70 print:text-slate-600">
             {compact ? 'Coleta' : 'Dossiê técnico'}
           </p>
           <div className="mt-0.5 flex flex-wrap items-end justify-between gap-2">
@@ -610,7 +677,7 @@ export default function FieldCollectionModulesSection({
                   )}
                 </p>
               ) : schemaVersion != null ? (
-                <p className="mt-0.5 text-[10px] text-slate-400 print:text-slate-600">Schema v{schemaVersion}</p>
+                <p className="mt-0.5 text-[10px] text-emerald-100/65 print:text-slate-600">Schema v{schemaVersion}</p>
               ) : null}
             </div>
             <div className="flex items-center gap-1">
@@ -696,7 +763,7 @@ export default function FieldCollectionModulesSection({
                     return (
                       <div
                         key={secId}
-                        className={`grid ${modRow}`}
+                        className={`grid items-start ${modRow}`}
                         style={{
                           gridTemplateColumns: compact
                             ? `minmax(5.5rem,8rem) repeat(${sideKeys.length},minmax(0,1fr))`

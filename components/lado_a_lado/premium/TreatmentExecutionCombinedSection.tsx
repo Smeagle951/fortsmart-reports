@@ -230,7 +230,7 @@ export default function TreatmentExecutionCombinedSection({
   const sortedApps = [...apps].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
   const grid = (
-    <div className="grid gap-6 lg:grid-cols-2" dir="ltr">
+    <div className="grid grid-cols-2 gap-4 overflow-x-auto pb-1 lg:gap-6" dir="ltr">
       {(['A', 'B'] as const).map((sideKey) => {
         const side = sides.find((s) => s.side === sideKey);
         const displayName = sideDisplayTitle(sideKey, side, data);
@@ -247,7 +247,7 @@ export default function TreatmentExecutionCombinedSection({
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className={`flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md ring-2 ${ring}`}
+            className={`min-w-[340px] flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md ring-2 ${ring}`}
           >
             <div className={`${headerBg} px-4 py-3 text-center text-white`}>
               <p className="text-lg font-black leading-tight">{displayName}</p>
@@ -275,7 +275,7 @@ export default function TreatmentExecutionCombinedSection({
                 </div>
               )}
 
-              <div className="grid gap-4 px-4 py-4 sm:px-5 lg:grid-cols-2">
+              <div className="grid gap-4 px-4 py-4 sm:px-5 xl:grid-cols-2">
                 <div className="min-w-0">
                   <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-900/5 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-700">
                     <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} aria-hidden />

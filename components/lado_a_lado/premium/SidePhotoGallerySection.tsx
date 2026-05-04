@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import type { ReportPhotoWeb } from '@/types/side-by-side-report';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
+import { resolveReportPhotoSrc } from '@/lib/resolveReportPhotoSrc';
 import PremiumSectionShell from './PremiumSectionShell';
 
 function hotspotMomentLabel(m?: string): string | null {
@@ -35,8 +36,21 @@ function PhotoCard({
     >
       <div className="aspect-4/3 w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200/80">
         {url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={caption || `${sideLabel} — foto`} className="h-full w-full object-cover" />
+          <div className="relative h-full w-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt={caption || `${sideLabel} — foto`} className="h-full w-full object-cover" />
+            {p.hotspots?.map((h, hi) => (
+              <span
+                key={hi}
+                className="absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]"
+                style={{
+                  left: `${Math.max(0, Math.min(100, h.xPct))}%`,
+                  top: `${Math.max(0, Math.min(100, h.yPct))}%`,
+                }}
+                title={[h.label, h.detail].filter(Boolean).join(' — ') || `Marcador ${hi + 1}`}
+              />
+            ))}
+          </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs text-slate-500 px-3 text-center">
             Imagem indisponível (URL não publicada)
@@ -49,17 +63,16 @@ function PhotoCard({
           {category ? <span className="text-slate-500"> · {category}</span> : null}
         </div>
         {caption ? <p className="mt-1 text-slate-600">{caption}</p> : null}
-        {p.hotspots != null && p.hotspots.length > 0 ? (
+        {p.hotspots != null && p.hotspots.some((h) => h.label || h.detail || hotspotMomentLabel(h.applicationMoment)) ? (
           <ul className="mt-2 space-y-1.5 border-t border-emerald-100/80 bg-emerald-50/30 pt-2 text-[11px] text-slate-700">
-            <li className="font-bold uppercase tracking-wide text-emerald-900/80">Marcadores</li>
+            <li className="font-bold uppercase tracking-wide text-emerald-900/80">Anotações na imagem</li>
             {p.hotspots.map((h, hi) => {
               const phase = hotspotMomentLabel(h.applicationMoment);
+              const hasText = h.label || h.detail || phase;
+              if (!hasText) return null;
               return (
                 <li key={hi} className="leading-snug">
-                  <span className="text-slate-500">
-                    {Math.round(h.xPct)}%, {Math.round(h.yPct)}%
-                  </span>
-                  {h.label ? <span className="text-slate-800"> — {h.label}</span> : null}
+                  {h.label ? <span className="font-semibold text-slate-800">{h.label}</span> : <span className="font-semibold text-slate-800">Marcador {hi + 1}</span>}
                   {phase ? (
                     <span className="ml-1 inline-block rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-900">
                       {phase}
@@ -101,7 +114,7 @@ export default function SidePhotoGallerySection({
               // eslint-disable-next-line react/no-array-index-key
               key={`A-${i}`}
               sideLabel={nameA}
-              url={p.url}
+              url={resolveReportPhotoSrc(p as unknown as Record<string, unknown>)}
               caption={p.caption}
               category={p.category}
               p={p}
@@ -117,7 +130,7 @@ export default function SidePhotoGallerySection({
               // eslint-disable-next-line react/no-array-index-key
               key={`B-${i}`}
               sideLabel={nameB}
-              url={p.url}
+              url={resolveReportPhotoSrc(p as unknown as Record<string, unknown>)}
               caption={p.caption}
               category={p.category}
               p={p}
