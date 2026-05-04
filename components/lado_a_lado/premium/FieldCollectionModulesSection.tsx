@@ -121,6 +121,18 @@ function extractImageUrlsFromText(v: unknown): string[] {
   return matches.map((m) => m.trim()).filter((m) => isLikelyImageUrl(m));
 }
 
+function collectImageUrls(v: unknown, depth = 0): string[] {
+  if (depth > 5 || v == null) return [];
+  if (typeof v === 'string') return isLikelyImageUrl(v) ? [v.trim()] : extractImageUrlsFromText(v);
+  if (Array.isArray(v)) return v.flatMap((x) => collectImageUrls(x, depth + 1));
+  if (isPlainObject(v)) {
+    const direct = pickImageUrlFromRow(v);
+    const nested = Object.values(v).flatMap((x) => collectImageUrls(x, depth + 1));
+    return [...(direct ? [direct] : []), ...nested].filter((x, i, arr) => arr.indexOf(x) === i);
+  }
+  return [];
+}
+
 function stripImageUrlsFromText(text: string): string {
   return text
     .replace(/Foto:\s*https?:\/\/[^\s;|,)]+;?/gi, '')
@@ -188,7 +200,7 @@ function pickImageUrlFromRow(row: Record<string, unknown>): string | null {
     if (typeof v === 'string' && isLikelyImageUrl(v)) return v.trim();
   }
   for (const v of Object.values(row)) {
-    const urls = extractImageUrlsFromText(v);
+    const urls = collectImageUrls(v);
     if (urls.length > 0) return urls[0];
   }
   return null;
@@ -278,7 +290,7 @@ function renderTableCell(value: unknown): React.ReactNode {
   if (isPhotoMediaRecord(value)) {
     return <PhotoMediaCell value={value} />;
   }
-  const urls = extractImageUrlsFromText(value);
+  const urls = collectImageUrls(value);
   if (urls.length > 0) {
     const caption = typeof value === 'string' ? stripImageUrlsFromText(value) : undefined;
     return <InlineImageGallery urls={urls} caption={caption} />;
@@ -328,7 +340,7 @@ function renderCell(k: string, v: unknown, row: Record<string, unknown>): React.
   if (isPhotoMediaRecord(v)) {
     return <PhotoMediaCell value={v as Record<string, unknown>} />;
   }
-  const embeddedUrls = extractImageUrlsFromText(v);
+  const embeddedUrls = collectImageUrls(v);
   if (typeof v === 'string' && (embeddedUrls.length > 0 || (IMAGE_KEYS.has(k) && isLikelyImageUrl(v)))) {
     const caption =
       (typeof row.caption === 'string' && stripImageUrlsFromText(row.caption)) ||
@@ -402,7 +414,7 @@ function OccurrencesGallery({ rows }: { rows: Record<string, unknown>[] }) {
       {withImages.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
           {withImages.map((r, i) => {
-            const src = pickImageUrlFromRow(r)!;
+            const urls = collectImageUrls(r);
             const caption =
               (typeof r.caption === 'string' && r.caption.trim()) ||
               (typeof r.descricao === 'string' && r.descricao.trim()) ||
@@ -413,9 +425,9 @@ function OccurrencesGallery({ rows }: { rows: Record<string, unknown>[] }) {
             if (typeof r.incidencia === 'string' && r.incidencia) meta.push(`Incid. ${r.incidencia}`);
             if (typeof r.nota !== 'undefined' && r.nota !== null && r.nota !== '')
               meta.push(`Nota ${r.nota}`);
-            return (
+            return urls.slice(0, 4).map((src, imgIndex) => (
               <figure
-                key={i}
+                key={`${i}-${imgIndex}`}
                 className="group relative overflow-hidden rounded-lg ring-1 ring-slate-200 bg-white shadow-sm"
               >
                 <a href={src} target="_blank" rel="noopener noreferrer" className="block">
@@ -434,7 +446,7 @@ function OccurrencesGallery({ rows }: { rows: Record<string, unknown>[] }) {
                   )}
                 </figcaption>
               </figure>
-            );
+            ));
           })}
         </div>
       )}
@@ -465,23 +477,16 @@ function DlBlock({ obj }: { obj: Record<string, unknown> }) {
 
   if (!hasNested) {
     return (
-      <table className="w-full border-collapse text-left text-[11px] leading-snug">
-        <tbody>
-          {entries.map(([k, v]) => (
-            <tr key={k} className="border-b border-slate-100 last:border-b-0">
-              <th
-                scope="row"
-                className="w-[38%] max-w-38 py-1 pr-2 align-top text-[0.58rem] font-semibold uppercase tracking-wide text-slate-500"
-              >
-                {KEY_LABELS[k] ?? k.replace(/_/g, ' ')}
-              </th>
-              <td className="py-1 font-medium text-slate-900">
-                {renderTableCell(v)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="grid grid-cols-2 gap-1.5">
+        {entries.map(([k, v]) => (
+          <div key={k} className="rounded-md border border-slate-200/80 bg-slate-50/70 px-2 py-1.5">
+            <div className="text-[0.56rem] font-bold uppercase tracking-wide text-slate-500">
+              {KEY_LABELS[k] ?? k.replace(/_/g, ' ')}
+            </div>
+            <div className="mt-0.5 text-sm font-semibold leading-tight text-slate-900">{renderTableCell(v)}</div>
+          </div>
+        ))}
+      </div>
     );
   }
 

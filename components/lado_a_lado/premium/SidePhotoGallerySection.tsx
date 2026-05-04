@@ -13,6 +13,57 @@ function hotspotMomentLabel(m?: string): string | null {
   return null;
 }
 
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v != null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+}
+
+function photosFromFieldCollection(data: SideBySideReportData, side: 'A' | 'B'): ReportPhotoWeb[] {
+  const fcm = asRecord(data.field_collection_modules);
+  const points = Array.isArray(fcm?.points) ? fcm.points : [];
+  const out: ReportPhotoWeb[] = [];
+  for (const point of points) {
+    const sides = asRecord(asRecord(point)?.sides);
+    const sideRec = asRecord(sides?.[side]);
+    if (!sideRec) continue;
+    for (const [sectionKey, sectionValue] of Object.entries(sideRec)) {
+      const section = asRecord(sectionValue);
+      const occurrences = Array.isArray(section?.occurrences) ? section.occurrences : [];
+      for (const occurrence of occurrences) {
+        const occ = asRecord(occurrence);
+        const images = Array.isArray(occ?.images) ? occ.images : [];
+        for (const image of images) {
+          const img = asRecord(image);
+          const url = typeof img?.url === 'string' && img.url.trim() ? img.url.trim() : null;
+          if (!url) continue;
+          out.push({
+            url,
+            caption:
+              (typeof img?.caption === 'string' && img.caption.trim()) ||
+              (typeof occ?.alvo === 'string' && occ.alvo.trim()) ||
+              null,
+            category: sectionKey,
+          } as ReportPhotoWeb);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function mergeRenderablePhotos(base: ReportPhotoWeb[], extra: ReportPhotoWeb[]): ReportPhotoWeb[] {
+  const seen = new Set<string>();
+  const out: ReportPhotoWeb[] = [];
+  for (const photo of [...base, ...extra]) {
+    const src = resolveReportPhotoSrc(photo as unknown as Record<string, unknown>);
+    if (!src) continue;
+    const key = `${src}|${photo.category ?? ''}|${photo.caption ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ ...photo, url: src });
+  }
+  return out;
+}
+
 function PhotoCard({
   sideLabel,
   url,
@@ -26,6 +77,7 @@ function PhotoCard({
   category?: string | null;
   p: ReportPhotoWeb;
 }) {
+  if (!url) return null;
   return (
     <motion.figure
       initial={{ opacity: 0, y: 10 }}
@@ -63,27 +115,6 @@ function PhotoCard({
           {category ? <span className="text-slate-500"> · {category}</span> : null}
         </div>
         {caption ? <p className="mt-1 text-slate-600">{caption}</p> : null}
-        {p.hotspots != null && p.hotspots.some((h) => h.label || h.detail || hotspotMomentLabel(h.applicationMoment)) ? (
-          <ul className="mt-2 space-y-1.5 border-t border-emerald-100/80 bg-emerald-50/30 pt-2 text-[11px] text-slate-700">
-            <li className="font-bold uppercase tracking-wide text-emerald-900/80">Anotações na imagem</li>
-            {p.hotspots.map((h, hi) => {
-              const phase = hotspotMomentLabel(h.applicationMoment);
-              const hasText = h.label || h.detail || phase;
-              if (!hasText) return null;
-              return (
-                <li key={hi} className="leading-snug">
-                  {h.label ? <span className="font-semibold text-slate-800">{h.label}</span> : <span className="font-semibold text-slate-800">Marcador {hi + 1}</span>}
-                  {phase ? (
-                    <span className="ml-1 inline-block rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-900">
-                      {phase}
-                    </span>
-                  ) : null}
-                  {h.detail ? <span className="block text-slate-600">{h.detail}</span> : null}
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
       </figcaption>
     </motion.figure>
   );
@@ -97,8 +128,8 @@ export default function SidePhotoGallerySection({
   /** Sem capa duplicada — usado pelo relatório agronómico único. */
   embedded?: boolean;
 }) {
-  const a = (data.sideA?.photos ?? []) as ReportPhotoWeb[];
-  const b = (data.sideB?.photos ?? []) as ReportPhotoWeb[];
+  const a = mergeRenderablePhotos((data.sideA?.photos ?? []) as ReportPhotoWeb[], photosFromFieldCollection(data, 'A'));
+  const b = mergeRenderablePhotos((data.sideB?.photos ?? []) as ReportPhotoWeb[], photosFromFieldCollection(data, 'B'));
   if (a.length === 0 && b.length === 0) return null;
 
   const nameA = data.sideA?.name?.trim() || data.sideA?.label?.trim() || 'Tratamento 1 (nome no app)';

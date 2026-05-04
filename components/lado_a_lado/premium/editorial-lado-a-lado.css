@@ -120,7 +120,7 @@
 
 @media (min-width: 640px) {
   .premium-spec-theme .fs-l2-header-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -222,15 +222,15 @@
 
 @media (max-width: 720px) {
   .premium-spec-theme .fs-l2-hero {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(250px, 1fr) 58px minmax(250px, 1fr);
+    overflow-x: auto;
   }
 
   .premium-spec-theme .fs-l2-hero-vs {
-    border-left: none !important;
-    border-top: 1px solid var(--l2-border);
-    border-bottom: 1px solid var(--l2-border);
-    padding: 20px !important;
-    min-width: 0 !important;
+    border-left: 1px solid var(--l2-border);
+    border-right: 1px solid var(--l2-border);
+    padding: 16px 8px !important;
+    min-width: 58px !important;
   }
 }
 

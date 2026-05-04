@@ -57,6 +57,10 @@ export default function EditorialLadoALadoAboveFold({ data }: { data: SideBySide
   const farm = data.farm ?? {};
   const raw = data as unknown as Record<string, unknown>;
   const talhao = raw.talhao && typeof raw.talhao === 'object' && !Array.isArray(raw.talhao) ? (raw.talhao as Record<string, unknown>) : null;
+  const experimentDesign =
+    raw.experiment_design && typeof raw.experiment_design === 'object' && !Array.isArray(raw.experiment_design)
+      ? (raw.experiment_design as Record<string, unknown>)
+      : null;
   const branding = data.branding ?? {};
   const meta = data.meta ?? {};
   const qc = data.quality_check as { warnings?: string[] } | undefined;
@@ -98,7 +102,22 @@ export default function EditorialLadoALadoAboveFold({ data }: { data: SideBySide
   const areaHa =
     farm.areaHa ??
     (typeof talhao?.area_total_ha === 'number' ? talhao.area_total_ha : parseRowNum(talhao?.area_total_ha)) ??
-    (typeof talhao?.areaHa === 'number' ? talhao.areaHa : parseRowNum(talhao?.areaHa));
+    (typeof talhao?.areaHa === 'number' ? talhao.areaHa : parseRowNum(talhao?.areaHa)) ??
+    parseRowNum(experimentDesign?.talhao_area_ha ?? experimentDesign?.area_ha ?? experimentDesign?.areaHa);
+  const farmName =
+    farm.farmName?.trim() ||
+    (typeof experimentDesign?.property_label === 'string' ? experimentDesign.property_label.trim() : '') ||
+    '—';
+  const testName =
+    (typeof experimentDesign?.evaluation_title === 'string' && experimentDesign.evaluation_title.trim()) ||
+    branding.title?.trim() ||
+    farm.objective?.trim() ||
+    '—';
+  const technicianName =
+    meta.generatedBy?.name?.trim() ||
+    (typeof experimentDesign?.technician_name === 'string' ? experimentDesign.technician_name.trim() : '') ||
+    data.conclusion?.signature?.name?.trim() ||
+    '—';
 
   type KpiCard = { label: string; va: string; vb: string };
   const kpiCards: KpiCard[] = [
@@ -187,12 +206,20 @@ export default function EditorialLadoALadoAboveFold({ data }: { data: SideBySide
 
           <div className="fs-l2-header-grid">
             <div className="fs-l2-header-cell">
-              <div className="fs-l2-header-label">Cultura</div>
-              <div className="fs-l2-header-value">{farm.culture?.trim() || '—'}</div>
+              <div className="fs-l2-header-label">Fazenda</div>
+              <div className="fs-l2-header-value">{farmName}</div>
             </div>
             <div className="fs-l2-header-cell">
-              <div className="fs-l2-header-label">Safra</div>
-              <div className="fs-l2-header-value">{farm.season?.trim() || '—'}</div>
+              <div className="fs-l2-header-label">Teste</div>
+              <div className="fs-l2-header-value">{testName}</div>
+            </div>
+            <div className="fs-l2-header-cell">
+              <div className="fs-l2-header-label">Responsável</div>
+              <div className="fs-l2-header-value">{technicianName}</div>
+            </div>
+            <div className="fs-l2-header-cell">
+              <div className="fs-l2-header-label">Cultura / Safra</div>
+              <div className="fs-l2-header-value">{[farm.culture?.trim(), farm.season?.trim()].filter(Boolean).join(' · ') || '—'}</div>
             </div>
             <div className="fs-l2-header-cell">
               <div className="fs-l2-header-label">Talhão</div>
