@@ -2327,6 +2327,18 @@ body {
   page-break-inside: avoid;
 }
 
+.fs-field-label {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: white !important;
+  pointer-events: none !important;
+}
+
+.fs-field-label::before {
+  display: none !important;
+}
+
 /* ── Print / PDF ──────────────────────────────────────────────────────────── */
 @media print {
   .no-print {

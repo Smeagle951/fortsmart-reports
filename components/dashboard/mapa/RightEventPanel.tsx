@@ -1,12 +1,13 @@
 'use client';
 
 import Image from 'next/image';
+import { X } from 'lucide-react';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import type { DashboardMonitorEvent } from '@/lib/dashboard-mapa/types';
 
@@ -29,32 +30,38 @@ type Props = {
 };
 
 export function RightEventPanel({ event, onClose }: Props) {
-  const open = !!event;
+  const [tab, setTab] = useState<'detail' | 'calc'>('detail');
 
   const typeLabel =
     event?.type === 'praga' ? 'Praga' : event?.type === 'doenca' ? 'Doença' : 'Monitoramento';
 
+  if (!event) return null;
+
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(isOpen) => {
-        if (!isOpen) onClose();
-      }}
+    <aside
+      className="absolute bottom-3 right-3 top-3 z-[1060] flex w-[min(320px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-black/20 print:hidden max-lg:left-3 max-lg:top-20"
+      aria-label="Detalhe do evento selecionado"
     >
-      <SheetContent
-        side="right"
-        className="z-[1100] w-full overflow-y-auto border-slate-200 p-0 sm:max-w-md print:hidden"
-      >
-        {event ? (
-          <>
-            <SheetHeader className="space-y-1 border-b border-border px-4 pb-3 pt-4 text-left">
-              <SheetTitle className="flex items-center gap-2 font-['Poppins',system-ui,sans-serif] text-base">
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3">
+        <div className="flex gap-5 text-sm">
+          <button type="button" onClick={() => setTab('detail')} className={cn('border-b-2 pb-2 font-semibold', tab === 'detail' ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500')}>Detalhe</button>
+          <button type="button" onClick={() => setTab('calc')} className={cn('border-b-2 pb-2 font-semibold', tab === 'calc' ? 'border-emerald-700 text-emerald-800' : 'border-transparent text-slate-500')}>Calculadora</button>
+        </div>
+        <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Fechar painel">
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {tab === 'detail' ? (
+        <>
+            <div className="space-y-1 border-b border-border px-4 pb-3 pt-4 text-left">
+              <h2 className="flex items-center gap-3 font-['Poppins',system-ui,sans-serif] text-base font-bold text-slate-950">
                 <span className="text-xl" aria-hidden>
                   {event.type === 'praga' ? '🐛' : event.type === 'doenca' ? '🟣' : '✓'}
                 </span>
                 <span className="truncate">{event.title}</span>
-              </SheetTitle>
-              {event.subtitle ? <SheetDescription>{event.subtitle}</SheetDescription> : null}
+              </h2>
+              {event.subtitle ? <p className="text-sm text-red-600">{event.subtitle}</p> : null}
               <p className="text-xs text-muted-foreground">
                 {event.talhaoLabel}
                 {event.areaLabel ? ` · ${event.areaLabel}` : ''}
@@ -62,7 +69,7 @@ export function RightEventPanel({ event, onClose }: Props) {
               <p className="text-[10px] text-muted-foreground">
                 {event.lat.toFixed(6)}, {event.lng.toFixed(6)}
               </p>
-            </SheetHeader>
+            </div>
 
             <ScrollArea className="h-[calc(100vh-8rem)] px-4 py-3">
               <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -127,11 +134,15 @@ export function RightEventPanel({ event, onClose }: Props) {
                 Ver histórico deste ponto
               </Button>
             </ScrollArea>
-          </>
-        ) : (
-          <span className="sr-only">Nenhum evento</span>
-        )}
-      </SheetContent>
-    </Sheet>
+        </>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col justify-center p-5 text-center text-sm text-slate-600">
+          <p className="font-semibold text-slate-900">Calculadora preservada</p>
+          <p className="mt-2 text-xs leading-relaxed">
+            A calculadora completa continua disponível no fluxo de plantio/GeoJSON em “Detalhe | Calculadora”.
+          </p>
+        </div>
+      )}
+    </aside>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { SlidersHorizontal } from 'lucide-react';
+import { CalendarDays, Filter } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -32,18 +32,69 @@ export function MapFiltersSheet({
   onCamada,
 }: Props) {
   return (
-    <div className="pointer-events-none absolute right-3 top-3 z-[1100] print:hidden">
+    <div className="pointer-events-none absolute left-4 right-4 top-4 z-[1100] flex flex-wrap items-start gap-3 print:hidden">
+      <div className="pointer-events-auto grid max-w-[calc(100%-5rem)] grid-cols-2 gap-3 md:flex md:max-w-none">
+        <div className="h-14 min-w-[150px] rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg shadow-black/10">
+          <p className="text-[11px] font-medium text-slate-500">Safra</p>
+          <Select value={safra} onValueChange={onSafra}>
+            <SelectTrigger className="h-7 border-0 p-0 text-sm font-semibold shadow-none focus:ring-0">
+              <SelectValue placeholder="Safra" />
+            </SelectTrigger>
+            <SelectContent className="z-[1300]">
+              <SelectItem value="all">Todas</SelectItem>
+              {safraChoices.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="h-14 min-w-[150px] rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg shadow-black/10">
+          <p className="text-[11px] font-medium text-slate-500">Cultura</p>
+          <Select value={cultura} onValueChange={onCultura}>
+            <SelectTrigger className="h-7 border-0 p-0 text-sm font-semibold shadow-none focus:ring-0">
+              <SelectValue placeholder="Cultura" />
+            </SelectTrigger>
+            <SelectContent className="z-[1300]">
+              <SelectItem value="all">Todas</SelectItem>
+              {culturaChoices.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="h-14 min-w-[150px] rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg shadow-black/10">
+          <p className="text-[11px] font-medium text-slate-500">Camadas</p>
+          <Select value={camada} onValueChange={onCamada}>
+            <SelectTrigger className="h-7 border-0 p-0 text-sm font-semibold shadow-none focus:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="z-[1300]">
+              <SelectItem value="satellite">Talhões</SelectItem>
+              <SelectItem value="events">Eventos</SelectItem>
+              <SelectItem value="heat">Mapa térmico</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="hidden h-14 min-w-[220px] rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg shadow-black/10 lg:block">
+          <p className="text-[11px] font-medium text-slate-500">Período</p>
+          <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <span>{dateRangeLabel}</span>
+            <CalendarDays className="ml-auto h-4 w-4 text-slate-500" />
+          </div>
+        </div>
+      </div>
       <Sheet>
         <SheetTrigger asChild>
           <Button
             type="button"
             variant="secondary"
             size="sm"
-            className="pointer-events-auto h-9 gap-2 shadow-md"
+            className="pointer-events-auto h-12 gap-2 rounded-xl bg-white px-4 shadow-lg shadow-black/10"
             aria-label="Abrir filtros do mapa"
           >
-            <SlidersHorizontal className="h-4 w-4" />
+            <Filter className="h-4 w-4" />
             Filtros
+            <span className="rounded-full bg-emerald-700 px-1.5 py-0.5 text-[10px] font-bold text-white">3</span>
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="w-[min(100%,320px)] sm:max-w-sm">

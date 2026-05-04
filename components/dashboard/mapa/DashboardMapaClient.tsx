@@ -142,7 +142,6 @@ export function DashboardMapaClient({
   }, [wantApi]);
 
   const showDemoFallback =
-    allowDemo &&
     !monBundle &&
     !urlIntent &&
     !wantApi &&
@@ -189,8 +188,8 @@ export function DashboardMapaClient({
       !monBundle &&
       !!baseFc &&
       baseFc.features.length > 0 &&
-      (urlIntent || wantApi || showDemoFallback),
-    [monBundle, baseFc, urlIntent, wantApi, showDemoFallback],
+      (urlIntent || wantApi),
+    [monBundle, baseFc, urlIntent, wantApi],
   );
 
   const plantioGeoOnlyLegend = usePlantioLayout && monitorEvents.length === 0;
@@ -417,6 +416,10 @@ export function DashboardMapaClient({
     }
   }, [monitorEvents.length]);
 
+  const handleHeatmapLayer = useCallback((enabled: boolean) => {
+    handleCamadaChange(enabled ? 'heat' : 'events');
+  }, [handleCamadaChange]);
+
   const handleNavChange = useCallback((id: DashboardNavId) => {
     setActiveNav(id);
     if (id === 'monitoramento') {
@@ -435,7 +438,7 @@ export function DashboardMapaClient({
     }
   }, []);
 
-  const hideTimelineOverlayNav: DashboardNavId[] = ['resumo', 'relatorios', 'atividades', 'insumos', 'config'];
+  const hideTimelineOverlayNav: DashboardNavId[] = ['resumo', 'relatorios', 'atividades', 'insumos', 'clima', 'config'];
   const showEventTimeline =
     operationalTimeline.length > 0 && !hideTimelineOverlayNav.includes(activeNav);
 
@@ -472,21 +475,8 @@ export function DashboardMapaClient({
   const mapShellClass = 'relative min-h-0 flex-1 overflow-hidden rounded-none border border-slate-300/80 bg-slate-900/20 shadow-inner';
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-slate-100 print:block print:h-auto">
-      <SidebarFarm
-        activeNav={activeNav}
-        onNav={handleNavChange}
-        collapsed={sidebarCollapsed}
-        onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
-        summary={summary}
-        alerts={alerts}
-        classicMapHref={classicMapHref}
-        fazendaNome={fazendaNomeResolved ?? displayMeta?.fazenda}
-        usuarioNome={displayMeta?.usuario}
-      />
-
-      <div className="flex min-w-0 flex-1 flex-col print:w-full">
-        <DashboardMapHeader
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#F4F7F4] print:block print:h-auto">
+      <DashboardMapHeader
           safraBadge={safraBadge}
           fazendaNome={fazendaNomeResolved ?? displayMeta?.fazenda}
           usuarioNome={displayMeta?.usuario}
@@ -498,6 +488,20 @@ export function DashboardMapaClient({
           onUpload={onUploadHeader}
         />
 
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <SidebarFarm
+          activeNav={activeNav}
+          onNav={handleNavChange}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
+          summary={summary}
+          alerts={alerts}
+          classicMapHref={classicMapHref}
+          fazendaNome={fazendaNomeResolved ?? displayMeta?.fazenda}
+          usuarioNome={displayMeta?.usuario}
+        />
+
+        <div className="flex min-w-0 flex-1 flex-col print:w-full">
         {hostHint ? (
           <p className="border-b border-sky-200 bg-sky-50 px-4 py-1.5 text-center text-xs text-sky-900">{hostHint}</p>
         ) : null}
@@ -525,6 +529,22 @@ export function DashboardMapaClient({
             <div className="pointer-events-none absolute left-2 right-2 top-14 z-[1040] flex justify-center print:hidden">
               <p className="pointer-events-auto max-w-xl rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-center text-[11px] text-sky-950 shadow-md sm:text-xs">
                 {performanceWarning}
+              </p>
+            </div>
+          ) : null}
+
+          {showDemoFallback ? (
+            <div className="pointer-events-none absolute left-4 top-20 z-[1040] print:hidden">
+              <p className="pointer-events-auto rounded-xl border border-emerald-200 bg-white/95 px-3 py-2 text-[11px] font-medium text-emerald-950 shadow-md">
+                Visualização demonstrativa automática. Abra com <code className="rounded bg-emerald-50 px-1">?token=</code> para dados reais do relatório.
+              </p>
+            </div>
+          ) : null}
+
+          {activeNav === 'monitoramento' && monitorEvents.length === 0 ? (
+            <div className="pointer-events-none absolute left-4 top-20 z-[1040] print:hidden">
+              <p className="pointer-events-auto max-w-md rounded-xl border border-amber-200 bg-white/95 px-3 py-2 text-[11px] font-medium text-amber-950 shadow-md">
+                Monitoramento não carregado neste link. Abra um relatório com <code className="rounded bg-amber-50 px-1">?token=</code> para visualizar pins, imagens e ocorrências georreferenciadas.
               </p>
             </div>
           ) : null}
@@ -590,6 +610,14 @@ export function DashboardMapaClient({
               <p className="mx-auto max-w-md text-center text-sm text-slate-600">
                 Gestão de insumos em <strong>desenvolvimento</strong>.
               </p>
+            </DashboardNavOverlay>
+          ) : null}
+
+          {activeNav === 'clima' ? (
+            <DashboardNavOverlay title="Clima" onClose={() => setActiveNav('talhoes')}>
+              <div className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-sm">
+                Dados climáticos da fazenda entram aqui quando o módulo estiver vinculado ao relatório.
+              </div>
             </DashboardNavOverlay>
           ) : null}
 
@@ -750,9 +778,11 @@ export function DashboardMapaClient({
             layerTalhoes={layerTalhoes}
             layerSubareas={layerSubareas}
             layerEvents={layerEvents}
+            layerHeatmap={heatmapMode}
             onLayerTalhoes={setLayerTalhoes}
             onLayerSubareas={setLayerSubareas}
             onLayerEvents={setLayerEvents}
+            onLayerHeatmap={handleHeatmapLayer}
             plantioGeoOnly={plantioGeoOnlyLegend}
           />
 
@@ -763,6 +793,7 @@ export function DashboardMapaClient({
           <EventTimeline events={operationalTimeline} selectedId={selectedEventId} onSelect={(id) => setSelectedEventId(id)} />
         ) : null}
       </div>
+    </div>
     </div>
   );
 }

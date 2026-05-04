@@ -11,6 +11,8 @@ import {
   PanelLeft,
   Settings,
   ClipboardList,
+  CloudSun,
+  ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -29,6 +31,7 @@ const NAV: { id: DashboardNavId; label: string; icon: typeof Map }[] = [
   { id: 'atividades', label: 'Atividades', icon: ClipboardList },
   { id: 'relatorios', label: 'Relatórios', icon: FileText },
   { id: 'insumos', label: 'Insumos', icon: Package },
+  { id: 'clima', label: 'Clima', icon: CloudSun },
   { id: 'config', label: 'Configurações', icon: Settings },
 ];
 
@@ -59,14 +62,14 @@ export function SidebarFarm({
     <>
       <aside
         className={cn(
-          'flex shrink-0 flex-col overflow-hidden text-white shadow-xl transition-[width] duration-200 ease-out',
-          collapsed ? 'w-0 min-w-0 opacity-0 lg:w-0' : 'w-[260px] opacity-100',
+          'flex h-full shrink-0 flex-col overflow-hidden text-white shadow-xl transition-[width] duration-200 ease-out',
+          collapsed ? 'w-0 min-w-0 opacity-0 lg:w-0' : 'w-[280px] opacity-100',
         )}
         style={{
           background: `linear-gradient(180deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)`,
         }}
       >
-        <div className="flex items-center gap-2 border-b border-white/10 px-3 py-3">
+        <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
               <Leaf className="h-5 w-5" aria-hidden />
@@ -104,9 +107,9 @@ export function SidebarFarm({
                 type="button"
                 onClick={() => onNav(item.id)}
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
+                  'flex w-full items-center gap-3 rounded-[10px] px-3 py-3 text-left text-[15px] transition-colors',
                   active
-                    ? 'bg-white/12 font-medium text-white'
+                    ? 'bg-emerald-700/85 font-semibold text-white shadow-sm'
                     : 'text-emerald-100/75 hover:bg-white/5 hover:text-white',
                 )}
               >
@@ -122,9 +125,13 @@ export function SidebarFarm({
 
           <Link
             href={classicMapHref}
-            className="mt-3 block rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-center text-xs font-medium text-emerald-100 hover:bg-white/10"
+            className="mt-5 flex items-center justify-between rounded-xl border border-emerald-400/40 bg-white/5 px-4 py-3 text-left text-xs font-medium text-emerald-100 hover:bg-white/10"
           >
-            Mapa clássico (GeoJSON + calculadora)
+            <span>
+              <span className="block text-sm font-bold text-white">Abrir mapa simples</span>
+              <span className="text-emerald-100/75">Visualização pública</span>
+            </span>
+            <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
       </aside>

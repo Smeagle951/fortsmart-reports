@@ -7,6 +7,7 @@ export type DashboardNavId =
   | 'atividades'
   | 'relatorios'
   | 'insumos'
+  | 'clima'
   | 'config';
 
 export type MonitorEventSeverity = 'alto' | 'medio' | 'baixo' | 'normal';

@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, CloudUpload, HelpCircle, Share2 } from 'lucide-react';
+import { Bell, ChevronDown, CloudUpload, HelpCircle, Leaf, Menu, Share2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -49,51 +49,67 @@ export function DashboardMapHeader({
   const fazendaLine = fazendaNome?.trim() || '— (use o link com dados do relatório ou ?token=)';
 
   return (
-    <header className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 bg-white px-4 py-2 shadow-sm">
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate font-['Poppins',system-ui,sans-serif] text-lg font-bold text-slate-900">
-            Mapa de talhões
-          </h1>
-          <p className="truncate text-xs text-slate-600" title={fazendaLine}>
-            <span className="font-semibold text-slate-800">Fazenda:</span> {fazendaLine}
-          </p>
-          <p className="truncate text-[11px] text-slate-500" title={displayName}>
-            <span className="font-semibold text-slate-600">Montado/partilhado por:</span> {displayName}
-          </p>
+    <header className="grid h-[72px] shrink-0 grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-slate-200 bg-white px-5 shadow-sm">
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+            <Leaf className="h-6 w-6" />
+          </span>
+          <span className="font-['Poppins',system-ui,sans-serif] text-2xl font-extrabold text-slate-950">FortSmart</span>
         </div>
-        <span className="shrink-0 self-start rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-900 sm:self-center">
+        <button type="button" className="rounded-lg p-2 text-slate-700 hover:bg-slate-100" aria-label="Menu">
+          <Menu className="h-5 w-5" />
+        </button>
+        <div className="hidden min-w-0 items-center gap-4 md:flex">
+          <h1 className="truncate font-['Poppins',system-ui,sans-serif] text-lg font-bold text-slate-950">
+            Relatório de Talhões
+          </h1>
+          <span className="shrink-0 rounded-full bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-900">
           Safra {safraBadge}
-        </span>
+          </span>
+        </div>
       </div>
-      <div className="flex items-center gap-1 sm:gap-2">
+
+      <div className="hidden justify-center lg:flex">
+        <button type="button" className="flex min-w-[240px] items-center justify-between gap-4 border-x border-slate-200 px-5 py-2 text-left">
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold text-slate-950">{fazendaLine}</span>
+            <span className="block truncate text-xs text-slate-500">120,5 ha · Sorriso/MT</span>
+          </span>
+          <ChevronDown className="h-4 w-4 text-slate-500" />
+        </button>
+      </div>
+      <div className="flex items-center justify-end gap-2">
         <button
           type="button"
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          className="flex flex-col items-center gap-1 rounded-lg px-2 py-1 text-slate-700 hover:bg-slate-100"
           title="Enviar / abrir app para carregar dados"
           aria-label="Enviar dados"
           onClick={onUpload}
         >
           <CloudUpload className="h-5 w-5" />
+          <span className="hidden text-[10px] font-medium lg:block">Enviar para app</span>
         </button>
         <button
           type="button"
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          className="flex flex-col items-center gap-1 rounded-lg px-2 py-1 text-slate-700 hover:bg-slate-100"
           title="Copiar link desta página"
           aria-label="Partilhar — copiar link"
           onClick={() => void onShare()}
         >
           <Share2 className="h-5 w-5" />
+          <span className="hidden text-[10px] font-medium lg:block">Compartilhar</span>
         </button>
         <Sheet open={helpOpen} onOpenChange={setHelpOpen}>
           <SheetTrigger asChild>
             <button
               type="button"
-              className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+              className="flex flex-col items-center gap-1 rounded-lg px-2 py-1 text-slate-700 hover:bg-slate-100"
               title="Ajuda"
               aria-label="Ajuda"
             >
               <HelpCircle className="h-5 w-5" />
+              <span className="hidden text-[10px] font-medium lg:block">Ajuda</span>
             </button>
           </SheetTrigger>
           <SheetContent side="right" className="w-[min(100%,380px)] sm:max-w-md">
@@ -122,11 +138,12 @@ export function DashboardMapHeader({
           <SheetTrigger asChild>
             <button
               type="button"
-              className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+              className="relative flex flex-col items-center gap-1 rounded-lg px-2 py-1 text-slate-700 hover:bg-slate-100"
               title={notificationsTitle ?? 'Alertas derivados do relatório'}
               aria-label="Notificações e alertas"
             >
               <Bell className="h-5 w-5" />
+              <span className="hidden text-[10px] font-medium lg:block">Notificações</span>
               {notificationCount > 0 ? (
                 <span className="absolute right-1 top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">
                   {notificationCount > 9 ? '9+' : notificationCount}
@@ -167,7 +184,7 @@ export function DashboardMapHeader({
             </Button>
           </SheetContent>
         </Sheet>
-        <div className="ml-1 hidden items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 py-1 pl-1 pr-3 sm:flex">
+        <div className="ml-2 hidden items-center gap-3 border-l border-slate-200 pl-4 sm:flex">
           <div
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white"
             aria-hidden
