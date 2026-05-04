@@ -3,15 +3,38 @@
 import type { FeatureCollection, GeoJsonObject } from 'geojson';
 import L from 'leaflet';
 import { useEffect, useMemo } from 'react';
-import { GeoJSON, MapContainer, ScaleControl, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import {
+  CircleMarker,
+  GeoJSON,
+  MapContainer,
+  ScaleControl,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from 'react-leaflet';
+import { pinColorForKind } from '@/lib/dashboard-mapa/constants';
+import type { MapEventPinKind } from '@/lib/dashboard-mapa/types';
+
 import { colorPairForProperties, strokeForProperties } from './materialColor';
 
 import 'leaflet/dist/leaflet.css';
+
+export type MapEventMarker = {
+  id: string;
+  lat: number;
+  lng: number;
+  pinKind: MapEventPinKind;
+};
 
 type Props = {
   data: FeatureCollection;
   /** Clique no polígono (talhão/subárea) — mesmos atributos do popup. */
   onSelectFeature?: (properties: Record<string, unknown> | null) => void;
+  eventMarkers?: MapEventMarker[];
+  selectedEventMarkerId?: string | null;
+  onSelectEventMarker?: (id: string) => void;
+  showEventMarkers?: boolean;
+  mapClassName?: string;
 };
 
 function MapBackgroundClick({ onMapClick }: { onMapClick: () => void }) {
@@ -67,7 +90,15 @@ function tooltipText(p: Record<string, unknown>): string {
   return `${tal} — ${mat}`;
 }
 
-export function MapView({ data, onSelectFeature }: Props) {
+export function MapView({
+  data,
+  onSelectFeature,
+  eventMarkers = [],
+  selectedEventMarkerId = null,
+  onSelectEventMarker,
+  showEventMarkers = true,
+  mapClassName,
+}: Props) {
   const dataKey = useMemo(
     () => data.features.map((f) => (f.id != null ? String(f.id) : JSON.stringify(f.geometry))).join('|'),
     [data]
@@ -85,7 +116,7 @@ export function MapView({ data, onSelectFeature }: Props) {
       center={center}
       preferCanvas
       zoom={14}
-      className="h-full min-h-[360px] w-full rounded-md"
+      className={mapClassName ?? 'h-full min-h-[360px] w-full rounded-md'}
       style={{ zIndex: 0 }}
     >
       <TileLayer
@@ -135,6 +166,31 @@ export function MapView({ data, onSelectFeature }: Props) {
           }
         }}
       />
+      {showEventMarkers
+        ? eventMarkers.map((m) => (
+            <CircleMarker
+              key={m.id}
+              center={[m.lat, m.lng]}
+              radius={selectedEventMarkerId === m.id ? 11 : 8}
+              pathOptions={{
+                color: '#ffffff',
+                weight: 2,
+                fillColor: pinColorForKind(m.pinKind),
+                fillOpacity: 0.95,
+              }}
+              eventHandlers={
+                onSelectEventMarker
+                  ? {
+                      click: (e) => {
+                        L.DomEvent.stopPropagation(e);
+                        onSelectEventMarker(m.id);
+                      },
+                    }
+                  : undefined
+              }
+            />
+          ))
+        : null}
     </MapContainer>
   );
 }

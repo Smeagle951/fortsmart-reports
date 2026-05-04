@@ -17,13 +17,23 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@opennextjs/cloudflare": "^1.17.4",
     "@aws-sdk/client-s3": "^3.775.0",
     "@aws-sdk/s3-request-presigner": "^3.775.0",
+    "@opennextjs/cloudflare": "^1.17.4",
+    "@radix-ui/react-checkbox": "^1.3.3",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
     "@supabase/supabase-js": "^2.39.0",
     "@turf/area": "^7.3.4",
     "@types/leaflet": "^1.9.21",
     "chart.js": "^4.5.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "dotenv": "^17.3.1",
     "framer-motion": "^11.18.2",
     "html2pdf.js": "^0.14.0",
@@ -39,6 +49,8 @@
     "react-leaflet": "^4.2.1",
     "recharts": "^3.7.0",
     "shp-write": "^0.3.2",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss-animate": "^1.0.7",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

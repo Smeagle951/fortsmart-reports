@@ -1,20 +1,16 @@
 'use client';
 
-import type { FeatureCollection, GeoJsonObject } from 'geojson';
+import type { FeatureCollection } from 'geojson';
 import dynamic from 'next/dynamic';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  decodeGeoJsonFromQuery,
   distinctCulturasSafas,
   downloadGeoJson,
-  looksLikeHttpsGeoJsonFetchUrl,
   filterByCulturaSafra,
   filterBySelectedTalhoes,
   filterByViewMode,
-  isFeatureCollectionGj,
   listTalhoesFromFc,
-  parseJsonFileText,
   type MapaViewMode,
 } from './geojsonUtils';
 import { FiltersHeader } from './FiltersHeader';
@@ -24,6 +20,7 @@ import { strokeForProperties } from './materialColor';
 import { SeedCalculatorTable } from './SeedCalculatorTable';
 import { TalhaoDetailPanel } from './TalhaoDetailPanel';
 import { TalhaoSidebar } from './TalhaoSidebar';
+import { useMapGeoJsonFromUrl } from './useMapGeoJsonFromUrl';
 
 const MapView = dynamic(() => import('./MapView').then((m) => m.MapView), {
   ssr: false,
@@ -46,215 +43,24 @@ export function MapaTalhoesClient({
 }: MapaTalhoesClientProps) {
   const sp = useSearchParams();
   const pathname = usePathname();
-  const [raw, setRaw] = useState<FeatureCollection | null>(null);
+  const { raw, err, setErr, loadingShare, hostHint } = useMapGeoJsonFromUrl({
+    initialFeatureCollection,
+    searchParams: sp,
+    pathname,
+    legacyTokenPathRegex: /^\/mapa-talhoes\/m\/([^/]+)\/?$/,
+  });
   const [cultura, setCultura] = useState('all');
   const [safra, setSafra] = useState('all');
   const [viewMode, setViewMode] = useState<MapaViewMode>('talhoes_subareas');
   const [search, setSearch] = useState('');
   const [staged, setStaged] = useState<Set<string>>(new Set());
   const [onMap, setOnMap] = useState<Set<string>>(new Set());
-  const [err, setErr] = useState<string | null>(null);
   const [tip, setTip] = useState<string | null>(null);
-  const [loadingShare, setLoadingShare] = useState(false);
   const [selectedFeatureProps, setSelectedFeatureProps] = useState<Record<string, unknown> | null>(null);
-  const [hostHint, setHostHint] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const h = window.location.hostname.toLowerCase();
-    if (h.includes('fortsmart') && !h.startsWith('relatorios.') && !h.includes('localhost')) {
-      setHostHint(
-        'Se abriu a partir do app e o mapa fica vazio: confirme o domínio relatorios.fortsmart-agro.com.br (o mesmo do link partilhado).',
-      );
-    }
-  }, []);
-
-  /** SSR / props OU snapshot explícito */
-  useEffect(() => {
-    if (initialFeatureCollection == null) return;
-    setRaw(initialFeatureCollection);
-    setErr(null);
-  }, [initialFeatureCollection]);
-
-  /**
-   * Prioridade absoluta — `?file=` (HTTPS, ex.: objeto público Cloudflare R2).
-   */
-  useEffect(() => {
-    if (initialFeatureCollection != null) return;
-    const fileUrl = sp?.get('file')?.trim();
-    if (!fileUrl) return;
-    let cancelled = false;
-    const ac = new AbortController();
-
-    void (async () => {
-      if (!looksLikeHttpsGeoJsonFetchUrl(fileUrl)) {
-        setErr('Parâmetro file= deve ser uma URL http(s) válida para o GeoJSON.');
-        return;
-      }
-      try {
-        setLoadingShare(true);
-        setErr(null);
-        setTip(null);
-        const res = await fetch(fileUrl, { signal: ac.signal, mode: 'cors', cache: 'no-store' });
-        if (cancelled) return;
-        if (!res.ok) {
-          setErr(`Falha ao carregar arquivo GeoJSON (${res.status}). Verifique permissões CORS no armazenamento.`);
-          return;
-        }
-        const text = await res.text();
-        if (cancelled) return;
-        const fc = parseJsonFileText(text);
-        if (fc && fc.features.length > 0) {
-          setRaw(fc);
-          setErr(null);
-        } else {
-          setErr('Falha ao carregar arquivo GeoJSON: FeatureCollection ausente ou vazio.');
-        }
-      } catch (e) {
-        if (cancelled) return;
-        if (e instanceof DOMException && e.name === 'AbortError') return;
-        const msg = e instanceof Error ? e.message : String(e);
-        setErr(
-          msg.includes('Failed to fetch') || msg.includes('NetworkError')
-            ? 'Falha de rede ao carregar GeoJSON (CORS ou URL inacessível).'
-            : `Falha ao carregar GeoJSON: ${msg}`,
-        );
-      } finally {
-        if (!cancelled) setLoadingShare(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      ac.abort();
-    };
-  }, [initialFeatureCollection, sp]);
-
-  /**
-   * Origem: snapshot `?id=` (Supabase) · compat. `/mapa-talhoes/m/:token` abaixo.
-   */
-  useEffect(() => {
-    if (initialFeatureCollection != null) return;
-    if (sp?.get('file')?.trim()) return;
-    const idParam = sp?.get('id')?.trim();
-    if (!idParam) return;
-
-    let cancelled = false;
-    const ac = new AbortController();
-
-    void (async () => {
-      try {
-        setLoadingShare(true);
-        setErr(null);
-        const res = await fetch(
-          `/api/mapa-talhoes/snapshot/${encodeURIComponent(idParam)}`,
-          { signal: ac.signal },
-        );
-        if (cancelled) return;
-        if (!res.ok) {
-          setErr(
-            res.status === 404
-              ? 'Link expirado ou inválido. Gere um novo mapa na app FortSmart (Plantio → Exportar KML / mapa web).'
-              : `Não foi possível carregar o mapa partilhado (${res.status}).`,
-          );
-          return;
-        }
-        const data = (await res.json()) as unknown;
-        if (cancelled) return;
-        if (isFeatureCollectionGj(data as GeoJsonObject)) {
-          setRaw(data as FeatureCollection);
-          setErr(null);
-        } else {
-          setErr('Resposta do servidor sem GeoJSON válido.');
-        }
-      } catch (e) {
-        if (cancelled) return;
-        if (e instanceof DOMException && e.name === 'AbortError') return;
-        setErr('Falha de rede ao carregar o mapa partilhado.');
-      } finally {
-        if (!cancelled) setLoadingShare(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      ac.abort();
-    };
-  }, [initialFeatureCollection, sp]);
-
-  useEffect(() => {
-    if (initialFeatureCollection != null) return;
-    if (sp?.get('file')?.trim()) return;
-    if (sp?.get('id')?.trim()) return;
-    const d = sp?.get('d');
-    if (!d) return;
-    const fc = decodeGeoJsonFromQuery(d);
-    if (fc) {
-      setRaw(fc);
-      setErr(null);
-    } else {
-      setErr(
-        'O parâmetro d= na URL está incompleto ou inválido (navegadores cortam URLs muito longas). Use Visualizar mapa (web) no app ou importe um .geojson.',
-      );
-    }
-  }, [sp, initialFeatureCollection]);
 
   useEffect(() => {
     setSelectedFeatureProps(null);
   }, [raw]);
-
-  useEffect(() => {
-    if (initialFeatureCollection != null) return;
-    if (sp?.get('file')?.trim()) return;
-    if (sp?.get('id')?.trim()) return;
-    if (raw != null) return;
-
-    const m = pathname?.match(/^\/mapa-talhoes\/m\/([^/]+)\/?$/);
-    const token = m?.[1]?.trim();
-    if (!token) return;
-
-    let cancelled = false;
-    const ac = new AbortController();
-
-    void (async () => {
-      try {
-        setLoadingShare(true);
-        setErr(null);
-        const res = await fetch(
-          `/api/mapa-talhoes/snapshot/${encodeURIComponent(token)}`,
-          { signal: ac.signal },
-        );
-        if (cancelled) return;
-        if (!res.ok) {
-          setErr(
-            res.status === 404
-              ? 'Link expirado ou inválido. Gere um novo mapa na app FortSmart (Plantio → Exportar KML / mapa web).'
-              : `Não foi possível carregar o mapa partilhado (${res.status}).`,
-          );
-          return;
-        }
-        const data = (await res.json()) as unknown;
-        if (cancelled) return;
-        if (isFeatureCollectionGj(data as GeoJsonObject)) {
-          setRaw(data as FeatureCollection);
-          setErr(null);
-        } else {
-          setErr('Resposta do servidor sem GeoJSON válido.');
-        }
-      } catch (e) {
-        if (cancelled) return;
-        if (e instanceof DOMException && e.name === 'AbortError') return;
-        setErr('Falha de rede ao carregar o mapa partilhado.');
-      } finally {
-        if (!cancelled) setLoadingShare(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      ac.abort();
-    };
-  }, [initialFeatureCollection, raw, pathname, sp]);
 
   const baseFiltered = useMemo(() => {
     if (!raw) return null;
@@ -346,6 +152,11 @@ export function MapaTalhoesClient({
     setOnMap(new Set(staged));
   }, [staged]);
 
+  const dashboardGisHref = useMemo(() => {
+    const q = sp?.toString();
+    return q ? `/dashboard/mapa?${q}` : '/dashboard/mapa';
+  }, [sp]);
+
   const copiarLinkAtual = useCallback(async () => {
     if (typeof window === 'undefined') return;
     try {
@@ -385,6 +196,7 @@ export function MapaTalhoesClient({
         onPrintPdf={onPrintPdf}
         onKmlInfo={onKmlInfo}
         novoPlantioHref={NOVO_PLANTIO_HREF}
+        dashboardGisHref={dashboardGisHref}
       />
 
       <div className="mapa-talhoes-layout mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-2 p-2 print:block print:p-4 lg:grid lg:min-h-0 lg:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(260px,300px)] lg:gap-3 lg:p-3">

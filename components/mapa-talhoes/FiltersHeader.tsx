@@ -19,6 +19,8 @@ type Props = {
   /** KML é gerado no app móvel — abre página de ajuda / loja. */
   onKmlInfo: () => void;
   novoPlantioHref: string;
+  /** Link para o dashboard GIS (mesma query preservada), ex. `/dashboard/mapa?file=…` */
+  dashboardGisHref?: string | null;
 };
 
 export function FiltersHeader({
@@ -37,6 +39,7 @@ export function FiltersHeader({
   onPrintPdf,
   onKmlInfo,
   novoPlantioHref,
+  dashboardGisHref,
 }: Props) {
   return (
     <header className="mapa-talhoes-print-header border-b border-emerald-950/40 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950/30 px-4 py-3 shadow-lg print:border-0 print:bg-white print:shadow-none">
@@ -97,6 +100,14 @@ export function FiltersHeader({
 
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           {tip ? <span className="text-xs text-emerald-300">{tip}</span> : null}
+          {dashboardGisHref ? (
+            <a
+              href={dashboardGisHref}
+              className="rounded-lg border border-emerald-500/40 bg-emerald-900/30 px-2.5 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/50"
+            >
+              Dashboard GIS
+            </a>
+          ) : null}
           {hasData ? (
             <>
               <button
