@@ -224,6 +224,38 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
   const hasPolygonOrGeoPontos = hasValidPolygon || hasValidGeoPontos;
   const hasMapa = hasPolygonOrGeoPontos || (mapa.path != null && String(mapa.path).trim() !== '') || (Array.isArray(mapa.pontos) && mapa.pontos.length > 0);
   const useRealMap = hasValidPolygon || hasValidGeoPontos;
+  const mapSummary = useMemo(() => {
+    if (pontosForMap.length === 0) {
+      return hasValidPolygon
+        ? 'Perimetro do talhao carregado; associe pontos georreferenciados para leitura de clusters de pressao.'
+        : null;
+    }
+    if (pontosForMap.length < 3) {
+      return `Mapa com ${pontosForMap.length} ponto(s) georreferenciado(s); ampliar amostragem melhora a leitura de concentracao.`;
+    }
+    const lats = pontosForMap.map((p) => Number(p.latitude)).filter(Number.isFinite);
+    const lngs = pontosForMap.map((p) => Number(p.longitude)).filter(Number.isFinite);
+    if (lats.length < 3 || lngs.length < 3) return null;
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const latSpan = Math.max(maxLat - minLat, 0.000001);
+    const lngSpan = Math.max(maxLng - minLng, 0.000001);
+    const zones: Record<string, number> = {};
+    for (const p of pontosForMap) {
+      const latPos = (Number(p.latitude) - minLat) / latSpan;
+      const lngPos = (Number(p.longitude) - minLng) / lngSpan;
+      const ns = latPos > 0.66 ? 'norte' : latPos < 0.34 ? 'sul' : 'central';
+      const ew = lngPos > 0.66 ? 'leste' : lngPos < 0.34 ? 'oeste' : 'central';
+      const zone = ns === 'central' && ew === 'central' ? 'regiao central' : `${ns} ${ew}`.replace('central ', '').replace(' central', '');
+      zones[zone] = (zones[zone] ?? 0) + 1;
+    }
+    const dominant = Object.entries(zones).sort((a, b) => b[1] - a[1])[0]?.[0];
+    return dominant
+      ? `Concentracao de registros em ${dominant} do talhao, com ${pontosForMap.length} ponto(s) georreferenciado(s) no mapa.`
+      : null;
+  }, [hasValidPolygon, pontosForMap]);
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -526,6 +558,7 @@ export default function RelatorioVisitaTecnicaContent({ relatorio, reportId, rel
 
         {hasMapa ? (
           <VtDeckSlide detail icon={MapPinned} spanFull kicker="Geodata" title="Mapa do talhão e pontos georreferenciados">
+            {mapSummary ? <div className={dp.mapSummary}>{mapSummary}</div> : null}
             <div style={{ marginBottom: pontosForMap.length > 0 ? 20 : 0 }}>
               {useRealMap ? (
                 <MapaTalhaoClientMount

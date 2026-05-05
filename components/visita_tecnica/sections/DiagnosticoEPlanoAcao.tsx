@@ -18,6 +18,25 @@ function planoPriorClass(prioridade: string | undefined): string {
   return deck.planoPriorNeutra;
 }
 
+function buildPlanStrategy(planoAcao: PayloadVisitaTecnica['planoAcao']): string | null {
+  const acoes = Array.isArray(planoAcao?.acoes) ? planoAcao!.acoes : [];
+  const primeira = acoes.find((acao) => {
+    const a = acao as { acao?: string; produto?: string; objetivoTecnico?: string };
+    return [a.acao, a.produto, a.objetivoTecnico].some((x) => x != null && String(x).trim() !== '');
+  }) as { acao?: string; produto?: string; objetivoTecnico?: string; prazo?: string } | undefined;
+
+  if (primeira?.objetivoTecnico != null && String(primeira.objetivoTecnico).trim() !== '') {
+    return `Estrategia: ${String(primeira.objetivoTecnico).trim()}.`;
+  }
+  if (primeira?.produto != null && String(primeira.produto).trim() !== '') {
+    return 'Estrategia: controle imediato para quebra de ciclo e reducao populacional.';
+  }
+  if (primeira?.acao != null && String(primeira.acao).trim() !== '') {
+    return `Estrategia: executar ${String(primeira.acao).trim().toLowerCase()} dentro da janela recomendada.`;
+  }
+  return null;
+}
+
 export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao, omitDiagnosticoResumo }: DiagnosticoEPlanoAcaoProps) {
   const hasDiagnostico =
     diagnostico &&
@@ -47,6 +66,7 @@ export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao, omitDiag
       (a as { objetivoTecnico?: string }).objetivoTecnico != null &&
       String((a as { objetivoTecnico?: string }).objetivoTecnico).trim() !== '',
   );
+  const planStrategy = buildPlanStrategy(planoAcao);
 
   const riscoStr = String(diagnostico?.nivelRisco || '').toLowerCase();
   const riskWarm =
@@ -171,6 +191,7 @@ export default function DiagnosticoEPlanoAcao({ diagnostico, planoAcao, omitDiag
                 <strong style={{ color: 'var(--vt-forest)' }}>Objetivo de manejo:</strong> {String(planoAcao!.objetivoManejo)}
               </p>
             )}
+            {planStrategy ? <div className={deck.planStrategy}>{planStrategy}</div> : null}
             {Array.isArray(planoAcao!.acoes) && planoAcao!.acoes.length > 0 && (
               <div className={deck.planoExecStack} aria-label="Plano de ação — visão executiva">
                 {planoAcao!.acoes.flatMap((acao, i) => {

@@ -30,7 +30,7 @@ export default function VtInteligenciaNarrativa({ relatorio }: { relatorio: Reco
         Inteligência agronômica
       </h2>
       {resumo ? (
-        <div className={dp.intelBlock}>
+        <div className={`${dp.intelBlock} ${dp.aiInsight}`}>
           <div className={dp.intelBlockTitle}>Insight automático</div>
           <p className={dp.intelBlockText}>{resumo}</p>
         </div>

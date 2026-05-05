@@ -11,6 +11,25 @@ function parseN(v: string | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function buildImpactContext(potencial?: string, estimativa?: string): string | null {
+  const p = parseN(potencial);
+  const e = parseN(estimativa);
+  if (p == null || e == null || p <= 0) return null;
+  const perda = p - e;
+  if (Math.abs(perda) < 0.05) {
+    return 'Estimativa atual esta alinhada ao potencial produtivo declarado.';
+  }
+  const pct = Math.abs((perda / p) * 100);
+  if (perda > 0) {
+    return `Impacto estimado representa perda potencial de ${pct.toLocaleString('pt-BR', {
+      maximumFractionDigits: 2,
+    })}% sobre o potencial produtivo.`;
+  }
+  return `Estimativa atual supera o potencial declarado em ${pct.toLocaleString('pt-BR', {
+    maximumFractionDigits: 2,
+  })}%; validar metodo e base de dados.`;
+}
+
 export default function VtBlocoImpactoProdutivo({
   potencial,
   estimativa,
@@ -46,6 +65,7 @@ export default function VtBlocoImpactoProdutivo({
 
   const showLine = lineData != null;
   const showBar = !showLine && barData != null;
+  const impactContext = useMemo(() => buildImpactContext(potencial, estimativa), [potencial, estimativa]);
 
   if (!showLine && !showBar) return null;
 
@@ -105,6 +125,7 @@ export default function VtBlocoImpactoProdutivo({
       ) : null}
 
       {frase ? <p className={dp.fraseImpacto}>{frase}</p> : null}
+      {impactContext ? <p className={dp.impactContext}>{impactContext}</p> : null}
       {notaMetodo?.trim() ? (
         <p className={dp.fraseImpacto} style={{ marginTop: frase ? '0.65rem' : '1rem', fontSize: '0.82rem', fontWeight: 600 }}>
           <strong style={{ color: 'var(--dp-green)' }}>Método / observação:</strong> {notaMetodo.trim()}

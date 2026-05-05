@@ -21,6 +21,23 @@ const categoriaLabel: Record<string, string> = {
   evidencia: 'Evidência',
 };
 
+function photoAnalysis(cat: string, descricao?: string): string | null {
+  const desc = String(descricao ?? '').toLowerCase();
+  if (cat === 'praga' || desc.includes('lagarta') || desc.includes('spodoptera')) {
+    return 'Evidencia de alimentacao ativa — correlacionar com incidencia e estagio larval.';
+  }
+  if (cat === 'doença' || cat === 'doenca' || desc.includes('mancha') || desc.includes('fung')) {
+    return 'Evidencia fitossanitaria registrada — validar severidade e evolucao na proxima visita.';
+  }
+  if (cat === 'daninha') {
+    return 'Evidencia de competicao no talhao — cruzar com janela de manejo e area afetada.';
+  }
+  if (cat === 'fenologia') {
+    return 'Registro fenologico util para confirmar janela critica e potencial produtivo.';
+  }
+  return null;
+}
+
 export default function FotografiasEAutoriaVT({ imagens, assinatura, conclusao, setLightboxIndex }: FotografiasEAutoriaVTProps) {
   const assinaturaRecord = assinatura && typeof assinatura === 'object' ? (assinatura as Record<string, unknown>) : null;
   const imgAssinatura = assinaturaRecord ? assinaturaImagemUrl(assinaturaRecord) : undefined;
@@ -50,6 +67,7 @@ export default function FotografiasEAutoriaVT({ imagens, assinatura, conclusao, 
                 if (!src) return null;
                 const cat = (img.categoria ?? '').toLowerCase();
                 const catLabel = categoriaLabel[cat] || cat || 'Registro';
+                const analysis = photoAnalysis(cat, img.descricao);
                 return (
                   <figure key={i} className={deck.photoFigure}>
                     <button type="button" onClick={() => setLightboxIndex(i)} className={deck.photoButton}>
@@ -57,20 +75,7 @@ export default function FotografiasEAutoriaVT({ imagens, assinatura, conclusao, 
                       <span className={deck.photoCatBar}>{catLabel}</span>
                     </button>
                     {img.descricao && <figcaption className={deck.photoCaption}>{img.descricao}</figcaption>}
-                    {(cat === 'praga' || cat === 'doença' || cat === 'doenca' || cat === 'daninha') && (
-                      <div
-                        style={{
-                          fontSize: '0.7rem',
-                          color: 'var(--vt-accent)',
-                          marginTop: 6,
-                          padding: '0 0.2rem',
-                          fontWeight: 700,
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        Contexto: registro fitossanitário — correlacionar com incidência, severidade e plano de ação desta visita.
-                      </div>
-                    )}
+                    {analysis ? <div className={deck.photoAnalysis}>{analysis}</div> : null}
                     {img.data && <div className={deck.photoDate}>{img.data}</div>}
                   </figure>
                 );

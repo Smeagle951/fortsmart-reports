@@ -19,10 +19,31 @@ function badgeClass(variant: VtHeroNarrativeModel['statusVariant']): string {
   }
 }
 
+function buildDecisionSummary(model: VtHeroNarrativeModel): string {
+  const status = model.statusVariant;
+  if (status === 'critico') {
+    return 'Intervencao necessaria em ate 48h para evitar perda adicional de produtividade.';
+  }
+  if (status === 'atencao') {
+    return 'Manejo e monitoramento devem ser priorizados nesta janela para evitar piora do quadro.';
+  }
+  return 'Manter rotina de monitoramento e validar evolucao no proximo ponto de decisao.';
+}
+
+function buildScoreInterpretation(model: VtHeroNarrativeModel): string {
+  if (model.score < 45 || model.statusVariant === 'critico') {
+    return 'Score indica cenario de risco alto, com potencial de perda sem intervencao.';
+  }
+  if (model.score < 70 || model.statusVariant === 'atencao') {
+    return 'Score indica cenario com risco moderado, com tendencia de piora sem manejo.';
+  }
+  return 'Score indica quadro sob controle, mantendo atencao a mudancas de campo.';
+}
+
 export default function VtDecisionHero({ model }: { model: VtHeroNarrativeModel }) {
   return (
-    <section className={dp.hero} aria-label="Status do talhão e decisão em 5 segundos">
-      <p className={dp.heroKicker}>Status do talhão · cockpit de decisão</p>
+    <section className={dp.hero} aria-label="Status do talhao e decisao em 3 segundos">
+      <p className={dp.heroKicker}>Decisao em 3 segundos · cockpit agronomico</p>
       <div className={dp.heroTop}>
         <div>
           <h1 className={dp.heroTitle}>{model.tituloTalhao}</h1>
@@ -31,8 +52,11 @@ export default function VtDecisionHero({ model }: { model: VtHeroNarrativeModel 
         <div style={{ textAlign: 'right' as const }}>
           <span className={badgeClass(model.statusVariant)}>{model.statusLabel}</span>
           <p className={dp.scoreLine}>Score {model.score} / 100</p>
+          <p className={dp.scoreInterpretation}>{buildScoreInterpretation(model)}</p>
         </div>
       </div>
+
+      <div className={dp.decisionSummary}>{buildDecisionSummary(model)}</div>
 
       <div className={dp.heroQaStrip} aria-label="Respostas prontas">
         <p className={dp.heroQaRow}>

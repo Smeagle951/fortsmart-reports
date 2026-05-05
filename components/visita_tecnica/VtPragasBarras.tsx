@@ -12,18 +12,34 @@ function barColor(pct: number, p: Record<string, unknown>): string {
   return '#16a34a';
 }
 
+function severityRank(p: Record<string, unknown>): number {
+  const s = String(p.severidade ?? p.situacao ?? '').toLowerCase();
+  const pct = severidadeParaBarraPct(p);
+  if (s.includes('crit') || s.includes('alt') || pct >= 70) return 3;
+  if (s.includes('med') || s.includes('acima') || pct >= 40) return 2;
+  if (pct >= 20) return 1;
+  return 0;
+}
+
+function severityLabel(rank: number): string {
+  if (rank >= 3) return 'alta';
+  if (rank === 2) return 'media';
+  if (rank === 1) return 'baixa a moderada';
+  return 'baixa';
+}
+
 export default function VtPragasBarras({ pragas }: { pragas: Record<string, unknown>[] }) {
   if (pragas.length === 0) return null;
+  const dominante = [...pragas].sort((a, b) => severityRank(b) - severityRank(a))[0];
+  const dominanteNome = String(dominante?.alvo ?? dominante?.nome ?? 'alvo principal').trim();
+  const dominanteRank = severityRank(dominante ?? {});
 
   return (
     <section className={dp.sectionPremium} aria-label="Pragas e daninhas — severidade visual">
       <h2 className={dp.sectionTitle}>Pressão fitossanitária</h2>
-      <p style={{ margin: '-0.35rem 0 1rem', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.45, fontWeight: 600 }}>
-        Severidade visual primeiro; tabela técnica abaixo para rastreio.
-      </p>
-      <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.45 }}>
-        Barras indicam pressão relativa (incidência % quando informada; caso contrário, severidade declarada).
-      </p>
+      <div className={dp.pestSummary}>
+        Pressao dominante: {dominanteNome} ({severityLabel(dominanteRank)}) com tendencia de crescimento se nao houver manejo.
+      </div>
       <div className={dp.pragasGrid}>
         {pragas.map((p, i) => {
           const nome = String(p.alvo ?? p.nome ?? 'Alvo').trim();

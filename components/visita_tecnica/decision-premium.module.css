@@ -31,7 +31,7 @@
   box-shadow: var(--dp-shadow);
   border: 1px solid var(--dp-line);
   border-left: 4px solid var(--dp-green);
-  padding: clamp(1.25rem, 4vw, 1.75rem);
+  padding: clamp(1.05rem, 3vw, 1.45rem);
   margin-bottom: 0;
 }
 
@@ -140,6 +140,27 @@
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--dp-muted);
+}
+
+.scoreInterpretation {
+  max-width: 240px;
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #475569;
+}
+
+.decisionSummary {
+  margin-top: 0.9rem;
+  padding: 0.75rem 0.9rem;
+  border-left: 4px solid #f4a31b;
+  border-radius: 8px;
+  background: #fff4e5;
+  color: #7c2d12;
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .heroResumo {
@@ -251,17 +272,18 @@
   border-radius: var(--dp-radius);
   box-shadow: var(--dp-shadow);
   border: 1px solid var(--dp-line);
-  padding: clamp(1.15rem, 3vw, 1.5rem);
+  padding: clamp(1rem, 2.5vw, 1.25rem);
   margin-bottom: 1.25rem;
 }
 
 .sectionTitle {
   margin: 0 0 1rem;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--dp-muted);
+  opacity: 0.72;
 }
 
 .chartSubtitle {
@@ -331,6 +353,34 @@
   line-height: 1.55;
   color: #334155;
   font-weight: 600;
+}
+
+.impactContext,
+.pestSummary,
+.mapSummary {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--dp-line);
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.impactContext {
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.mapSummary {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+  color: #14532d;
 }
 
 .narrativeStack {
@@ -423,6 +473,13 @@
   color: #334155;
 }
 
+.aiInsight {
+  padding: 0.85rem 0.95rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid #bbf7d0;
+}
+
 .intelAlertText {
   margin: 0;
   font-size: 0.9rem;
@@ -438,7 +495,7 @@
 }
 
 .pragaCard {
-  padding: 1rem;
+  padding: 0.9rem;
   border: 1px solid var(--dp-line);
   border-radius: 12px;
   background: #fafafa;
