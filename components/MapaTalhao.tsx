@@ -17,8 +17,8 @@ if (typeof window !== 'undefined') {
 
 const MAPTILER_KEY = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_MAPTILER_KEY : undefined;
 const mapTilerUrl = MAPTILER_KEY
-  ? `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`
-  : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  ? `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_KEY}`
+  : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 
 type Ponto = {
   id?: string;
@@ -81,10 +81,10 @@ export default function MapaTalhao({ polygon: polygonProp, pontos = [], centro =
       <div className="mapa-wrap">
         <MapContainer center={mapCenter} zoom={zoom} style={{ height: 520, width: '100%' }} scrollWheelZoom={true}>
           <TileLayer
-            attribution={MAPTILER_KEY ? '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' : '&copy; OpenStreetMap contributors'}
+            attribution={MAPTILER_KEY ? '&copy; <a href="https://www.maptiler.com/">MapTiler</a>' : 'Tiles &copy; Esri'}
             url={mapTilerUrl}
           />
-          {polygonCoords && <Polygon positions={polygonCoords} pathOptions={{ color: '#2e7d32', weight: 3, fillColor: '#e8f5e9', fillOpacity: 0.4 }} />}
+          {polygonCoords && <Polygon positions={polygonCoords} pathOptions={{ color: '#22c55e', weight: 3, fillColor: '#22c55e', fillOpacity: 0.18 }} />}
           {markers.map((m) => (
             <Marker key={m.meta.id ?? `${m.lat}-${m.lng}`} position={[m.lat, m.lng]}>
               <Popup>
@@ -99,7 +99,6 @@ export default function MapaTalhao({ polygon: polygonProp, pontos = [], centro =
                   {m.meta.estagio && <div className="mapa-popup-row">Estágio: {m.meta.estagio}</div>}
                   {m.meta.descricao && <div className="mapa-popup-desc">{m.meta.descricao}</div>}
                   {m.meta.recommendation && <div className="mapa-popup-desc"><strong>Recomendação:</strong> {m.meta.recommendation}</div>}
-                  <div className="mapa-popup-row">{m.lat.toFixed(6)}, {m.lng.toFixed(6)}</div>
                   {m.meta.data && <div className="mapa-popup-date">{m.meta.data}</div>}
                 </div>
               </Popup>
