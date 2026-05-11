@@ -26,8 +26,12 @@ type Ponto = {
   longitude: number;
   titulo?: string;
   descricao?: string;
+  type?: string;
+  severity?: string;
   estagio?: string;
   data?: string;
+  imageUrl?: string;
+  recommendation?: string;
 };
 
 interface Props {
@@ -75,7 +79,7 @@ export default function MapaTalhao({ polygon: polygonProp, pontos = [], centro =
         <h2 className="section-title">Mapa do talhão — pontos georreferenciados</h2>
       )}
       <div className="mapa-wrap">
-        <MapContainer center={mapCenter} zoom={zoom} style={{ height: 360, width: '100%' }} scrollWheelZoom={true}>
+        <MapContainer center={mapCenter} zoom={zoom} style={{ height: 520, width: '100%' }} scrollWheelZoom={true}>
           <TileLayer
             attribution={MAPTILER_KEY ? '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' : '&copy; OpenStreetMap contributors'}
             url={mapTilerUrl}
@@ -84,10 +88,18 @@ export default function MapaTalhao({ polygon: polygonProp, pontos = [], centro =
           {markers.map((m) => (
             <Marker key={m.meta.id ?? `${m.lat}-${m.lng}`} position={[m.lat, m.lng]}>
               <Popup>
-                <div className="mapa-popup">
+                <div className="mapa-popup" style={{ minWidth: 220 }}>
+                  {m.meta.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.meta.imageUrl} alt={m.meta.titulo || 'Ponto'} style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 10, marginBottom: 10 }} />
+                  ) : null}
                   <strong>{m.meta.titulo || 'Ponto'}</strong>
+                  {m.meta.type && <div className="mapa-popup-row">Tipo: {m.meta.type}</div>}
+                  {m.meta.severity && <div className="mapa-popup-row">Severidade: {m.meta.severity}</div>}
                   {m.meta.estagio && <div className="mapa-popup-row">Estágio: {m.meta.estagio}</div>}
                   {m.meta.descricao && <div className="mapa-popup-desc">{m.meta.descricao}</div>}
+                  {m.meta.recommendation && <div className="mapa-popup-desc"><strong>Recomendação:</strong> {m.meta.recommendation}</div>}
+                  <div className="mapa-popup-row">{m.lat.toFixed(6)}, {m.lng.toFixed(6)}</div>
                   {m.meta.data && <div className="mapa-popup-date">{m.meta.data}</div>}
                 </div>
               </Popup>

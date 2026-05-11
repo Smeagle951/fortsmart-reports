@@ -11,8 +11,12 @@ export type MapaTalhaoClientMountProps = {
     longitude: number;
     titulo?: string;
     descricao?: string;
+    type?: string;
+    severity?: string;
     estagio?: string;
     data?: string;
+    imageUrl?: string;
+    recommendation?: string;
   }>;
   centro?: [number, number];
   zoom?: number;
