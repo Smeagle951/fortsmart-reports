@@ -104,7 +104,7 @@ export default function MonitoramentoNdeContextoPanel({
                 'Perda (ref.)',
                 'Econ. (R$/ha)',
                 'Interpretação',
-                'Notas & fonte',
+                'Conhecimento proprietário interpretado',
               ].map((h) => (
                 <th
                   key={h}
@@ -251,9 +251,41 @@ export default function MonitoramentoNdeContextoPanel({
                     '—'
                   )}
                 </td>
-                <td style={{ padding: '10px 10px', verticalAlign: 'top', color: '#94a3b8', lineHeight: 1.4, maxWidth: 220 }}>
+                <td style={{ padding: '10px 10px', verticalAlign: 'top', color: '#94a3b8', lineHeight: 1.4, maxWidth: 260 }}>
                   {r.observacaoCatalogo && <p style={{ margin: '0 0 6px' }}>{r.observacaoCatalogo}</p>}
-                  {r.fonte && <p style={{ margin: 0, fontSize: '0.6rem', opacity: 0.9 }}>Fonte: {r.fonte}</p>}
+                  {(r.knowledge_type || r.confidence_level) && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {r.knowledge_type && (
+                        <span
+                          style={{
+                            fontSize: '0.58rem',
+                            padding: '2px 6px',
+                            borderRadius: 999,
+                            border: '1px solid #334155',
+                            color: '#cbd5e1',
+                          }}
+                        >
+                          {r.knowledge_type}
+                        </span>
+                      )}
+                      {r.confidence_level && (
+                        <span
+                          style={{
+                            fontSize: '0.58rem',
+                            padding: '2px 6px',
+                            borderRadius: 999,
+                            border: '1px solid #334155',
+                            color: '#cbd5e1',
+                          }}
+                        >
+                          Confiança: {r.confidence_level}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <p style={{ margin: '6px 0 0', fontSize: '0.58rem', opacity: 0.85 }}>
+                    Baseado em conhecimento agronômico consolidado.
+                  </p>
                 </td>
               </tr>
             ))}

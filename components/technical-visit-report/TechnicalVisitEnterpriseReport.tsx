@@ -12,6 +12,7 @@ import {
   FileText,
   Leaf,
   MapPinned,
+  Navigation,
   QrCode,
   Share2,
   ShieldCheck,
@@ -138,24 +139,11 @@ function TechnicalVisitReportHero({ report }: { report: TechnicalVisitReport }) 
           </div>
         </div>
         <div className="flex flex-col justify-between rounded-[24px] border border-white/15 bg-white/10 p-5 backdrop-blur-md">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {report.farmLogoUrl ? (
-                <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-2xl border border-white/20 bg-white shadow-sm">
-                  <img src={report.farmLogoUrl} alt={`Logo ${report.farmName}`} className="h-full w-full object-contain p-1.5" />
-                </div>
-              ) : null}
-              <div className="grid h-14 w-14 place-items-center rounded-2xl border border-white/15 bg-white/10">
-                <FortSmartLogo size={38} />
-              </div>
-            </div>
+          <div className="flex items-center justify-between">
+            <FortSmartLogo size={42} />
             <QrCode size={30} className="text-emerald-100" />
           </div>
           <div className="space-y-3">
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-300">Fazenda</div>
-              <div className="mt-1 text-base font-black text-white">{report.farmName}</div>
-            </div>
             <div>
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-300">ID do relatório</div>
               <div className="mt-1 break-all text-sm font-bold text-white">{report.reportKey ?? 'Não informado'}</div>
@@ -196,6 +184,19 @@ function TechnicalVisitMapSection({ report }: { report: TechnicalVisitReport }) 
       ) : (
         <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm font-semibold text-slate-500">
           Esta visita não possui dados georreferenciados registrados.
+        </div>
+      )}
+      {report.points.length > 0 && (
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {report.points.slice(0, 6).map((point) => (
+            <div key={point.id ?? `${point.latitude}-${point.longitude}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
+                <Navigation size={13} /> {point.title ?? 'Ponto GPS'}
+              </div>
+              <div className="mt-2 text-sm font-bold text-slate-900">{formatCoordinate(point.latitude, point.longitude)}</div>
+              {point.description && <p className="mt-1 line-clamp-2 text-xs font-medium text-slate-500">{point.description}</p>}
+            </div>
+          ))}
         </div>
       )}
     </SectionShell>
@@ -469,15 +470,9 @@ export default function TechnicalVisitEnterpriseReport({ relatorio, reportId, re
       <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
         <aside className="no-print hidden bg-[#071711] p-6 text-white lg:block">
           <div className="flex items-center gap-3">
-            {report.farmLogoUrl ? (
-              <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-2xl bg-white">
-                <img src={report.farmLogoUrl} alt={`Logo ${report.farmName}`} className="h-full w-full object-contain p-1.5" />
-              </div>
-            ) : (
-              <FortSmartLogo size={42} />
-            )}
+            <FortSmartLogo size={42} />
             <div>
-              <div className="text-sm font-black">{report.farmName}</div>
+              <div className="text-sm font-black">FortSmart Agro</div>
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-200">Enterprise Report</div>
             </div>
           </div>

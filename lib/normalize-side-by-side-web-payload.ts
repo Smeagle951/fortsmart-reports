@@ -124,78 +124,6 @@ function mergeVigorFromPhenology(
   }
 }
 
-function valuesFromFieldCollection(
-  fcm: Record<string, unknown> | null,
-  sideKey: 'A' | 'B',
-): Record<string, unknown> {
-  const points = Array.isArray(fcm?.points) ? (fcm!.points as unknown[]) : [];
-  const nums: Record<string, number[]> = {};
-  const texts: Record<string, string> = {};
-
-  const addNum = (key: string, v: unknown) => {
-    const n = parseNum(v);
-    if (n == null) return;
-    (nums[key] ??= []).push(n);
-  };
-  const walk = (obj: unknown, path = '') => {
-    const rec = asRecord(obj);
-    if (!rec) return;
-    for (const [rawKey, value] of Object.entries(rec)) {
-      const key = rawKey.toLowerCase();
-      const full = path ? `${path}.${key}` : key;
-      if (asRecord(value)) {
-        walk(value, full);
-        continue;
-      }
-      if (Array.isArray(value)) continue;
-      if (matches(full, ['altura_cm', 'altura cm', 'height_cm', 'altura'])) addNum('avgHeightCm', value);
-      if (matches(full, ['populacao_pl_ha', 'população_pl_ha', 'populacao pl ha', 'populacao', 'população', 'estande'])) {
-        addNum('finalPopulationPlHa', value);
-        addNum('estandeEfetivo', value);
-      }
-      if (matches(full, ['produtividade_kg_ha', 'produtividade kg ha', 'yield_kg_ha', 'produtividade'])) {
-        addNum('estimatedYieldKgHa', value);
-      }
-      if (matches(full, ['vigor']) && !matches(full, ['observacao', 'texto'])) {
-        const n = parseNum(value);
-        if (n != null) {
-          if (n <= 5) {
-            texts.vigorRatingLabel ??= String(value);
-            nums.vigorRatingScore ??= [];
-            nums.vigorRatingScore.push(n);
-          } else if (n <= 100) {
-            addNum('vigorCulturaPct', n);
-          }
-        } else if (typeof value === 'string' && value.trim()) {
-          texts.vigorRatingLabel ??= value.trim();
-        }
-      }
-    }
-  };
-
-  for (const p of points) {
-    const prec = asRecord(p);
-    const sides = asRecord(prec?.sides);
-    walk(asRecord(sides?.[sideKey]));
-  }
-
-  const avg = (arr?: number[]) => (arr?.length ? arr.reduce((a, b) => a + b, 0) / arr.length : undefined);
-  const out: Record<string, unknown> = {};
-  for (const key of ['avgHeightCm', 'finalPopulationPlHa', 'estimatedYieldKgHa', 'estandeEfetivo', 'vigorCulturaPct']) {
-    const v = avg(nums[key]);
-    if (v != null) out[key] = v;
-  }
-  const vigorScore = avg(nums.vigorRatingScore);
-  if (vigorScore != null || texts.vigorRatingLabel) {
-    out.vigorRating = {
-      label: texts.vigorRatingLabel ?? String(Math.round(vigorScore ?? 0)),
-      score: vigorScore != null ? Math.round(vigorScore) : undefined,
-      max: 5,
-    };
-  }
-  return out;
-}
-
 /**
  * Devolve uma cópia superficial + merges profundos onde necessário.
  */
@@ -222,23 +150,15 @@ export function normalizeSideBySideWebPayload(src: Record<string, unknown>): Sid
   }
 
   const rows = Array.isArray(out.summary_rows) ? (out.summary_rows as unknown[]) : [];
-  const fcm = asRecord(out.field_collection_modules ?? src.fieldCollectionModules);
-  const patchA = {
-    ...(rows.length > 0 ? kpisPatchFromSummaryRows(rows, 'value_a_num') : {}),
-    ...valuesFromFieldCollection(fcm, 'A'),
-  };
-  const patchB = {
-    ...(rows.length > 0 ? kpisPatchFromSummaryRows(rows, 'value_b_num') : {}),
-    ...valuesFromFieldCollection(fcm, 'B'),
-  };
+  const patchA = rows.length > 0 ? kpisPatchFromSummaryRows(rows, 'value_a_num') : {};
+  const patchB = rows.length > 0 ? kpisPatchFromSummaryRows(rows, 'value_b_num') : {};
 
   const phen = asRecord(out.phenology);
   const farmExisting = asRecord(out.farm) ?? {};
   const farmOut: Record<string, unknown> = { ...farmExisting };
   if (farmOut.areaHa == null) {
-    const fieldMap = asRecord(out.field_map ?? src.field_map ?? src.fieldMap);
-    const tal = asRecord(src.talhao as unknown) ?? asRecord(fieldMap?.talhao);
-    const a = tal?.area_total_ha ?? tal?.areaHa ?? tal?.area_ha;
+    const tal = asRecord(src.talhao as unknown);
+    const a = tal?.area_total_ha;
     if (typeof a === 'number' && Number.isFinite(a)) farmOut.areaHa = a;
     else if (a != null) {
       const n = parseNum(a);
@@ -265,15 +185,6 @@ export function normalizeSideBySideWebPayload(src: Record<string, unknown>): Sid
   if (out.field_collection_modules == null && src.fieldCollectionModules != null) {
     out.field_collection_modules = src.fieldCollectionModules;
   }
-  if (out.field_map == null && src.fieldMap != null) {
-    out.field_map = src.fieldMap;
-  }
-  if (out.field_polygon_json == null && src.fieldPolygonJson != null) {
-    out.field_polygon_json = src.fieldPolygonJson;
-  }
-  if (out.subareas_polygons == null && src.subareasPolygons != null) {
-    out.subareas_polygons = src.subareasPolygons;
-  }
   const appsRaw = out.applications;
   if (Array.isArray(appsRaw) && appsRaw.length > 0) {
     out.applications = appsRaw.map((row) => {
@@ -289,16 +200,6 @@ export function normalizeSideBySideWebPayload(src: Record<string, unknown>): Sid
               : undefined;
       if (notes == null) return row;
       return { ...ev, notes };
-    });
-  }
-
-  const pointsRaw = Array.isArray(out.points) ? (out.points as unknown[]) : [];
-  if (pointsRaw.length > 0) {
-    out.points = pointsRaw.map((row, idx) => {
-      const p = asRecord(row);
-      if (!p) return row;
-      const name = typeof p.name === 'string' && p.name.trim() ? p.name : `Ponto ${p.indexNo ?? p.index ?? idx + 1}`;
-      return { ...p, name };
     });
   }
 

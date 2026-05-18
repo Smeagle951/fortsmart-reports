@@ -101,7 +101,10 @@ export type EconomiaJson = {
 
 export type ReportPhotoWeb = {
   caption?: string;
+  /** URL pública após upload (ex.: Supabase Storage). */
   url?: string;
+  /** Payload direto do DTO Flutter antes ou sem Storage (`imageBase64Jpg`). */
+  imageBase64Jpg?: string;
   category?: string;
   hotspots?: Array<{
     xPct: number;
@@ -160,3 +163,16 @@ export type PlantEvaluationMetricJson = {
 
 // Extensão V1: `decision_layer.fortsmart_ai` é tipado em `lib/decisionLayer.ts`
 // e consumido via `SideBySideReportData.decision_layer`.
+
+/** Avaliações sequenciais por DAA (opcional — futuro publish / retrocompatível). */
+export type DaaAssessmentJson = {
+  evaluation_id?: string;
+  side?: 'A' | 'B';
+  daa?: number;
+  date?: string;
+  stage?: string;
+  notes?: string;
+  criteria?: Array<{ key?: string; label?: string; value_a?: number; value_b?: number }>;
+  medias?: Record<string, unknown>;
+  scores?: Record<string, unknown>;
+};

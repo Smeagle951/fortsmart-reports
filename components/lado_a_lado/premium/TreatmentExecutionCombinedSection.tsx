@@ -94,10 +94,20 @@ function ProtocolProductsTable({
   );
 }
 
+function pointIdsLine(ids: string[] | undefined): string | null {
+  if (!ids?.length) return null;
+  const shown = ids.slice(0, 8);
+  const more = ids.length > 8 ? ` +${ids.length - 8}` : '';
+  return `${shown.join(', ')}${more}`;
+}
+
 function ApplicationBlock({ ev, accent }: { ev: ReportApplicationEventV2Json; accent: string }) {
   const c = ev.climate;
   const t = ev.applicationTech;
   const badge = protocolBadge(ev);
+  const pid = ev.point_ids;
+  const nPts = Array.isArray(pid) ? pid.length : 0;
+  const ptsPretty = pointIdsLine(pid);
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -117,12 +127,36 @@ function ApplicationBlock({ ev, accent }: { ev: ReportApplicationEventV2Json; ac
           </span>
         ) : null}
         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{ev.type || 'Aplicação'}</span>
+        {ev.stage?.trim() ? (
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700">{ev.stage.trim()}</span>
+        ) : null}
         <span
           className={`ml-auto inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${badge.ok ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900'}`}
         >
           {badge.ok ? '✓' : '⚠'} {badge.label}
         </span>
       </div>
+
+      {(ev.scope?.trim() || nPts > 0 || ev.responsible?.trim()) && (
+        <p className="mt-1.5 pl-2 text-[11px] text-slate-600">
+          {ev.responsible?.trim() ? (
+            <span className="font-medium text-slate-800">Resp.: {ev.responsible.trim()}</span>
+          ) : null}
+          {ev.responsible?.trim() && (ev.scope?.trim() || nPts > 0) ? (
+            <span className="mx-1 text-slate-300">·</span>
+          ) : null}
+          {ev.scope?.trim() ? <span className="font-medium text-slate-800">Âmbito: {ev.scope.trim()}</span> : null}
+          {ev.scope?.trim() && nPts > 0 ? <span className="mx-1 text-slate-300">·</span> : null}
+          {nPts > 0 ? (
+            <span>
+              {nPts} ponto{nPts === 1 ? '' : 's'}
+              {ptsPretty ? (
+                <span className="mt-0.5 block font-mono text-[10px] text-slate-500">IDs: {ptsPretty}</span>
+              ) : null}
+            </span>
+          ) : null}
+        </p>
+      )}
 
       <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 border-y border-slate-100 py-1.5 pl-2 text-[11px]">
         {c?.temperature != null ? (
@@ -138,6 +172,12 @@ function ApplicationBlock({ ev, accent }: { ev: ReportApplicationEventV2Json; ac
         {c?.wind != null ? (
           <p>
             <span className="text-slate-500">Vento:</span> <span className="font-semibold text-slate-800">{formatWind(c.wind)}</span>
+          </p>
+        ) : null}
+        {c?.derivaRisco?.trim() ? (
+          <p className="col-span-2">
+            <span className="text-slate-500">Risco deriva:</span>{' '}
+            <span className="font-semibold text-slate-800">{c.derivaRisco.trim()}</span>
           </p>
         ) : null}
         {t?.bico ? (
@@ -158,19 +198,46 @@ function ApplicationBlock({ ev, accent }: { ev: ReportApplicationEventV2Json; ac
       </div>
 
       {ev.products && ev.products.length > 0 ? (
-        <ul className="mt-2 space-y-1 pl-2 text-[11px]">
-          {ev.products.map((p, j) => (
-            <li key={j} className="flex flex-wrap items-baseline gap-x-2 text-slate-800">
-              <span className="font-bold">{p.nomeComercial || 'Produto'}</span>
-              {p.nomeAtivo ? <span className="text-slate-500">({p.nomeAtivo})</span> : null}
-              <span className="text-slate-600">
-                · {p.dose != null ? p.dose : '—'}
-                {p.unidade ? ` ${p.unidade}` : ''}
-                {p.custoHa != null ? ` · R$ ${formatNumber(p.custoHa, { decimals: 2 })}/ha` : ''}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-2 overflow-x-auto rounded-lg border border-slate-100 pl-2">
+          <table className="w-full min-w-[260px] text-left text-[11px]">
+            <thead>
+              <tr className="border-b border-slate-100 text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                <th className="py-1 pr-2">Produto</th>
+                <th className="py-1 pr-2">Classe</th>
+                <th className="py-1 pr-2">Dose</th>
+                <th className="py-1">R$/ha</th>
+                <th className="py-1">Prot.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ev.products.map((p, j) => (
+                <tr key={j} className="border-b border-slate-50 last:border-0">
+                  <td className="py-1.5 pr-2 font-semibold text-slate-900">
+                    {p.nomeComercial || p.nomeAtivo || '—'}
+                    {p.nomeAtivo && p.nomeComercial ? (
+                      <span className="block text-[10px] font-normal text-slate-500">{p.nomeAtivo}</span>
+                    ) : null}
+                  </td>
+                  <td className="py-1.5 pr-2 text-slate-600">{p.classe?.trim() || '—'}</td>
+                  <td className="py-1.5 pr-2 tabular-nums">
+                    {p.dose != null ? p.dose : '—'}
+                    {p.unidade ? ` ${p.unidade}` : ''}
+                  </td>
+                  <td className="py-1.5 tabular-nums text-slate-800">
+                    {p.custoHa != null ? `R$ ${formatNumber(p.custoHa, { decimals: 2 })}` : '—'}
+                  </td>
+                  <td className="py-1.5 text-center text-[10px]">
+                    {p.linkedProtocolItemId?.trim() ? (
+                      <span className="rounded bg-emerald-50 px-1 font-semibold text-emerald-800">Sim</span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : null}
 
       <div className="mt-2 border-t border-slate-100 pl-2 pt-2">
@@ -228,85 +295,114 @@ export default function TreatmentExecutionCombinedSection({
   }
 
   const sortedApps = [...apps].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const protocol = data.treatment_protocol;
+  const protocolNote = [protocol?.kind?.trim(), protocol?.note?.trim()].filter(Boolean).join(' — ');
+
+  const sideModels = (['A', 'B'] as const).map((sideKey) => {
+    const side = sides.find((s) => s.side === sideKey);
+    const displayName = sideDisplayTitle(sideKey, side, data);
+    const roleLine = sideRoleLine(sideKey, data);
+    const headerBg = sideKey === 'A' ? 'bg-emerald-800' : 'bg-blue-900';
+    const ring = sideKey === 'A' ? 'ring-emerald-200' : 'ring-blue-200';
+    const accent = ACCENT[sideKey];
+    const sideApps = sortedApps.filter((e) => e.side === sideKey);
+    const planCount = dedupeProtocolProducts(side?.products ?? []).length;
+    return { sideKey, side, displayName, roleLine, headerBg, ring, accent, sideApps, planCount };
+  });
 
   const grid = (
-    <div className="grid grid-cols-2 gap-4 overflow-x-auto pb-1 lg:gap-6" dir="ltr">
-      {(['A', 'B'] as const).map((sideKey) => {
-        const side = sides.find((s) => s.side === sideKey);
-        const displayName = sideDisplayTitle(sideKey, side, data);
-        const roleLine = sideRoleLine(sideKey, data);
-        const headerBg = sideKey === 'A' ? 'bg-emerald-800' : 'bg-blue-900';
-        const ring = sideKey === 'A' ? 'ring-emerald-100' : 'ring-blue-100';
-        const accent = ACCENT[sideKey];
-        const sideApps = sortedApps.filter((e) => e.side === sideKey);
-        const planCount = dedupeProtocolProducts(side?.products ?? []).length;
+    <div className="space-y-6" dir="ltr">
+      {protocolNote ? (
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50/80 px-4 py-3 text-sm text-slate-700 shadow-sm">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Planeamento (treatment_protocol)</span>
+          <p className="mt-1 leading-snug text-slate-800">{protocolNote}</p>
+        </div>
+      ) : null}
 
-        return (
+      <div className="grid gap-4 lg:grid-cols-2">
+        {sideModels.map((m) => (
           <motion.div
-            key={sideKey}
-            initial={{ opacity: 0, y: 12 }}
+            key={`hdr-${m.sideKey}`}
+            initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className={`min-w-[340px] flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md ring-2 ${ring}`}
+            className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md ring-2 ${m.ring}`}
           >
-            <div className={`${headerBg} px-4 py-3 text-center text-white`}>
-              <p className="text-lg font-black leading-tight">{displayName}</p>
-              <p className="mt-1 text-[11px] opacity-90">{roleLine}</p>
+            <div className={`${m.headerBg} px-4 py-3 text-center text-white`}>
+              <p className="text-lg font-black leading-tight tracking-tight">{m.displayName}</p>
+              <p className="mt-1 text-[11px] opacity-90">{m.roleLine}</p>
               <p className="mt-0.5 text-[11px] opacity-85">
-                {planCount} produto{planCount === 1 ? '' : 's'} no plano · {sideApps.length} aplicação{sideApps.length === 1 ? '' : 'ões'} em
-                campo
+                {m.planCount} produto{m.planCount === 1 ? '' : 's'} no plano · {m.sideApps.length} aplicação
+                {m.sideApps.length === 1 ? '' : 'ões'} registrada{m.sideApps.length === 1 ? '' : 's'}
               </p>
+              {m.side?.is_control_side ? (
+                <p className="mt-2 inline-block rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold">Testemunha / controle</p>
+              ) : null}
             </div>
-
-              {(side?.objective || side?.expected_result) && (
-                <div className="space-y-2 border-b border-slate-100 bg-slate-50/60 px-4 py-3 text-[12px] leading-snug text-slate-700 sm:px-5">
-                  {side?.objective ? (
-                    <p>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Objetivo: </span>
-                      {side.objective}
-                    </p>
-                  ) : null}
-                  {side?.expected_result ? (
-                    <p>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Resultado esperado: </span>
-                      {side.expected_result}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-
-              <div className="grid gap-4 px-4 py-4 sm:px-5 xl:grid-cols-2">
-                <div className="min-w-0">
-                  <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-900/5 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-700">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} aria-hidden />
-                    Plano (protocolo)
+            {m.side?.description?.trim() ? (
+              <p className="border-b border-slate-100 bg-white px-4 py-2.5 text-[12px] leading-snug text-slate-600">{m.side.description!.trim()}</p>
+            ) : null}
+            {(m.side?.objective || m.side?.expected_result) && (
+              <div className="space-y-2 bg-slate-50/70 px-4 py-3 text-[12px] leading-snug text-slate-700">
+                {m.side?.objective ? (
+                  <p>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Objetivo: </span>
+                    {m.side.objective}
                   </p>
-                  {side ? (
-                    <ProtocolProductsTable products={side.products ?? []} accent={accent} />
-                  ) : (
-                    <p className="text-xs text-slate-500">Sem protocolo publicado para este lado.</p>
-                  )}
-                </div>
-
-                <div className="min-w-0">
-                  <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-900/5 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-700">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
-                    Aplicações realizadas
+                ) : null}
+                {m.side?.expected_result ? (
+                  <p>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Resultado esperado: </span>
+                    {m.side.expected_result}
                   </p>
-                  {sideApps.length === 0 ? (
-                    <p className="text-xs text-slate-500">Nenhuma aplicação com este manejo no período publicado.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {sideApps.map((ev, i) => (
-                        <ApplicationBlock key={ev.id || `${ev.date}-${ev.daa}-${i}`} ev={ev} accent={accent} />
-                      ))}
-                    </div>
-                  )}
-                </div>
+                ) : null}
               </div>
-            </motion.div>
-        );
-      })}
+            )}
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2 items-start">
+        {sideModels.map((m) => (
+          <div
+            key={`plan-${m.sideKey}`}
+            className={`min-h-[120px] rounded-2xl border border-slate-200/90 bg-white p-4 shadow-md ring-2 ${m.ring} print:shadow-none`}
+          >
+            <p className="mb-3 flex items-center gap-2 border-b border-slate-100 pb-2 text-[10px] font-black uppercase tracking-wider text-slate-600">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: m.accent }} aria-hidden />
+              Plano (protocolo) — {m.displayName}
+            </p>
+            {m.side ? (
+              <ProtocolProductsTable products={m.side.products ?? []} accent={m.accent} />
+            ) : (
+              <p className="text-xs text-slate-500">Sem protocolo publicado para este lado.</p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2 items-start">
+        {sideModels.map((m) => (
+          <div
+            key={`apps-${m.sideKey}`}
+            className={`min-h-[160px] rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/60 p-4 shadow-md ring-1 ring-slate-200/80 print:shadow-none`}
+          >
+            <p className="mb-3 flex items-center gap-2 border-b border-slate-200/80 pb-2 text-[10px] font-black uppercase tracking-wider text-slate-600">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden />
+              Execução em campo — {m.displayName}
+            </p>
+            {m.sideApps.length === 0 ? (
+              <p className="text-xs text-slate-500">Nenhuma aplicação com este manejo no período publicado.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {m.sideApps.map((ev, i) => (
+                  <ApplicationBlock key={ev.id || `${ev.date}-${ev.daa}-${i}`} ev={ev} accent={m.accent} />
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 

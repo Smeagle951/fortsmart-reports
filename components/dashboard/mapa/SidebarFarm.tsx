@@ -2,17 +2,14 @@
 
 import {
   Activity,
+  CloudSun,
   FileText,
   LayoutDashboard,
   Leaf,
   Map,
   Package,
-  PanelLeftClose,
-  PanelLeft,
   Settings,
   ClipboardList,
-  CloudSun,
-  ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -37,21 +34,17 @@ const NAV: { id: DashboardNavId; label: string; icon: typeof Map }[] = [
 
 type Props = {
   activeNav: DashboardNavId;
-  onNav: (id: DashboardNavId) => void;
-  collapsed: boolean;
-  onToggleCollapsed: () => void;
   summary: PropertySummary;
   alerts: PropertyAlert[];
   classicMapHref: string;
+  /** Nome da fazenda (perfil / payload do relatório) */
   fazendaNome?: string | null;
+  /** Nome do utilizador responsável (perfil / payload) */
   usuarioNome?: string | null;
 };
 
 export function SidebarFarm({
   activeNav,
-  onNav,
-  collapsed,
-  onToggleCollapsed,
   summary,
   alerts,
   classicMapHref,
@@ -59,94 +52,59 @@ export function SidebarFarm({
   usuarioNome,
 }: Props) {
   return (
-    <>
-      <aside
-        className={cn(
-          'flex h-full shrink-0 flex-col overflow-hidden text-white shadow-xl transition-[width] duration-200 ease-out',
-          collapsed ? 'w-0 min-w-0 opacity-0 lg:w-0' : 'w-[280px] opacity-100',
-        )}
-        style={{
-          background: `linear-gradient(180deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)`,
-        }}
-      >
-        <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
-              <Leaf className="h-5 w-5" aria-hidden />
-            </div>
-            <div className="min-w-0">
-              <p className="font-['Poppins',system-ui,sans-serif] text-sm font-bold tracking-tight">FortSmart</p>
-              <p className="truncate text-[10px] text-emerald-200/90" title={fazendaNome ?? undefined}>
-                {fazendaNome?.trim() ? fazendaNome : 'Agronegócio'}
-              </p>
-              {usuarioNome?.trim() ? (
-                <p className="truncate text-[9px] text-emerald-200/60" title={usuarioNome}>
-                  {usuarioNome}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            className="shrink-0 rounded-lg p-2 text-emerald-100 hover:bg-white/10 hover:text-white"
-            title="Recolher menu"
-            aria-label="Recolher menu lateral"
-          >
-            <PanelLeftClose className="h-5 w-5" />
-          </button>
+    <aside
+      className="flex w-[260px] shrink-0 flex-col text-white shadow-xl"
+      style={{ background: `linear-gradient(180deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)` }}
+    >
+      <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+          <Leaf className="h-5 w-5" aria-hidden />
         </div>
-
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            const active = item.id === activeNav;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onNav(item.id)}
-                className={cn(
-                  'flex w-full items-center gap-3 rounded-[10px] px-3 py-3 text-left text-[15px] transition-colors',
-                  active
-                    ? 'bg-emerald-700/85 font-semibold text-white shadow-sm'
-                    : 'text-emerald-100/75 hover:bg-white/5 hover:text-white',
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="border-t border-white/10 p-3">
-          <PropertySummaryCard summary={summary} alerts={alerts} />
-
-          <Link
-            href={classicMapHref}
-            className="mt-5 flex items-center justify-between rounded-xl border border-emerald-400/40 bg-white/5 px-4 py-3 text-left text-xs font-medium text-emerald-100 hover:bg-white/10"
-          >
-            <span>
-              <span className="block text-sm font-bold text-white">Abrir mapa simples</span>
-              <span className="text-emerald-100/75">Visualização pública</span>
-            </span>
-            <ChevronRight className="h-4 w-4" />
-          </Link>
+        <div className="min-w-0">
+          <p className="font-['Poppins',system-ui,sans-serif] text-sm font-bold tracking-tight">FortSmart</p>
+          <p className="truncate text-[10px] text-emerald-200/90" title={fazendaNome ?? undefined}>
+            {fazendaNome?.trim() ? fazendaNome : 'Agronegócio'}
+          </p>
+          {usuarioNome?.trim() ? (
+            <p className="truncate text-[9px] text-emerald-200/60" title={usuarioNome}>
+              {usuarioNome}
+            </p>
+          ) : null}
         </div>
-      </aside>
+      </div>
 
-      {collapsed ? (
-        <button
-          type="button"
-          onClick={onToggleCollapsed}
-          className="fixed left-2 top-[4.5rem] z-[1200] flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white shadow-md print:hidden hover:bg-slate-50"
-          title="Abrir menu"
-          aria-label="Abrir menu lateral"
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
+        {NAV.map((item) => {
+          const Icon = item.icon;
+          const active = item.id === activeNav;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={cn(
+                'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
+                active
+                  ? 'bg-white/12 font-medium text-white'
+                  : 'text-emerald-100/75 hover:bg-white/5 hover:text-white',
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="border-t border-white/10 p-3">
+        <PropertySummaryCard summary={summary} alerts={alerts} />
+
+        <Link
+          href={classicMapHref}
+          className="mt-3 block rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-center text-xs font-medium text-emerald-100 hover:bg-white/10"
         >
-          <PanelLeft className="h-5 w-5 text-slate-700" />
-        </button>
-      ) : null}
-    </>
+          Mapa clássico (GeoJSON + calculadora)
+        </Link>
+      </div>
+    </aside>
   );
 }

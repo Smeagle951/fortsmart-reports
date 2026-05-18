@@ -1,8 +1,29 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  /**
+   * Quando o app móvel usa a URL do site Next (Vercel) como base da API FortSmart,
+   * encaminha `/sync/*` para o `fortsmart-cloud-api` real (Railway, etc.).
+   * Defina `FORTSMART_CLOUD_API_PROXY_TARGET` na Vercel (ex.: `https://xxx.up.railway.app`).
+   */
+  async rewrites() {
+    const raw = process.env.FORTSMART_CLOUD_API_PROXY_TARGET?.trim();
+    if (!raw) return [];
+    let base = raw.replace(/\/$/, '');
+    if (!base.startsWith('http://') && !base.startsWith('https://')) {
+      base = `https://${base}`;
+    }
+    return [
+      {
+        source: '/sync/:path*',
+        destination: `${base}/sync/:path*`,
+      },
+    ];
+  },
+
   images: {
     remotePatterns: [
+      { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'upload.wikimedia.org' },
       { protocol: 'https', hostname: '*.arcgisonline.com' },
       { protocol: 'https', hostname: '*.esri.com' },

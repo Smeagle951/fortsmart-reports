@@ -123,7 +123,9 @@ export interface OrganismoContextoWeb {
     janelaHorasRef?: number;
     fatorFenologicoAplicavel?: number;
     observacaoCatalogo?: string;
-    fonte?: string;
+    /** Camada produto: sem fonte direta; use metadados de conhecimento. */
+    knowledge_type?: string;
+    confidence_level?: 'Alta' | 'Média' | 'Baixa' | string;
     /** Região dos parâmetros (ex.: DEFAULT) */
     paramsRegionId?: string;
     /** UF da propriedade, quando conhecida */

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { ReportPhotoWeb } from '@/types/side-by-side-report';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import { photoDisplayCaption } from '@/lib/photoCaption';
+import { resolveReportPhotoSrc } from '@/lib/resolveReportPhotoSrc';
 import { ENT } from './enterpriseTheme';
 
 type Props = { data: SideBySideReportData };
@@ -121,16 +122,17 @@ export default function PhotoGalleryEnterprise({ data }: Props) {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {a.slice(0, 6).map((p, i) => {
                 const cap = photoDisplayCaption(p);
+                const src = resolveReportPhotoSrc(p);
                 return (
                   <GalleryCard
                     key={`A-${i}`}
-                    url={p.url}
+                    url={src}
                     caption={cap}
                     delay={i * 0.05}
                     sideColor={ENT.green}
                     sideLabel="A"
                     onOpen={() => {
-                      if (p.url) setLightbox({ url: p.url, caption: cap });
+                      if (src) setLightbox({ url: src, caption: cap });
                     }}
                   />
                 );
@@ -147,16 +149,17 @@ export default function PhotoGalleryEnterprise({ data }: Props) {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {b.slice(0, 6).map((p, i) => {
                 const cap = photoDisplayCaption(p);
+                const src = resolveReportPhotoSrc(p);
                 return (
                   <GalleryCard
                     key={`B-${i}`}
-                    url={p.url}
+                    url={src}
                     caption={cap}
                     delay={i * 0.05}
                     sideColor={ENT.blue}
                     sideLabel="B"
                     onOpen={() => {
-                      if (p.url) setLightbox({ url: p.url, caption: cap });
+                      if (src) setLightbox({ url: src, caption: cap });
                     }}
                   />
                 );

@@ -1,7 +1,8 @@
 'use client';
 
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
-import LadoALadoRelatorioAgronomico from '@/components/lado_a_lado/agronomic/LadoALadoRelatorioAgronomico';
+import SideBySideOfficialReport from '@/components/lado_a_lado/SideBySideOfficialReport';
+import FortSmartLadoALadoReport from '@/components/lado_a_lado/fortsmart/FortSmartLadoALadoReport';
 import { postReportAnalytics } from '@/lib/report-analytics-client';
 import './premium-theme.css';
 import './editorial-lado-a-lado.css';
@@ -22,7 +23,9 @@ export default function PremiumReport({
   const handlePrint = () => window.print();
 
   const handleExportPdf = async () => {
-    const el = document.getElementById('relatorio-lado-a-lado-content');
+    const el =
+      document.getElementById('relatorio-avaliacao-lado-a-lado-content') ??
+      document.getElementById('relatorio-lado-a-lado-content');
     if (!el) {
       window.print();
       return;
@@ -69,33 +72,21 @@ export default function PremiumReport({
         className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(27,67,50,0.06),transparent_50%)] print:hidden"
         aria-hidden
       />
-      <div className="premium-toolbar sticky top-0 z-40 flex flex-wrap items-center justify-end gap-2 border-b px-4 py-2.5 shadow-sm backdrop-blur-xl print:hidden">
-        <button
-          type="button"
-          onClick={handlePrint}
-          className="rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors"
-          style={{
-            color: 'var(--fs-forest, #1b4332)',
-            borderColor: 'var(--fs-border, rgba(0,0,0,0.08))',
-            background: '#fff',
-          }}
-        >
-          Imprimir
-        </button>
-        <button
-          type="button"
-          onClick={handleExportPdf}
-          className="rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-md transition-colors"
-          style={{ background: 'linear-gradient(90deg, var(--fs-forest,#1b4332), var(--fs-forest-md,#2d6a4f))' }}
-        >
-          Exportar PDF
-        </button>
-      </div>
-
       <div id="relatorio-lado-a-lado-content" className="overflow-x-hidden print:overflow-visible">
-        <LadoALadoRelatorioAgronomico data={data} />
-        <ReportFooterEnterprise data={data} reportId={reportId} />
-        <EditorialLadoALadoFooterStrip data={data} shareToken={shareToken} />
+        {data.branding?.reportLayout === 'legacy' ? (
+          <>
+            <FortSmartLadoALadoReport data={data} onPrint={handlePrint} onExportPdf={handleExportPdf} />
+            <ReportFooterEnterprise data={data} reportId={reportId} />
+            <EditorialLadoALadoFooterStrip data={data} shareToken={shareToken} />
+          </>
+        ) : (
+          <SideBySideOfficialReport
+            data={data}
+            reportId={reportId}
+            shareToken={shareToken}
+            onExportPdf={handleExportPdf}
+          />
+        )}
       </div>
     </div>
   );

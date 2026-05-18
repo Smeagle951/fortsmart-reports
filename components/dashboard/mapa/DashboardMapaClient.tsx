@@ -26,30 +26,19 @@ import {
   buildMonitoramentoMapBundle,
   type MonitoramentoMapDisplayMeta,
 } from '@/lib/dashboard-mapa/monitoramento-map-bundle';
-import { buildOperationalTimeline } from '@/lib/dashboard-mapa/timeline';
 import {
   DEMO_FEATURE_COLLECTION,
   DEMO_MONITOR_EVENTS,
   DEMO_PROPERTY_ALERTS,
 } from '@/lib/dashboard-mapa/mock';
-import {
-  countGeoJsonFeatures,
-  getRecommendedRenderMode,
-  shouldSimplifyGeoJson,
-} from '@/lib/dashboard-mapa/performance';
 import { propertySummaryFromFeatureCollection } from '@/lib/dashboard-mapa/summary-from-geojson';
 import type { MapEventMarker } from '@/components/mapa-talhoes/MapView';
-import { cn } from '@/lib/utils';
-
-import type { DashboardNavId } from '@/lib/dashboard-mapa/types';
 
 import { DashboardMapHeader } from './DashboardMapHeader';
-import { DashboardNavOverlay } from './DashboardNavOverlay';
 import { DashboardPlantioToolbar } from './DashboardPlantioToolbar';
 import { EventTimeline } from './EventTimeline';
-import { MapFiltersSheet } from './MapFiltersSheet';
+import { MapFloatingFilters } from './MapFloatingFilters';
 import { MapLegendAndLayers } from './MapLegendAndLayers';
-import { PremiumOverviewPanel } from './PremiumOverviewPanel';
 import { RightEventPanel } from './RightEventPanel';
 import { SidebarFarm } from './SidebarFarm';
 
@@ -142,6 +131,7 @@ export function DashboardMapaClient({
   }, [wantApi]);
 
   const showDemoFallback =
+    allowDemo &&
     !monBundle &&
     !urlIntent &&
     !wantApi &&
@@ -166,16 +156,6 @@ export function DashboardMapaClient({
 
   const displayMeta: MonitoramentoMapDisplayMeta | null = monBundle?.meta ?? null;
 
-  const reportToken = useMemo(() => sp?.get('token')?.trim() || null, [sp]);
-
-  const fazendaNomeResolved = useMemo(() => {
-    if (displayMeta?.fazenda?.trim()) return displayMeta.fazenda.trim();
-    const first = baseFc?.features?.[0]?.properties as Record<string, unknown> | undefined;
-    const nome = first?.fazenda ?? first?.nome_fazenda ?? first?.property_name ?? first?.farm_name;
-    if (nome != null && String(nome).trim()) return String(nome).trim();
-    return null;
-  }, [displayMeta?.fazenda, baseFc]);
-
   const alerts = useMemo(() => {
     if (monBundle?.alerts?.length) return monBundle.alerts;
     if (showDemoFallback) return DEMO_PROPERTY_ALERTS;
@@ -188,8 +168,8 @@ export function DashboardMapaClient({
       !monBundle &&
       !!baseFc &&
       baseFc.features.length > 0 &&
-      (urlIntent || wantApi),
-    [monBundle, baseFc, urlIntent, wantApi],
+      (urlIntent || wantApi || showDemoFallback),
+    [monBundle, baseFc, urlIntent, wantApi, showDemoFallback],
   );
 
   const plantioGeoOnlyLegend = usePlantioLayout && monitorEvents.length === 0;
@@ -207,9 +187,6 @@ export function DashboardMapaClient({
   const [onMap, setOnMap] = useState<Set<string>>(new Set());
   const [selectedFeatureProps, setSelectedFeatureProps] = useState<Record<string, unknown> | null>(null);
   const [plantioTip, setPlantioTip] = useState<string | null>(null);
-  const [activeNav, setActiveNav] = useState<DashboardNavId>('talhoes');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [plantioPanel, setPlantioPanel] = useState<'detail' | 'sementes'>('detail');
 
   useEffect(() => {
     if (monitorEvents.length === 0) {
@@ -369,79 +346,6 @@ export function DashboardMapaClient({
     }
   }, []);
 
-  const heatmapMode = camadaUi === 'heat';
-
-  const operationalTimeline = useMemo(
-    () => buildOperationalTimeline({ events: monitorEvents, featureCollection: mapWorkflowSource ?? filteredByMeta }),
-    [monitorEvents, mapWorkflowSource, filteredByMeta],
-  );
-
-  const renderRecommendation = useMemo(
-    () =>
-      getRecommendedRenderMode({
-        eventsCount: monitorEvents.length,
-        featuresCount: countGeoJsonFeatures(mapDisplayData),
-      }),
-    [monitorEvents.length, mapDisplayData],
-  );
-
-  const performanceWarning = useMemo(() => {
-    const featureCount = countGeoJsonFeatures(mapDisplayData);
-    if (renderRecommendation === 'heatmap_or_cluster' || renderRecommendation === 'cluster') {
-      return 'Muitos eventos carregados. Para melhor desempenho, use mapa térmico ou filtros.';
-    }
-    if (shouldSimplifyGeoJson(featureCount)) {
-      return 'GeoJSON muito detalhado. Simplificação de geometria será recomendada em versões futuras.';
-    }
-    return null;
-  }, [mapDisplayData, renderRecommendation]);
-
-  const handleCamadaChange = useCallback((v: string) => {
-    setCamadaUi(v);
-    if (v === 'events') {
-      setLayerEvents(true);
-      setLayerTalhoes(true);
-      setLayerSubareas(true);
-    } else if (v === 'heat') {
-      setLayerEvents(false);
-      setLayerTalhoes(true);
-      setLayerSubareas(true);
-      if (monitorEvents.length === 0) {
-        setPlantioTip('Mapa térmico indisponível: nenhum evento de monitoramento carregado.');
-        window.setTimeout(() => setPlantioTip(null), 4500);
-      }
-    } else {
-      setLayerTalhoes(true);
-      setLayerSubareas(true);
-    }
-  }, [monitorEvents.length]);
-
-  const handleHeatmapLayer = useCallback((enabled: boolean) => {
-    handleCamadaChange(enabled ? 'heat' : 'events');
-  }, [handleCamadaChange]);
-
-  const handleNavChange = useCallback((id: DashboardNavId) => {
-    setActiveNav(id);
-    if (id === 'monitoramento') {
-      setCamadaUi('events');
-      setLayerEvents(true);
-      setLayerTalhoes(true);
-      setLayerSubareas(true);
-      setSelectedEventId((prev) => prev ?? monitorEvents[0]?.id ?? null);
-    }
-  }, [monitorEvents]);
-
-  const onUploadHeader = useCallback(() => {
-    const url = process.env.NEXT_PUBLIC_FORTSMART_APP_URL?.trim();
-    if (typeof window !== 'undefined') {
-      window.open(url && url.length > 0 ? url : '/', '_blank', 'noopener,noreferrer');
-    }
-  }, []);
-
-  const hideTimelineOverlayNav: DashboardNavId[] = ['resumo', 'relatorios', 'atividades', 'insumos', 'clima', 'config'];
-  const showEventTimeline =
-    operationalTimeline.length > 0 && !hideTimelineOverlayNav.includes(activeNav);
-
   const onPrintPdf = useCallback(() => {
     window.print();
   }, []);
@@ -475,33 +379,24 @@ export function DashboardMapaClient({
   const mapShellClass = 'relative min-h-0 flex-1 overflow-hidden rounded-none border border-slate-300/80 bg-slate-900/20 shadow-inner';
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#F4F7F4] print:block print:h-auto">
-      <DashboardMapHeader
+    <div className="flex h-[100dvh] overflow-hidden bg-slate-100 print:block print:h-auto">
+      <SidebarFarm
+        activeNav="talhoes"
+        summary={summary}
+        alerts={alerts}
+        classicMapHref={classicMapHref}
+        fazendaNome={displayMeta?.fazenda}
+        usuarioNome={displayMeta?.usuario}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col print:w-full">
+        <DashboardMapHeader
           safraBadge={safraBadge}
-          fazendaNome={fazendaNomeResolved ?? displayMeta?.fazenda}
+          fazendaNome={displayMeta?.fazenda}
           usuarioNome={displayMeta?.usuario}
           tecnicoNome={displayMeta?.tecnico}
-          notificationCount={alerts.length}
-          notificationsTitle={`${alerts.length} alerta(s) no relatório`}
-          alerts={alerts}
-          onShare={onCopyLink}
-          onUpload={onUploadHeader}
         />
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <SidebarFarm
-          activeNav={activeNav}
-          onNav={handleNavChange}
-          collapsed={sidebarCollapsed}
-          onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
-          summary={summary}
-          alerts={alerts}
-          classicMapHref={classicMapHref}
-          fazendaNome={fazendaNomeResolved ?? displayMeta?.fazenda}
-          usuarioNome={displayMeta?.usuario}
-        />
-
-        <div className="flex min-w-0 flex-1 flex-col print:w-full">
         {hostHint ? (
           <p className="border-b border-sky-200 bg-sky-50 px-4 py-1.5 text-center text-xs text-sky-900">{hostHint}</p>
         ) : null}
@@ -513,128 +408,17 @@ export function DashboardMapaClient({
         ) : null}
 
         <div className="relative flex min-h-0 flex-1 flex-col bg-slate-200 print:bg-white">
-          <MapFiltersSheet
+          <MapFloatingFilters
             safra={safra}
             cultura={cultura}
             camada={camadaUi}
             dateRangeLabel={periodLabel}
             onSafra={setSafra}
             onCultura={setCultura}
-            onCamada={handleCamadaChange}
+            onCamada={setCamadaUi}
             safraChoices={safraChoices}
             culturaChoices={culturaChoices}
           />
-
-          {performanceWarning ? (
-            <div className="pointer-events-none absolute left-2 right-2 top-14 z-[1040] flex justify-center print:hidden">
-              <p className="pointer-events-auto max-w-xl rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-center text-[11px] text-sky-950 shadow-md sm:text-xs">
-                {performanceWarning}
-              </p>
-            </div>
-          ) : null}
-
-          {showDemoFallback ? (
-            <div className="pointer-events-none absolute left-4 top-20 z-[1040] print:hidden">
-              <p className="pointer-events-auto rounded-xl border border-emerald-200 bg-white/95 px-3 py-2 text-[11px] font-medium text-emerald-950 shadow-md">
-                Visualização demonstrativa automática. Abra com <code className="rounded bg-emerald-50 px-1">?token=</code> para dados reais do relatório.
-              </p>
-            </div>
-          ) : null}
-
-          {activeNav === 'monitoramento' && monitorEvents.length === 0 ? (
-            <div className="pointer-events-none absolute left-4 top-20 z-[1040] print:hidden">
-              <p className="pointer-events-auto max-w-md rounded-xl border border-amber-200 bg-white/95 px-3 py-2 text-[11px] font-medium text-amber-950 shadow-md">
-                Monitoramento não carregado neste link. Abra um relatório com <code className="rounded bg-amber-50 px-1">?token=</code> para visualizar pins, imagens e ocorrências georreferenciadas.
-              </p>
-            </div>
-          ) : null}
-
-          {heatmapMode && monitorEvents.length === 0 ? (
-            <div className="pointer-events-none absolute left-2 right-2 top-28 z-[1040] flex justify-center print:hidden">
-              <p className="pointer-events-auto max-w-xl rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-center text-[11px] text-amber-950 shadow-md sm:text-xs">
-                Mapa térmico indisponível: nenhum evento de monitoramento carregado.
-              </p>
-            </div>
-          ) : null}
-
-          {activeNav === 'resumo' ? (
-            <DashboardNavOverlay title="Resumo geral" onClose={() => setActiveNav('talhoes')}>
-              <div className="mx-auto w-full max-w-6xl">
-                <PremiumOverviewPanel
-                  summary={summary}
-                  alerts={alerts}
-                  events={monitorEvents}
-                  featureCollection={mapWorkflowSource ?? filteredByMeta}
-                  hasMonitoramentoPayload={!!monBundle}
-                />
-              </div>
-            </DashboardNavOverlay>
-          ) : null}
-
-          {activeNav === 'relatorios' ? (
-            <DashboardNavOverlay title="Relatórios agronómicos" onClose={() => setActiveNav('talhoes')}>
-              <div className="mx-auto max-w-lg space-y-4 text-sm text-slate-700">
-                <p>
-                  O relatório detalhado é o mesmo fluxo do módulo «Relatório agronómico» na web. No mapa, ative a camada{' '}
-                  <strong>Eventos</strong> na legenda para ver as infestações por talhão (pins).
-                </p>
-                {reportToken ? (
-                  <a
-                    href={`/r/${reportToken}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-emerald-800"
-                  >
-                    Abrir relatório agronómico completo
-                  </a>
-                ) : (
-                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950">
-                    Sem token na URL. Publique o relatório na app e abra esta página com{' '}
-                    <code className="rounded bg-white px-1 text-xs">?token=…</code>.
-                  </p>
-                )}
-              </div>
-            </DashboardNavOverlay>
-          ) : null}
-
-          {activeNav === 'atividades' ? (
-            <DashboardNavOverlay title="Atividades" onClose={() => setActiveNav('talhoes')}>
-              <p className="mx-auto max-w-md text-center text-sm text-slate-600">
-                Módulo de atividades em <strong>desenvolvimento</strong>.
-              </p>
-            </DashboardNavOverlay>
-          ) : null}
-
-          {activeNav === 'insumos' ? (
-            <DashboardNavOverlay title="Insumos" onClose={() => setActiveNav('talhoes')}>
-              <p className="mx-auto max-w-md text-center text-sm text-slate-600">
-                Gestão de insumos em <strong>desenvolvimento</strong>.
-              </p>
-            </DashboardNavOverlay>
-          ) : null}
-
-          {activeNav === 'clima' ? (
-            <DashboardNavOverlay title="Clima" onClose={() => setActiveNav('talhoes')}>
-              <div className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-sm">
-                Dados climáticos da fazenda entram aqui quando o módulo estiver vinculado ao relatório.
-              </div>
-            </DashboardNavOverlay>
-          ) : null}
-
-          {activeNav === 'config' ? (
-            <DashboardNavOverlay title="Configurações" onClose={() => setActiveNav('talhoes')}>
-              <div className="mx-auto max-w-md space-y-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-sm">
-                <p className="text-xs text-slate-500">
-                  Preferências do painel web (expansível). Por agora utilize filtros e legenda no próprio mapa.
-                </p>
-                <ul className="list-inside list-disc space-y-2 text-xs text-slate-600">
-                  <li>Filtros: botão «Filtros» no canto superior direito do mapa.</li>
-                  <li>Camadas de talhões, subáreas e eventos: legenda inferior.</li>
-                  <li>Relatório completo: menu «Relatórios» ou link com token.</li>
-                </ul>
-              </div>
-            </DashboardNavOverlay>
-          ) : null}
 
           {usePlantioLayout && exportGeoJsonSource ? (
             <DashboardPlantioToolbar
@@ -667,65 +451,32 @@ export function DashboardMapaClient({
                 </aside>
                 <div className="order-1 flex min-h-0 min-w-0 flex-1 flex-col gap-2 lg:order-2 print:order-1">
                   <div className={`${mapShellClass} flex min-h-[48vh] flex-1 flex-col`}>
-                    <MapSummaryBar data={mapDisplayData} placement="bottom" />
+                    <MapSummaryBar data={mapDisplayData} />
                     <FieldMap
                       data={mapDisplayData}
                       mapClassName="h-full min-h-[320px] w-full flex-1 rounded-none"
                       eventMarkers={eventMarkers}
                       selectedEventMarkerId={selectedEventId}
                       onSelectEventMarker={onSelectEventMarker}
-                      showEventMarkers={layerEvents && !heatmapMode && monitorEvents.length > 0}
-                      heatmapEvents={monitorEvents}
-                      showHeatmap={heatmapMode && monitorEvents.length > 0}
+                      showEventMarkers={layerEvents && monitorEvents.length > 0}
                       onSelectFeature={onSelectMapFeature}
                     />
                     <LegendFooter items={materialsLegend} showSubareaHint={mapViewMode !== 'talhoes'} />
                   </div>
+                  <div
+                    id="mapa-sementes"
+                    className="max-h-72 shrink-0 overflow-y-auto rounded-lg border border-slate-300/80 bg-slate-900/90 p-2 print:max-h-none print:border-slate-300 print:bg-white"
+                  >
+                    <SeedCalculatorTable data={tableData} />
+                  </div>
                 </div>
-                <aside className="order-3 flex min-h-[280px] w-full min-w-0 shrink-0 flex-col lg:max-h-[calc(100dvh-12rem)] lg:w-[300px] print:hidden">
-                  <div className="flex shrink-0 gap-1 rounded-t-xl border border-b-0 border-slate-700/70 bg-slate-950/95 p-1">
-                    <button
-                      type="button"
-                      className={cn(
-                        'flex-1 rounded-md px-2 py-2 text-xs font-semibold transition-colors',
-                        plantioPanel === 'detail'
-                          ? 'bg-emerald-700 text-white shadow-sm'
-                          : 'text-slate-400 hover:bg-white/5 hover:text-white',
-                      )}
-                      onClick={() => setPlantioPanel('detail')}
-                    >
-                      Detalhe
-                    </button>
-                    <button
-                      type="button"
-                      className={cn(
-                        'flex-1 rounded-md px-2 py-2 text-xs font-semibold transition-colors',
-                        plantioPanel === 'sementes'
-                          ? 'bg-emerald-700 text-white shadow-sm'
-                          : 'text-slate-400 hover:bg-white/5 hover:text-white',
-                      )}
-                      onClick={() => setPlantioPanel('sementes')}
-                    >
-                      Calculadora
-                    </button>
-                  </div>
-                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-b-xl border border-t-0 border-slate-700/70 bg-slate-900/85">
-                    {plantioPanel === 'detail' ? (
-                      <TalhaoDetailPanel
-                        properties={selectedFeatureProps}
-                        fullCollection={mapWorkflowSource}
-                        onClose={() => setSelectedFeatureProps(null)}
-                        onGerarRelatorioPdf={onPrintPdf}
-                      />
-                    ) : (
-                      <div
-                        id="mapa-sementes"
-                        className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2 print:border-slate-300 print:bg-white"
-                      >
-                        <SeedCalculatorTable data={tableData} />
-                      </div>
-                    )}
-                  </div>
+                <aside className="order-3 w-full min-w-0 shrink-0 lg:max-h-[calc(100dvh-12rem)] lg:w-[300px] lg:overflow-y-auto print:hidden">
+                  <TalhaoDetailPanel
+                    properties={selectedFeatureProps}
+                    fullCollection={mapWorkflowSource}
+                    onClose={() => setSelectedFeatureProps(null)}
+                    onGerarRelatorioPdf={onPrintPdf}
+                  />
                 </aside>
               </div>
             ) : (
@@ -736,9 +487,7 @@ export function DashboardMapaClient({
                   eventMarkers={eventMarkers}
                   selectedEventMarkerId={selectedEventId}
                   onSelectEventMarker={onSelectEventMarker}
-                  showEventMarkers={layerEvents && !heatmapMode && monitorEvents.length > 0}
-                  heatmapEvents={monitorEvents}
-                  showHeatmap={heatmapMode && monitorEvents.length > 0}
+                  showEventMarkers={layerEvents && monitorEvents.length > 0}
                   onSelectFeature={() => setSelectedEventId(null)}
                 />
               </div>
@@ -778,22 +527,19 @@ export function DashboardMapaClient({
             layerTalhoes={layerTalhoes}
             layerSubareas={layerSubareas}
             layerEvents={layerEvents}
-            layerHeatmap={heatmapMode}
             onLayerTalhoes={setLayerTalhoes}
             onLayerSubareas={setLayerSubareas}
             onLayerEvents={setLayerEvents}
-            onLayerHeatmap={handleHeatmapLayer}
             plantioGeoOnly={plantioGeoOnlyLegend}
           />
 
           <RightEventPanel event={selectedEvent} onClose={() => setSelectedEventId(null)} />
         </div>
 
-        {showEventTimeline ? (
-          <EventTimeline events={operationalTimeline} selectedId={selectedEventId} onSelect={(id) => setSelectedEventId(id)} />
+        {monitorEvents.length > 0 ? (
+          <EventTimeline events={monitorEvents} selectedId={selectedEventId} onSelect={(id) => setSelectedEventId(id)} />
         ) : null}
       </div>
-    </div>
     </div>
   );
 }

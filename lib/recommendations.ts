@@ -26,6 +26,49 @@ function getProdutoPadrao(tipo: TipoOrganismo) {
 // Cache em memória para não ficar lendo disco toda hora (útil para Supabase/API repetida)
 const jsonCache: Record<string, any> = {};
 
+function sanitizePublicKnowledge<T>(input: T): T {
+    // Remove qualquer chave de fonte/citação do JSON (camada produto).
+    // Mantém a informação técnica, mas sem rastreabilidade exposta.
+    const stripText = (s: string) => {
+        // Remove linhas "Fonte: ..." e normaliza espaços.
+        return s
+            .replace(/^\s*fonte\s*:\s*.*$/gim, '')
+            .replace(/\s*fonte\s*:\s*[^.\n]+(\.|$)/gi, '. ')
+            .replace(/\s{2,}/g, ' ')
+            .replace(/\.\s*\./g, '.')
+            .trim();
+    };
+
+    const walk = (v: any): any => {
+        if (v == null) return v;
+        if (typeof v === 'string') return stripText(v);
+        if (Array.isArray(v)) return v.map(walk);
+        if (typeof v === 'object') {
+            const out: Record<string, any> = {};
+            for (const [k, val] of Object.entries(v)) {
+                const key = k.toLowerCase();
+                if (
+                    key === 'fonte' ||
+                    key === 'source' ||
+                    key === 'sources' ||
+                    key === 'references' ||
+                    key === 'citation' ||
+                    key === 'citations' ||
+                    key === 'nota_licenca' ||
+                    key === 'fontes_referencia'
+                ) {
+                    continue;
+                }
+                out[k] = walk(val);
+            }
+            return out;
+        }
+        return v;
+    };
+
+    return walk(input) as T;
+}
+
 function carregarCatalogoCultura(cultura: string) {
     if (!cultura) return null;
 
@@ -44,7 +87,7 @@ function carregarCatalogoCultura(cultura: string) {
         const filePath = path.join(process.cwd(), 'data', 'organismos', `organismos_${cultNorm}.json`);
         if (fs.existsSync(filePath)) {
             const raw = fs.readFileSync(filePath, 'utf-8');
-            const data = JSON.parse(raw);
+            const data = sanitizePublicKnowledge(JSON.parse(raw));
             if (data && data.organismos) {
                 jsonCache[cultNorm] = data;
                 return data;

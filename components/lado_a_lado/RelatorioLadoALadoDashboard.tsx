@@ -37,6 +37,7 @@ import {
   isColheitaJson,
   pickHeroPhoto,
 } from '@/components/lado_a_lado/ladoALadoHelpers';
+import { resolveReportPhotoSrc } from '@/lib/resolveReportPhotoSrc';
 
 type SideKey = 'A' | 'B';
 
@@ -516,14 +517,16 @@ function PhotosGrid({
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      {entries.map((entry) => (
+      {entries.map((entry) => {
+        const thumbSrc = resolveReportPhotoSrc(entry.photo ?? undefined);
+        return (
         <div key={entry.side} className="space-y-2">
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-            {entry.photo?.url ? (
-              <img src={entry.photo.url} alt={entry.photo.caption || entry.name} className="aspect-square w-full object-cover" />
+            {thumbSrc ? (
+              <img src={thumbSrc} alt={entry.photo?.caption || entry.name} className="aspect-square w-full object-cover" />
             ) : (
               <div className="flex aspect-square items-center justify-center p-3 text-center text-xs text-slate-400">
-                <NullBadge label={`side${entry.side}.photos[0].url`} />
+                <NullBadge label={`side${entry.side}.photos[0]`} />
                     </div>
                   )}
                 </div>
@@ -534,7 +537,8 @@ function PhotosGrid({
             <div className="min-h-[28px] text-center text-[11px] text-slate-500">{entry.photo?.caption || 'Sem legenda publicada.'}</div>
                 </div>
                     </div>
-      ))}
+      );
+      })}
             </div>
   );
 }
@@ -583,6 +587,7 @@ export default function RelatorioLadoALadoDashboard({
   const scoreB = data.sideB?.kpis?.performanceScore ?? null;
   const deltaScore = isFiniteNumber(scoreA) && isFiniteNumber(scoreB) ? scoreB - scoreA : null;
   const heroPhoto = pickHeroPhoto((winner === 'A' ? data.sideA?.photos : data.sideB?.photos) ?? data.sideB?.photos ?? data.sideA?.photos);
+  const heroBgSrc = resolveReportPhotoSrc(heroPhoto);
   const radarRows = useMemo(() => buildRadarRows(data), [data]);
   const applicationSeries = useMemo(() => buildApplicationsSeries(data.applications), [data.applications]);
   const alerts = useMemo(() => buildAiAlerts(data), [data]);
@@ -861,8 +866,8 @@ export default function RelatorioLadoALadoDashboard({
           <div
             className="relative min-h-[124px] overflow-hidden px-5 py-4 text-white"
             style={{
-              backgroundImage: heroPhoto?.url
-                ? `linear-gradient(180deg, rgba(15,23,42,0.4), rgba(15,23,42,0.7)), url(${heroPhoto.url})`
+              backgroundImage: heroBgSrc
+                ? `linear-gradient(180deg, rgba(15,23,42,0.4), rgba(15,23,42,0.7)), url(${heroBgSrc})`
                 : 'linear-gradient(90deg, #14532d 0%, #0f172a 100%)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',

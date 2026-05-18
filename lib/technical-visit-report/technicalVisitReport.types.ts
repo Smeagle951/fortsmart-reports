@@ -101,7 +101,6 @@ export type TechnicalVisitReport = {
   state?: string;
   ownerName?: string;
   areaHa?: string;
-  farmLogoUrl?: string;
   heroImage?: string;
   polygon?: [number, number][];
   points: TechnicalVisitGeoPoint[];

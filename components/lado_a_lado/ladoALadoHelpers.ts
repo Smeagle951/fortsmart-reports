@@ -4,6 +4,7 @@ import type {
   ReportApplicationEventV2Json,
   ReportPhotoWeb,
 } from '@/types/side-by-side-report';
+import { hasRenderablePhotoSrc } from '@/lib/resolveReportPhotoSrc';
 
 export const COLOR_SIDE_A = '#2563eb';
 export const COLOR_SIDE_B = '#16a34a';
@@ -88,13 +89,13 @@ const HERO_CATEGORY_ORDER = ['sanidade', 'daninha', 'estande', 'raiz', 'geral'] 
 
 export function pickHeroPhoto(photos: ReportPhotoWeb[] | undefined): ReportPhotoWeb | null {
   if (!photos?.length) return null;
-  const withUrl = photos.filter((p) => p.url);
-  if (withUrl.length === 0) return null;
+  const withSrc = photos.filter((p) => hasRenderablePhotoSrc(p));
+  if (withSrc.length === 0) return null;
   for (const cat of HERO_CATEGORY_ORDER) {
-    const hit = withUrl.find((p) => (p.category || 'geral') === cat);
+    const hit = withSrc.find((p) => (p.category || 'geral') === cat);
     if (hit) return hit;
   }
-  return withUrl[0];
+  return withSrc[0];
 }
 
 export function distinctApplicationDaas(apps: ReportApplicationEventV2Json[] | undefined): number[] {

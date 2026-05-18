@@ -25,6 +25,7 @@ import {
   pickHeroPhoto,
   pressaoFitossanitariaMedia,
 } from '@/components/lado_a_lado/ladoALadoHelpers';
+import { hasRenderablePhotoSrc, resolveReportPhotoSrc } from '@/lib/resolveReportPhotoSrc';
 import { formatNumber } from '@/utils/format';
 import { buildPremiumRadarRows } from './evaluationRadar';
 import { radarAxisWinSummary } from './premiumChartInsights';
@@ -623,7 +624,8 @@ export default function ExecutiveDeckSection({
   const riskContext = riskSummary(data);
   const photoA = pickHeroPhoto(data.sideA?.photos);
   const photoB = pickHeroPhoto(data.sideB?.photos);
-  const bannerPhoto = photoB?.url ? photoB : photoA;
+  const bannerPhoto = hasRenderablePhotoSrc(photoB) ? photoB : photoA;
+  const bannerSrc = resolveReportPhotoSrc(bannerPhoto);
   const daaBarData = useMemo(() => daaApplicationBarRows(data.applications), [data.applications]);
   const riskFromOcc = deriveRiskFromOcorrencias(data.ocorrencias);
 
@@ -928,10 +930,10 @@ export default function ExecutiveDeckSection({
           </div>
 
           <div className="relative min-h-[140px] w-full overflow-hidden">
-            {bannerPhoto?.url ? (
+            {bannerSrc ? (
               <img
-                src={bannerPhoto.url}
-                alt={bannerPhoto.caption || 'Campo'}
+                src={bannerSrc}
+                alt={bannerPhoto?.caption || 'Campo'}
                 className="absolute inset-0 h-full w-full object-cover"
                 loading="lazy"
               />
@@ -1065,11 +1067,17 @@ export default function ExecutiveDeckSection({
                       const side = idx === 0 ? 'A' : 'B';
                       const nm = idx === 0 ? nameA : nameB;
                       const col = idx === 0 ? DECK_SIDE_A : DECK_SIDE_B;
+                      const heroThumb = resolveReportPhotoSrc(ph);
                       return (
                         <div key={side} className="overflow-hidden rounded-lg border border-slate-200">
                           <div className="aspect-square bg-slate-100">
-                            {ph?.url ? (
-                              <img src={ph.url} alt={ph.caption || nm} className="h-full w-full object-cover" loading="lazy" />
+                            {heroThumb ? (
+                              <img
+                                src={heroThumb}
+                                alt={ph?.caption || nm}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
                             ) : (
                               <div className="flex h-full items-center justify-center p-2 text-center text-[10px] text-slate-400">
                                 <NullChip label={`foto lado ${side}: null`} />
@@ -1135,11 +1143,13 @@ export default function ExecutiveDeckSection({
                 {(['A', 'B'] as const).flatMap((side) => {
                   const s = side === 'A' ? data.sideA : data.sideB;
                   const list = s?.photos ?? [];
-                  return list.map((p, i) => (
+                  return list.map((p, i) => {
+                    const thumbSrc = resolveReportPhotoSrc(p);
+                    return (
                     <div key={`${side}-${i}`} className="overflow-hidden rounded-lg border border-slate-200">
                       <div className="aspect-square bg-slate-100">
-                        {p.url ? (
-                          <img src={p.url} alt={p.caption || ''} className="h-full w-full object-cover" loading="lazy" />
+                        {thumbSrc ? (
+                          <img src={thumbSrc} alt={p.caption || ''} className="h-full w-full object-cover" loading="lazy" />
                         ) : (
                           <div className="flex h-full items-center justify-center p-1">
                             <NullChip label="url: null" />
@@ -1148,7 +1158,8 @@ export default function ExecutiveDeckSection({
                       </div>
                       <p className="truncate px-1 py-0.5 text-center text-[9px] text-slate-500">{p.caption || '—'}</p>
                     </div>
-                  ));
+                  );
+                  });
                 })}
               </div>
             ) : null}

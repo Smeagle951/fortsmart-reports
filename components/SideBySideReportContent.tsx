@@ -97,8 +97,8 @@ export type SideBySideReportData = {
   branding?: {
     title?: string;
     subtitle?: string;
-    /** `premium` (padrão): narrativa executiva. `dashboard`: layout técnico completo anterior. */
-    reportLayout?: 'premium' | 'dashboard';
+    /** `premium` (padrão): layout oficial aprovado. `legacy`: abas FortSmart L2. `dashboard`: layout técnico anterior. */
+    reportLayout?: 'premium' | 'legacy' | 'dashboard';
   };
   farm?: {
     farmName?: string;
@@ -246,6 +246,17 @@ export type SideBySideReportData = {
   quality_check?: { warnings?: string[]; notes?: string } | null;
   /** Resultado de [ReportQualityGate] (app Flutter). */
   quality_gate?: Record<string, unknown> | null;
+  /** Linha do tempo de visitas / DAA — publicação pelo app (`timeline_events`). */
+  timeline_events?: Array<{ date?: string; description?: string }>;
+  /** Pontos de avaliação com GPS (`evaluation_points_geo`). */
+  evaluation_points_geo?: Array<Record<string, unknown>>;
+  /** Snapshot `mapa.talhao` / subáreas — alternativa ao uso só na raiz. */
+  mapa?: Record<string, unknown> | null;
+  talhao_geo?: Record<string, unknown> | null;
+  field_polygon_json?: string | null;
+  subareas_polygons?: string | Record<string, unknown> | null;
+  /** Avaliações por DAA (schema opcional — ver `DaaAssessmentJson`). */
+  daa_assessments?: import('@/types/side-by-side-report').DaaAssessmentJson[];
 };
 
 type SideData = {

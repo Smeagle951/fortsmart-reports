@@ -3,12 +3,10 @@
 import type { FeatureCollection } from 'geojson';
 
 import type { MapEventMarker } from '@/components/mapa-talhoes/MapView';
-import type { DashboardMonitorEvent } from '@/lib/dashboard-mapa/types';
 
 import { EventMarkers } from './EventMarkers';
 import { MapBackgroundClick } from './MapBackgroundClick';
 import { MapProvider } from './MapProvider';
-import { MonitoringHeatmapLayer } from './MonitoringHeatmapLayer';
 import { TalhaoLayers } from './TalhaoLayers';
 
 type Props = {
@@ -19,8 +17,6 @@ type Props = {
   selectedEventMarkerId?: string | null;
   onSelectEventMarker?: (id: string) => void;
   showEventMarkers?: boolean;
-  heatmapEvents?: DashboardMonitorEvent[];
-  showHeatmap?: boolean;
 };
 
 /**
@@ -35,8 +31,6 @@ export function FieldMap({
   selectedEventMarkerId = null,
   onSelectEventMarker,
   showEventMarkers = true,
-  heatmapEvents = [],
-  showHeatmap = false,
 }: Props) {
   return (
     <MapProvider fitGeoJson={data} mapClassName={mapClassName}>
@@ -48,7 +42,6 @@ export function FieldMap({
         onSelect={onSelectEventMarker}
         show={showEventMarkers}
       />
-      <MonitoringHeatmapLayer events={heatmapEvents} show={showHeatmap} />
     </MapProvider>
   );
 }

@@ -43,7 +43,7 @@ export function middleware(req: NextRequest) {
   // Se já está no host canônico, segue.
   if (hostname === canonicalHost) return NextResponse.next();
 
-  // Mapa de talhões e dashboard GIS: host canónico dos relatórios.
+  // Mapa de talhões e dashboard GIS (GeoJSON ?file= / relatório ?token=): host canónico dos relatórios.
   if (pathname.startsWith('/mapa-talhoes') || pathname.startsWith('/dashboard')) {
     const url = new URL(req.nextUrl.pathname + req.nextUrl.search, canonicalOrigin);
     return NextResponse.redirect(url, 308);

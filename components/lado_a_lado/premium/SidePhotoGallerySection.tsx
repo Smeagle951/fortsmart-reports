@@ -3,81 +3,50 @@
 import { motion } from 'framer-motion';
 import type { ReportPhotoWeb } from '@/types/side-by-side-report';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
+import { shortenPhotoCaptionForGallery } from '@/lib/photoCaption';
 import { resolveReportPhotoSrc } from '@/lib/resolveReportPhotoSrc';
 import PremiumSectionShell from './PremiumSectionShell';
 
-function hotspotMomentLabel(m?: string): string | null {
-  const t = m?.trim().toLowerCase();
-  if (t === 'antes') return 'Antes da aplicação';
-  if (t === 'depois') return 'Depois da aplicação';
+/** Aceita objeto foto DTO ou string URL pura publicada pelo app. */
+function coerceGalleryPhoto(raw: unknown): ReportPhotoWeb | null {
+  if (raw == null) return null;
+  if (typeof raw === 'string') {
+    const t = raw.trim();
+    if (!t) return null;
+    return { url: t };
+  }
+  if (typeof raw === 'object' && !Array.isArray(raw)) return raw as ReportPhotoWeb;
   return null;
 }
 
-function asRecord(v: unknown): Record<string, unknown> | null {
-  return v != null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
-}
-
-function photosFromFieldCollection(data: SideBySideReportData, side: 'A' | 'B'): ReportPhotoWeb[] {
-  const fcm = asRecord(data.field_collection_modules);
-  const points = Array.isArray(fcm?.points) ? fcm.points : [];
-  const out: ReportPhotoWeb[] = [];
-  for (const point of points) {
-    const sides = asRecord(asRecord(point)?.sides);
-    const sideRec = asRecord(sides?.[side]);
-    if (!sideRec) continue;
-    for (const [sectionKey, sectionValue] of Object.entries(sideRec)) {
-      const section = asRecord(sectionValue);
-      const occurrences = Array.isArray(section?.occurrences) ? section.occurrences : [];
-      for (const occurrence of occurrences) {
-        const occ = asRecord(occurrence);
-        const images = Array.isArray(occ?.images) ? occ.images : [];
-        for (const image of images) {
-          const img = asRecord(image);
-          const url = typeof img?.url === 'string' && img.url.trim() ? img.url.trim() : null;
-          if (!url) continue;
-          out.push({
-            url,
-            caption:
-              (typeof img?.caption === 'string' && img.caption.trim()) ||
-              (typeof occ?.alvo === 'string' && occ.alvo.trim()) ||
-              null,
-            category: sectionKey,
-          } as ReportPhotoWeb);
-        }
-      }
-    }
+function hotspotSummaryLine(hotspots: NonNullable<ReportPhotoWeb['hotspots']>): string {
+  const n = hotspots.length;
+  if (n === 0) return '';
+  let antes = 0;
+  let depois = 0;
+  for (const h of hotspots) {
+    const t = h.applicationMoment?.trim().toLowerCase();
+    if (t === 'antes') antes += 1;
+    else if (t === 'depois') depois += 1;
   }
-  return out;
-}
-
-function mergeRenderablePhotos(base: ReportPhotoWeb[], extra: ReportPhotoWeb[]): ReportPhotoWeb[] {
-  const seen = new Set<string>();
-  const out: ReportPhotoWeb[] = [];
-  for (const photo of [...base, ...extra]) {
-    const src = resolveReportPhotoSrc(photo as unknown as Record<string, unknown>);
-    if (!src) continue;
-    const key = `${src}|${photo.category ?? ''}|${photo.caption ?? ''}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({ ...photo, url: src });
-  }
-  return out;
+  const bits = [`${n} marcador${n === 1 ? '' : 'es'}`];
+  if (antes) bits.push(`${antes} antes`);
+  if (depois) bits.push(`${depois} depois`);
+  return bits.join(' · ');
 }
 
 function PhotoCard({
   sideLabel,
-  url,
-  caption,
+  src,
   category,
   p,
 }: {
   sideLabel: string;
-  url?: string | null;
-  caption?: string | null;
+  src?: string | null;
   category?: string | null;
   p: ReportPhotoWeb;
 }) {
-  if (!url) return null;
+  const captionShort = shortenPhotoCaptionForGallery(p);
   return (
     <motion.figure
       initial={{ opacity: 0, y: 10 }}
@@ -87,25 +56,14 @@ function PhotoCard({
       className="overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/80 shadow-md shadow-emerald-950/5 ring-1 ring-emerald-900/5 print:break-inside-avoid print:shadow-sm"
     >
       <div className="aspect-4/3 w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200/80">
-        {url ? (
-          <div className="relative h-full w-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt={caption || `${sideLabel} — foto`} className="h-full w-full object-cover" />
-            {p.hotspots?.map((h, hi) => (
-              <span
-                key={hi}
-                className="absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]"
-                style={{
-                  left: `${Math.max(0, Math.min(100, h.xPct))}%`,
-                  top: `${Math.max(0, Math.min(100, h.yPct))}%`,
-                }}
-                title={[h.label, h.detail].filter(Boolean).join(' — ') || `Marcador ${hi + 1}`}
-              />
-            ))}
-          </div>
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={captionShort || `${sideLabel} — foto`} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs text-slate-500 px-3 text-center">
-            Imagem indisponível (URL não publicada)
+            Imagem indisponível. Se a foto já está na web, reenvie o relatório pelo app (URLs em
+            <code className="mx-0.5 rounded bg-slate-200/80 px-1">imageBase64Jpg</code> passam a ser
+            reconhecidas).
           </div>
         )}
       </div>
@@ -114,7 +72,12 @@ function PhotoCard({
           {sideLabel}
           {category ? <span className="text-slate-500"> · {category}</span> : null}
         </div>
-        {caption ? <p className="mt-1 text-slate-600">{caption}</p> : null}
+        {captionShort ? <p className="mt-1 text-slate-600">{captionShort}</p> : null}
+        {p.hotspots != null && p.hotspots.length > 0 ? (
+          <p className="mt-2 border-t border-emerald-100/80 pt-2 text-[11px] font-medium tabular-nums text-emerald-900/90">
+            {hotspotSummaryLine(p.hotspots)}
+          </p>
+        ) : null}
       </figcaption>
     </motion.figure>
   );
@@ -128,8 +91,8 @@ export default function SidePhotoGallerySection({
   /** Sem capa duplicada — usado pelo relatório agronómico único. */
   embedded?: boolean;
 }) {
-  const a = mergeRenderablePhotos((data.sideA?.photos ?? []) as ReportPhotoWeb[], photosFromFieldCollection(data, 'A'));
-  const b = mergeRenderablePhotos((data.sideB?.photos ?? []) as ReportPhotoWeb[], photosFromFieldCollection(data, 'B'));
+  const a = (data.sideA?.photos ?? []).map(coerceGalleryPhoto).filter((x): x is ReportPhotoWeb => x != null);
+  const b = (data.sideB?.photos ?? []).map(coerceGalleryPhoto).filter((x): x is ReportPhotoWeb => x != null);
   if (a.length === 0 && b.length === 0) return null;
 
   const nameA = data.sideA?.name?.trim() || data.sideA?.label?.trim() || 'Tratamento 1 (nome no app)';
@@ -145,8 +108,7 @@ export default function SidePhotoGallerySection({
               // eslint-disable-next-line react/no-array-index-key
               key={`A-${i}`}
               sideLabel={nameA}
-              url={resolveReportPhotoSrc(p as unknown as Record<string, unknown>)}
-              caption={p.caption}
+              src={resolveReportPhotoSrc(p)}
               category={p.category}
               p={p}
             />
@@ -161,8 +123,7 @@ export default function SidePhotoGallerySection({
               // eslint-disable-next-line react/no-array-index-key
               key={`B-${i}`}
               sideLabel={nameB}
-              url={resolveReportPhotoSrc(p as unknown as Record<string, unknown>)}
-              caption={p.caption}
+              src={resolveReportPhotoSrc(p)}
               category={p.category}
               p={p}
             />

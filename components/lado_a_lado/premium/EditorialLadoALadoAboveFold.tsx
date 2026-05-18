@@ -1,6 +1,7 @@
 'use client';
 
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
+import { buildHeroKpiRows, resolveExperimentAreaHa } from '@/lib/ladoALadoPresentationExtras';
 import { formatNumber } from '@/utils/format';
 
 function rawGeneratedAt(data: SideBySideReportData): string | null {
@@ -53,14 +54,15 @@ function matchesProdRow(label: string): boolean {
   );
 }
 
-export default function EditorialLadoALadoAboveFold({ data }: { data: SideBySideReportData }) {
+export default function EditorialLadoALadoAboveFold({
+  data,
+  /** Sem cabeçalho verde completo — para usar dentro do relatório FortSmart em abas. */
+  embedded = false,
+}: {
+  data: SideBySideReportData;
+  embedded?: boolean;
+}) {
   const farm = data.farm ?? {};
-  const raw = data as unknown as Record<string, unknown>;
-  const talhao = raw.talhao && typeof raw.talhao === 'object' && !Array.isArray(raw.talhao) ? (raw.talhao as Record<string, unknown>) : null;
-  const experimentDesign =
-    raw.experiment_design && typeof raw.experiment_design === 'object' && !Array.isArray(raw.experiment_design)
-      ? (raw.experiment_design as Record<string, unknown>)
-      : null;
   const branding = data.branding ?? {};
   const meta = data.meta ?? {};
   const qc = data.quality_check as { warnings?: string[] } | undefined;
@@ -97,69 +99,8 @@ export default function EditorialLadoALadoAboveFold({ data }: { data: SideBySide
   const confPct =
     typeof conf === 'number' && conf >= 0 && conf <= 100 ? Math.round(conf) : null;
 
-  const kpA = data.sideA?.kpis;
-  const kpB = data.sideB?.kpis;
-  const areaHa =
-    farm.areaHa ??
-    (typeof talhao?.area_total_ha === 'number' ? talhao.area_total_ha : parseRowNum(talhao?.area_total_ha)) ??
-    (typeof talhao?.areaHa === 'number' ? talhao.areaHa : parseRowNum(talhao?.areaHa)) ??
-    parseRowNum(experimentDesign?.talhao_area_ha ?? experimentDesign?.area_ha ?? experimentDesign?.areaHa);
-  const farmName =
-    farm.farmName?.trim() ||
-    (typeof experimentDesign?.property_label === 'string' ? experimentDesign.property_label.trim() : '') ||
-    '—';
-  const testName =
-    (typeof experimentDesign?.evaluation_title === 'string' && experimentDesign.evaluation_title.trim()) ||
-    branding.title?.trim() ||
-    farm.objective?.trim() ||
-    '—';
-  const technicianName =
-    meta.generatedBy?.name?.trim() ||
-    (typeof experimentDesign?.technician_name === 'string' ? experimentDesign.technician_name.trim() : '') ||
-    data.conclusion?.signature?.name?.trim() ||
-    '—';
-
-  type KpiCard = { label: string; va: string; vb: string };
-  const kpiCards: KpiCard[] = [
-    {
-      label: 'População (pl/ha)',
-      va:
-        kpA?.finalPopulationPlHa != null
-          ? formatNumber(kpA.finalPopulationPlHa, { decimals: 0 })
-          : '—',
-      vb:
-        kpB?.finalPopulationPlHa != null
-          ? formatNumber(kpB.finalPopulationPlHa, { decimals: 0 })
-          : '—',
-    },
-    {
-      label: 'Produtividade (kg/ha)',
-      va:
-        kpA?.estimatedYieldKgHa != null
-          ? formatNumber(kpA.estimatedYieldKgHa, { decimals: 0 })
-          : '—',
-      vb:
-        kpB?.estimatedYieldKgHa != null
-          ? formatNumber(kpB.estimatedYieldKgHa, { decimals: 0 })
-          : '—',
-    },
-    {
-      label: 'Altura (cm)',
-      va: kpA?.avgHeightCm != null ? formatNumber(kpA.avgHeightCm, { decimals: 1 }) : '—',
-      vb: kpB?.avgHeightCm != null ? formatNumber(kpB.avgHeightCm, { decimals: 1 }) : '—',
-    },
-    {
-      label: 'Vigor',
-      va:
-        kpA?.vigorCulturaPct != null
-          ? `${formatNumber(kpA.vigorCulturaPct, { decimals: 0 })}%`
-          : kpA?.vigorRating?.label?.trim() || '—',
-      vb:
-        kpB?.vigorCulturaPct != null
-          ? `${formatNumber(kpB.vigorCulturaPct, { decimals: 0 })}%`
-          : kpB?.vigorRating?.label?.trim() || '—',
-    },
-  ];
+  const areaHaResolved = resolveExperimentAreaHa(data);
+  const kpiCards = buildHeroKpiRows(data);
 
   const rows = Array.isArray(data.summary_rows) ? data.summary_rows : [];
   let deltaPct: number | null = null;
@@ -184,65 +125,60 @@ export default function EditorialLadoALadoAboveFold({ data }: { data: SideBySide
 
   return (
     <>
-      <header className="fs-l2-report-header print:break-inside-avoid">
-        <div className="fs-l2-header-accent" aria-hidden />
-        <div className="fs-l2-header-noise" aria-hidden />
-        <div className="fs-l2-header-inner">
-          <div className="flex flex-col gap-6 sm:flex-row sm:justify-between sm:items-start">
-            <div>
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">
-                FortSmart Agro
-              </p>
-              <span className="fs-l2-type-badge">Avaliação lado a lado</span>
-              <h1 className="fs-l2-report-title">{title}</h1>
-              <p className="fs-l2-report-subtitle mt-2 max-w-xl">{subtitle}</p>
-            </div>
-            <div className="fs-l2-header-meta shrink-0 text-left sm:text-right">
-              <div>schema {schemaV}</div>
-              {metaLine ? <div>{metaLine}</div> : null}
-              {meta.appVersion ? <div>{meta.appVersion}</div> : null}
-            </div>
-          </div>
-
-          <div className="fs-l2-header-grid">
-            <div className="fs-l2-header-cell">
-              <div className="fs-l2-header-label">Fazenda</div>
-              <div className="fs-l2-header-value">{farmName}</div>
-            </div>
-            <div className="fs-l2-header-cell">
-              <div className="fs-l2-header-label">Teste</div>
-              <div className="fs-l2-header-value">{testName}</div>
-            </div>
-            <div className="fs-l2-header-cell">
-              <div className="fs-l2-header-label">Responsável</div>
-              <div className="fs-l2-header-value">{technicianName}</div>
-            </div>
-            <div className="fs-l2-header-cell">
-              <div className="fs-l2-header-label">Cultura / Safra</div>
-              <div className="fs-l2-header-value">{[farm.culture?.trim(), farm.season?.trim()].filter(Boolean).join(' · ') || '—'}</div>
-            </div>
-            <div className="fs-l2-header-cell">
-              <div className="fs-l2-header-label">Talhão</div>
-              <div className="fs-l2-header-value">{farm.fieldName?.trim() || '—'}</div>
-            </div>
-            <div className="fs-l2-header-cell">
-              <div className="fs-l2-header-label">Área</div>
-              <div className="fs-l2-header-value">
-                {areaHa != null ? `${formatNumber(areaHa, { decimals: 2 })} ha` : '—'}
+      {!embedded ? (
+        <header className="fs-l2-report-header print:break-inside-avoid">
+          <div className="fs-l2-header-accent" aria-hidden />
+          <div className="fs-l2-header-noise" aria-hidden />
+          <div className="fs-l2-header-inner">
+            <div className="flex flex-col gap-6 sm:flex-row sm:justify-between sm:items-start">
+              <div>
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">
+                  FortSmart Agro
+                </p>
+                <span className="fs-l2-type-badge">Avaliação lado a lado</span>
+                <h1 className="fs-l2-report-title">{title}</h1>
+                <p className="fs-l2-report-subtitle mt-2 max-w-xl">{subtitle}</p>
+              </div>
+              <div className="fs-l2-header-meta shrink-0 text-left sm:text-right">
+                <div>schema {schemaV}</div>
+                {metaLine ? <div>{metaLine}</div> : null}
+                {meta.appVersion ? <div>{meta.appVersion}</div> : null}
               </div>
             </div>
-          </div>
-          {(farm.city || farm.state) ? (
-            <p className="mt-4 text-xs text-white/45">
-              {[farm.city, farm.state].filter(Boolean).join(' · ')}
-              {farm.farmName ? ` · ${farm.farmName}` : ''}
-            </p>
-          ) : farm.farmName ? (
-            <p className="mt-4 text-xs text-white/45">{farm.farmName}</p>
-          ) : null}
-        </div>
-      </header>
 
+            <div className="fs-l2-header-grid">
+              <div className="fs-l2-header-cell">
+                <div className="fs-l2-header-label">Cultura</div>
+                <div className="fs-l2-header-value">{farm.culture?.trim() || '—'}</div>
+              </div>
+              <div className="fs-l2-header-cell">
+                <div className="fs-l2-header-label">Safra</div>
+                <div className="fs-l2-header-value">{farm.season?.trim() || '—'}</div>
+              </div>
+              <div className="fs-l2-header-cell">
+                <div className="fs-l2-header-label">Talhão</div>
+                <div className="fs-l2-header-value">{farm.fieldName?.trim() || '—'}</div>
+              </div>
+              <div className="fs-l2-header-cell">
+                <div className="fs-l2-header-label">Área (talhão)</div>
+                <div className="fs-l2-header-value">
+                  {areaHaResolved != null ? `${formatNumber(areaHaResolved, { decimals: 2 })} ha` : '—'}
+                </div>
+              </div>
+            </div>
+            {(farm.city || farm.state) ? (
+              <p className="mt-4 text-xs text-white/45">
+                {[farm.city, farm.state].filter(Boolean).join(' · ')}
+                {farm.farmName ? ` · ${farm.farmName}` : ''}
+              </p>
+            ) : farm.farmName ? (
+              <p className="mt-4 text-xs text-white/45">{farm.farmName}</p>
+            ) : null}
+          </div>
+        </header>
+      ) : null}
+
+      {!embedded ? (
       <div className="fs-l2-quality-strip">
         <div className="fs-l2-quality-inner">
           <span className="fs-l2-quality-label">Completude do relatório</span>
@@ -267,8 +203,9 @@ export default function EditorialLadoALadoAboveFold({ data }: { data: SideBySide
           )}
         </div>
       </div>
+      ) : null}
 
-      <div className="mx-auto max-w-[960px] px-5 pt-10 pb-6 sm:px-10">
+      <div className={`mx-auto max-w-[960px] px-5 pb-6 sm:px-10 ${embedded ? 'pt-4' : 'pt-10'}`}>
         <div className="fs-l2-hero page-section">
           <div className={`fs-l2-hero-side fs-l2-hero-a ${winner === 'A' ? 'ring-2 ring-amber-400/40' : ''}`}>
             <div className="flex flex-wrap items-center gap-2">

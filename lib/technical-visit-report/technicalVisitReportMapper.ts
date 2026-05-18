@@ -47,13 +47,6 @@ function firstText(...values: unknown[]): string | undefined {
   return undefined;
 }
 
-function webImageUrl(...values: unknown[]): string | undefined {
-  const raw = firstText(...values);
-  if (!raw) return undefined;
-  if (/^(https?:|data:image\/|blob:)/i.test(raw)) return raw;
-  return undefined;
-}
-
 function field(label: string, value: unknown, critical = false): TechnicalVisitField | undefined {
   const out = text(value);
   if (!out && !critical) return undefined;
@@ -139,12 +132,12 @@ function pointFromRecord(record: AnyRecord, index: number): TechnicalVisitGeoPoi
     id: firstText(record.id, record.local_id, record.index) ?? `ponto-${index + 1}`,
     latitude: lat,
     longitude: lng,
-    title: firstText(record.legenda, record.label, record.titulo, record.title, record.point_code, record.descricao) ?? `Ponto ${index + 1}`,
+    title: firstText(record.titulo, record.title, record.point_code, record.descricao),
     description: firstText(record.descricao, record.observacoes, record.observation),
     type: firstText(record.tipo, record.type, record.categoria),
     severity: firstText(record.severidade, record.risk_level, record.infestion_level),
     date: firstText(record.data, record.collected_at, record.created_at),
-    imageUrl: webImageUrl(record.imagem, record.url, record.cloud_url),
+    imageUrl: firstText(record.imagem, record.url, record.cloud_url),
     recommendation: firstText(record.recomendacao, record.recommendation),
   };
 }
@@ -347,15 +340,6 @@ export function normalizeTechnicalVisitReport(dto: PayloadVisitaTecnica, opts: {
   const technicianName = firstText(meta.tecnicoSessao, dto.tecnico, meta.tecnico, assinatura.nome);
   const technicianCrea = firstText(meta.tecnicoCrea, prop.tecnicoCrea, assinatura.crea);
   const farmName = resolveFarmName(dto);
-  const farmLogoUrl = webImageUrl(
-    prop.logoUrl,
-    prop.logo_url,
-    prop.logo,
-    prop.logoPath,
-    prop.logo_path,
-    (dto as AnyRecord).farmLogoUrl,
-    (dto as AnyRecord).farm_logo_url,
-  );
   const plotName = resolvePlotName(dto);
   const cropName = resolveCropName(dto);
   const seasonName = resolveSeasonName(dto);
@@ -383,8 +367,7 @@ export function normalizeTechnicalVisitReport(dto: PayloadVisitaTecnica, opts: {
     state: firstText(prop.estado),
     ownerName: firstText(prop.proprietario),
     areaHa,
-    farmLogoUrl,
-    heroImage: webImageUrl(photos.find((photo) => photo.url)?.url, prop.fotoAreaPath),
+    heroImage: firstText(photos.find((photo) => photo.url)?.url, prop.fotoAreaPath),
     polygon: resolvePolygon(mapa),
     points,
     photos,

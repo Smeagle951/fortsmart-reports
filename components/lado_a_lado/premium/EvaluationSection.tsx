@@ -4,10 +4,12 @@ import { motion } from 'framer-motion';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
 import type { ReportPhotoWeb } from '@/types/side-by-side-report';
 import { pickHeroPhoto } from '@/components/lado_a_lado/ladoALadoHelpers';
+import { resolveReportPhotoSrc } from '@/lib/resolveReportPhotoSrc';
 import PremiumSectionShell from './PremiumSectionShell';
 
 function ExtraPhotoThumb({ ph, label }: { ph: ReportPhotoWeb; label: string }) {
-  if (!ph.url) return null;
+  const src = resolveReportPhotoSrc(ph);
+  if (!src) return null;
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.98 }}
@@ -16,7 +18,7 @@ function ExtraPhotoThumb({ ph, label }: { ph: ReportPhotoWeb; label: string }) {
       className="rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm"
     >
       <div className="relative aspect-[4/3] bg-slate-100">
-        <img src={ph.url} alt={ph.caption || label} className="h-full w-full object-cover" />
+        <img src={src} alt={ph.caption || label} className="h-full w-full object-cover" />
         {ph.hotspots?.map((h, i) => (
           <div
             key={i}
@@ -50,8 +52,16 @@ export default function EvaluationSection({ data }: { data: SideBySideReportData
   const heroA = pickHeroPhoto(photosA);
   const heroB = pickHeroPhoto(photosB);
 
-  const restA = photosA.filter((p) => p.url && p.url !== heroA?.url);
-  const restB = photosB.filter((p) => p.url && p.url !== heroB?.url);
+  const heroSrcA = resolveReportPhotoSrc(heroA ?? undefined);
+  const heroSrcB = resolveReportPhotoSrc(heroB ?? undefined);
+  const restA = photosA.filter((p) => {
+    const s = resolveReportPhotoSrc(p);
+    return Boolean(s && (!heroSrcA || s !== heroSrcA));
+  });
+  const restB = photosB.filter((p) => {
+    const s = resolveReportPhotoSrc(p);
+    return Boolean(s && (!heroSrcB || s !== heroSrcB));
+  });
   const extras = [...restA, ...restB];
 
   if (extras.length === 0) return null;

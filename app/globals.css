@@ -19,7 +19,7 @@
   --card-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
   --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, .08), 0 2px 4px rgba(0, 0, 0, .04);
 
-  /* shadcn/ui — dashboard GIS */
+  /* shadcn/ui — tokens HSL (dashboard e componentes novos) */
   --background: 0 0% 100%;
   --foreground: 0 0% 9%;
   --card: 0 0% 100%;
@@ -42,6 +42,7 @@
   --radius: 0.5rem;
 }
 
+/* Escopo opcional: reduzir choque Tailwind preflight com páginas legadas fora do dashboard */
 #fs-dashboard-root {
   isolation: isolate;
 }
@@ -2325,18 +2326,6 @@ body {
 /* Blocos que não devem quebrar entre páginas (relatório fitossanitário) */
 .pdf-keep-together {
   page-break-inside: avoid;
-}
-
-.fs-field-label {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  color: white !important;
-  pointer-events: none !important;
-}
-
-.fs-field-label::before {
-  display: none !important;
 }
 
 /* ── Print / PDF ──────────────────────────────────────────────────────────── */

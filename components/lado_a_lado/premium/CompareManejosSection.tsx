@@ -10,6 +10,7 @@ import {
   isCustoJson,
   pickHeroPhoto,
 } from '@/components/lado_a_lado/ladoALadoHelpers';
+import { resolveReportPhotoSrc } from '@/lib/resolveReportPhotoSrc';
 import { formatNumber } from '@/utils/format';
 import { winnerFromJson } from './premiumInference';
 import PremiumSectionShell from './PremiumSectionShell';
@@ -166,6 +167,8 @@ function ManejoCard({
         ? 'Motor multifator'
         : null;
 
+  const photoSrc = resolveReportPhotoSrc(photo);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
@@ -198,9 +201,9 @@ function ManejoCard({
         </div>
       </div>
       <div className="p-4 flex flex-col flex-1 gap-4">
-        {photo?.url ? (
+        {photoSrc ? (
           <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100">
-            <img src={photo.url} alt={photo.caption || name} className="h-full w-full object-cover" />
+            <img src={photoSrc} alt={photo?.caption || name} className="h-full w-full object-cover" />
           </div>
         ) : (
           <div className="aspect-[4/3] rounded-xl bg-slate-100 flex items-center justify-center text-sm text-slate-400">

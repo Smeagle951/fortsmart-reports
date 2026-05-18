@@ -4,7 +4,15 @@ import { assinaturaImagemUrl } from '../assinaturaImagemUrl';
 import deck from '../visita-tecnica-deck.module.css';
 
 interface FotografiasEAutoriaVTProps {
-  imagens: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
+  imagens: Array<{
+    url?: string;
+    descricao?: string;
+    categoria?: string;
+    data?: string;
+    talhaoNome?: string;
+    latitude?: number;
+    longitude?: number;
+  }>;
   assinatura?: Record<string, unknown>;
   conclusao?: string;
   setLightboxIndex: (index: number | null) => void;
@@ -76,7 +84,17 @@ export default function FotografiasEAutoriaVT({ imagens, assinatura, conclusao, 
                     </button>
                     {img.descricao && <figcaption className={deck.photoCaption}>{img.descricao}</figcaption>}
                     {analysis ? <div className={deck.photoAnalysis}>{analysis}</div> : null}
-                    {img.data && <div className={deck.photoDate}>{img.data}</div>}
+                    {(img.talhaoNome || img.latitude != null || img.longitude != null) && (
+                      <div className={deck.photoDate} style={{ fontSize: 11, opacity: 0.85 }}>
+                        {[img.talhaoNome ? `Talhão: ${img.talhaoNome}` : null,
+                          img.latitude != null && img.longitude != null
+                            ? `${Number(img.latitude).toFixed(5)}, ${Number(img.longitude).toFixed(5)}`
+                            : null]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </div>
+                    )}
+                    {img.data && <div className={deck.photoDate}>Data: {img.data}</div>}
                   </figure>
                 );
               })}

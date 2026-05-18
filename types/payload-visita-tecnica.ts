@@ -51,15 +51,29 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
   visita_snapshot_anterior?: VisitaSnapshotCanonico;
   /** Score e variação oficiais (opcional); se ausente, o viewer deriva heurística. */
   conclusao_metricas?: ConclusaoMetricasVisita;
-  meta?: Record<string, unknown>;
+  meta?: Record<string, unknown> & {
+    dataVisita?: string;
+    dataHoraVisita?: string;
+    dataGeracao?: string;
+    sessaoId?: string;
+    workflowStatus?: string;
+    tecnicoSessao?: string;
+    statusGeralVisita?: string;
+    semanaAno?: string;
+  };
   propriedade?: Record<string, unknown>;
   talhoes?: Record<string, unknown>[];
   contextoSafra?: Record<string, unknown>;
   populacao?: Record<string, unknown>;
   fazenda?: string;
   safra?: string;
+  /** yyyy-MM-dd — data da visita (sessão), quando disponível */
   data?: string;
+  dataVisita?: string;
+  dataHoraVisita?: string;
   tecnico?: string;
+  observacoesGeraisVisita?: string;
+  condicoesClimaticasVisita?: string;
   aplicacoes?: Array<{
     tipo?: string;
     data?: string;
@@ -112,7 +126,15 @@ export type PayloadVisitaTecnica = Record<string, unknown> & {
   condicoes?: Record<string, unknown>;
   fenologia?: Record<string, unknown>;
   mapa?: Record<string, unknown>;
-  imagens?: Array<{ url?: string; descricao?: string; categoria?: string; data?: string }>;
+  imagens?: Array<{
+    url?: string;
+    descricao?: string;
+    categoria?: string;
+    data?: string;
+    talhaoNome?: string;
+    latitude?: number;
+    longitude?: number;
+  }>;
   /** nome, crea, cidade, dataAssinatura, e opcionalmente URL da imagem (url, urlAssinatura, imagemUrl, etc.) */
   assinaturaTecnica?: Record<string, unknown>;
   consultoria?: { nome?: string };
