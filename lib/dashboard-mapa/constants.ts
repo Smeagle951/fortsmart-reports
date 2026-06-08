@@ -13,6 +13,7 @@
  * Manter esta distinção evita assumir R2/Storage “genérico” onde a verdade é sempre o payload do relatório (SQL).
  */
 import type { MapEventPinKind } from './types';
+import type { MonitorEventSeverity } from './types';
 
 /** Paleta centralizada — dashboard GIS + legenda de eventos */
 export const COLORS = {
@@ -32,6 +33,20 @@ export const COLORS = {
   fillExperimental: 'rgba(212, 175, 55, 0.4)',
   fillSubareaStroke: 'rgba(255, 255, 255, 0.95)',
   fillSubarea: 'rgba(255, 255, 255, 0.18)',
+} as const;
+
+/**
+ * Classes Tailwind para o badge de severidade.
+ * Mantém compat com payloads que podem enviar "normal".
+ */
+export const SEVERITY_BADGE_CLASS: Record<
+  MonitorEventSeverity | 'normal',
+  string
+> = {
+  alto: 'bg-red-100 text-red-800 ring-1 ring-red-200',
+  medio: 'bg-amber-100 text-amber-900 ring-1 ring-amber-200',
+  baixo: 'bg-sky-100 text-sky-900 ring-1 ring-sky-200',
+  normal: 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200',
 } as const;
 
 export const TILE_DEFAULTS = {

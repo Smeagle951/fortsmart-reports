@@ -10,7 +10,7 @@ export type DashboardNavId =
   | 'clima'
   | 'config';
 
-export type MonitorEventSeverity = 'alto' | 'medio' | 'baixo';
+export type MonitorEventSeverity = 'alto' | 'medio' | 'baixo' | 'normal';
 
 export type MonitorEventType = 'praga' | 'doenca' | 'normal';
 
@@ -32,6 +32,22 @@ export type DashboardMonitorEvent = {
   imageUrl: string;
   /** Atributos agronómicos exibidos no painel */
   specs: { label: string; value: string }[];
+};
+
+export type DashboardTimelineEvent = {
+  id: string;
+  /** Quando vem de monitoramento, referencia o evento original */
+  sourceEventId?: string;
+  type: 'monitoramento' | 'plantio' | 'foto';
+  dateIso: string;
+  talhaoLabel: string;
+  areaLabel?: string;
+  title: string;
+  description: string;
+  severity?: MonitorEventSeverity;
+  /** label curto em caps (ex.: ALTO/MÉDIO/BAIXO/NORMAL, PLANTIO, FOTO) */
+  status?: string;
+  imageUrl?: string;
 };
 
 export type PropertyAlert = {

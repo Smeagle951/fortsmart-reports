@@ -31,11 +31,11 @@ function daysAgo(dateIso: string): string {
   return `há ${diff} dias`;
 }
 
-function severityLabel(s: DashboardMonitorEvent['severity']): string {
+function severityLabel(s: DashboardMonitorEvent['severity'] | 'normal' | null | undefined): string {
   if (s === 'alto') return 'ALTO';
   if (s === 'medio') return 'MÉDIO';
-  if (s === 'normal') return 'NORMAL';
-  return 'BAIXO';
+  if (s === 'baixo') return 'BAIXO';
+  return 'NORMAL';
 }
 
 function featureStats(fc: FeatureCollection | null | undefined) {

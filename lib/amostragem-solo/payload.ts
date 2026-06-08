@@ -5,7 +5,11 @@ export type AmostragemSoloPayload = {
   schemaVersion?: number;
   meta?: Record<string, unknown>;
   talhoes?: Array<{ id?: string; nome?: string }>;
+  sample_points?: AmostragemSamplePoint[];
   observacoes?: AmostragemObservacao[];
+  soil_ndvi_layers?: SoilNdviLayerPayload[];
+  /** Alertas de diagnóstico rápido de campo (mobile, offline). */
+  soil_field_alerts?: SoilFieldAlertPayload[];
   geojson?: FeatureCollection;
   talhoes_geojson?: FeatureCollection;
   rota_geojson?: FeatureCollection;
@@ -14,6 +18,93 @@ export type AmostragemSoloPayload = {
     isolines?: boolean;
     isolines_geojson?: FeatureCollection;
   };
+};
+
+export type AmostragemSamplePoint = {
+  id?: number;
+  campaign_id?: number;
+  lat?: number;
+  lng?: number;
+  ndvi_layer_id?: string | null;
+  ndvi_value?: number | null;
+  ndvi_class?: string | null;
+  ndvi_image_date?: string | null;
+};
+
+export type SoilFieldAlertPayload = {
+  id: string;
+  farm_id: string;
+  plot_id: string;
+  campaign_id: string;
+  ndvi_layer_id?: string | null;
+  latitude: number;
+  longitude: number;
+  ndvi_value?: number | null;
+  ndvi_class?: string | null;
+  alert_level: 'red' | 'orange' | string;
+  area_ha?: number | null;
+  image_date?: string | null;
+  evidences?: FieldAlertEvidencePayload[];
+  hypotheses?: FieldAlertHypothesisPayload[];
+  main_hypothesis?: FieldAlertHypothesisPayload | null;
+  recommended_actions?: string[];
+  created_at?: string | null;
+  updated_at?: string | null;
+  synced?: boolean | number;
+};
+
+export type FieldAlertEvidencePayload = {
+  id: string;
+  type: string;
+  label: string;
+  description?: string | null;
+  severity?: string;
+  confidence?: number;
+  source_module?: string | null;
+  distance_meters?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  created_at?: string | null;
+  raw_data?: Record<string, unknown> | null;
+};
+
+export type FieldAlertHypothesisPayload = {
+  id: string;
+  title: string;
+  description?: string | null;
+  category?: string;
+  confidence?: string;
+  confidence_score?: number;
+  evidence_ids?: string[];
+  recommended_actions?: string[];
+  disclaimer?: string;
+};
+
+export type SoilNdviLayerPayload = {
+  id: string;
+  farm_id: string;
+  plot_id: string;
+  campaign_id?: string | null;
+  source: string;
+  image_date: string;
+  cloud_coverage?: number | null;
+  resolution_m?: number | null;
+  ndvi_mean?: number | null;
+  ndvi_min?: number | null;
+  ndvi_max?: number | null;
+  very_low_percent?: number | null;
+  low_percent?: number | null;
+  medium_percent?: number | null;
+  high_percent?: number | null;
+  preview_url?: string | null;
+  tile_url?: string | null;
+  raster_url?: string | null;
+  local_preview_path?: string | null;
+  local_tile_path?: string | null;
+  is_active?: boolean | number;
+  created_at?: string | null;
+  updated_at?: string | null;
+  synced?: boolean | number;
 };
 
 /** Leitura de penetrômetro serializada pelo app (Flutter). */
@@ -59,6 +150,10 @@ export type AmostragemObservacao = {
   bulk_density?: number | null;
   depth_top_cm?: number | null;
   depth_bottom_cm?: number | null;
+  ndvi_layer_id?: string | null;
+  ndvi_value?: number | null;
+  ndvi_class?: string | null;
+  ndvi_image_date?: string | null;
   leituras?: AmostragemLeitura[];
 };
 
@@ -95,6 +190,10 @@ export function getFeatureCollection(payload: AmostragemSoloPayload): FeatureCol
         ...(o.sample_code != null && o.sample_code !== '' ? { sample_code: o.sample_code } : {}),
         ...(o.moisture_percent != null ? { moisture_percent: o.moisture_percent } : {}),
         ...(o.bulk_density != null ? { bulk_density: o.bulk_density } : {}),
+        ...(o.ndvi_layer_id != null && o.ndvi_layer_id !== '' ? { ndvi_layer_id: o.ndvi_layer_id } : {}),
+        ...(o.ndvi_value != null ? { ndvi_value: o.ndvi_value } : {}),
+        ...(o.ndvi_class != null && o.ndvi_class !== '' ? { ndvi_class: o.ndvi_class } : {}),
+        ...(o.ndvi_image_date != null && o.ndvi_image_date !== '' ? { ndvi_image_date: o.ndvi_image_date } : {}),
       },
     });
   }

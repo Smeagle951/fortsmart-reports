@@ -38,7 +38,7 @@ export function buildOperationalTimeline(params: {
     talhaoLabel: event.talhaoLabel,
     areaLabel: event.areaLabel,
     title: event.title,
-    description: event.shortDescription || event.observation || 'Monitoramento registrado no relatório.',
+    description: event.observation || 'Monitoramento registrado no relatório.',
     severity: event.severity,
     status: eventStatus(event.severity),
     imageUrl: event.imageUrl,
