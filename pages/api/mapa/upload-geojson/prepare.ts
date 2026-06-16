@@ -2,8 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 import {
   prepareR2GeoJsonUpload,
-  isR2ConfiguredAsync,
-  generateMapObjectId,
+  r2ConfigurationGapsAsync,
 } from '@/lib/cloudflare/r2-geojson-upload';
 
 function publicOriginFromReq(req: NextApiRequest): string {
@@ -38,33 +37,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const base = publicOriginFromReq(req).replace(/\/$/, '');
-  if (!(await isR2ConfiguredAsync())) {
-    const mapId = generateMapObjectId();
-    const fallbackFileUrl = `${base}/api/mapa/upload-geojson/put/${encodeURIComponent(mapId)}`;
-    const fileParam = encodeURIComponent(fallbackFileUrl);
-    return res.status(200).json({
-      success: true,
-      ok: true,
-      requires_complete: false,
-      storage_backend: 'supabase_share_fallback',
-      map_id: mapId,
-      bucket: 'mapa_talhoes_shares',
-      storage_path: mapId,
-      upload_url: fallbackFileUrl,
-      public_url: fallbackFileUrl,
-      expires_in_seconds: 3600,
-      url_partial: `/mapa-talhoes?file=${fileParam}`,
-      url: `${base}/mapa-talhoes?file=${fileParam}`,
-    });
-  }
-
   const r2 = await prepareR2GeoJsonUpload();
   if (!r2.ok) {
+    const missing = r2.code === 'r2_unconfigured' ? await r2ConfigurationGapsAsync() : [];
     return res.status(503).json({
       ok: false,
       success: false,
       code: r2.code,
       error: r2.message,
+      missing_env: missing,
     });
   }
   const fileParam = encodeURIComponent(r2.publicUrl);

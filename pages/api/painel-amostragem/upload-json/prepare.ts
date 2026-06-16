@@ -1,9 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { randomBytes } from 'crypto';
 
 import {
   prepareR2JsonUploadForSoilPanel,
-  isR2ConfiguredAsync,
+  r2ConfigurationGapsAsync,
 } from '@/lib/cloudflare/r2-geojson-upload';
 
 function publicOriginFromReq(req: NextApiRequest): string {
@@ -31,33 +30,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const base = publicOriginFromReq(req).replace(/\/$/, '');
-  if (!(await isR2ConfiguredAsync())) {
-    const mapId = `amostragem_${new Date().getFullYear()}_${randomBytes(5).toString('hex')}`;
-    const fallbackFileUrl = `${base}/api/painel-amostragem/upload-json/put/${encodeURIComponent(mapId)}`;
-    const fileParam = encodeURIComponent(fallbackFileUrl);
-    return res.status(200).json({
-      ok: true,
-      success: true,
-      requires_complete: false,
-      storage_backend: 'supabase_share_fallback',
-      map_id: mapId,
-      bucket: 'mapa_talhoes_shares',
-      storage_path: mapId,
-      upload_url: fallbackFileUrl,
-      public_url: fallbackFileUrl,
-      expires_in_seconds: 3600,
-      url_partial: `/painel-amostragem?file=${fileParam}`,
-      url: `${base}/painel-amostragem?file=${fileParam}`,
-    });
-  }
-
   const prepared = await prepareR2JsonUploadForSoilPanel();
   if (!prepared.ok) {
+    const missing = prepared.code === 'r2_unconfigured' ? await r2ConfigurationGapsAsync() : [];
     return res.status(503).json({
       ok: false,
       success: false,
       code: prepared.code,
       error: prepared.message,
+      missing_env: missing,
     });
   }
 
