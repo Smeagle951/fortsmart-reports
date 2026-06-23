@@ -11,17 +11,17 @@ export const FORTSMART_SUPABASE_ANON_KEY_DEFAULT =
 
 export function resolveFortsmartSupabaseUrl(): string {
   return (
+    process.env.URL_SUPABASE?.trim() ||
     process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
     process.env.SUPABASE_URL?.trim() ||
-    process.env.URL_SUPABASE?.trim() ||
     FORTSMART_SUPABASE_URL_DEFAULT
   );
 }
 
 export function resolveFortsmartSupabaseAnonKey(): string {
   return (
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
     process.env.SUPABASE_ANON_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
     FORTSMART_SUPABASE_ANON_KEY_DEFAULT
   );
 }

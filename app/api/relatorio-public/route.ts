@@ -3,6 +3,8 @@ import { getRelatorioByTokenHybrid, getRelatorioReadCutoverSnapshot } from '@/li
 import { resolveFortsmartApiBase } from '@/lib/fortsmart-api-base';
 import {
   hasFortsmartSupabaseConfig,
+  resolveFortsmartSupabaseAnonKey,
+  resolveFortsmartSupabaseServiceRoleKey,
   resolveFortsmartSupabaseUrl,
 } from '@/lib/fortsmart-supabase-defaults';
 
@@ -117,9 +119,9 @@ export async function GET(request: NextRequest) {
   });
 
   const env = {
-    hasSupabaseUrl,
-    hasServiceKey,
-    hasAnonKey,
+    hasSupabaseUrl: !!resolveFortsmartSupabaseUrl(),
+    hasServiceKey: !!resolveFortsmartSupabaseServiceRoleKey(),
+    hasAnonKey: !!resolveFortsmartSupabaseAnonKey(),
     hasApiBase: !!process.env.FORTSMART_API_URL?.trim(),
     fortsmart_api_base_resolvida: apiBasePreview,
     projectRef,

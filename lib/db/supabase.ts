@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import {
   resolveFortsmartSupabaseAnonKey,
   resolveFortsmartSupabaseUrl,
-} from './fortsmart-supabase-defaults';
+} from '../fortsmart-supabase-defaults';
 
 /**
  * Cliente Supabase anon (browser ou server).
