@@ -9,12 +9,28 @@ export const FORTSMART_SUPABASE_URL_DEFAULT =
 export const FORTSMART_SUPABASE_ANON_KEY_DEFAULT =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudWpib2VzZXd6aWt3eXBpZGphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NTM4NjcsImV4cCI6MjA4NzAyOTg2N30.fR2dlKaDUCYZfxQWLH2FNk1gQx-Cn_rwqCu0biYNM98';
 
+/** Projeto legado (app principal) — não usar para relatórios web. */
+const LEGACY_SUPABASE_PROJECT_REF = 'ywkhjrpdoouxnqdmfddc';
+
+function isLegacySupabaseUrl(url: string): boolean {
+  return url.includes(LEGACY_SUPABASE_PROJECT_REF);
+}
+
+function pickFirstValidUrl(...candidates: Array<string | undefined>): string {
+  for (const raw of candidates) {
+    const url = raw?.trim();
+    if (!url) continue;
+    if (isLegacySupabaseUrl(url)) continue;
+    return url;
+  }
+  return FORTSMART_SUPABASE_URL_DEFAULT;
+}
+
 export function resolveFortsmartSupabaseUrl(): string {
-  return (
-    process.env.URL_SUPABASE?.trim() ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
-    process.env.SUPABASE_URL?.trim() ||
-    FORTSMART_SUPABASE_URL_DEFAULT
+  return pickFirstValidUrl(
+    process.env.URL_SUPABASE,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_URL,
   );
 }
 
