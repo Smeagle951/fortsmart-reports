@@ -395,7 +395,9 @@ export async function getRelatorioByTokenHybrid(token: string): Promise<GetRelat
     };
   }
 
-  const postgresFirst = process.env.FORTSMART_RELATORIO_POSTGRES_FIRST !== '0';
+  // Padrão: Supabase primeiro (app grava em relatorios). Postgres via API só se =1.
+  // api.fortsmart-agro.com.br (cloud-api) não expõe GET /relatorios/:token.
+  const postgresFirst = process.env.FORTSMART_RELATORIO_POSTGRES_FIRST === '1';
   let postgresHttpStatus: number | null = null;
   let postgresError: string | undefined;
   let postgresFailureClass: PostgresFailureClass | undefined;

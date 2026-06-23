@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRelatorioByTokenHybrid, getRelatorioReadCutoverSnapshot } from '@/lib/get-relatorio-by-token-hybrid';
 import { resolveFortsmartApiBase } from '@/lib/fortsmart-api-base';
+import {
+  hasFortsmartSupabaseConfig,
+  resolveFortsmartSupabaseUrl,
+} from '@/lib/fortsmart-supabase-defaults';
 
 /** Causas possíveis do 404 (em ordem de prioridade) */
 export type Causa404 =
@@ -95,17 +99,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const hasSupabaseUrl = !!(
-    process.env.SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.URL_SUPABASE
-  );
-  const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const configOk = hasSupabaseUrl && (hasServiceKey || hasAnonKey);
+  const configOk = hasFortsmartSupabaseConfig();
   const apiBasePreview = resolveFortsmartApiBase();
 
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.URL_SUPABASE || '';
+  const supabaseUrl = resolveFortsmartSupabaseUrl();
   const projectRef = supabaseUrl.includes('supabase.co')
     ? supabaseUrl.replace(/https?:\/\/([^.]+)\.supabase\.co.*/, '$1')
     : '(não configurado)';

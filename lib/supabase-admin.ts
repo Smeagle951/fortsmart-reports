@@ -7,14 +7,14 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import {
+  resolveFortsmartSupabaseServiceRoleKey,
+  resolveFortsmartSupabaseUrl,
+} from './fortsmart-supabase-defaults';
 
 export function getSupabaseAdmin(): SupabaseClient | null {
-  const supabaseUrl =
-    process.env.SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.URL_SUPABASE ||
-    '';
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const supabaseUrl = resolveFortsmartSupabaseUrl();
+  const serviceRoleKey = resolveFortsmartSupabaseServiceRoleKey();
   if (!supabaseUrl || !serviceRoleKey) {
     console.warn('[fortsmart-reports] getSupabaseAdmin: SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurado.');
     return null;

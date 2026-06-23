@@ -1,25 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
+import {
+  resolveFortsmartSupabaseAnonKey,
+  resolveFortsmartSupabaseServiceRoleKey,
+  resolveFortsmartSupabaseUrl,
+} from './fortsmart-supabase-defaults';
 
 /** Cliente anon (browser ou server). Sem singleton para funcionar corretamente em serverless. */
 export function getSupabase() {
-  const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.SUPABASE_URL ||
-    process.env.URL_SUPABASE ||
-    '';
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const url = resolveFortsmartSupabaseUrl();
+  const key = resolveFortsmartSupabaseAnonKey();
   if (!url || !key) return null;
   return createClient(url, key);
 }
 
 /** Cliente service_role (só no server). Sem singleton para funcionar corretamente em serverless. */
 export function getSupabaseService() {
-  const url =
-    process.env.SUPABASE_URL ||
-    process.env.URL_SUPABASE ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    '';
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const url = resolveFortsmartSupabaseUrl();
+  const key = resolveFortsmartSupabaseServiceRoleKey();
   if (!url || !key) return null;
   return createClient(url, key, { auth: { persistSession: false } });
 }
