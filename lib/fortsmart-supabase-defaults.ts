@@ -34,20 +34,66 @@ export function resolveFortsmartSupabaseUrl(): string {
   );
 }
 
+function supabaseProjectRefFromUrl(url: string): string | null {
+  const m = url.match(/https?:\/\/([^.]+)\.supabase\.co/);
+  return m?.[1] ?? null;
+}
+
+function supabaseProjectRefFromJwt(key: string): string | null {
+  try {
+    const parts = key.split('.');
+    if (parts.length < 2) return null;
+    const payload = JSON.parse(
+      Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'),
+    ) as { ref?: string };
+    return payload.ref ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function jwtMatchesSupabaseUrl(key: string, url: string): boolean {
+  const urlRef = supabaseProjectRefFromUrl(url);
+  const keyRef = supabaseProjectRefFromJwt(key);
+  if (!urlRef || !keyRef) return true;
+  return urlRef === keyRef;
+}
+
+function pickFirstValidKey(url: string, ...candidates: Array<string | undefined>): string {
+  for (const raw of candidates) {
+    const key = raw?.trim();
+    if (!key) continue;
+    if (key.startsWith('sb_publishable_')) continue;
+    if (keyRefIsLegacy(key)) continue;
+    if (!jwtMatchesSupabaseUrl(key, url)) continue;
+    return key;
+  }
+  return '';
+}
+
+function keyRefIsLegacy(key: string): boolean {
+  const ref = supabaseProjectRefFromJwt(key);
+  return ref === LEGACY_SUPABASE_PROJECT_REF;
+}
+
 export function resolveFortsmartSupabaseAnonKey(): string {
+  const url = resolveFortsmartSupabaseUrl();
   return (
-    process.env.SUPABASE_ANON_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
-    FORTSMART_SUPABASE_ANON_KEY_DEFAULT
+    pickFirstValidKey(
+      url,
+      process.env.SUPABASE_ANON_KEY,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    ) || FORTSMART_SUPABASE_ANON_KEY_DEFAULT
   );
 }
 
 /** Service role: aceita nomes usados no painel Vercel/Supabase. */
 export function resolveFortsmartSupabaseServiceRoleKey(): string {
-  return (
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
-    process.env.SUPABASE_SECRET_KEY?.trim() ||
-    ''
+  const url = resolveFortsmartSupabaseUrl();
+  return pickFirstValidKey(
+    url,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    process.env.SUPABASE_SECRET_KEY,
   );
 }
 

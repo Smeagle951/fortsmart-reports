@@ -68,9 +68,10 @@ function finalizePublicRelatorioRow(data: unknown): RelatorioRow | null {
  * Só retorna se is_public != false e token não expirado.
  */
 export async function getRelatorioByShareToken(token: string): Promise<RelatorioRow | null> {
-  const serviceClient = getSupabaseService();
   const anonClient = getSupabase();
-  const client = serviceClient ?? anonClient;
+  const serviceClient = getSupabaseService();
+  // Leitura pública: anon + RLS (is_public). Service role só se for do mesmo projeto.
+  const client = anonClient ?? serviceClient;
   if (!client) {
     console.error('[fortsmart-reports] getRelatorioByShareToken: nenhum cliente Supabase. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel.');
     return null;
