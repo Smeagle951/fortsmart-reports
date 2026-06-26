@@ -20,6 +20,7 @@ import { calcularEstatisticaFromAvaliacoes } from '@/lib/research-pro/anova-tuke
 import { extractTalhaoChave, parseAiSnapshotFromRelatorio } from '@/lib/ai-intelligence-snapshot';
 import { buildAiTemporalViewerPayload } from '@/lib/inteligencia-temporal';
 import { fetchPreviousRelatorioForTemporal } from '@/lib/server/fetch-previous-relatorio-temporal';
+import { isProduction } from '@/lib/security/production-guard';
 
 // Disable Vercel's SSR cache so the latest Supabase data is always served
 export const dynamic = 'force-dynamic';
@@ -69,23 +70,23 @@ function sanitizeForRSC(obj: unknown): unknown {
 }
 
 function ErroServidor({ mensagem, stack }: { mensagem: string; stack?: string }) {
+  const showDetails = !isProduction();
   return (
     <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
-      <div style={{ textAlign: 'center', maxWidth: 640 }}>
+      <div style={{ textAlign: 'center', maxWidth: 480 }}>
         <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>Erro ao abrir o relatório</h1>
-        <p style={{ color: '#6b7280', marginBottom: 16 }}>Ocorreu um erro no servidor ao carregar este relatório.</p>
-        {mensagem && (
+        <p style={{ color: '#6b7280', marginBottom: 16 }}>
+          Não foi possível carregar este relatório. Verifique se o link está correto ou tente novamente mais tarde.
+        </p>
+        {showDetails && mensagem && (
           <details style={{ textAlign: 'left', marginTop: 16 }}>
-            <summary style={{ cursor: 'pointer', fontSize: 14, color: '#6b7280' }}>Detalhes do erro (para diagnóstico)</summary>
+            <summary style={{ cursor: 'pointer', fontSize: 14, color: '#6b7280' }}>Detalhes (somente desenvolvimento)</summary>
             <pre style={{ fontSize: 11, background: '#fef2f2', color: '#991b1b', padding: 12, marginTop: 8, borderRadius: 8, overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {mensagem}
               {stack ? `\n\n${stack}` : ''}
             </pre>
           </details>
         )}
-        <p style={{ fontSize: 13, color: '#6b7280', marginTop: 20 }}>
-          Confira na Vercel as variáveis <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> e <code>SUPABASE_SERVICE_ROLE_KEY</code>. Depois faça Redeploy.
-        </p>
       </div>
     </main>
   );
@@ -98,11 +99,13 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     const token = resolvedParams?.token ?? '';
     const sp = props.searchParams ? await props.searchParams : {};
 
-  const debug = sp?.debug === '1' || sp?.debug === 'true';
-  const debugPayload = sp?.debug === '2' || sp?.debug === 'payload';
+  const allowDebug = !isProduction();
+  const debug = allowDebug && (sp?.debug === '1' || sp?.debug === 'true');
+  const debugPayload = allowDebug && (sp?.debug === '2' || sp?.debug === 'payload');
   /** Logs no servidor: `?debug=vt-flow` ou env `FORTSMART_VT_DEBUG=1` */
   const vtFlowTrace =
-    sp?.debug === 'vt-flow' || sp?.debug === 'vtflow' || process.env.FORTSMART_VT_DEBUG === '1';
+    (allowDebug && (sp?.debug === 'vt-flow' || sp?.debug === 'vtflow')) ||
+    process.env.FORTSMART_VT_DEBUG === '1';
   console.log('[fortsmart-reports] /r/[token] token recebido:', token);
   if (debug) {
     return <div style={{ padding: 20, fontFamily: 'sans-serif' }}><h1>Token (roteamento OK)</h1><pre>{token}</pre></div>;

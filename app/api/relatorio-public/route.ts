@@ -7,6 +7,7 @@ import {
   resolveFortsmartSupabaseServiceRoleKey,
   resolveFortsmartSupabaseUrl,
 } from '@/lib/fortsmart-supabase-defaults';
+import { allowDiagnosticAccess } from '@/lib/security/production-guard';
 
 /** Causas possíveis do 404 (em ordem de prioridade) */
 export type Causa404 =
@@ -92,6 +93,10 @@ function buildDiagnostico(
  * Opcional: `&with_cutover=1` inclui snapshot in-process de `postgres_success_rate` e `cutover_ready_candidate` (métricas do runtime).
  */
 export async function GET(request: NextRequest) {
+  if (!allowDiagnosticAccess(request)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   const token = request.nextUrl.searchParams.get('token');
   const withCutover = request.nextUrl.searchParams.get('with_cutover') === '1';
   if (!token || token.length < 10) {

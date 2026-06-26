@@ -7,6 +7,10 @@
   ],
   "routes": [
     {
+      "src": "/(.*)\\.md",
+      "status": 404
+    },
+    {
       "src": "/painel-amostragem",
       "dest": "/painel-amostragem/index.html"
     },

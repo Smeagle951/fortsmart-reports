@@ -5,6 +5,16 @@ import './relatorio-enterprise.css';
 export const metadata: Metadata = {
   title: 'FortSmart – Relatórios',
   description: 'Portal de relatórios FortSmart — Informativo de Colheita',
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

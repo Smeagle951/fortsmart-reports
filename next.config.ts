@@ -34,6 +34,22 @@ const nextConfig: NextConfig = {
     '/api/**/*': ['./data/**/*'],
   },
 
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-Robots-Tag',
+            value: 'noindex, nofollow, noarchive, nosnippet, noimageindex',
+          },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+    ];
+  },
+
   // ✅ better-sqlite3 é uma dependência nativa Node.js — deve ser tratada
   // como externa para não ser empacotada pelo webpack (funciona em modo local).
   // Na Vercel (serverless) o banco não é acessível; o fallback mock é usado.

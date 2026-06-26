@@ -2,6 +2,8 @@
 
 import React from 'react';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 type Props = {
   children: React.ReactNode;
   fallbackTitle?: string;
@@ -29,21 +31,22 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
     return (
       <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
-        <div style={{ textAlign: 'center', maxWidth: 900 }}>
+        <div style={{ textAlign: 'center', maxWidth: 480 }}>
           <h1 style={{ fontSize: '1.5rem', marginBottom: 8 }}>
             {this.props.fallbackTitle ?? 'Erro ao renderizar a página'}
           </h1>
           <p style={{ color: '#6b7280' }}>
-            Ocorreu um erro ao montar o relatório no navegador. Para diagnosticar, abra o mesmo link com <code>?debug=payload</code>.
+            Ocorreu um erro ao exibir este relatório. Atualize a página ou tente novamente mais tarde.
           </p>
-          <pre style={{ textAlign: 'left', fontSize: 11, background: '#0b1020', color: '#d1d5db', padding: 12, marginTop: 16, borderRadius: 8, overflowX: 'auto' }}>
-            {error.message}
-            {'\n'}
-            {error.stack ?? ''}
-          </pre>
+          {!isProd && (
+            <pre style={{ textAlign: 'left', fontSize: 11, background: '#0b1020', color: '#d1d5db', padding: 12, marginTop: 16, borderRadius: 8, overflowX: 'auto' }}>
+              {error.message}
+              {'\n'}
+              {error.stack ?? ''}
+            </pre>
+          )}
         </div>
       </main>
     );
   }
 }
-
