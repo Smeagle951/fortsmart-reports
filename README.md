@@ -59,8 +59,8 @@ fortsmart-reports/
 
    ```
    NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-   SUPABASE_SERVICE_ROLE_KEY=eyJ...   # Para API privada /relatorio/[id]
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=REPLACE_WITH_SUPABASE_ANON_KEY
+   SUPABASE_SERVICE_ROLE_KEY=REPLACE_WITH_SERVER_ONLY_SERVICE_ROLE_KEY   # Para API privada /relatorio/[id]
    ```
 
 4. **Supabase — tabela e RLS:** execute no **SQL Editor** do projeto:
