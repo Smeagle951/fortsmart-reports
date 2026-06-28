@@ -2360,4 +2360,20 @@ body {
   #relatorio-lado-a-lado-content {
     background: white;
   }
+
+  /* Relatório Visita Técnica Enterprise */
+  #technical-visit-enterprise-report {
+    background: white;
+    max-width: 100%;
+    padding: 12px;
+  }
+
+  #technical-visit-enterprise-report section {
+    page-break-inside: avoid;
+    box-shadow: none;
+  }
+
+  #technical-visit-enterprise-report table {
+    page-break-inside: avoid;
+  }
 }

@@ -82,6 +82,12 @@ export type TechnicalVisitTimelineItem = {
   detail?: string;
 };
 
+export type TechnicalVisitDecisionChip = {
+  label: string;
+  value: string;
+  tone: 'neutral' | 'success' | 'info' | 'warning' | 'danger';
+};
+
 export type TechnicalVisitReport = {
   id?: string;
   reportKey?: string;
@@ -101,6 +107,8 @@ export type TechnicalVisitReport = {
   state?: string;
   ownerName?: string;
   areaHa?: string;
+  phenologicalStage?: string;
+  areaCondition?: string;
   heroImage?: string;
   polygon?: [number, number][];
   points: TechnicalVisitGeoPoint[];
@@ -112,6 +120,9 @@ export type TechnicalVisitReport = {
   farmFields: TechnicalVisitField[];
   visitFields: TechnicalVisitField[];
   fieldConditionFields: TechnicalVisitField[];
+  identificationRows: TechnicalVisitField[];
+  operationRows: TechnicalVisitField[];
+  decisionPanel: TechnicalVisitDecisionChip[];
   kpis: TechnicalVisitKpi[];
   conclusion?: string;
   diagnosis?: {

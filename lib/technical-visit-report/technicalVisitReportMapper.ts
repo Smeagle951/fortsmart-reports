@@ -1,6 +1,12 @@
 import type { PayloadVisitaTecnica, VisitaSnapshotPontoGeo } from '@/types/payload-visita-tecnica';
+import {
+  buildPreventiveActionPlan,
+  buildRecommendationsFallback,
+  normalizeAgronomicAssessment,
+} from './technicalVisitReportNarratives';
 import type {
   TechnicalVisitAction,
+  TechnicalVisitDecisionChip,
   TechnicalVisitField,
   TechnicalVisitGeoPoint,
   TechnicalVisitKpi,
@@ -273,24 +279,66 @@ function resolveActions(dto: PayloadVisitaTecnica): TechnicalVisitAction[] {
   return actions.filter((action) => action.action !== EMPTY);
 }
 
-function resolveTimeline(dto: PayloadVisitaTecnica, points: TechnicalVisitGeoPoint[], photos: TechnicalVisitPhoto[], occurrences: TechnicalVisitOccurrence[]): TechnicalVisitTimelineItem[] {
+function resolveTimeline(dto: PayloadVisitaTecnica, points: TechnicalVisitGeoPoint[], photos: TechnicalVisitPhoto[], occurrences: TechnicalVisitOccurrence[], recommendations: TechnicalVisitRecommendation[]): TechnicalVisitTimelineItem[] {
   const meta = asRecord(dto.meta);
   const snapshot = asRecord(dto.visita_snapshot ?? dto.visita);
   const items: TechnicalVisitTimelineItem[] = [];
   const visitDate = firstText(dto.dataVisita, dto.data, meta.dataVisita, snapshot.data);
-  const generated = firstText(meta.dataGeracao);
-  if (visitDate) items.push({ label: 'Visita técnica', date: visitDate, detail: firstText(meta.workflowStatus, dto.status) });
+  const generated = firstText(meta.dataGeracao, meta.createdAt);
+  const created = firstText(meta.createdAt, generated);
+
+  if (created) items.push({ label: 'Visita criada', date: created });
+  if (visitDate) items.push({ label: 'Visita realizada', date: visitDate, detail: firstText(meta.workflowStatus, dto.status) });
+  if (occurrences.length > 0 && visitDate) {
+    items.push({ label: 'Ocorrências registradas', date: visitDate, detail: `${occurrences.length} ocorrência(s)` });
+  }
+  if (recommendations.length > 0) {
+    items.push({
+      label: 'Recomendações geradas',
+      date: visitDate ?? generated ?? created ?? '',
+      detail: `${recommendations.length} recomendação(ões)`,
+    });
+  }
   if (points.length > 0) {
     const firstPointDate = firstText(points.map((p) => p.date).find(Boolean), visitDate);
     if (firstPointDate) items.push({ label: 'Pontos georreferenciados', date: firstPointDate, detail: `${points.length} ponto(s)` });
   }
-  if (occurrences.length > 0 && visitDate) items.push({ label: 'Ocorrências registradas', date: visitDate, detail: `${occurrences.length} ocorrência(s)` });
   if (photos.length > 0) {
     const firstPhotoDate = firstText(photos.map((p) => p.date).find(Boolean), visitDate);
     if (firstPhotoDate) items.push({ label: 'Fotos anexadas', date: firstPhotoDate, detail: `${photos.length} foto(s)` });
   }
   if (generated) items.push({ label: 'Relatório emitido', date: generated });
-  return items;
+  return items.filter((item) => item.date);
+}
+
+function buildDecisionPanel(
+  report: Pick<
+    TechnicalVisitReport,
+    'areaHa' | 'occurrences' | 'recommendations' | 'photos' | 'points' | 'technicianName'
+  >,
+  assessment: ReturnType<typeof normalizeAgronomicAssessment>,
+): TechnicalVisitDecisionChip[] {
+  const criticalCount = report.occurrences.filter((o) => o.severityTone === 'critical' || o.severityTone === 'high').length;
+  return [
+    { label: 'Status geral', value: assessment.generalStatus, tone: assessment.generalStatusTone },
+    { label: 'Risco', value: assessment.risk, tone: assessment.riskTone },
+    { label: 'Urgência', value: assessment.urgency, tone: assessment.urgencyTone },
+    { label: 'Área monitorada', value: report.areaHa ?? '—', tone: 'neutral' },
+    {
+      label: 'Ocorrências',
+      value: String(report.occurrences.length),
+      tone: criticalCount > 0 ? 'danger' : report.occurrences.length > 0 ? 'warning' : 'success',
+    },
+    {
+      label: 'Recomendações',
+      value: String(report.recommendations.length),
+      tone: report.recommendations.length > 0 ? 'info' : 'neutral',
+    },
+    { label: 'Fotos/evidências', value: String(report.photos.length), tone: report.photos.length > 0 ? 'info' : 'neutral' },
+    { label: 'Pontos georreferenciados', value: String(report.points.length), tone: report.points.length > 0 ? 'info' : 'neutral' },
+    { label: 'Principal fator observado', value: assessment.mainFactor, tone: assessment.hasAnyOccurrence ? 'warning' : 'success' },
+    { label: 'Próxima ação recomendada', value: assessment.nextAction, tone: 'info' },
+  ];
 }
 
 export function resolveFarmName(dto: PayloadVisitaTecnica): string {
@@ -332,9 +380,10 @@ export function normalizeTechnicalVisitReport(dto: PayloadVisitaTecnica, opts: {
   const mapa = asRecord(dto.mapa);
   const points = resolveGeoPoints(dto);
   const photos = resolvePhotos(dto, points);
+  const fenologia = asRecord(dto.fenologia);
   const occurrences = resolveOccurrences(dto, photos);
-  const recommendations = resolveRecommendations(dto, occurrences);
-  const actions = resolveActions(dto);
+  const rawRecommendations = resolveRecommendations(dto, occurrences);
+  const rawActions = resolveActions(dto);
   const visitDate = firstText(dto.dataVisita, dto.data, meta.dataVisita, asRecord(dto.visita_snapshot ?? dto.visita).data);
   const generatedAt = firstText(meta.dataGeracao);
   const technicianName = firstText(meta.tecnicoSessao, dto.tecnico, meta.tecnico, assinatura.nome);
@@ -345,13 +394,14 @@ export function normalizeTechnicalVisitReport(dto: PayloadVisitaTecnica, opts: {
   const seasonName = resolveSeasonName(dto);
   const areaHa = formatHa(firstText(talhao.area, contexto.area));
   const status = resolveVisitStatus(dto);
+  const phenologicalStage = firstText(fenologia.estadio, fenologia.estagio);
+  const areaCondition = firstText(condicoes.vigorCultura, condicoes.uniformidade, condicoes.situacao);
   const criticalCount = occurrences.filter((occ) => occ.severityTone === 'critical' || occ.severityTone === 'high').length;
-  const diagnosisRisk = firstText(diagnostico.nivelRisco, diagnostico.risco, diagnostico.urgenciaAcao);
 
-  return {
+  const draftReport: TechnicalVisitReport = {
     id: firstText(meta.sessaoId, asRecord(dto.visita_snapshot ?? dto.visita).visita_id),
     reportKey: firstText(opts.reportId, opts.relatorioUuid, meta.id, meta.relatorioId, meta.uuid),
-    title: 'Relatório de Visita Técnica',
+    title: 'Relatório de Visita Técnica Agronômica',
     farmName,
     plotName,
     cropName,
@@ -367,14 +417,73 @@ export function normalizeTechnicalVisitReport(dto: PayloadVisitaTecnica, opts: {
     state: firstText(prop.estado),
     ownerName: firstText(prop.proprietario),
     areaHa,
+    phenologicalStage,
+    areaCondition,
     heroImage: firstText(photos.find((photo) => photo.url)?.url, prop.fotoAreaPath),
+    polygon: resolvePolygon(mapa),
+    points,
+    photos,
+    occurrences,
+    recommendations: rawRecommendations,
+    actions: rawActions,
+    timeline: [],
+    farmFields: [],
+    visitFields: [],
+    fieldConditionFields: [],
+    identificationRows: [],
+    operationRows: [],
+    decisionPanel: [],
+    kpis: [],
+    conclusion: firstText(dto.conclusao, diagnostico.conclusaoProdutor),
+    diagnosis: {
+      mainProblem: firstText(diagnostico.problemaPrincipal),
+      probableCause: firstText(diagnostico.causaProvavel),
+      risk: firstText(diagnostico.nivelRisco),
+      urgency: firstText(diagnostico.urgenciaAcao),
+      observations: firstText(diagnostico.observacoes, diagnostico.observacoesTecnicas),
+    },
+    rawDebugIds: {
+      farmId: firstText(prop.fazendaId, prop.farm_id),
+      plotId: firstText(talhao.id, talhao.talhaoId),
+      seasonId: firstText(contexto.safraId, meta.safraId),
+      cropId: firstText(contexto.culturaId, talhao.culturaId),
+    },
+  };
+
+  const assessment = normalizeAgronomicAssessment(draftReport);
+  const recommendations = buildRecommendationsFallback({ ...draftReport, recommendations: rawRecommendations });
+  const actions = buildPreventiveActionPlan({ ...draftReport, actions: rawActions });
+  const diagnosisRisk = assessment.risk;
+
+  return {
+    id: firstText(meta.sessaoId, asRecord(dto.visita_snapshot ?? dto.visita).visita_id),
+    reportKey: firstText(opts.reportId, opts.relatorioUuid, meta.id, meta.relatorioId, meta.uuid),
+    title: 'Relatório de Visita Técnica Agronômica',
+    farmName,
+    plotName,
+    cropName,
+    seasonName,
+    visitDate,
+    generatedAt,
+    technicianName,
+    technicianCrea,
+    status,
+    visitType: draftReport.visitType,
+    objective: draftReport.objective,
+    city: draftReport.city,
+    state: draftReport.state,
+    ownerName: draftReport.ownerName,
+    areaHa,
+    phenologicalStage,
+    areaCondition,
+    heroImage: draftReport.heroImage,
     polygon: resolvePolygon(mapa),
     points,
     photos,
     occurrences,
     recommendations,
     actions,
-    timeline: resolveTimeline(dto, points, photos, occurrences),
+    timeline: resolveTimeline(dto, points, photos, occurrences, rawRecommendations),
     farmFields: compactFields([
       field('Fazenda', farmName, true),
       field('Produtor', prop.proprietario),
@@ -396,30 +505,53 @@ export function normalizeTechnicalVisitReport(dto: PayloadVisitaTecnica, opts: {
       field('Status', status),
     ]),
     fieldConditionFields: compactFields([
-      field('Condição climática', firstText(dto.condicoesClimaticasVisita, condicoes.condicoesClimaticas)),
+      field('Clima', firstText(dto.condicoesClimaticasVisita, condicoes.condicoesClimaticas)),
       field('Temperatura', condicoes.temperatura != null ? `${condicoes.temperatura} °C` : undefined),
-      field('Umidade', condicoes.umidade != null ? `${condicoes.umidade}%` : undefined),
+      field('Umidade do ar', condicoes.umidade != null ? `${condicoes.umidade}%` : undefined),
+      field('Estádio fenológico', phenologicalStage),
+      field('Condição da área', areaCondition),
       field('Vento', condicoes.vento),
-      field('Nebulosidade', condicoes.nebulosidade),
       field('Umidade do solo', condicoes.soloUmidade),
-      field('Cobertura', condicoes.cobertura),
-      field('Observações', firstText(condicoes.observacoes, dto.observacoesGeraisVisita)),
+      field('Observações de campo', firstText(condicoes.observacoes, dto.observacoesGeraisVisita)),
     ]),
+    identificationRows: compactFields([
+      field('Fazenda', farmName, true),
+      field('Produtor', prop.proprietario),
+      field('Município', prop.municipio),
+      field('Estado', prop.estado),
+      field('Talhão', plotName, true),
+      field('Área', areaHa),
+      field('Cultura', cropName),
+      field('Safra', seasonName),
+    ]),
+    operationRows: compactFields([
+      field('Data da visita', formatVisitDate(visitDate), true),
+      field('Responsável', technicianName, true),
+      field('CREA', technicianCrea),
+      field('Status', status),
+      field('Tipo', firstText((dto as AnyRecord).tipoVisita, meta.tipoVisita)),
+      field('Objetivo', firstText((dto as AnyRecord).objetivoVisita, asRecord(dto.planoAcao).objetivoManejo)),
+    ]),
+    decisionPanel: buildDecisionPanel(
+      { areaHa, occurrences, recommendations: rawRecommendations, photos, points, technicianName },
+      assessment,
+    ),
     kpis: [
-      kpi('Status da visita', status, undefined, status?.toLowerCase().includes('concl') ? 'success' : 'neutral'),
-      kpi('Estádio fenológico', firstText(asRecord(dto.fenologia).estadio, asRecord(dto.fenologia).estagio), undefined, 'info'),
-      kpi('Ocorrências', occurrences.length > 0 ? String(occurrences.length) : undefined, criticalCount > 0 ? `${criticalCount} em atenção` : undefined, criticalCount > 0 ? 'warning' : 'neutral'),
-      kpi('Fotos', photos.length > 0 ? String(photos.length) : undefined, undefined, 'neutral'),
-      kpi('Pontos GPS', points.length > 0 ? String(points.length) : undefined, undefined, 'info'),
+      kpi('Status geral', assessment.generalStatus, undefined, assessment.generalStatusTone),
+      kpi('Estádio fenológico', phenologicalStage, undefined, 'info'),
+      kpi('Ocorrências', String(occurrences.length), criticalCount > 0 ? `${criticalCount} em atenção` : 'Sem críticas', criticalCount > 0 ? 'warning' : 'success'),
+      kpi('Fotos', String(photos.length), undefined, 'neutral'),
+      kpi('Pontos GPS', String(points.length), undefined, 'info'),
       kpi('Área monitorada', areaHa, undefined, 'neutral'),
-      kpi('Risco', diagnosisRisk, undefined, resolveSeverity(diagnosisRisk) === 'critical' || resolveSeverity(diagnosisRisk) === 'high' ? 'danger' : 'warning'),
+      kpi('Risco agronômico', diagnosisRisk, undefined, assessment.riskTone === 'danger' ? 'danger' : assessment.riskTone === 'warning' ? 'warning' : 'success'),
+      kpi('Urgência', assessment.urgency, undefined, assessment.urgencyTone === 'danger' ? 'danger' : 'info'),
     ].filter(Boolean) as TechnicalVisitKpi[],
-    conclusion: firstText(dto.conclusao, diagnostico.conclusaoProdutor),
+    conclusion: draftReport.conclusion,
     diagnosis: {
-      mainProblem: firstText(diagnostico.problemaPrincipal),
-      probableCause: firstText(diagnostico.causaProvavel),
-      risk: firstText(diagnostico.nivelRisco),
-      urgency: firstText(diagnostico.urgenciaAcao),
+      mainProblem: assessment.mainProblem,
+      probableCause: assessment.probableCause,
+      risk: assessment.risk,
+      urgency: assessment.urgency,
       observations: firstText(diagnostico.observacoes, diagnostico.observacoesTecnicas),
     },
     rawDebugIds: {
