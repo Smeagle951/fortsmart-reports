@@ -82,8 +82,8 @@ export async function r2ConfigurationGapsAsync(): Promise<string[]> {
   if (!(await readWorkerEnvString('R2_SECRET_ACCESS_KEY'))) {
     g.push('R2_SECRET_ACCESS_KEY');
   }
-  if (!(await readWorkerEnvString('R2_BUCKET_NAME', 'CLOUDFLARE_R2_BUCKET'))) {
-    g.push('R2_BUCKET_NAME ou CLOUDFLARE_R2_BUCKET');
+  if (!(await readWorkerEnvString('R2_BUCKET_NAME', 'CLOUDFLARE_R2_BUCKET', 'R2_BUCKET', 'FORTSMART_S3_BUCKET'))) {
+    g.push('R2_BUCKET_NAME, CLOUDFLARE_R2_BUCKET, R2_BUCKET ou FORTSMART_S3_BUCKET');
   }
   if (!(await readWorkerEnvString(...R2_PUBLIC_BASE_URL_KEYS))) {
     g.push('R2_PUBLIC_BASE_URL');
@@ -99,7 +99,7 @@ export async function resolveR2EnvAsync(): Promise<R2ResolvedEnv | null> {
   const accountId = await readWorkerEnvString('R2_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID');
   const accessKeyId = await readWorkerEnvString('R2_ACCESS_KEY_ID');
   const secretAccessKey = await readWorkerEnvString('R2_SECRET_ACCESS_KEY');
-  const bucketName = await readWorkerEnvString('R2_BUCKET_NAME', 'CLOUDFLARE_R2_BUCKET');
+  const bucketName = await readWorkerEnvString('R2_BUCKET_NAME', 'CLOUDFLARE_R2_BUCKET', 'R2_BUCKET', 'FORTSMART_S3_BUCKET');
   const publicBaseUrl = await readWorkerEnvString(...R2_PUBLIC_BASE_URL_KEYS);
   if (!accountId || !accessKeyId || !secretAccessKey || !bucketName || !publicBaseUrl) {
     return null;
