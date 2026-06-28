@@ -10,9 +10,12 @@ export type MapaTalhaoClientMountProps = {
     latitude: number;
     longitude: number;
     titulo?: string;
+    title?: string;
     descricao?: string;
+    description?: string;
     type?: string;
     severity?: string;
+    severityTone?: 'low' | 'medium' | 'high' | 'critical' | 'unknown';
     estagio?: string;
     data?: string;
     imageUrl?: string;
@@ -21,6 +24,8 @@ export type MapaTalhaoClientMountProps = {
   centro?: [number, number];
   zoom?: number;
   hideSectionTitle?: boolean;
+  mapVariant?: 'default' | 'operational';
+  plotLabel?: { name?: string; area?: string };
 };
 
 /**

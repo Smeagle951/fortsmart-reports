@@ -318,31 +318,59 @@ function TechnicalVisitHorizontalTimeline({ items }: { items: TechnicalVisitTime
 function TechnicalVisitMapSection({ report }: { report: TechnicalVisitReport }) {
   const hasMap = (report.polygon?.length ?? 0) >= 3 || report.points.length > 0;
   const legend = [
-    { color: 'bg-emerald-500', label: 'Limite do talhão' },
-    { color: 'bg-sky-500', label: 'Ponto monitorado' },
-    { color: 'bg-amber-400', label: 'Atenção' },
-    { color: 'bg-red-500', label: 'Crítico' },
-    { color: 'bg-slate-400', label: 'Sem ocorrência' },
+    { swatch: 'border-2 border-emerald-500 bg-emerald-500/20', label: 'Limite do talhão' },
+    { swatch: 'bg-sky-500', label: 'Ponto monitorado' },
+    { swatch: 'bg-amber-400', label: 'Atenção', shape: 'triangle' as const },
+    { swatch: 'bg-red-500', label: 'Crítico' },
+    { swatch: 'bg-slate-400', label: 'Sem ocorrência' },
   ];
+
+  const mapPoints = report.points.map((p) => ({
+    id: p.id,
+    latitude: p.latitude,
+    longitude: p.longitude,
+    title: p.title,
+    description: p.description,
+    type: p.type,
+    severity: p.severity,
+    severityTone: p.severityTone,
+    data: p.date,
+    imageUrl: p.imageUrl,
+    recommendation: p.recommendation,
+  }));
 
   return (
     <SectionShell id="mapa" eyebrow="GIS operacional" title="Mapa operacional da visita" icon={<MapPinned size={18} />} full>
-      <div className="mb-3 flex flex-wrap gap-3 text-xs font-semibold text-slate-600">
+      <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
         {report.plotName !== 'Não informado' && <span>Talhão: {report.plotName}</span>}
         {report.areaHa && <span>Área: {report.areaHa}</span>}
         {report.visitDate && <span>Data: {formatVisitDate(report.visitDate)}</span>}
+        <span>Pontos: {report.points.length}</span>
       </div>
       {hasMap ? (
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-          <MapaTalhaoClientMount polygon={report.polygon} pontos={report.points} hideSectionTitle />
+        <div className="vt-operational-map overflow-hidden rounded-lg border border-slate-200 bg-slate-900 shadow-inner">
+          <MapaTalhaoClientMount
+            polygon={report.polygon}
+            pontos={mapPoints}
+            hideSectionTitle
+            mapVariant="operational"
+            plotLabel={{
+              name: report.plotName !== 'Não informado' ? report.plotName : undefined,
+              area: report.areaHa,
+            }}
+          />
         </div>
       ) : (
         <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-600">{EMPTY_STATES.mapNoData}</p>
       )}
-      <div className="mt-3 flex flex-wrap gap-3">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 rounded-lg border border-slate-100 bg-white px-3 py-2.5">
         {legend.map((item) => (
           <span key={item.label} className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
-            <span className={`h-2.5 w-2.5 rounded-full ${item.color}`} />
+            {item.shape === 'triangle' ? (
+              <span className="inline-block h-0 w-0 border-x-[5px] border-b-[9px] border-x-transparent border-b-amber-400" />
+            ) : (
+              <span className={`h-2.5 w-2.5 rounded-full ${item.swatch.includes('border') ? item.swatch : item.swatch}`} />
+            )}
             {item.label}
           </span>
         ))}

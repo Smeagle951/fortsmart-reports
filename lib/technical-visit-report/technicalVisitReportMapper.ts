@@ -4,6 +4,7 @@ import {
   buildRecommendationsFallback,
   normalizeAgronomicAssessment,
 } from './technicalVisitReportNarratives';
+import { severityToneFromText } from './vtMapMarkers';
 import type {
   TechnicalVisitAction,
   TechnicalVisitDecisionChip,
@@ -130,34 +131,115 @@ function resolvePolygon(mapa: AnyRecord): [number, number][] | undefined {
   return points.length >= 3 ? points : undefined;
 }
 
-function pointFromRecord(record: AnyRecord, index: number): TechnicalVisitGeoPoint | undefined {
+function pointFromRecord(record: AnyRecord, index: number, source?: TechnicalVisitGeoPoint['source']): TechnicalVisitGeoPoint | undefined {
   const lat = numberValue(record.latitude ?? record.lat);
   const lng = numberValue(record.longitude ?? record.lng ?? record.lon);
   if (lat == null || lng == null || Math.abs(lat) > 90 || Math.abs(lng) > 180) return undefined;
+  const severity = firstText(record.severidade, record.risk_level, record.infestion_level, record.severity);
+  const tone = resolveSeverity(severity);
+  const severityTone =
+    tone === 'unknown' && source && ['mapa', 'snapshot', 'avaliacao'].includes(source) ? 'low' : tone;
   return {
     id: firstText(record.id, record.local_id, record.index) ?? `ponto-${index + 1}`,
     latitude: lat,
     longitude: lng,
-    title: firstText(record.titulo, record.title, record.point_code, record.descricao),
+    title: firstText(record.titulo, record.title, record.point_code, record.alvo, record.nome, record.descricao),
     description: firstText(record.descricao, record.observacoes, record.observation),
-    type: firstText(record.tipo, record.type, record.categoria),
-    severity: firstText(record.severidade, record.risk_level, record.infestion_level),
+    type: firstText(record.tipo, record.type, record.categoria, record.class_name),
+    severity,
+    severityTone,
     date: firstText(record.data, record.collected_at, record.created_at),
     imageUrl: firstText(record.imagem, record.url, record.cloud_url),
     recommendation: firstText(record.recomendacao, record.recommendation),
+    source,
   };
 }
 
-export function resolveGeoPoints(dto: PayloadVisitaTecnica): TechnicalVisitGeoPoint[] {
+function geoPointKey(point: TechnicalVisitGeoPoint): string {
+  return `${point.latitude.toFixed(5)}:${point.longitude.toFixed(5)}`;
+}
+
+function mergeGeoPoints(lists: TechnicalVisitGeoPoint[][]): TechnicalVisitGeoPoint[] {
+  const byKey = new Map<string, TechnicalVisitGeoPoint>();
+  const severityRank: Record<TechnicalVisitSeverity, number> = {
+    unknown: 0,
+    low: 1,
+    medium: 2,
+    high: 3,
+    critical: 4,
+  };
+
+  for (const list of lists) {
+    for (const point of list) {
+      const key = geoPointKey(point);
+      const existing = byKey.get(key);
+      if (!existing) {
+        byKey.set(key, point);
+        continue;
+      }
+      const existingRank = severityRank[existing.severityTone ?? 'unknown'];
+      const nextRank = severityRank[point.severityTone ?? 'unknown'];
+      if (nextRank > existingRank || (!existing.title && point.title)) {
+        byKey.set(key, { ...existing, ...point, id: point.id ?? existing.id });
+      }
+    }
+  }
+  return Array.from(byKey.values());
+}
+
+function pointsFromOccurrences(occurrences: TechnicalVisitOccurrence[]): TechnicalVisitGeoPoint[] {
+  return occurrences
+    .filter((occ) => occ.latitude != null && occ.longitude != null)
+    .map((occ, index) => ({
+      id: occ.id ?? `occ-${index + 1}`,
+      latitude: occ.latitude as number,
+      longitude: occ.longitude as number,
+      title: occ.name,
+      description: occ.observation,
+      type: occ.type,
+      severity: occ.severity,
+      severityTone: occ.severityTone,
+      recommendation: occ.recommendation,
+      source: 'ocorrencia' as const,
+    }));
+}
+
+function pointsFromPhotos(photos: TechnicalVisitPhoto[]): TechnicalVisitGeoPoint[] {
+  return photos
+    .filter((photo) => photo.latitude != null && photo.longitude != null)
+    .map((photo, index) => ({
+      id: `foto-${index + 1}`,
+      latitude: photo.latitude as number,
+      longitude: photo.longitude as number,
+      title: photo.occurrenceName ?? photo.description ?? 'Evidência fotográfica',
+      description: photo.description,
+      type: photo.category ?? 'foto',
+      severityTone: photo.occurrenceName ? severityToneFromText(photo.category) : 'low',
+      date: photo.date,
+      imageUrl: photo.url,
+      source: 'foto' as const,
+    }));
+}
+
+export function resolveGeoPoints(
+  dto: PayloadVisitaTecnica,
+  occurrences: TechnicalVisitOccurrence[] = [],
+  photos: TechnicalVisitPhoto[] = [],
+): TechnicalVisitGeoPoint[] {
   const mapa = asRecord(dto.mapa);
-  const fromMap = asArray(mapa.pontos).map(pointFromRecord).filter(Boolean) as TechnicalVisitGeoPoint[];
-  if (fromMap.length > 0) return fromMap;
+  const fromMap = asArray(mapa.pontos ?? mapa.marcadores).map((p, i) => pointFromRecord(asRecord(p), i, 'mapa')).filter(Boolean) as TechnicalVisitGeoPoint[];
 
   const snapshot = asRecord(dto.visita_snapshot ?? dto.visita);
   const snapPoints = Array.isArray(snapshot.pontos_georreferenciados)
     ? (snapshot.pontos_georreferenciados as VisitaSnapshotPontoGeo[])
     : [];
-  return snapPoints.map((p, i) => pointFromRecord(asRecord(p), i)).filter(Boolean) as TechnicalVisitGeoPoint[];
+  const fromSnapshot = snapPoints.map((p, i) => pointFromRecord(asRecord(p), i, 'snapshot')).filter(Boolean) as TechnicalVisitGeoPoint[];
+
+  const fromPragas = asArray(dto.pragas)
+    .map((p, i) => pointFromRecord(asRecord(p), i, 'avaliacao'))
+    .filter(Boolean) as TechnicalVisitGeoPoint[];
+
+  return mergeGeoPoints([fromMap, fromSnapshot, fromPragas, pointsFromOccurrences(occurrences), pointsFromPhotos(photos)]);
 }
 
 export function resolvePhotos(dto: PayloadVisitaTecnica, points: TechnicalVisitGeoPoint[]): TechnicalVisitPhoto[] {
@@ -378,10 +460,11 @@ export function normalizeTechnicalVisitReport(dto: PayloadVisitaTecnica, opts: {
   const diagnostico = asRecord(dto.diagnostico);
   const assinatura = asRecord(dto.assinaturaTecnica);
   const mapa = asRecord(dto.mapa);
-  const points = resolveGeoPoints(dto);
+  const photosDraft = resolvePhotos(dto, []);
+  const occurrences = resolveOccurrences(dto, photosDraft);
+  const points = resolveGeoPoints(dto, occurrences, photosDraft);
   const photos = resolvePhotos(dto, points);
   const fenologia = asRecord(dto.fenologia);
-  const occurrences = resolveOccurrences(dto, photos);
   const rawRecommendations = resolveRecommendations(dto, occurrences);
   const rawActions = resolveActions(dto);
   const visitDate = firstText(dto.dataVisita, dto.data, meta.dataVisita, asRecord(dto.visita_snapshot ?? dto.visita).data);

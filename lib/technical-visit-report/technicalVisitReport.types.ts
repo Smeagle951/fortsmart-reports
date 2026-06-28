@@ -20,9 +20,11 @@ export type TechnicalVisitGeoPoint = {
   description?: string;
   type?: string;
   severity?: string;
+  severityTone?: TechnicalVisitSeverity;
   date?: string;
   imageUrl?: string;
   recommendation?: string;
+  source?: 'mapa' | 'snapshot' | 'ocorrencia' | 'foto' | 'avaliacao';
 };
 
 export type TechnicalVisitPhoto = {
