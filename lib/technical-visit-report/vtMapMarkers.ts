@@ -1,5 +1,7 @@
-import L from 'leaflet';
 import type { TechnicalVisitSeverity } from './technicalVisitReport.types';
+
+/** Ícones Leaflet — só importar no cliente (`MapaTalhao`). Nunca importar este ficheiro no SSR/mapper. */
+import L from 'leaflet';
 
 const MARKER_COLORS: Record<TechnicalVisitSeverity, { bg: string; border: string; shape: 'circle' | 'triangle' | 'pin' }> = {
   critical: { bg: '#DC2626', border: '#ffffff', shape: 'pin' },
@@ -57,13 +59,4 @@ export function createPlotLabelIcon(name: string, area?: string): L.DivIcon {
     iconSize: [120, 48],
     iconAnchor: [60, 24],
   });
-}
-
-export function severityToneFromText(value?: string): TechnicalVisitSeverity {
-  const raw = (value ?? '').toLowerCase();
-  if (raw.includes('critic') || raw.includes('crític') || raw.includes('urgente')) return 'critical';
-  if (raw.includes('alta') || raw.includes('alto')) return 'high';
-  if (raw.includes('media') || raw.includes('média') || raw.includes('moder')) return 'medium';
-  if (raw.includes('baixa') || raw.includes('baixo') || raw.includes('ok') || raw.includes('normal')) return 'low';
-  return 'unknown';
 }

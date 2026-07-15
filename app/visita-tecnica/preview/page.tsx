@@ -1,30 +1,12 @@
-'use client';
+import VisitaTecnicaPreviewClient from './VisitaTecnicaPreviewClient';
 
-import { useMemo } from 'react';
-import RelatorioVisitaTecnicaContent from '@/components/RelatorioVisitaTecnicaContent';
-import { normalizeRelatorioVisitaTecnica } from '@/lib/normalize-relatorio-visita-tecnica';
-import type { PayloadVisitaTecnica } from '@/types/payload-visita-tecnica';
-import mockVisitaTecnica from '@/lib/data/mock-visita-tecnica.json';
+/** Evita pré-render estático: o relatório usa Leaflet (`window`) no cliente. */
+export const dynamic = 'force-dynamic';
 
 /**
- * Pré-visualização local do relatório web de visita técnica (dados fictícios).
- * Acesso em desenvolvimento: http://localhost:3000/visita-tecnica/preview
+ * Pré-visualização do relatório de visita técnica (dados mock).
+ * Acesso: /visita-tecnica/preview
  */
 export default function VisitaTecnicaPreviewPage() {
-  const relatorio = useMemo(
-    () =>
-      normalizeRelatorioVisitaTecnica(mockVisitaTecnica as Record<string, unknown>) as PayloadVisitaTecnica,
-    [],
-  );
-
-  return (
-    <article className="relatorio relatorio--visita-tecnica-preview" style={{ minHeight: '100vh' }}>
-      <RelatorioVisitaTecnicaContent
-        relatorio={relatorio}
-        reportId="preview-visita-tecnica"
-        relatorioUuid="00000000-0000-4000-8000-000000000001"
-        shareToken="preview-local"
-      />
-    </article>
-  );
+  return <VisitaTecnicaPreviewClient />;
 }

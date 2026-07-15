@@ -4,7 +4,6 @@ import {
   buildRecommendationsFallback,
   normalizeAgronomicAssessment,
 } from './technicalVisitReportNarratives';
-import { severityToneFromText } from './vtMapMarkers';
 import type {
   TechnicalVisitAction,
   TechnicalVisitDecisionChip,
@@ -214,7 +213,7 @@ function pointsFromPhotos(photos: TechnicalVisitPhoto[]): TechnicalVisitGeoPoint
       title: photo.occurrenceName ?? photo.description ?? 'Evidência fotográfica',
       description: photo.description,
       type: photo.category ?? 'foto',
-      severityTone: photo.occurrenceName ? severityToneFromText(photo.category) : 'low',
+      severityTone: photo.occurrenceName ? resolveSeverity(photo.category) : 'low',
       date: photo.date,
       imageUrl: photo.url,
       source: 'foto' as const,
