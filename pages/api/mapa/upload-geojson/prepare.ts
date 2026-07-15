@@ -48,7 +48,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       missing_env: missing,
     });
   }
-  const fileParam = encodeURIComponent(r2.publicUrl);
+  /**
+   * `file=` aponta para proxy same-origin (não direto ao r2.dev).
+   * Buckets R2 públicos frequentemente não enviam CORS → o fetch no browser falha.
+   */
+  const proxyFileUrl = `${base}/api/mapa/geojson-proxy?u=${encodeURIComponent(r2.publicUrl)}`;
+  const fileParam = encodeURIComponent(proxyFileUrl);
   return res.status(200).json({
     success: true,
     ok: true,
@@ -58,8 +63,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     bucket: r2.bucketName,
     storage_path: r2.storagePath,
     upload_url: r2.uploadUrl,
-    /** R2 público onde o objeto estará disponível depois do PUT. */
+    /** Objeto público no R2 (após PUT). */
     public_url: r2.publicUrl,
+    /** URL same-origin que devolve o GeoJSON (para `?file=` no mapa). */
+    file_proxy_url: proxyFileUrl,
     expires_in_seconds: 3600,
     url_partial: `/mapa-talhoes?file=${fileParam}`,
     url: `${base}/mapa-talhoes?file=${fileParam}`,

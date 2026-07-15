@@ -69,6 +69,36 @@ export function useMapGeoJsonFromUrl({
     let cancelled = false;
     const ac = new AbortController();
 
+    const sameOriginProxyUrl = (remote: string): string | null => {
+      if (typeof window === 'undefined') return null;
+      try {
+        const u = new URL(remote);
+        const alreadyProxy = u.pathname.includes('/api/mapa/geojson-proxy');
+        if (alreadyProxy) return null;
+        const host = u.hostname.toLowerCase();
+        if (!(host.endsWith('.r2.dev') || host.includes('r2.cloudflarestorage.com') || host.includes('cloudflare'))) {
+          // Ainda assim: se falhar CORS, tentamos proxy genérico abaixo.
+        }
+        return `${window.location.origin}/api/mapa/geojson-proxy?u=${encodeURIComponent(remote)}`;
+      } catch {
+        return null;
+      }
+    };
+
+    const loadFromUrl = async (url: string): Promise<{ ok: true; text: string } | { ok: false; status?: number; msg: string }> => {
+      try {
+        const res = await fetch(url, { signal: ac.signal, mode: 'cors', cache: 'no-store' });
+        if (!res.ok) {
+          return { ok: false, status: res.status, msg: `HTTP ${res.status}` };
+        }
+        return { ok: true, text: await res.text() };
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') throw e;
+        const msg = e instanceof Error ? e.message : String(e);
+        return { ok: false, msg };
+      }
+    };
+
     void (async () => {
       if (!looksLikeHttpsGeoJsonFetchUrl(fileUrl)) {
         setErr('Parâmetro file= deve ser uma URL http(s) válida para o GeoJSON.');
@@ -77,20 +107,33 @@ export function useMapGeoJsonFromUrl({
       try {
         setLoadingShare(true);
         setErr(null);
-        const res = await fetch(fileUrl, { signal: ac.signal, mode: 'cors', cache: 'no-store' });
+
+        let result = await loadFromUrl(fileUrl);
+        if (!result.ok) {
+          const proxy = sameOriginProxyUrl(fileUrl);
+          if (proxy && !cancelled) {
+            result = await loadFromUrl(proxy);
+          }
+        }
         if (cancelled) return;
-        if (!res.ok) {
-          setErr(`Falha ao carregar arquivo GeoJSON (${res.status}). Verifique permissões CORS no armazenamento.`);
+
+        if (!result.ok) {
+          setErr(
+            result.msg.includes('Failed to fetch') || result.msg.includes('NetworkError') || result.msg.includes('HTTP')
+              ? `Falha ao carregar GeoJSON (${result.msg}). CORS do R2 ou URL inacessível — use o link gerado pelo app (proxy) ou configure CORS no bucket.`
+              : `Falha ao carregar GeoJSON: ${result.msg}`,
+          );
           return;
         }
-        const text = await res.text();
-        if (cancelled) return;
-        const fc = parseJsonFileText(text);
+
+        const fc = parseJsonFileText(result.text);
         if (fc && fc.features.length > 0) {
           setRaw(fc);
           setErr(null);
+        } else if (fc && fc.features.length === 0) {
+          setErr('FeatureCollection carregada, mas sem polígonos (features vazias). Exporte talhões com geometria no app.');
         } else {
-          setErr('Falha ao carregar arquivo GeoJSON: FeatureCollection ausente ou vazio.');
+          setErr('Falha ao carregar arquivo GeoJSON: FeatureCollection ausente ou inválida.');
         }
       } catch (e) {
         if (cancelled) return;

@@ -162,6 +162,9 @@ async function prepareR2Upload(spec: R2ObjectSpec): Promise<R2PrepareResult> {
       secretAccessKey: cfg.secretAccessKey,
     },
     forcePathStyle: true,
+    // Evita query `x-amz-checksum-*` que quebra PUT de clientes simples (Flutter/http).
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
   });
 
   const command = new PutObjectCommand({
