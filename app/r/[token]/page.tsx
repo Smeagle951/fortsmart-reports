@@ -453,8 +453,8 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     return (
       <>
         {/* Lado a lado e visita técnica: barra própria com Imprimir/PDF no dashboard (evita duplicar botão) */}
-        {!isSideBySide && !isVisitaTecnica && <PrintBar />}
-        <article className={`relatorio ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''} ${isPlantioMulti ? 'relatorio--plantio-multi' : ''}`} style={isMonitoramento ? { minHeight: '100vh', background: '#F1F5F9' } : undefined}>
+        {!isSideBySide && !isVisitaTecnica && !isMonitoramento && <PrintBar />}
+        <article className={`relatorio ${isSideBySide ? 'relatorio--lado-a-lado' : ''} ${isMonitoramento ? 'relatorio--monitoramento' : ''} ${isPlantioMulti ? 'relatorio--plantio-multi' : ''}`} style={isMonitoramento ? { minHeight: '100vh', background: '#ffffff' } : undefined}>
           {isMonitoramento ? (
             <ErrorBoundary fallbackTitle="Erro ao renderizar o relatório de monitoramento">
               <RelatorioMonitoramentoContent

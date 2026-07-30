@@ -20,19 +20,13 @@ const NIVEL_COLOR: Record<NivelRecomendacao, string> = {
     PREVENTIVO: '#2E7D32',
 };
 
-const RECOMENDACOES_PADRAO: { nivel: NivelRecomendacao; texto: string; produto?: string; dose?: string }[] = [
-    { nivel: 'MONITORAR', texto: 'Realizar monitoramento semanal para acompanhar a evolução do estande e possíveis surtos.', produto: '', dose: '' },
-    { nivel: 'PREVENTIVO', texto: 'Manter registro fotográfico e amostragens representativas para análise de tendências.', produto: '', dose: '' },
-    { nivel: 'MONITORAR', texto: 'Avaliar condições climáticas e estádio da cultura para alinhar manejo ao momento fenológico.', produto: '', dose: '' },
-];
-
 function hasContent(rec: Recomendacao): boolean {
     const acao = (rec.acao ?? '').trim();
     const org = (rec.organismo ?? '').trim();
     return (acao.length > 0 && acao !== '—' && acao !== '-') || org.length > 0;
 }
 
-/** Uma card por organismo (praga/doença/daninha); sem duplicação. Máximo 3 cards. Sempre exibe Controle, Produto e Dose (— quando vazio). */
+/** Uma linha por recomendação realmente registrada; nunca completa o layout com texto artificial. */
 function buildCards(recomendacoes: Recomendacao[]): { nivel: NivelRecomendacao; organismo: string; tipo: string; texto: string; produto: string; dose: string }[] {
   const comConteudo = recomendacoes.filter(hasContent);
   const porOrganismo = new Map<string, Recomendacao>();
@@ -51,37 +45,23 @@ function buildCards(recomendacoes: Recomendacao[]): { nivel: NivelRecomendacao; 
       nivel: rec.nivel,
       organismo: (rec.organismo ?? '').trim() || 'Monitoramento',
       tipo: rec.tipo ?? 'praga',
-      texto: (rec.acao ?? '').trim() || 'Acompanhar evolução.',
+      texto: (rec.acao ?? '').trim() || '—',
       produto: (rec.produto ?? '').trim() || '—',
       dose: (rec.dose ?? '').trim() || '—',
     }));
-  if (list.length < 3 && porOrganismo.has('geral')) {
+  if (porOrganismo.has('geral')) {
     const rec = porOrganismo.get('geral')!;
     list.push({
       nivel: rec.nivel,
       organismo: 'Recomendação geral',
       tipo: rec.tipo ?? 'praga',
-      texto: (rec.acao ?? '').trim() || 'Acompanhar evolução.',
+      texto: (rec.acao ?? '').trim() || '—',
       produto: (rec.produto ?? '').trim() || '—',
       dose: (rec.dose ?? '').trim() || '—',
     });
   }
-  while (list.length < 3) {
-    const idx = list.length % RECOMENDACOES_PADRAO.length;
-    const pad = RECOMENDACOES_PADRAO[idx];
-    list.push({
-      nivel: pad.nivel,
-      organismo: 'Recomendação geral',
-      tipo: 'praga',
-      texto: pad.texto,
-      produto: pad.produto ?? '—',
-      dose: pad.dose ?? '—',
-    });
-  }
   return list.slice(0, 3);
 }
-
-const TIPO_EMOJI: Record<string, string> = { praga: '🐛', doenca: '🦠', daninha: '🌿' };
 
 export default function RecomendacoesTecnicas({ recomendacoes }: RecomendacoesTecnicasProps) {
     const cards = buildCards(recomendacoes);
@@ -91,6 +71,11 @@ export default function RecomendacoesTecnicas({ recomendacoes }: RecomendacoesTe
             <h2 id="rec-tec-title" style={{ fontSize: 14, fontWeight: 600, color: '#475569', marginBottom: 14 }}>
                 Recomendações técnicas
             </h2>
+            {cards.length === 0 ? (
+                <p style={{ margin: 0, color: '#64748B', fontSize: 13 }}>
+                    Nenhuma recomendação técnica registrada para este monitoramento.
+                </p>
+            ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
                 {cards.map((card, idx) => {
                     const cor = NIVEL_COLOR[card.nivel];
@@ -107,7 +92,6 @@ export default function RecomendacoesTecnicas({ recomendacoes }: RecomendacoesTe
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                                <span style={{ fontSize: 18 }}>{TIPO_EMOJI[card.tipo] ?? '📋'}</span>
                                 <span style={{ fontSize: 15, fontWeight: 700, color: '#1E293B' }}>{card.organismo}</span>
                                 <span
                                     style={{
@@ -141,6 +125,7 @@ export default function RecomendacoesTecnicas({ recomendacoes }: RecomendacoesTe
                     );
                 })}
             </div>
+            )}
         </section>
     );
 }

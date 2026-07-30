@@ -104,6 +104,10 @@ export interface Recomendacao {
     acao: string;
     pontos: string[];  // quais pontos têm essa ocorrência
     severidade: number;
+    /** Prazo/janela registrado na origem. Ausência não implica urgência. */
+    prazo?: string;
+    /** Evidência, fonte ou justificativa registrada para a conduta. */
+    evidencia?: string;
     fortsmartIa?: FortsmartIaRelatorio;
 }
 
