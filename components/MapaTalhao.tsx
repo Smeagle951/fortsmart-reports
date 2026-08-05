@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Polygon, Marker, Popup, useMap } from 'react-l
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { tileUrlFromEnv } from '@/lib/dashboard-mapa/constants';
+import { normalizeLeafletRing } from '@/lib/technical-visit-report/normalizeMapCoords';
 import { createPlotLabelIcon, createVtPointIcon } from '@/lib/technical-visit-report/vtMapMarkers';
 import type { TechnicalVisitSeverity } from '@/lib/technical-visit-report/technicalVisitReport.types';
 
@@ -59,13 +60,43 @@ function polygonCentroid(coords: [number, number][]): [number, number] {
   return [lat, lng];
 }
 
-function FitMapBounds({ bounds }: { bounds: L.LatLngBoundsExpression | null }) {
+function FitMapBounds({ bounds }: { bounds: L.LatLngBounds | null }) {
   const map = useMap();
   useEffect(() => {
-    if (!bounds) return;
-    map.fitBounds(bounds, { padding: [48, 48], maxZoom: 17 });
+    if (!bounds || !bounds.isValid()) return;
+
+    const apply = () => {
+      try {
+        map.invalidateSize();
+        map.fitBounds(bounds, { padding: [48, 48], maxZoom: 17 });
+      } catch {
+        /* mapa ainda sem tamanho */
+      }
+    };
+
+    apply();
+    const t1 = window.setTimeout(apply, 80);
+    const t2 = window.setTimeout(apply, 320);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, [map, bounds]);
   return null;
+}
+
+/** Descarta pontos absurdamente longe do polígono (ex.: coords trocadas vs GPS correto). */
+function markersNearPolygon(
+  markers: Array<{ lat: number; lng: number; meta: Ponto }>,
+  polygon: [number, number][] | undefined,
+): Array<{ lat: number; lng: number; meta: Ponto }> {
+  if (!polygon || polygon.length < 3 || markers.length === 0) return markers;
+  const polyBounds = L.latLngBounds(polygon);
+  if (!polyBounds.isValid()) return markers;
+  // Amplia ~2x a caixa do talhão para tolerar pontos na borda.
+  const expanded = polyBounds.pad(1);
+  const near = markers.filter((m) => expanded.contains(L.latLng(m.lat, m.lng)));
+  return near.length > 0 ? near : markers;
 }
 
 export default function MapaTalhao({
@@ -80,13 +111,10 @@ export default function MapaTalhao({
   const operational = mapVariant === 'operational';
   const tile = operational ? tileUrlFromEnv() : { url: mapTilerStreetsUrl, attribution: MAPTILER_KEY ? '&copy; MapTiler &copy; OpenStreetMap' : '&copy; OpenStreetMap contributors' };
 
-  const markers = pontos
-    .filter((p) => Math.abs(p.latitude) <= 90 && Math.abs(p.longitude) <= 180)
-    .map((p) => ({ lat: p.latitude, lng: p.longitude, meta: p }));
-
   const polygonCoords = useMemo((): [number, number][] | undefined => {
     if (polygonProp && Array.isArray(polygonProp) && polygonProp.length >= 3) {
-      return polygonProp.map((c) => (Array.isArray(c) ? [c[0], c[1]] : [c, c]) as [number, number]);
+      const normalized = normalizeLeafletRing(polygonProp);
+      if (normalized.length >= 3) return normalized;
     }
     if (pontos.length > 2) {
       const valid = pontos.filter((p) => Math.abs(p.latitude) <= 90 && Math.abs(p.longitude) <= 180);
@@ -94,6 +122,15 @@ export default function MapaTalhao({
     }
     return undefined;
   }, [polygonProp, pontos]);
+
+  const markers = useMemo(() => {
+    const raw = pontos
+      .filter((p) => Number.isFinite(p.latitude) && Number.isFinite(p.longitude))
+      .filter((p) => Math.abs(p.latitude) <= 90 && Math.abs(p.longitude) <= 180)
+      .filter((p) => !(p.latitude === 0 && p.longitude === 0))
+      .map((p) => ({ lat: p.latitude, lng: p.longitude, meta: p }));
+    return markersNearPolygon(raw, polygonCoords);
+  }, [pontos, polygonCoords]);
 
   const mapCenter = useMemo((): [number, number] => {
     if (polygonCoords && polygonCoords.length > 0) return polygonCentroid(polygonCoords);
@@ -105,11 +142,20 @@ export default function MapaTalhao({
     return centro;
   }, [polygonCoords, markers, centro]);
 
-  const fitBounds = useMemo((): L.LatLngBoundsExpression | null => {
-    const all: [number, number][] = [...(polygonCoords ?? []), ...markers.map((m) => [m.lat, m.lng] as [number, number])];
+  const fitBounds = useMemo((): L.LatLngBounds | null => {
+    const all: [number, number][] = [
+      ...(polygonCoords ?? []),
+      ...markers.map((m) => [m.lat, m.lng] as [number, number]),
+    ];
     if (all.length === 0) return null;
-    return L.latLngBounds(all);
+    const bounds = L.latLngBounds(all);
+    return bounds.isValid() ? bounds : null;
   }, [polygonCoords, markers]);
+
+  const mapKey = useMemo(() => {
+    const c = mapCenter;
+    return `vt-map-${c[0].toFixed(5)}-${c[1].toFixed(5)}-${polygonCoords?.length ?? 0}-${markers.length}`;
+  }, [mapCenter, polygonCoords, markers.length]);
 
   const polygonStyle = operational
     ? { color: '#22C55E', weight: 3, fillColor: '#22C55E', fillOpacity: 0.22 }
@@ -126,9 +172,15 @@ export default function MapaTalhao({
             <span>N</span>
           </div>
         )}
-        <MapContainer center={mapCenter} zoom={zoom} style={{ height: mapHeight, width: '100%' }} scrollWheelZoom={!operational}>
+        <MapContainer
+          key={mapKey}
+          center={mapCenter}
+          zoom={zoom}
+          style={{ height: mapHeight, width: '100%' }}
+          scrollWheelZoom={!operational}
+        >
           <TileLayer attribution={tile.attribution} url={tile.url} maxZoom={19} />
-          {fitBounds && operational && <FitMapBounds bounds={fitBounds} />}
+          {fitBounds && <FitMapBounds bounds={fitBounds} />}
           {polygonCoords && <Polygon positions={polygonCoords} pathOptions={polygonStyle} />}
           {operational && polygonCoords && plotLabel?.name && (
             <Marker

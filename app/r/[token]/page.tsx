@@ -106,7 +106,12 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
   const vtFlowTrace =
     (allowDebug && (sp?.debug === 'vt-flow' || sp?.debug === 'vtflow')) ||
     process.env.FORTSMART_VT_DEBUG === '1';
-  console.log('[fortsmart-reports] /r/[token] token recebido:', token);
+  console.log(
+    '[fortsmart-reports] /r/[token] token recebido:',
+    typeof token === 'string' && token.length > 8
+      ? `${token.slice(0, 8)}…`
+      : '(curto)',
+  );
   if (debug) {
     return <div style={{ padding: 20, fontFamily: 'sans-serif' }}><h1>Token (roteamento OK)</h1><pre>{token}</pre></div>;
   }
@@ -141,7 +146,12 @@ export default async function RelatorioCompartilhadoPage(props: Props) {
     }
 
     if (!row) {
-      console.warn('[fortsmart-reports] /r/[token] notFound: nenhum registro para token', token);
+      console.warn(
+        '[fortsmart-reports] /r/[token] notFound: nenhum registro para token',
+        typeof token === 'string' && token.length > 8
+          ? `${token.slice(0, 8)}…`
+          : '(curto)',
+      );
       return (
         <main style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: 'Segoe UI, system-ui, sans-serif' }}>
           <div style={{ textAlign: 'center', maxWidth: 560 }}>

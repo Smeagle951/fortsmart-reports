@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import FortSmartLogo from '@/components/FortSmartLogo';
+import { LocalQrCode } from '@/components/LocalQrCode';
 import ModalImagem from '@/components/ModalImagem';
 import MapaTalhaoClientMount from '@/components/visita_tecnica/MapaTalhaoClientMount';
 import { postReportAnalytics } from '@/lib/report-analytics-client';
@@ -149,7 +150,6 @@ function TechnicalVisitReportHeader({ report, shareToken }: { report: TechnicalV
       : shareToken
         ? `https://fortsmartagro.com.br/r/${shareToken}`
         : 'https://fortsmartagro.com.br';
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(reportUrl)}`;
 
   return (
     <header className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm print:break-inside-avoid md:p-5">
@@ -166,8 +166,12 @@ function TechnicalVisitReportHeader({ report, shareToken }: { report: TechnicalV
             <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">ID do relatório</div>
             <div className="mt-0.5 break-all text-xs font-bold text-slate-800">{report.reportKey ?? '—'}</div>
           </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qrUrl} alt="QR Code de validação" className="h-[72px] w-[72px] rounded-md border border-slate-200" />
+          <LocalQrCode
+            data={reportUrl}
+            size={72}
+            alt="QR Code de validação"
+            className="h-[72px] w-[72px] rounded-md border border-slate-200"
+          />
         </div>
       </div>
 
@@ -570,7 +574,6 @@ function TechnicalVisitConclusion({ report, conclusionText, shareToken }: { repo
       : shareToken
         ? `https://fortsmartagro.com.br/r/${shareToken}`
         : 'https://fortsmartagro.com.br';
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(reportUrl)}`;
 
   return (
     <SectionShell id="conclusao" eyebrow="Fechamento" title="Conclusão e responsabilidade técnica" icon={<FileText size={18} />} full>
@@ -591,8 +594,12 @@ function TechnicalVisitConclusion({ report, conclusionText, shareToken }: { repo
             <div className="mt-1 text-[10px] text-slate-400">Assinatura do responsável técnico</div>
           </div>
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={qrUrl} alt="QR validação" className="h-16 w-16 rounded border border-slate-200" />
+            <LocalQrCode
+              data={reportUrl}
+              size={64}
+              alt="QR validação"
+              className="h-16 w-16 rounded border border-slate-200"
+            />
             <div className="text-right">
               <div className="text-[10px] font-bold uppercase text-slate-400">Código</div>
               <div className="text-xs font-bold text-slate-700">{report.reportKey ?? '—'}</div>

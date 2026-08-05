@@ -224,7 +224,9 @@ const MapaInterativo = forwardRef<MapaInterativoRef, MapaInterativoProps>(functi
         String(s ?? '')
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
-          .replace(/"/g, '&quot;');
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
       pontos.forEach((p) => {
         const comFoto = p.infestacoes.filter((i) => i.imagem && String(i.imagem).trim());
         if (comFoto.length === 0) return;

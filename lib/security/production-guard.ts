@@ -1,5 +1,11 @@
 import type { NextRequest } from 'next/server';
 
+import {
+  ADMIN_SESSION_COOKIE,
+  adminSessionFromCookieHeader,
+  verifyAdminSessionToken,
+} from './admin-session';
+
 /** Rotas de diagnóstico — não expor em produção sem sessão admin. */
 export const DIAGNOSTIC_API_PATHS = [
   '/api/supabase-status',
@@ -7,7 +13,7 @@ export const DIAGNOSTIC_API_PATHS = [
 ] as const;
 
 export function isAdminSession(req: NextRequest): boolean {
-  return req.cookies.get('fs_admin')?.value === '1';
+  return verifyAdminSessionToken(req.cookies.get(ADMIN_SESSION_COOKIE)?.value);
 }
 
 export function isProduction(): boolean {
@@ -25,8 +31,7 @@ export function allowDiagnosticFromCookieHeader(
   cookieHeader: string | null | undefined,
 ): boolean {
   if (!isProduction()) return true;
-  if (!cookieHeader) return false;
-  return cookieHeader.split(';').some((part) => part.trim() === 'fs_admin=1');
+  return adminSessionFromCookieHeader(cookieHeader);
 }
 
 export function isSensitivePublicPath(pathname: string): boolean {

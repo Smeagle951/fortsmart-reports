@@ -4,6 +4,7 @@ import {
   buildRecommendationsFallback,
   normalizeAgronomicAssessment,
 } from './technicalVisitReportNarratives';
+import { normalizeLeafletRing } from './normalizeMapCoords';
 import type {
   TechnicalVisitAction,
   TechnicalVisitDecisionChip,
@@ -108,7 +109,7 @@ function kpi(label: string, value: unknown, detail?: string, tone: TechnicalVisi
 }
 
 function resolvePolygon(mapa: AnyRecord): [number, number][] | undefined {
-  let raw = mapa.polygon;
+  let raw = mapa.polygon ?? mapa.poligono ?? mapa.coordinates;
   if (typeof raw === 'string') {
     try {
       raw = JSON.parse(raw) as unknown;
@@ -116,18 +117,26 @@ function resolvePolygon(mapa: AnyRecord): [number, number][] | undefined {
       return undefined;
     }
   }
-  if (!Array.isArray(raw)) return undefined;
-  const points: [number, number][] = [];
-  for (const item of raw) {
-    if (!Array.isArray(item) || item.length < 2) continue;
-    const a = numberValue(item[0]);
-    const b = numberValue(item[1]);
-    if (a == null || b == null) continue;
-    const lat = Math.abs(a) <= 90 && Math.abs(b) <= 180 ? a : b;
-    const lng = Math.abs(a) <= 90 && Math.abs(b) <= 180 ? b : a;
-    if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) points.push([lat, lng]);
+  // GeoJSON Polygon: { type, coordinates: [[[lng,lat],...]] }
+  if (raw != null && typeof raw === 'object' && !Array.isArray(raw)) {
+    const g = raw as AnyRecord;
+    if (Array.isArray(g.coordinates)) {
+      const ring = Array.isArray(g.coordinates[0]) ? g.coordinates[0] : g.coordinates;
+      const normalized = normalizeLeafletRing(ring);
+      return normalized.length >= 3 ? normalized : undefined;
+    }
+    if (g.geometry != null && typeof g.geometry === 'object') {
+      return resolvePolygon({ polygon: (g.geometry as AnyRecord).coordinates ?? g.geometry });
+    }
   }
-  return points.length >= 3 ? points : undefined;
+  if (!Array.isArray(raw)) return undefined;
+  // Anel aninhado GeoJSON: [[[lng,lat],...]]
+  if (raw.length > 0 && Array.isArray(raw[0]) && Array.isArray((raw[0] as unknown[])[0])) {
+    const normalized = normalizeLeafletRing(raw[0]);
+    return normalized.length >= 3 ? normalized : undefined;
+  }
+  const normalized = normalizeLeafletRing(raw);
+  return normalized.length >= 3 ? normalized : undefined;
 }
 
 function pointFromRecord(record: AnyRecord, index: number, source?: TechnicalVisitGeoPoint['source']): TechnicalVisitGeoPoint | undefined {

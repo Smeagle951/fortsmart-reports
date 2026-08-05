@@ -10,6 +10,7 @@ import {
   User,
 } from 'lucide-react';
 import type { SideBySideReportData } from '@/components/SideBySideReportContent';
+import { LocalQrCode } from '@/components/LocalQrCode';
 import { reportStatus } from '@/lib/lado-a-lado-official/selectors';
 import { FS } from '@/lib/lado-a-lado-official/theme';
 
@@ -63,7 +64,6 @@ export default function SideBySideHeader({ data, reportId, shareToken, onExportP
   const reportUrl = shareToken
     ? `https://fortsmartagro.com.br/r/${shareToken}`
     : 'https://fortsmartagro.com.br';
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(reportUrl)}`;
 
   return (
     <header className="border-b border-[#E5E7EB] bg-white print:border-[#E5E7EB]">
@@ -94,12 +94,10 @@ export default function SideBySideHeader({ data, reportId, shareToken, onExportP
             {status === 'concluido' ? 'Concluído' : 'Em andamento'}
           </span>
           <p className="text-xs font-medium text-[#6B7280]">ID {id}</p>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={qrUrl}
+          <LocalQrCode
+            data={reportUrl}
+            size={72}
             alt="QR Code do relatório"
-            width={72}
-            height={72}
             className="rounded-lg border border-[#E5E7EB] bg-white"
           />
           {onExportPdf ? (

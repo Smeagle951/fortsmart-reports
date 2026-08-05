@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from '@/lib/security/admin-session';
 import {
   allowDiagnosticAccess,
   DIAGNOSTIC_API_PATHS,
@@ -46,7 +47,9 @@ export function middleware(req: NextRequest) {
   // Painel interno /admin (dataset AgroIntelige) — não exposto na UI pública
   if (pathname.startsWith('/admin')) {
     if (!pathname.startsWith('/admin/login')) {
-      const ok = req.cookies.get('fs_admin')?.value === '1';
+      const ok = verifyAdminSessionToken(
+        req.cookies.get(ADMIN_SESSION_COOKIE)?.value,
+      );
       if (!ok) {
         const login = new URL('/admin/login', req.url);
         login.searchParams.set('next', pathname);

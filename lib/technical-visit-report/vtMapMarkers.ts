@@ -49,9 +49,19 @@ export function createVtPointIcon(
   });
 }
 
+/** Escape completo para texto inserido em HTML de DivIcon (Leaflet usa innerHTML). */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function createPlotLabelIcon(name: string, area?: string): L.DivIcon {
-  const safeName = name.replace(/</g, '&lt;');
-  const safeArea = area ? area.replace(/</g, '&lt;') : '';
+  const safeName = escapeHtml(name);
+  const safeArea = area ? escapeHtml(area) : '';
   const html = `<div style="pointer-events:none;text-align:center;font-family:Inter,system-ui,sans-serif;text-shadow:0 1px 3px rgba(0,0,0,.8)"><div style="font-size:15px;font-weight:800;color:#fff;letter-spacing:.02em">${safeName}</div>${safeArea ? `<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.92);margin-top:2px">${safeArea}</div>` : ''}</div>`;
   return L.divIcon({
     html,

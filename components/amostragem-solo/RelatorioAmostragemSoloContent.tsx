@@ -99,7 +99,12 @@ function colorForDepth(prof: string | null | undefined): string {
 }
 
 function escapeTooltipText(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function fmtNumPt(n: unknown, decimals: number): string {
@@ -690,7 +695,7 @@ export default function RelatorioAmostragemSoloContent({
             const marker = L.marker([sLat / n, sLng / n], {
               icon: L.divIcon({
                 className: 'fs-talhao-label',
-                html: `<div style="padding:2px 6px;border-radius:4px;background:rgba(15,23,42,.72);color:#fff;font-size:11px;font-weight:700;border:1px solid rgba(255,255,255,.35);white-space:nowrap;">${label}</div>`,
+                html: `<div style="padding:2px 6px;border-radius:4px;background:rgba(15,23,42,.72);color:#fff;font-size:11px;font-weight:700;border:1px solid rgba(255,255,255,.35);white-space:nowrap;">${escapeTooltipText(label)}</div>`,
               }),
               interactive: false,
             });
@@ -784,7 +789,7 @@ export default function RelatorioAmostragemSoloContent({
         const displayOnPin = numLabel.length <= 3 ? numLabel : '·';
         const icon = L.divIcon({
           className: 'fs-soil-marker',
-          html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid ${depthColor};box-shadow:0 1px 4px rgba(0,0,0,.35);">${displayOnPin}</div>`,
+          html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid ${depthColor};box-shadow:0 1px 4px rgba(0,0,0,.35);">${escapeTooltipText(displayOnPin)}</div>`,
           iconSize: [22, 22],
           iconAnchor: [11, 11],
         });

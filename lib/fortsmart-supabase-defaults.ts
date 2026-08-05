@@ -1,13 +1,7 @@
 /**
- * Projeto Supabase oficial do FortSmart Agro (mesmo do app Flutter `assets/.env`).
- * A chave anon é pública por design (RLS); use env na Vercel para override.
+ * Resolução de URL/keys Supabase do FortSmart Agro.
+ * Sem fallback de chave no repositório — configure env (Vercel / .env.local).
  */
-export const FORTSMART_SUPABASE_URL_DEFAULT =
-  'https://qnujboesewzikwypidja.supabase.co';
-
-/** Anon key — já empacotada no app mobile; só lê relatórios com is_public=true via RLS. */
-export const FORTSMART_SUPABASE_ANON_KEY_DEFAULT =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudWpib2VzZXd6aWt3eXBpZGphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NTM4NjcsImV4cCI6MjA4NzAyOTg2N30.fR2dlKaDUCYZfxQWLH2FNk1gQx-Cn_rwqCu0biYNM98';
 
 /** Projeto legado (app principal) — não usar para relatórios web. */
 const LEGACY_SUPABASE_PROJECT_REF = 'ywkhjrpdoouxnqdmfddc';
@@ -23,7 +17,7 @@ function pickFirstValidUrl(...candidates: Array<string | undefined>): string {
     if (isLegacySupabaseUrl(url)) continue;
     return url;
   }
-  return FORTSMART_SUPABASE_URL_DEFAULT;
+  return '';
 }
 
 export function resolveFortsmartSupabaseUrl(): string {
@@ -78,12 +72,10 @@ function keyRefIsLegacy(key: string): boolean {
 
 export function resolveFortsmartSupabaseAnonKey(): string {
   const url = resolveFortsmartSupabaseUrl();
-  return (
-    pickFirstValidKey(
-      url,
-      process.env.SUPABASE_ANON_KEY,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    ) || FORTSMART_SUPABASE_ANON_KEY_DEFAULT
+  return pickFirstValidKey(
+    url,
+    process.env.SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
 }
 
