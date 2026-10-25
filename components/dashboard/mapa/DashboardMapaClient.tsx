@@ -12,13 +12,12 @@ import {
   filterBySelectedTalhoes,
   filterByViewMode,
   listTalhoesFromFc,
+  subareasForTalhaoId,
   type MapaViewMode,
 } from '@/components/mapa-talhoes/geojsonUtils';
 import { LegendFooter } from '@/components/mapa-talhoes/LegendFooter';
-import { MapSummaryBar } from '@/components/mapa-talhoes/MapSummaryBar';
 import { strokeForProperties } from '@/components/mapa-talhoes/materialColor';
 import { SeedCalculatorTable } from '@/components/mapa-talhoes/SeedCalculatorTable';
-import { TalhaoDetailPanel } from '@/components/mapa-talhoes/TalhaoDetailPanel';
 import { TalhaoSidebar } from '@/components/mapa-talhoes/TalhaoSidebar';
 import { geoFileUrlFromSearchParams, useMapGeoJsonFromUrl } from '@/components/mapa-talhoes/useMapGeoJsonFromUrl';
 import { talhoesFromApi } from '@/lib/dashboard-mapa/adapters/talhoesFromApi';
@@ -32,6 +31,14 @@ import {
   DEMO_PROPERTY_ALERTS,
 } from '@/lib/dashboard-mapa/mock';
 import { propertySummaryFromFeatureCollection } from '@/lib/dashboard-mapa/summary-from-geojson';
+import {
+  featurePropsFromCollection,
+  manejoCostSummary,
+  moneyDisplay,
+  parsePlantioFeatureProperties,
+  recordedManejoStages,
+  subareaStatusDisplay,
+} from '@/lib/dashboard-mapa/plantio-read-model';
 import type { MapEventMarker } from '@/components/mapa-talhoes/MapView';
 
 import { DashboardMapHeader } from './DashboardMapHeader';
@@ -39,6 +46,11 @@ import { DashboardPlantioToolbar } from './DashboardPlantioToolbar';
 import { EventTimeline } from './EventTimeline';
 import { MapFloatingFilters } from './MapFloatingFilters';
 import { MapLegendAndLayers } from './MapLegendAndLayers';
+import { PlantioAgronomicPanel } from './plantio/PlantioAgronomicPanel';
+import { PlantioKpiStrip } from './plantio/PlantioKpiStrip';
+import { PlantioSubareaList } from './plantio/PlantioSubareaList';
+import { PlantioTalhaoHeader } from './plantio/PlantioTalhaoHeader';
+import { PlantioTalhaoInfoStrip } from './plantio/PlantioTalhaoInfoStrip';
 import { RightEventPanel } from './RightEventPanel';
 import { SidebarFarm } from './SidebarFarm';
 
@@ -187,6 +199,12 @@ export function DashboardMapaClient({
   const [onMap, setOnMap] = useState<Set<string>>(new Set());
   const [selectedFeatureProps, setSelectedFeatureProps] = useState<Record<string, unknown> | null>(null);
   const [plantioTip, setPlantioTip] = useState<string | null>(null);
+  const [plantioSubView, setPlantioSubView] = useState<'map' | 'list'>('map');
+  const [seedCalcOpen, setSeedCalcOpen] = useState(false);
+  const selectionStorageKey = useMemo(() => {
+    const source = sp?.get('id') ?? sp?.get('file') ?? sp?.get('d') ?? (wantApi ? 'api' : 'local');
+    return `fortsmart:mapa:plantio-selection:${source}`;
+  }, [sp, wantApi]);
 
   useEffect(() => {
     if (monitorEvents.length === 0) {
@@ -199,8 +217,31 @@ export function DashboardMapaClient({
   }, [monitorEvents]);
 
   useEffect(() => {
-    setSelectedFeatureProps(null);
-  }, [baseFc]);
+    if (!baseFc || typeof window === 'undefined') {
+      setSelectedFeatureProps(null);
+      return;
+    }
+    try {
+      const saved = JSON.parse(window.sessionStorage.getItem(selectionStorageKey) ?? 'null') as
+        | { talhaoId?: string; subareaId?: string | null }
+        | null;
+      const restored = saved?.talhaoId
+        ? featurePropsFromCollection(baseFc, saved.talhaoId, saved.subareaId ?? null)
+        : null;
+      setSelectedFeatureProps(restored);
+    } catch {
+      setSelectedFeatureProps(null);
+    }
+  }, [baseFc, selectionStorageKey]);
+
+  useEffect(() => {
+    if (!selectedFeatureProps || typeof window === 'undefined') return;
+    const talhaoId = String(selectedFeatureProps.talhao_id ?? '');
+    if (!talhaoId) return;
+    const subareaId = String(selectedFeatureProps.tipo ?? '') === 'subarea'
+      ? String(selectedFeatureProps.subarea_id ?? '') || null : null;
+    window.sessionStorage.setItem(selectionStorageKey, JSON.stringify({ talhaoId, subareaId }));
+  }, [selectedFeatureProps, selectionStorageKey]);
 
   const { culturas, safras } = useMemo(
     () => (baseFc ? distinctCulturasSafas(baseFc) : { culturas: ['all'] as string[], safras: ['all'] as string[] }),
@@ -246,6 +287,14 @@ export function DashboardMapaClient({
     if (usePlantioLayout) return filterBySelectedTalhoes(filteredByMeta, onMap);
     return filteredByMeta;
   }, [filteredByMeta, usePlantioLayout, onMap]);
+
+  useEffect(() => {
+    if (!usePlantioLayout || !mapWorkflowSource || selectedFeatureProps) return;
+    const list = listTalhoesFromFc(mapWorkflowSource);
+    if (list.length === 0) return;
+    const props = featurePropsFromCollection(mapWorkflowSource, list[0].talhaoId, null);
+    if (props) setSelectedFeatureProps(props);
+  }, [usePlantioLayout, mapWorkflowSource, selectedFeatureProps]);
 
   const mapViewMode: MapaViewMode = useMemo(() => {
     if (layerTalhoes && layerSubareas) return 'talhoes_subareas';
@@ -370,6 +419,78 @@ export function DashboardMapaClient({
     setSelectedFeatureProps(p);
   }, []);
 
+  const plantioSelection = useMemo(() => {
+    if (!mapWorkflowSource || !selectedFeatureProps) {
+      return {
+        talhaoId: '',
+        subareaId: null as string | null,
+        talhaoProps: null as Record<string, unknown> | null,
+        panelProps: null as Record<string, unknown> | null,
+      };
+    }
+    const tipo = String(selectedFeatureProps.tipo ?? 'talhao');
+    const talhaoId = String(selectedFeatureProps.talhao_id ?? '');
+    if (!talhaoId) {
+      return { talhaoId: '', subareaId: null, talhaoProps: null, panelProps: selectedFeatureProps };
+    }
+    if (tipo === 'subarea') {
+      const subareaId = String(selectedFeatureProps.subarea_id ?? '');
+      const talhaoProps = featurePropsFromCollection(mapWorkflowSource, talhaoId, null);
+      return {
+        talhaoId,
+        subareaId: subareaId || null,
+        talhaoProps,
+        panelProps: selectedFeatureProps,
+      };
+    }
+    return {
+      talhaoId,
+      subareaId: null,
+      talhaoProps: selectedFeatureProps,
+      panelProps: selectedFeatureProps,
+    };
+  }, [mapWorkflowSource, selectedFeatureProps]);
+
+  const plantioHeaderTalhao = useMemo(() => {
+    const p = plantioSelection.talhaoProps ?? plantioSelection.panelProps;
+    if (!p) {
+      const first = listTalhoesFromFc(mapWorkflowSource ?? { type: 'FeatureCollection', features: [] })[0];
+      if (!first) return null;
+      const props = featurePropsFromCollection(mapWorkflowSource, first.talhaoId, null);
+      return props ? parsePlantioFeatureProperties(props) : null;
+    }
+    return parsePlantioFeatureProperties(p);
+  }, [plantioSelection, mapWorkflowSource]);
+
+  const plantioSubareas = useMemo(() => {
+    const tid = plantioHeaderTalhao?.talhaoId ?? plantioSelection.talhaoId;
+    if (!mapWorkflowSource || !tid) return [];
+    return subareasForTalhaoId(mapWorkflowSource, tid);
+  }, [mapWorkflowSource, plantioHeaderTalhao, plantioSelection.talhaoId]);
+
+  const plantioKpis = useMemo(() => {
+    const header = plantioHeaderTalhao;
+    const panel = selectedFeatureProps ? parsePlantioFeatureProperties(selectedFeatureProps) : null;
+    const areaTotal = header?.areaHa ?? null;
+    const selectedArea = panel?.areaHa ?? areaTotal;
+    const estande = panel?.agronomic.standMeasured ?? header?.agronomic.standMeasured ?? null;
+    return {
+      areaTotalHa: areaTotal,
+      subareaCount: plantioSubareas.length,
+      selectedAreaHa: selectedArea,
+      estandePlHa: estande,
+      materialFallback: header?.material ?? null,
+      hasSubareas: plantioSubareas.length > 0,
+    };
+  }, [plantioHeaderTalhao, plantioSubareas.length, selectedFeatureProps]);
+
+  const onBackToTalhaoPlantio = useCallback(() => {
+    const tid = plantioSelection.talhaoId;
+    if (!mapWorkflowSource || !tid) return;
+    const props = featurePropsFromCollection(mapWorkflowSource, tid, null);
+    setSelectedFeatureProps(props);
+  }, [mapWorkflowSource, plantioSelection.talhaoId]);
+
   const mapLoading =
     (urlIntent && loadingShare && !raw && !err) || (wantApi && apiLoading && !raw && !apiFc);
 
@@ -435,8 +556,8 @@ export function DashboardMapaClient({
             </div>
           ) : mapDisplayData && mapDisplayData.features.length > 0 ? (
             usePlantioLayout ? (
-              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2 lg:flex-row lg:gap-3 print:block">
-                <aside className="order-2 flex max-h-64 min-h-0 w-full shrink-0 overflow-hidden lg:order-1 lg:max-h-none lg:w-[260px] print:hidden">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden print:block lg:flex-row">
+                <aside className="hidden w-[220px] shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col print:hidden">
                   <TalhaoSidebar
                     listFiltered={listFiltered}
                     staged={staged}
@@ -449,35 +570,127 @@ export function DashboardMapaClient({
                     onMapCount={onMap.size}
                   />
                 </aside>
-                <div className="order-1 flex min-h-0 min-w-0 flex-1 flex-col gap-2 lg:order-2 print:order-1">
-                  <div className={`${mapShellClass} flex min-h-[48vh] flex-1 flex-col`}>
-                    <MapSummaryBar data={mapDisplayData} />
-                    <FieldMap
-                      data={mapDisplayData}
-                      mapClassName="h-full min-h-[320px] w-full flex-1 rounded-none"
-                      eventMarkers={eventMarkers}
-                      selectedEventMarkerId={selectedEventId}
-                      onSelectEventMarker={onSelectEventMarker}
-                      showEventMarkers={layerEvents && monitorEvents.length > 0}
-                      onSelectFeature={onSelectMapFeature}
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                  {plantioHeaderTalhao ? (
+                    <PlantioTalhaoHeader
+                      talhaoName={
+                        plantioHeaderTalhao.parentTalhaoName ??
+                        plantioHeaderTalhao.displayName
+                      }
+                      cultura={plantioHeaderTalhao.cultura}
+                      safra={plantioHeaderTalhao.safra}
+                      areaHa={plantioHeaderTalhao.areaHa}
+                      material={plantioHeaderTalhao.material}
+                      viewMode={plantioSubView}
+                      onViewMode={setPlantioSubView}
                     />
-                    <LegendFooter items={materialsLegend} showSubareaHint={mapViewMode !== 'talhoes'} />
-                  </div>
-                  <div
-                    id="mapa-sementes"
-                    className="max-h-72 shrink-0 overflow-y-auto rounded-lg border border-slate-300/80 bg-slate-900/90 p-2 print:max-h-none print:border-slate-300 print:bg-white"
-                  >
-                    <SeedCalculatorTable data={tableData} />
+                  ) : null}
+                  <div className="flex min-h-0 flex-1 flex-col gap-0 lg:flex-row">
+                    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                      {plantioSubView === 'map' ? (
+                        <div className={`${mapShellClass} relative flex min-h-[40vh] flex-1 flex-col`}>
+                          <PlantioSubareaList
+                            subareas={plantioSubareas}
+                            selectedSubareaId={plantioSelection.subareaId}
+                            onSelect={onSelectMapFeature}
+                          />
+                          <FieldMap
+                            data={mapDisplayData}
+                            selectedSubareaId={plantioSelection.subareaId}
+                            mapClassName="h-full min-h-[320px] w-full flex-1 rounded-none"
+                            eventMarkers={eventMarkers}
+                            selectedEventMarkerId={selectedEventId}
+                            onSelectEventMarker={onSelectEventMarker}
+                            showEventMarkers={layerEvents && monitorEvents.length > 0}
+                            onSelectFeature={onSelectMapFeature}
+                          />
+                          <LegendFooter items={materialsLegend} showSubareaHint={mapViewMode !== 'talhoes'} />
+                        </div>
+                      ) : (
+                        <div className="min-h-[40vh] flex-1 overflow-y-auto bg-white p-3">
+                          {plantioSubareas.length === 0 ? (
+                            <p className="text-sm text-slate-600">
+                              Nenhuma subárea neste talhão. O resumo agronômico aparece no painel à direita.
+                            </p>
+                          ) : (
+                            <ul className="space-y-2">
+                              {plantioSubareas.map((f) => {
+                                const p = (f.properties ?? {}) as Record<string, unknown>;
+                                const m = parsePlantioFeatureProperties(p);
+                                return (
+                                  <li key={String(p.subarea_id ?? m?.displayName)}>
+                                    <button
+                                      type="button"
+                                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left hover:border-emerald-600"
+                                      onClick={() => onSelectMapFeature(p)}
+                                    >
+                                      <p className="text-sm font-bold text-slate-900">{m?.displayName ?? 'Subárea'}</p>
+                                      <p className="text-xs text-slate-600">
+                                        {m?.material} ·{' '}
+                                        {m?.areaHa != null
+                                          ? `${m.areaHa.toLocaleString('pt-BR')} ha`
+                                          : '—'}
+                                      </p>
+                                      <p className="text-[11px] text-slate-500">
+                                        {subareaStatusDisplay(m?.agronomic.status ?? null)} ·{' '}
+                                        {m ? recordedManejoStages(m.manejoStages).length : 0} operação(ões)
+                                        {m && manejoCostSummary(m).productPerHa != null
+                                          ? ` · Produtos ${moneyDisplay(manejoCostSummary(m).productPerHa)}/ha`
+                                          : ''}
+                                      </p>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                      <PlantioKpiStrip {...plantioKpis} />
+                      {plantioHeaderTalhao ? (
+                        <PlantioTalhaoInfoStrip
+                          nome={plantioHeaderTalhao.displayName}
+                          areaHa={plantioHeaderTalhao.areaHa}
+                          cultura={plantioHeaderTalhao.cultura}
+                          safra={plantioHeaderTalhao.safra}
+                          plantingDate={plantioHeaderTalhao.agronomic.plantingDate}
+                          material={plantioHeaderTalhao.material}
+                        />
+                      ) : null}
+                      <div className="border-t border-slate-200 bg-white px-2 py-1 print:hidden">
+                        <button
+                          type="button"
+                          className="text-[11px] font-semibold text-emerald-700 hover:underline"
+                          onClick={() => setSeedCalcOpen((v) => !v)}
+                        >
+                          {seedCalcOpen ? 'Ocultar' : 'Mostrar'} calculadora de sementes
+                        </button>
+                        {seedCalcOpen ? (
+                          <div
+                            id="mapa-sementes"
+                            className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2"
+                          >
+                            <SeedCalculatorTable data={tableData} />
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                    <aside className="w-full shrink-0 border-t border-slate-200 bg-slate-50 lg:max-h-none lg:w-[340px] lg:border-l lg:border-t-0 lg:overflow-y-auto print:hidden">
+                      <div className="p-2 lg:sticky lg:top-0">
+                        <PlantioAgronomicPanel
+                          properties={plantioSelection.panelProps ?? plantioSelection.talhaoProps}
+                          comparisonCandidates={plantioSubareas
+                            .map((feature) => parsePlantioFeatureProperties((feature.properties ?? {}) as Record<string, unknown>))
+                            .filter((candidate): candidate is NonNullable<typeof candidate> => candidate != null)}
+                          onClose={() => setSelectedFeatureProps(null)}
+                          onBackToTalhao={
+                            plantioSelection.subareaId ? onBackToTalhaoPlantio : undefined
+                          }
+                        />
+                      </div>
+                    </aside>
                   </div>
                 </div>
-                <aside className="order-3 w-full min-w-0 shrink-0 lg:max-h-[calc(100dvh-12rem)] lg:w-[300px] lg:overflow-y-auto print:hidden">
-                  <TalhaoDetailPanel
-                    properties={selectedFeatureProps}
-                    fullCollection={mapWorkflowSource}
-                    onClose={() => setSelectedFeatureProps(null)}
-                    onGerarRelatorioPdf={onPrintPdf}
-                  />
-                </aside>
               </div>
             ) : (
               <div className={`${mapShellClass} min-h-[50vh] flex-1`}>

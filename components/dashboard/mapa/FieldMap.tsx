@@ -17,6 +17,7 @@ type Props = {
   selectedEventMarkerId?: string | null;
   onSelectEventMarker?: (id: string) => void;
   showEventMarkers?: boolean;
+  selectedSubareaId?: string | null;
 };
 
 /**
@@ -31,11 +32,12 @@ export function FieldMap({
   selectedEventMarkerId = null,
   onSelectEventMarker,
   showEventMarkers = true,
+  selectedSubareaId = null,
 }: Props) {
   return (
     <MapProvider fitGeoJson={data} mapClassName={mapClassName}>
       {onSelectFeature ? <MapBackgroundClick onBackgroundClick={() => onSelectFeature(null)} /> : null}
-      <TalhaoLayers data={data} onSelectFeature={onSelectFeature} />
+      <TalhaoLayers data={data} onSelectFeature={onSelectFeature} selectedSubareaId={selectedSubareaId} />
       <EventMarkers
         markers={eventMarkers}
         selectedId={selectedEventMarkerId}

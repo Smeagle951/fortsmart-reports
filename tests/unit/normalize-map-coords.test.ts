@@ -6,7 +6,7 @@ import {
 
 describe('normalizeLeafletRing', () => {
   it('mantém anel [lat, lng] típico do Brasil (Flutter)', () => {
-    const ring = [
+    const ring: [number, number][] = [
       [-19.457, -48.901],
       [-19.46, -48.9],
       [-19.455, -48.905],
@@ -18,7 +18,7 @@ describe('normalizeLeafletRing', () => {
   });
 
   it('converte GeoJSON [lng, lat] para Leaflet [lat, lng]', () => {
-    const ring = [
+    const ring: [number, number][] = [
       [-48.901, -19.457],
       [-48.9, -19.46],
       [-48.905, -19.455],

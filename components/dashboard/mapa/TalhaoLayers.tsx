@@ -52,12 +52,13 @@ function tooltipText(p: Record<string, unknown>): string {
 type Props = {
   data: FeatureCollection;
   onSelectFeature?: (properties: Record<string, unknown> | null) => void;
+  selectedSubareaId?: string | null;
 };
 
-export function TalhaoLayers({ data, onSelectFeature }: Props) {
+export function TalhaoLayers({ data, onSelectFeature, selectedSubareaId }: Props) {
   const dataKey = useMemo(
-    () => data.features.map((f) => (f.id != null ? String(f.id) : JSON.stringify(f.geometry))).join('|'),
-    [data],
+    () => `${selectedSubareaId ?? ''}|${data.features.map((f) => (f.id != null ? String(f.id) : JSON.stringify(f.geometry))).join('|')}`,
+    [data, selectedSubareaId],
   );
 
   return (
@@ -69,12 +70,13 @@ export function TalhaoLayers({ data, onSelectFeature }: Props) {
         const tipo = String(p.tipo ?? 'talhao');
         if (tipo === 'subarea') {
           const c = colorPairForProperties({ material: p.material as string, kml_style_key: p.kml_style_key as string });
+          const selected = selectedSubareaId != null && String(p.subarea_id ?? '') === selectedSubareaId;
           return {
-            color: COLORS.strokeMap,
-            weight: 2,
+            color: selected ? '#047857' : COLORS.strokeMap,
+            weight: selected ? 4 : 2,
             fillColor: c.stroke,
-            fillOpacity: 0.28,
-            dashArray: '6,4',
+            fillOpacity: selected ? 0.5 : 0.28,
+            dashArray: selected ? undefined : '6,4',
           };
         }
         const experimental = isExperimentalProps(p);
